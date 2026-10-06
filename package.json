@@ -1,0 +1,30 @@
+{
+  "name": "sillytavern-workbench",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:baseline": "python3 scripts/prepare.py",
+    "start": "docker compose up -d --wait",
+    "stop": "docker compose down",
+    "test": "node --test tests/*.test.mjs",
+    "verify": "node scripts/verify.mjs",
+    "benchmark": "node scripts/benchmark.mjs",
+    "check": "npm run typecheck && node --check extension/trace.js && node --check fixtures/mock-model.mjs",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "verify:workbench": "node scripts/verify-workbench.mjs"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "esbuild": "0.25.12",
+    "playwright": "1.58.2",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "lucide-react": "0.468.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  }
+}

@@ -1,0 +1,12 @@
+export type Resource = 'connection' | 'preset' | 'world' | 'persona';
+export type Panel = Resource | 'character' | 'trace' | null;
+export type Data = Record<string, any>;
+export interface Item { id: string; name: string; detail?: string; active?: boolean; image?: string; data?: Data }
+export interface Preferences { left: boolean; bindings: Record<string,string>; groups: Record<string,string>; }
+export interface HostSnapshot {
+    character: Item | null; characters: Item[]; resources: Record<Resource,Item[]>;
+    current: Record<Resource,string>; online: boolean; busy: boolean; messages: Data[];
+}
+declare global {
+    interface Window { SillyTavern: {getContext: () => any}; jQuery: any; workbench: any; workbenchProbe: any; storyWorkspace?: any; }
+}
