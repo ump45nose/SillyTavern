@@ -12,6 +12,7 @@ import "./rework.css";
 import "./polish.css";
 import "./selection.css";
 import "./preferences.css";
+import "./rp.css";
 class Boundary extends React.Component<
   { children: React.ReactNode },
   { failed: boolean }
@@ -42,7 +43,7 @@ let mounted = false,
   disposed = false;
 const launcher = document.createElement("button");
 launcher.id = "wb-launcher";
-launcher.textContent = "Noval 工作台";
+launcher.textContent = "创作工作台";
 const media = matchMedia("(min-width: 1024px)");
 async function mount() {
   if (mounted || mounting || disposed) return;
@@ -122,6 +123,10 @@ function unmount() {
     "wb-focus",
     "wb-resizing",
     "wb-native-panel",
+    "wb-rp",
+    "wb-rp-top-auto",
+    "wb-rp-top-collapsed",
+    "wb-rp-overlay-open",
   );
   mounted = false;
   launcher.hidden = false;

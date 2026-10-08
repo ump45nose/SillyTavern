@@ -12,6 +12,12 @@ export interface Item {
 }
 export interface Preferences {
   left: boolean;
+  layout?: "novel" | "rp";
+  rpTopAuto?: boolean;
+  rpTextSize?: number;
+  rpSpriteScale?: number;
+  rpDialogWidth?: number;
+  rpShowPortraits?: boolean;
   inputRatio?: number;
   presetPins?: string[];
   readingFont?: "serif" | "sans";

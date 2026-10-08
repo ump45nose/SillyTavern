@@ -6,7 +6,7 @@
 
 官方酒馆继续负责模型调用、提示词组装、世界书、角色卡、聊天记录和插件运行；新工作台负责页面布局、编辑体验、操作入口和轻量 Trace。
 
-2026-10-07 更新：第一版先交付横屏 Noval 日常可用闭环；PWA Noval、横屏 RP、PWA RP 后续接入。四种场景共用底层能力与数据，已确认的布局保存在 `docs/design/`。
+2026-10-09 更新：横屏 Novel 与 RP 已接入同一工作台，RP 主要替换主页布局和原生对话的展示方式，复用资源编辑、独立设置、原生输入和生成链路。PWA Novel、PWA RP 后续接入。四种场景共用底层能力与数据，已确认的布局保存在 `docs/design/`。
 
 官方扩展机制允许使用 React/Vue、访问页面及酒馆上下文，适合承载这一方向；官方也建议优先使用 `getContext()`，减少对内部模块的直接依赖。[官方扩展文档](https://docs.sillytavern.app/for-contributors/writing-extensions/)
 

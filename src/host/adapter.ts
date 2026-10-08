@@ -313,6 +313,25 @@ export class HostAdapter {
   messageTime(value: string | number | undefined) {
     if(!value)return "";const time=ctx().timestampToMoment(value);return time?.isValid()?time.format("MM-DD HH:mm"):"";
   }
+  rpPresentation(speaker?: string) {
+    const c = ctx(), snap = this.snapshot();
+    const actor = c.characters.find((item: Data) => item.name === speaker) ?? snap.character?.data;
+    const holder = [...document.querySelectorAll<HTMLElement>(".expression-holder")].find(n => actor?.avatar && n.dataset.avatar === actor.avatar)
+      ?? (snap.groupId ? null : document.getElementById("expression-holder"));
+    const image = holder?.querySelector<HTMLImageElement>("img.expression[src]");
+    const sprite = image?.getAttribute("src") || "";
+    const scene = c.chatMetadata?.workbenchRP?.scene;
+    return {
+      name: actor?.name || snap.groupName || "选择角色",
+      portrait: actor?.avatar && actor.avatar !== "none" ? "/characters/" + encodeURIComponent(actor.avatar) : "",
+      // Native emoji fallbacks are icons, not full-size character artwork.
+      sprite: sprite && !sprite.includes("/expressions/images/") ? sprite : "",
+      userName: c.name1 || "你",
+      userPortrait: snap.current.persona ? "/User%20Avatars/" + encodeURIComponent(snap.current.persona) : "",
+      scene: scene && typeof scene === "object" ? scene as Record<string, unknown> : {},
+    };
+  }
+  isGenerating() { return generating; }
   model() {
     const c = ctx();
     return c.mainApi === "openai"
@@ -787,6 +806,10 @@ export class HostAdapter {
       button.click();
       await new Promise((r) => setTimeout(r, 20));
       node = document.querySelector(selector);
+    }
+    if (this.prefs().layout === "rp") {
+      window.dispatchEvent(new CustomEvent("wb-rp-jump", { detail: id }));
+      return;
     }
     node?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion:reduce)").matches||document.body.classList.contains("reduced-motion")?"auto":"smooth" });
   }

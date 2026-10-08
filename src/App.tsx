@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { PanelLeftOpen, PanelLeftClose, PanelRightOpen, PanelRightClose, ScanLine, X, Activity, BookOpen, SlidersHorizontal, UserRound, UsersRound, Plug, ChevronDown } from "lucide-react";
+import { PanelLeftOpen, PanelLeftClose, PanelRightOpen, PanelRightClose, ScanLine, X, Activity, BookOpen, SlidersHorizontal, UserRound, UsersRound, Plug, ChevronDown, Eye, EyeOff, Pin, PinOff, Theater } from "lucide-react";
 import { ResourceRailContext } from "./ui/ResourcePicker";
 import {ClickFeedback,usePresence} from "./ui/Motion";
 import { Header } from "./ui/Header";
@@ -9,6 +9,7 @@ import {ComposerPopovers, type ComposerPopup} from "./ui/ComposerPopovers";
 import {ReadingPresentation,ReadingSettings} from "./ui/Reading";
 import { Operations, shortcutAction, shortcutHint } from "./host/operations";
 import {Shortcuts} from "./ui/Shortcuts";
+import {RPStage} from "./ui/RPStage";
 import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
 import {
@@ -49,7 +50,7 @@ export default function App({
   const [operations] = useState(() => new Operations());
   const snap = useHost(host),
     task = useTask(),
-    [left, setLeft] = useState(host.prefs().left),
+    [left, setLeft] = useState(host.prefs().layout === "rp" ? false : host.prefs().left),
     [panel, setPanel] = useState<Panel>(null),
     [chooser, setChooser] = useState<Resource | null>(null),
     [focusId, setFocusId] = useState(""),
@@ -64,6 +65,15 @@ export default function App({
     [workspace,setWorkspace]=useState<{page:SettingsPage;group?:string;initial?:string}|null>(null),
     [help, setHelp] = useState(false),
     [externalError, setExternalError] = useState("");
+  const rp = host.prefs().layout === "rp", topAuto = rp && !!host.prefs().rpTopAuto;
+  const [topHot, setTopHot] = useState(false), [topFocus, setTopFocus] = useState(false);
+  const topCollapsed = topAuto && !topHot && !topFocus && !chooser;
+  const switchLayout = (layout: "novel" | "rp") => {
+    if (!beforeClose()) return;
+    setPanel(null); setChooser(null); setPopup(null); setWorkspace(null); setDeep(null); setFocus(false); setTopHot(false); setTopFocus(false);
+    setLeft(layout === "rp" ? false : host.prefs().left);
+    host.preference({layout});
+  };
   const selectedIds = useRef<Partial<Record<NonNullable<Panel>, string>>>({});
   const popupPresence=usePresence(popup),workspacePresence=usePresence(workspace),helpPresence=usePresence(help?true:null);
   const openPopup=useCallback((next:ComposerPopup)=>setPopup(prev=>prev?.kind===next.kind&&prev.anchor===next.anchor?null:next),[]);
@@ -72,6 +82,7 @@ export default function App({
     if (!beforeClose()) return;
     if (next && id !== undefined) selectedIds.current[next] = id;
     setPanel(next);
+    if (rp && next && width <= 1100) setLeft(false);
     if(next)setRailOpen(true);
     if (next) setFocusId(id ?? selectedIds.current[next] ?? "");
     setChooser(null);
@@ -115,8 +126,8 @@ export default function App({
   operations.register("open.character", () => goPanel("character"));
   const leftWidth = width <= 1400 ? 240 : 260, rightWidth = width <= 1400 ? 440 : 460;
   const railVisible=!!panel&&panel!=="trace"&&railOpen&&!focus;
-  const leftVisible = left && !focus && (!panel || width - leftWidth - rightWidth - (railVisible?180:0) >= 420);
-  const toggleLeft = () => { if (left && !leftVisible && !focus) goPanel(null); else setLeft(v => !v); };
+  const leftVisible = left && !focus && (!panel || ((!rp || width > 1100) && width - leftWidth - rightWidth - (railVisible?180:0) >= 420));
+  const toggleLeft = () => { if (rp && width <= 1100 && !left) {goPanel(null);setLeft(true);} else if (left && !leftVisible && !focus) goPanel(null); else setLeft(v => !v); };
   const toggleFocus = () => { setChooser(null); setFocus(v => !v); };
   operations.register("toggle.left", toggleLeft);
   operations.register("toggle.focus", toggleFocus);
@@ -126,13 +137,17 @@ export default function App({
     const timer = setTimeout(() => setRenderedPanel(null), 220);
     return () => clearTimeout(timer);
   }, [panel]);
-  useEffect(() => { host.preference({ left }); }, [left]);
+  useEffect(() => { if (!rp) host.preference({ left }); }, [left, rp]);
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-left-open", leftVisible);
     document.body.classList.toggle("wb-right-open", !!panel && !focus);
     document.body.classList.toggle("wb-focus", focus);
     document.body.classList.toggle("wb-rail-open",railVisible);
-  }, [leftVisible, panel, focus, railVisible]);
+    document.body.classList.toggle("wb-rp",rp);
+    document.body.classList.toggle("wb-rp-top-auto",topAuto);
+    document.body.classList.toggle("wb-rp-top-collapsed",topCollapsed);
+    document.body.classList.toggle("wb-rp-overlay-open",rp && width <= 1100 && !!(leftVisible || (panel && !focus)));
+  }, [leftVisible, panel, focus, railVisible, rp, topAuto, topCollapsed, width]);
   useEffect(() => {
     const handler = (e: Event) => setExternalError((e as CustomEvent).detail);
     window.addEventListener("wb-error", handler);
@@ -191,13 +206,19 @@ export default function App({
   return (
     <>
       <ClickFeedback/>
+      <div className="wb-header-shell" inert={rp && (focus || topCollapsed)} onMouseEnter={()=>setTopHot(true)} onMouseLeave={e=>{setTopHot(false);if(!e.currentTarget.querySelector(':focus-visible'))setTopFocus(false);}} onFocusCapture={()=>setTopFocus(true)} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setTopFocus(false);}}>
       <Header snap={snap} panel={panel} chooser={chooser} setChooser={setChooser} goPanel={goPanel}
         next={kind => operations.run(`next.${kind}`)} model={host.model()} focus={toggleFocus} focused={focus}
+        actions={rp ? <button className={`wb-top-action ${topAuto?"is-active":""}`} aria-label="自动收纳顶栏" title="自动收纳顶栏" aria-pressed={topAuto} onClick={()=>host.preference({rpTopAuto:!topAuto})}>{topAuto?<PinOff size={20}/>:<Pin size={20}/>}</button> : undefined}
         focusShortcut={host.prefs().shortcutsEnabled===false?"":shortcutHint("toggle.focus",host.prefs().shortcuts)}
         select={(kind, id, enabled) => task.run(async () => {
           if (kind === "world") await host.toggleBook(id, enabled);
           else await host.select(kind, id);
         })} />
+      </div>
+      {rp && <><button className="wb-rp-visibility wb-icon" aria-label={focus?"显示界面":"隐藏界面"} title={focus?"显示界面":"隐藏界面"} aria-pressed={focus} onClick={toggleFocus}>{focus?<Eye size={20}/>:<EyeOff size={20}/>}</button>
+      {topAuto && !focus && <button className="wb-rp-top-trigger" aria-label="显示顶栏" onMouseEnter={()=>setTopHot(true)} onMouseLeave={e=>{if(!(e.relatedTarget as Element)?.closest?.('.wb-top'))setTopHot(false);}} onFocus={()=>setTopFocus(true)} onBlur={e=>{if(!(e.relatedTarget as Element)?.closest?.('.wb-top'))setTopFocus(false);}} onClick={()=>{setTopHot(true);setTopFocus(true);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('.wb-selector-value')?.focus());}}><span/></button>}</>}
+      {!rp &&
       <div className="wb-reading-bar">
         {!focus && <IconButton title={`收纳左栏${host.prefs().shortcutsEnabled!==false&&shortcutHint("toggle.left",host.prefs().shortcuts)?" · "+shortcutHint("toggle.left",host.prefs().shortcuts):""}`} onClick={() => operations.run("toggle.left")}>
           {leftVisible ? <PanelLeftClose size={21} /> : <PanelLeftOpen size={21} />}
@@ -205,16 +226,19 @@ export default function App({
         <span className="wb-chat-name" title={snap.chatName}>{snap.chatName || "开始一段新的故事"}</span>
         <span className="wb-grow" />
         <ReadingSettings host={host}/>
+        <IconButton title="切换 RP 布局" onClick={()=>switchLayout("rp")}><Theater size={21}/></IconButton>
         {focus ? <button className="wb-exit-focus wb-top-action is-active" title="退出专注" aria-label="退出专注" aria-pressed="true" onClick={toggleFocus}><ScanLine size={24} /></button> :
           <IconButton title={panel ? "关闭右栏" : "角色与资源侧栏"} onClick={() => goPanel(panel ? null : "character")}>
             {panel ? <PanelRightClose size={21} /> : <PanelRightOpen size={21} />}
           </IconButton>}
       </div>
+      }
+      {rp && <nav className={`wb-rp-stage-nav ${focus?"is-hidden":""}`} inert={focus} aria-label="边栏操作"><IconButton title={leftVisible?"收纳左边栏":"展开左边栏"} onClick={toggleLeft}>{leftVisible?<PanelLeftClose size={18}/>:<PanelLeftOpen size={18}/>}</IconButton><IconButton title={panel?"关闭右栏":"角色与资源侧栏"} onClick={()=>goPanel(panel?null:"character")}>{panel?<PanelRightClose size={18}/>:<PanelRightOpen size={18}/>}</IconButton></nav>}
       <Navigation host={host} snap={snap} visible={leftVisible} settings={openSettings} open={openPopup}
         help={() => setHelp(true)} exit={() => { if (beforeClose()) onExit(); }} run={task.run} />
       <aside id="wb-resource-rail" ref={setRailTarget} className={`wb-resource-rail ${railVisible?"is-open":""}`} inert={!railVisible} aria-hidden={!railVisible} aria-label="资源列表与角色信息"/>
       <aside className={`wb-right ${panel && !focus ? "is-open" : ""}`} inert={!panel || focus} aria-hidden={!panel || focus} aria-label="角色与资源">
-        <button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button>
+        <div className="wb-panel-header-row"><button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button>{rp&&<IconButton title="收起资源侧栏" onClick={()=>goPanel(null)}><X size={17}/></IconButton>}</div>
         <div className={`wb-panel-tabs-fold ${tabsOpen?"is-open":""}`} inert={!tabsOpen}>
         <div className="wb-panel-tabs">
           {([["character", "角色", UsersRound], ["world", "世界书", BookOpen], ["preset", "预设", SlidersHorizontal], ["connection", "连接", Plug], ["persona", "用户设定", UserRound], ["trace", "Trace", Activity]] as const).map(([kind, label, Icon]) =>
@@ -240,7 +264,7 @@ export default function App({
       <button className="wb-native-return" onClick={() => host.closeNative()}>
         收起原生面板 <X size={16} />
       </button>
-      <ReadingPresentation host={host}/>
+      {rp ? <RPStage host={host} hidden={focus} blocked={width<=1100&&!!(leftVisible||panel)} width={width-(width>1100?(leftVisible?leftWidth:0)+(panel&&!focus?rightWidth+(railVisible?180:0):0):0)} readingLayout={()=>switchLayout("novel")} run={task.run}/> : <ReadingPresentation host={host}/>}
       {popupPresence.value&&<ComposerPopovers key={popupPresence.value.kind} host={host} popup={popupPresence.value} exiting={popupPresence.exiting} close={()=>setPopup(null)} settings={openSettings}/>}
       {workspacePresence.value&&<Suspense fallback={<Loading/>}><SettingsWorkspace host={host} page={workspacePresence.value.page} group={workspacePresence.value.group} initial={workspacePresence.value.initial} exiting={workspacePresence.exiting} onClose={()=>setWorkspace(null)}/></Suspense>}
       {deep && (

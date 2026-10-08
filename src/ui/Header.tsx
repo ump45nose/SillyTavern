@@ -5,11 +5,12 @@ import { Empty, IconButton } from "./common";
 import {usePresence} from "./Motion";
 export const resourceLabels = { connection: "连接", preset: "预设", world: "世界书", persona: "用户设定" };
 const icons = { preset: SlidersHorizontal, world: BookOpen, persona: UserRound };
-export function Header({ snap, panel, chooser, setChooser, goPanel, next, select, model, focus, focused, focusShortcut }: {
+export function Header({ snap, panel, chooser, setChooser, goPanel, next, select, model, focus, focused, focusShortcut, actions }: {
   snap: HostSnapshot; panel: Panel; chooser: Resource | null;
   setChooser: (value: Resource | null) => void; goPanel: (panel: Panel, id?: string) => void;
   next: (kind: Resource) => void; select: (kind: Resource, id: string, enabled: boolean) => void;
   model: string; focus: () => void; focused: boolean; focusShortcut:string;
+  actions?: React.ReactNode;
 }) {
   const presence=usePresence(chooser);
   return <header className="wb-top">
@@ -49,7 +50,7 @@ export function Header({ snap, panel, chooser, setChooser, goPanel, next, select
     </div>
     <div className="wb-top-right">
       <button className={`wb-top-action ${panel === "trace" ? "is-active" : ""}`} title="Trace" aria-label="Trace" aria-pressed={panel === "trace"} onClick={() => goPanel(panel === "trace" ? null : "trace")}><Activity size={24} /></button>
-      <button className={`wb-top-action wb-focus-toggle ${focused ? "is-active" : ""}`} title={`专注模式${focusShortcut?" · "+focusShortcut:""}`} aria-label="专注模式" aria-pressed={focused} onClick={focus}><ScanLine size={24} /></button>
+      {actions ?? <button className={`wb-top-action wb-focus-toggle ${focused ? "is-active" : ""}`} title={`专注模式${focusShortcut?" · "+focusShortcut:""}`} aria-label="专注模式" aria-pressed={focused} onClick={focus}><ScanLine size={24} /></button>}
     </div>
   </header>;
 }

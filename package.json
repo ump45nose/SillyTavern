@@ -24,7 +24,8 @@
     "verify:migration": "node scripts/verify-migration-runtime.mjs",
     "verify:motion": "node scripts/verify-motion-layout.mjs",
     "verify:click-motion": "node scripts/verify-click-motion.mjs",
-    "verify:preferences": "node scripts/verify-preferences-runtime.mjs"
+    "verify:preferences": "node scripts/verify-preferences-runtime.mjs",
+    "verify:rp": "node scripts/verify-rp-runtime.mjs"
   },
   "devDependencies": {
     "@types/react": "19.2.2",
