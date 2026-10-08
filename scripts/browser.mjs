@@ -36,13 +36,16 @@ export async function launch() {
     return chromium.launch({ executablePath, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--no-proxy-server'] });
 }
 
-export async function session(browser, { mobile = false, helper = true, probe = true, timings = true } = {}) {
+export async function session(browser, { mobile = false, helper = true, probe = true, timings = true, recordVideo } = {}) {
     const context = await browser.newContext({
         httpCredentials: credentials,
         viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 },
         isMobile: mobile, hasTouch: mobile,
+        recordVideo,
     });
     if (!helper || !probe) {
+        // These flags are session-only test overrides; never persist them to the test account.
+        await context.route('**/api/settings/save', route => route.fulfill({ json: {} }));
         await context.route('**/api/settings/get', async route => {
             const response = await route.fetch();
             const data = await response.json();
@@ -78,6 +81,40 @@ export async function ready(page, url, { probe = false } = {}) {
     if (probe) await page.waitForFunction(() => window.workbenchProbe?.mounted, null, { timeout: 10_000 });
 }
 
+/** Temporary motion checks must not change the shared validation account. */
+export async function withMotionPreference(page, verify) {
+    const original = await page.evaluate(() => ({
+        setting: SillyTavern.getContext().powerUserSettings.reduced_motion,
+        os: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    }));
+    const protect = async route => {
+        const body = route.request().postDataJSON();
+        if (body?.power_user) body.power_user.reduced_motion = original.setting;
+        await route.continue({ postData: JSON.stringify(body) });
+    };
+    await page.route('**/api/settings/save', protect);
+    try {
+        return await verify();
+    } finally {
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        await page.evaluate(value => jQuery('#reduced_motion').prop('checked', value).trigger('input'), original.setting);
+        await page.unroute('**/api/settings/save', protect);
+        await page.evaluate(async () => (await import('/script.js')).saveSettings());
+        if (original.os) await page.emulateMedia({ reducedMotion: 'reduce' });
+    }
+}
+
+/** ST persists the OS preference; emulate it only inside a protected session. */
+export async function withReducedMotion(page, verify) {
+    return withMotionPreference(page, async () => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        // ST reads the OS preference only on init/input, not on a media-query change.
+        await page.evaluate(() => jQuery('#reduced_motion').prop('checked', true).trigger('input'));
+        await page.waitForFunction(() => document.body.classList.contains('reduced-motion'));
+        return verify();
+    });
+}
+
 export async function createCharacter(page) {
     return page.evaluate(async () => {
         const context = SillyTavern.getContext();
@@ -103,15 +140,33 @@ export async function createCharacter(page) {
 
 export async function connect(page) {
     await page.evaluate(() => {
-        const context = SillyTavern.getContext();
-        const settings = context.chatCompletionSettings;
-        settings.chat_completion_source = 'custom';
-        settings.custom_url = 'http://mock-model:4010/v1';
-        settings.custom_model = 'workbench-fixture';
-        settings.stream_openai = true;
+        // A loaded fixture profile can asynchronously reapply its provider.
+        // Deselect it before changing API fields, exactly as the native UI does.
+        jQuery('#connection_profiles').val('').trigger('change');
+        jQuery('#main_api').val('openai').trigger('change');
+    });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => jQuery('#chat_completion_source').val('custom').trigger('change'));
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+        jQuery('#custom_api_url_text').val('http://mock-model:4010/v1').trigger('input');
+        jQuery('#custom_model_id').val('workbench-fixture').trigger('input');
+        SillyTavern.getContext().chatCompletionSettings.stream_openai = true;
         document.querySelector('#api_button_openai').click();
     });
     await page.waitForFunction(() => SillyTavern.getContext().onlineStatus !== 'no_connection', null, { timeout: 30_000 });
+}
+
+export async function selectPaper(page, label, value) {
+    const trigger = page.getByRole('combobox', { name: label, exact: true });
+    const text = await trigger.evaluate((button, value) => [...button.closest('.wb-select').querySelector('select').options].find(o => o.value === value)?.textContent, String(value));
+    if (text == null) throw new Error(`Missing option in ${label}`);
+    await trigger.click();
+    await page.getByRole('listbox', { name: label, exact: true }).getByRole('option', { name: text, exact: true }).click();
+}
+
+export async function paperValue(page, label) {
+    return page.getByRole('combobox', { name: label, exact: true }).evaluate(button => button.closest('.wb-select').querySelector('select').value);
 }
 
 export const save = (name, value) => fs.writeFileSync(path.join(artifacts, name), JSON.stringify(value, null, 2) + '\n');

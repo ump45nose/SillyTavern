@@ -52,7 +52,7 @@ export function observeFetch(host, onRecord, now = () => performance.now()) {
                 // Native ST generation uses a JSON string. Other body types are
                 // intentionally left unread to avoid buffering/cloning streams.
                 record = {
-                    id: makeId(), atMs: now(), path: url.pathname,
+                    id: makeId(), atMs: now(), timestamp: Date.now(), path: url.pathname,
                     capturePoint: 'browser-to-sillytavern', status: 'pending',
                     body: typeof init?.body === 'string' && new TextEncoder().encode(init.body).byteLength <= MAX_BODY_BYTES
                         ? snapshot(JSON.parse(init.body)) : { unavailable: true, reason: 'unsupported-or-large-body' },
@@ -85,7 +85,8 @@ export function observeFetch(host, onRecord, now = () => performance.now()) {
     };
 }
 
-export function createTrace(context, host = window) {
+/** @param {() => any} inspectComposition */
+export function createTrace(context, host = window, inspectComposition = () => null) {
     const records = [];
     const listeners = [];
     let pending = {};
@@ -102,6 +103,9 @@ export function createTrace(context, host = window) {
             pending = {};
         }
     });
+    listen('CHAT_COMPLETION_PROMPT_READY', data => {
+        if (!data?.dryRun) { try { pending.composition = snapshot(inspectComposition()); } catch { /* optional capability */ } }
+    });
     listen('WORLD_INFO_ACTIVATED', entries => { pending.worldInfo = snapshot(entries); });
     listen('CHAT_COMPLETION_SETTINGS_READY', body => { pending.event = 'CHAT_COMPLETION_SETTINGS_READY'; pending.assembled = snapshot(body); });
     listen('GENERATE_AFTER_DATA', (body, dryRun) => {
@@ -116,6 +120,7 @@ export function createTrace(context, host = window) {
             assemblyEvent: pending.event ?? null,
             assembled: pending.assembled ?? null,
             worldInfo: pending.worldInfo ?? [],
+            composition: pending.composition ?? null,
             worldInfoEvidence: pending.worldInfo ? 'WORLD_INFO_ACTIVATED' : 'not-observed',
         });
         pending = {};

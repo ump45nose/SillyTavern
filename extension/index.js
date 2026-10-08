@@ -1,3 +1,5 @@
-// Loaded before APP_READY by the official extension loader.
-// Keep this awaited: a fire-and-forget import can miss the host's ready event.
-await import('./dist/index.js');
+// Await loading so the official APP_READY event cannot outrun registration.
+// Carry the host's cache key into the bundled entry for release upgrades.
+const entry = new URL('./dist/index.js', import.meta.url);
+entry.search = new URL(import.meta.url).search || '?v=0.2.0';
+await import(entry.href);

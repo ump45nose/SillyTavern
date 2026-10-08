@@ -84,7 +84,7 @@ test('trace snapshots events, bounds history, clears stale world info and cleans
     const listeners = new Map();
     const context = {
         eventTypes: Object.fromEntries(['GENERATION_STARTED', 'WORLD_INFO_ACTIVATED', 'CHAT_COMPLETION_SETTINGS_READY',
-            'GENERATE_AFTER_DATA', 'GENERATION_ENDED', 'GENERATION_STOPPED'].map(x => [x, x])),
+            'GENERATE_AFTER_DATA', 'GENERATION_ENDED', 'GENERATION_STOPPED', 'CHAT_COMPLETION_PROMPT_READY'].map(x => [x, x])),
         eventSource: {
             on(event, fn) { (listeners.get(event) ?? listeners.set(event, []).get(event)).push(fn); },
             removeListener(event, fn) { listeners.set(event, listeners.get(event).filter(x => x !== fn)); },
@@ -93,18 +93,26 @@ test('trace snapshots events, bounds history, clears stale world info and cleans
     const emit = (name, ...args) => listeners.get(name)?.forEach(fn => fn(...args));
     const original = () => Promise.resolve(new Response());
     const host = { location, fetch: original };
-    const trace = createTrace(context, host);
+    const composition = { counts: { main: 20, chatHistory: 80 }, total: 100, limit: 4096 };
+    const trace = createTrace(context, host, () => composition);
     const entry = { uid: 3, content: '命中内容' };
     emit('GENERATION_STARTED', 'normal', {}, false);
     emit('WORLD_INFO_ACTIVATED', [entry]);
+    emit('CHAT_COMPLETION_PROMPT_READY', { dryRun: false });
+    composition.counts.main = 999;
+    emit('CHAT_COMPLETION_PROMPT_READY', { dryRun: true });
     emit('CHAT_COMPLETION_SETTINGS_READY', body);
     await host.fetch(path, { method: 'POST', body: JSON.stringify(body) });
+    assert.equal(trace.records[0].composition.counts.main, 20);
+    assert.equal(trace.records[0].composition.total, 100);
+    assert.ok(trace.records[0].timestamp > 0);
     entry.content = '后来修改';
     assert.equal(trace.records[0].worldInfo[0].content, '命中内容');
     emit('GENERATION_ENDED');
     for (let i = 0; i < 30; i++) await host.fetch(path, { method: 'POST', body: '{}' });
     assert.equal(trace.records.length, 20);
     assert.equal(trace.records.at(-1).worldInfoEvidence, 'not-observed');
+    assert.equal(trace.records.at(-1).composition, null);
     trace.clear();
     assert.equal(trace.records.length, 0);
     trace.destroy();

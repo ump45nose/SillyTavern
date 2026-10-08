@@ -13,8 +13,8 @@ const seed = JSON.parse(original);
 const samples = Number(process.env.WB_BENCHMARK_SAMPLES ?? 5);
 const profiles = [
     { name: 'native-disabled-extensions', disabled: ['third-party/JS-Slash-Runner', 'third-party/workbench-probe'] },
-    { name: 'probe-only', disabled: ['third-party/JS-Slash-Runner'] },
-    { name: 'helper-and-probe', disabled: [] },
+    { name: 'workbench-only', disabled: ['third-party/JS-Slash-Runner'] },
+    { name: 'helper-and-workbench', disabled: [] },
 ];
 const report = {
     checkedAt: new Date().toISOString(), samplesPerCacheMode: samples,
@@ -35,6 +35,7 @@ const browser = await launch();
 async function measure(page) {
     const started = performance.now();
     await ready(page, urls.validation);
+    await page.waitForFunction(()=>!window.workbench||Boolean(window.workbench.metrics.workbenchReadyMs));
     return page.evaluate(wallMs => {
         const resources = performance.getEntriesByType('resource');
         const navigation = performance.getEntriesByType('navigation')[0];
@@ -102,6 +103,6 @@ try {
     console.error(error);
 } finally {
     fs.writeFileSync(settingsPath, original);
-    save('benchmark.json', report);
+    save('workbench-benchmark.json', report);
     await browser.close();
 }

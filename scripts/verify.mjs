@@ -26,7 +26,7 @@ try {
     await page.waitForFunction(() => typeof window.TavernHelper?.getChatMessages === 'function');
     check('extension mounts and helper API is available', await page.evaluate(() => workbenchProbe.capabilities()));
 
-    const restoration = await page.evaluate(() => {
+    const restoration = await page.evaluate(async () => {
         const probe = workbenchProbe;
         const input = document.getElementById('send_textarea');
         const chat = document.getElementById('chat');
@@ -36,7 +36,7 @@ try {
         const events = SillyTavern.getContext().eventSource.events;
         const count = () => Object.values(events).reduce((sum, x) => sum + x.length, 0);
         const first = count();
-        for (let i = 0; i < 5; i++) { probe.unmount(); probe.mount(); }
+        for (let i = 0; i < 5; i++) { probe.unmount(); await probe.mount(); }
         const last = count();
         probe.unmount();
         const result = {
@@ -47,7 +47,7 @@ try {
             noPanel: !document.getElementById('wb-probe-panel'),
             inputUntouched: Object.getOwnPropertyDescriptor(input, 'value') === nativeValueDescriptor,
         };
-        probe.mount();
+        await probe.mount();
         return result;
     });
     assert.equal(restoration.sameChat && restoration.sameInput && restoration.listenerCountStable && restoration.noPanel && restoration.inputUntouched, true);
@@ -161,17 +161,14 @@ try {
     await disabled.context.close();
 
     const mobile = await session(browser, { mobile: true });
-    await ready(mobile.page, urls.validation, { probe: true });
-    const mobileState = await mobile.page.evaluate(() => {
-        const panel = document.getElementById('wb-probe-panel').getBoundingClientRect();
-        return { width: innerWidth, panelRight: panel.right, panelLeft: panel.left, sameInput: workbenchProbe.nativeNodes.input === document.getElementById('send_textarea'), secureContext: isSecureContext };
-    });
-    assert(mobileState.panelLeft >= 0 && mobileState.panelRight <= mobileState.width);
-    assert.equal(mobileState.sameInput, true);
-    await mobile.page.locator('#wb-probe-panel button').click();
-    assert.equal(await mobile.page.locator('#wb-probe-launcher').isVisible(), true);
-    await mobile.page.screenshot({ path: path.join(artifacts, 'mobile-native.png') });
-    check('mobile viewport supports probe and fallback; real PWA remains a later device check', mobileState);
+    await ready(mobile.page, urls.validation);
+    const mobileState = await mobile.page.evaluate(() => ({
+        width:innerWidth,mounted:workbench.mounted,sameInput:workbench.nativeNodes.input===document.getElementById('send_textarea'),secureContext:isSecureContext,
+    }));
+    assert.equal(mobileState.mounted,false);
+    assert.equal(mobileState.sameInput,true);
+    await mobile.page.screenshot({path:path.join(artifacts,'mobile-native.png')});
+    check('narrow viewport retains the original UI; PWA is outside this release',mobileState);
     assert.deepEqual(mobile.errors, []);
     await mobile.context.close();
     results.passed = true;

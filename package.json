@@ -13,7 +13,18 @@
     "check": "npm run typecheck && node --check extension/trace.js && node --check fixtures/mock-model.mjs",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
-    "verify:workbench": "node scripts/verify-workbench.mjs"
+    "verify:workbench": "node scripts/verify-workbench.mjs",
+    "verify:compat": "node scripts/verify-workbench-compat.mjs",
+    "benchmark:chat": "node scripts/benchmark-chat.mjs",
+    "verify:home": "node scripts/verify-home-implementation.mjs",
+    "verify:resources": "node scripts/verify-resource-sidebars.mjs",
+    "verify:interactions": "node scripts/verify-interactions-runtime.mjs",
+    "verify:fidelity": "node scripts/verify-design-fidelity.mjs",
+    "review:fidelity": "node scripts/build-design-review.mjs",
+    "verify:migration": "node scripts/verify-migration-runtime.mjs",
+    "verify:motion": "node scripts/verify-motion-layout.mjs",
+    "verify:click-motion": "node scripts/verify-click-motion.mjs",
+    "verify:preferences": "node scripts/verify-preferences-runtime.mjs"
   },
   "devDependencies": {
     "@types/react": "19.2.2",
@@ -23,6 +34,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "fflate": "0.8.2",
     "lucide-react": "0.468.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"

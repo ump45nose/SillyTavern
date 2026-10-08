@@ -1,75 +1,98 @@
-# SillyTavern Workbench · 官方基线与技术验证
+# SillyTavern Workbench · 横屏 Noval
 
-第 1 阶段已建立固定的官方 release、隔离部署、最小前端探针和可重跑验证。探针只验证接入能力；正式 Novel / RP 页面将在后续模块设计后实现。
+基于官方 SillyTavern 1.19.0 的前端工作台扩展。首版采用已确认的暖纸布局，保留原生聊天、输入节点、模型调用与数据格式。
 
-## 当前入口
+## 当前可用入口
 
-| 实例 | 地址 | 内容 |
+| 实例 | 地址 | 用途 |
 | --- | --- | --- |
-| 官方基线 | http://192.168.31.201:32011 | 官方 1.19.0，独立测试数据，无第三方扩展 |
-| 技术验证 | http://192.168.31.201:32012 | 同一官方镜像，酒馆助手 4.8.18 与最小工作台探针 |
+| 官方基线 | http://192.168.31.201:32011 | 官方运行时与性能对照 |
+| Noval 验证版 | http://192.168.31.201:32012 | 横屏工作台、酒馆助手与合成测试数据 |
 
-两个入口使用相同的测试账号。用户名与随机密码保存在项目 `.env` 中，权限为 `0600`，不纳入 Git。原有酒馆仍在端口 `32001`，本阶段未更新其镜像、扩展或用户数据。
+使用现有测试账号；凭据保存在项目 `.env`，不纳入 Git。原生产实例 `32001` 未部署本次工作台。验证实例内不要保存需要保留的真实聊天，测试会修改明确命名的合成角色、世界书、预设等数据。
 
-验证实例的右下角“技术验证”面板可以返回原生界面，再从“工作台验证”按钮重新挂载。浏览器控制台可查看 `window.workbenchProbe.capabilities()`、`window.workbenchProbe.metrics` 与 `window.workbenchProbe.records`。这里是开发探针入口，不是正式 Trace 页面。
+横屏宽度至少 1024px 时默认挂载。左下“返回原界面”可退出，右下“Noval 工作台”重新进入。窄屏保留原生界面，PWA 与 RP 场景尚未实现。检测到 `storyWorkspace` 时停止挂载，避免两个布局插件同时接管页面。
 
-## 固定版本与结构
+## 首版功能
 
-- 官方 release：`1.19.0`，提交 `7e8663cd9c184a550b37238218bdd32c6efc68e9`。
-- 官方发布镜像以 digest 固定，详情见 `baseline.lock.json`。部署复用本机已有的同版本官方镜像，不跟随浮动 `latest`。
-- 官方源码位于 `upstream/SillyTavern/`，按 tag 拉取，保持独立 Git 目录及干净的官方文件；不纳入本项目源码仓库。
-- `extension/`：最小挂载、卸载、能力检测与内存请求记录。
-- `scripts/`、`tests/`、`fixtures/`：准备、浏览器验证、性能采样及本地测试模型。
-- `runtime/`：两个实例的配置、测试数据与酒馆助手部署资产快照；`artifacts/`：报告和截图。两者均被 Git 忽略。
+- 角色头像、连接 / 预设 / 世界书 / Persona 快捷选择与下一个；左侧大纲、楼层、最近对话；默认收起的右侧资源栏。
+- 原生 Markdown 原文输入、顶部横线拖动增高、续写、重生成、快速回复、附件和扩展工具。消息、输入、助手 iframe 不搬移或重建。
+- 世界书双列表和独立四区编辑，列表上切换激活方式；全局启用、关键词 / 常驻 / 向量化分别操作。JSON 编辑保留扩展字段。
+- 收藏角色、全部 / 当前角色、角色字段编辑、独立管理、筛选、批量标签、PNG 导出及删除。批量删除保留聊天文件，当前角色须先切换再删除。
+- 连接标题弹出按模型分组的配置列表；表头新建、记录、删除，API 模型和连接／测试在最前。完整原生 API 表单直接嵌入右栏，保持服务商专属选项、凭据管理和保存链路，不另建凭据存储。
+- 预设标题弹出选择，主体显示完整宽度的提示词启停列表和原文编辑器；流式／思维链常驻，数值输入紧凑，常用参数可配置，其他参数和文件管理收纳。支持独立深度编辑、原始 JSON 辅助视图和连接／模型绑定；连接绑定优先。
+- Persona 右栏直接管理名称、描述、注入位置／深度／角色、世界书绑定、默认／锁定关系和全局偏好；表头提供头像、新建、复制，保留统计、名称同步和备份恢复等入口。
+- Trace 展示浏览器实际生成请求、组装事件快照和真实世界书激活事件。最近 20 条，仅内存，正文快照上限 128 KiB；导出前过滤认证字段。
 
-酒馆助手复用了现有部署的 `dist`、`lib`、`i18n`、manifest 和许可证。现有目录并非已确认干净的上游 checkout，因此以实际部署资产哈希固定，不将它描述为某个干净的上游提交。
+世界书是多选资源，“下一个”浏览下一本详情，不会清空其他已启用世界书。正文编辑默认收纳，双击条目或点击右侧编辑图标展开。编辑冲突或保存失败保留草稿；未保存关闭时提醒。大纲目前保留占位，待页面样式完成后独立开发。
 
-## 运行与验证
+## 主题与快捷键
 
-首次准备：
+[Noval · Paper 主题](themes/noval-paper.json) 可从酒馆原生 UI 主题入口导入；也可将 [主题 CSS](themes/noval-paper.css) 放入自定义 CSS。插件自带默认样式，因此不导入也可使用。主题只负责表现，布局与行为由插件负责。主题变量用 `--wb-theme-*` 命名，可独立调整颜色和正文字体。
+
+左下「快捷键」可录入工作台操作的组合键、清除绑定、关闭快捷键或恢复默认；重复绑定会提示冲突。以下为默认组合，角色侧栏默认不绑定：
+
+| 默认快捷键 | 操作 |
+| --- | --- |
+| Alt + Shift + 1 / 2 / 3 / 4 | 连接 / 预设 / 世界书 / 用户设定 |
+| Alt + Shift + N | 下一个连接 |
+| Alt + Shift + L | 收纳左栏 |
+| Alt + Shift + T | Trace |
+| Alt + Shift + F | 进入／退出专注 |
+
+发送与 Markdown 编辑快捷键沿用酒馆设置，不覆盖中文输入法组合输入。
+
+阅读区右上「T」可调字体、字号、行距和正文左右留白。留白默认左右各 64px，可在 24–128px 间调整；窄阅读区会限制有效留白以保留正文宽度。配置随酒馆用户设置保存，独立用户设置的阅读排版区同步使用。
+
+## 构建与运行
 
 ```bash
-cd /home/yuwk/code/sillytavern-workbench
 npm ci
+npm run build
 npm run prepare:baseline
 npm run start
 ```
 
-准备脚本检查官方提交与镜像 revision；已存在的测试数据和凭据不会被初始化覆盖。缺少官方源码时自动拉取固定 tag。镜像需先存在于本机，可按 `baseline.lock.json` 中的 reference 拉取。
+官方 release、镜像 digest 和酒馆助手资产快照由 `baseline.lock.json` 固定。准备脚本检查版本，不初始化覆盖现有数据；需要本机已有锁定镜像，可按 lock 中的 reference 获取。`WB_HELPER_SOURCE` 可指定另一台机器上的同版本酒馆助手资产。
 
-其他机器可以通过 `WB_HELPER_SOURCE` 指定同一部署版本的酒馆助手目录。已有快照的哈希必须与 lock 一致，变更需要显式更新版本记录。浏览器默认使用本机现有 Chromium；可用 `WB_CHROMIUM` 指定可执行文件。
-
-```bash
-npm run check
-npm test
-npm run verify
-npm run benchmark
-```
-
-`verify` 会清理两个隔离实例内名为 `WorkbenchFixture` 的合成聊天，并重建验证流程；不得在这些测试实例内存放需要保留的真实聊天。`benchmark` 在验证实例内临时切换扩展启用组合，结束时恢复原设置，同时重启官方基线实例三次。
-
-停止并保留数据：
+验证实例继续使用 `third-party/workbench-probe` 扩展目录标识，将原探针升级为工作台，避免重复加载。部署文件是 `extension/` 整个目录，修改 `src/` 后必须重新 `npm run build`。没有必需的服务端插件、核心补丁或额外数据库。
 
 ```bash
-npm run stop
+npm run check              # TypeScript、观察器与测试模型语法
+npm test                   # 保存冲突 / 数据保留 / Trace 单元测试
+npm run verify             # 原生生成、助手、回退、停用与窄屏回归
+npm run verify:workbench    # 工作台配置、编辑、布局与 Trace
+npm run verify:compat      # 批量角色、快捷回复、STscript、附件、正则与保存失败
+npm run verify:interactions # 菜单、阅读、九类设置、批量资源、聊天文件与草稿恢复
+npm run verify:fidelity    # 1496×817 主尺寸、原组件迁移、管理密度与四种桌面尺寸
+npm run verify:motion      # 输入展开中间帧、固定标题与背景单行工具栏
+npm run verify:click-motion # 真实酒馆鼠标点击：开合、勾选、编辑与页面切换，并录制视频
+npm run verify:preferences  # 两侧留白、选中样式和自定义快捷键的真实页面／刷新验证
+npm run benchmark          # 冷 / 热启动对照；结束恢复隔离实例设置
+npm run benchmark:chat     # 400 条内存合成消息的渲染与滚动对照
+npm run stop               # 停止隔离实例，保留数据
 ```
 
-测试模型复用同一个镜像中的 Node，单独运行确定性测试接口，不需要数据库、Redis、模型密钥或外部模型。原生酒馆服务真正将请求发送到它，因而可以独立验证浏览器请求与服务端出站消息。测试模型的请求检查端口 `32013` 仅绑定 localhost。
+浏览器使用已有 Chromium，可用 `WB_CHROMIUM` 指定路径。上述集成验证只访问两个隔离实例及本地确定性测试模型，不读取生产聊天或调用真实模型。请串行运行集成测试和性能测试，以免同时修改同一个隔离账号。
 
-## 验证结果与边界
+## 源码与维护
 
-完整结论、采样方法、兼容发现和后续接入边界见 [第 1 阶段报告](docs/stage-1-report.md)。结果文件：
+- `src/host/`：状态、命令、版本相关接口、保存与冲突检查；所有宿主访问集中在这里。
+- `src/ui/` 与 `src/App.tsx`：公共组件和横屏布局；`src/modules/`：按需加载的世界书、角色、资源编辑和 Trace。
+- `extension/trace.js`：已验证的请求观察器；`extension/dist/`：可直接部署的构建产物。
+- `themes/`：原生主题产物；`docs/design/`：确认稿与资源编辑补充设计。
+- `upstream/`、`runtime/`、`artifacts/`：官方 checkout、隔离运行数据、检查结果，均忽略入库。
 
-- `artifacts/verification.json`：10 项浏览器验证全部通过。
-- `artifacts/benchmark.json`：三组各 5 次冷缓存及 5 次热缓存采样、三次服务端重启。
-- `artifacts/source-integrity.json`：7 个关键官方文件与发布镜像一致，上游 tracked 文件保持干净。
-- `artifacts/request-trace.json` 与 `provider-request.json`：仅合成数据的请求及命中证据。
-- `artifacts/desktop-probe.png`、`native-fallback.png`、`mobile-native.png`：验证截图。
+[总体架构](docs/architecture/overall-architecture.md) · [第一阶段验证](docs/stage-1-report.md) · [横屏 Noval 实现报告](docs/stage-2-report.md)
 
-HTTP 局域网地址可用于网页技术验证，尚未完成 HTTPS 安装形态、真实手机 PWA 或 iOS 软键盘验证。性能数据来自小型合成数据集，不代表现有生产负载。
+新官方 release 先更新隔离基线并运行回归，再迁移生产；官方文件、工作台、助手版本分别维护。真实供应商差异、其他第三方插件、生产规模负载和实际手机 PWA 仍需独立验证。独立生图编排、XML / 图片导出和目录同步属于后续模块。
 
-## 后续维护
+## 横屏 Noval 主页重做
 
-官方 release、镜像 digest、插件资产版本分别记录。新 release 先在这两个实例运行相同验证，再决定升级；生产端口与数据卷不参与准备或测试脚本。当前没有核心补丁、服务端插件、Early Bridge 或 Service Worker。
+已按确认预览接入正式主页：居中配置、正文工具栏、专注、侧栏收纳、原生输入拖动、圆形发送与统一控件动效。访问验证实例后刷新即可加载。详细范围与验收结果见 [主页重做记录](docs/design/novel-desktop/rework/implementation.md)。
 
-发现现有生产环境还安装了 `story-workspace`，其部署说明记录了 Novel / RP 外壳和原生节点复用。该扩展未被本阶段覆盖或加载到隔离实例；后续界面阶段应先定位并审阅它的源项目，确定复用方式，避免同时挂载两个工作台。
+`npm run verify:home` 检查正式页面布局与交互。Trace 和资源右栏已进一步接入，使用 `npm run verify:resources` 检查。九类独立设置、纸张弹出菜单、聊天管理与小说阅读区已按确认稿接入，使用 `npm run verify:interactions` 验证。见 [本轮接入记录](docs/design/novel-desktop/rework/interactions-implementation.md)。
+
+连接、预设、用户设定的新右栏已按确认稿接入；模型／连接／测试前置，滚动条统一为暖灰细条，资源行只绘制一层悬浮和选中反馈。见 [资源右栏修订与验证](docs/design/novel-desktop/rework/resources-redesign.md)。中间阅读区的增量需求保存在 [阅读区队列](docs/design/novel-desktop/rework/reading-queue.md)。
+
+2026-10-08 的尺寸校准与组件迁移已接入：一级资源列外展 180px，角色／身份管理紧凑化，低频页面保留完整原组件和局部操作。实际尺寸、功能验证与检查图见 [此次修复记录](docs/design/novel-desktop/rework/migration-implementation-2026-10-08.md)。
