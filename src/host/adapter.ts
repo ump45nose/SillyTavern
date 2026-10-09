@@ -320,12 +320,14 @@ export class HostAdapter {
       ?? (snap.groupId ? null : document.getElementById("expression-holder"));
     const image = holder?.querySelector<HTMLImageElement>("img.expression[src]");
     const sprite = image?.getAttribute("src") || "";
+    const characterSprite = !snap.groupId && typeof c.chatMetadata?.workbenchRP?.characterSprite === "string" ? c.chatMetadata.workbenchRP.characterSprite : "";
     const scene = c.chatMetadata?.workbenchRP?.scene;
     return {
       name: actor?.name || snap.groupName || "选择角色",
       portrait: actor?.avatar && actor.avatar !== "none" ? "/characters/" + encodeURIComponent(actor.avatar) : "",
+      // Keep native expressions live; a chat-specific sprite fills in when none is available.
       // Native emoji fallbacks are icons, not full-size character artwork.
-      sprite: sprite && !sprite.includes("/expressions/images/") ? sprite : "",
+      sprite: sprite && !sprite.includes("/expressions/images/") ? sprite : characterSprite,
       userName: c.name1 || "你",
       userPortrait: snap.current.persona ? "/User%20Avatars/" + encodeURIComponent(snap.current.persona) : "",
       // A chat can supply a transparent user sprite without replacing its persona avatar.
