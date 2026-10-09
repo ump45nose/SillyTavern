@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { HostAdapter, nativeNodes } from "./host/adapter";
 import App, { beforeClose } from "./App";
+import { LayoutSwitcher, type LayoutMode } from "./ui/LayoutSwitcher";
 import { createTrace } from "../extension/trace.js";
 import "./style.css";
 import "./home.css";
@@ -13,6 +14,7 @@ import "./polish.css";
 import "./selection.css";
 import "./preferences.css";
 import "./rp.css";
+import "./layout.css";
 class Boundary extends React.Component<
   { children: React.ReactNode },
   { failed: boolean }
@@ -41,10 +43,45 @@ let root: Root | undefined,
 let mounted = false,
   mounting = false,
   disposed = false;
+let layoutRoot:Root | undefined, layoutContainer:HTMLElement | undefined, unsubscribeLayout:(()=>void) | undefined;
 const launcher = document.createElement("button");
 launcher.id = "wb-launcher";
 launcher.textContent = "创作工作台";
 const media = matchMedia("(min-width: 1024px)");
+function updateLayoutSwitcher() {
+  if (!layoutRoot || disposed) return;
+  const mode:LayoutMode = mounted ? host?.prefs().layout === "rp" ? "rp" : "novel" : "native";
+  layoutRoot.render(<LayoutSwitcher mode={mode} desktop={media.matches} onChange={changeLayout}/>);
+}
+async function changeLayout(mode:LayoutMode) {
+  if (!beforeClose()) return false;
+  if (mode === "native") {
+    const previous = context.accountStorage.getItem("wb-native");
+    context.accountStorage.setItem("wb-native", "true");
+    try {
+      if (host) await host.persistSettings();
+      else { const scriptPath = "/script.js"; await (await import(scriptPath)).saveSettings(); }
+    } catch (error) {
+      if (previous === null) context.accountStorage.removeItem("wb-native");
+      else context.accountStorage.setItem("wb-native", previous);
+      throw error;
+    }
+    unmount();
+    return true;
+  }
+  if (!media.matches) throw new Error("工作台需要至少 1024px 的横屏窗口。");
+  if (window.storyWorkspace) throw new Error("请先停用 Story Workspace，再切换工作台。");
+  context.accountStorage.removeItem("wb-native");
+  if (!mounted) {
+    context.extensionSettings.workbench ??= {};
+    context.extensionSettings.workbench.layout = mode;
+    await mount();
+  } else host!.preference({ layout:mode });
+  if (!mounted || !host) throw new Error("工作台未能载入，请刷新后重试。");
+  await host.persistSettings();
+  updateLayoutSwitcher();
+  return true;
+}
 async function mount() {
   if (mounted || mounting || disposed) return;
   if (!media.matches) {
@@ -60,6 +97,7 @@ async function mount() {
   try {
     host = new HostAdapter();
     await host.init();
+    unsubscribeLayout = host.subscribe(updateLayoutSwitcher);
     if (disposed) {
       host.destroy();
       return;
@@ -80,15 +118,16 @@ async function mount() {
           trace={trace}
           toolbar={toolbar}
           onExit={() => {
-            context.accountStorage.setItem("wb-native", "true");
-            unmount();
+            void changeLayout("native").catch(error => host?.report(error));
           }}
+          onLayout={mode => { void changeLayout(mode).catch(error => host?.report(error)); }}
         />
       </Boundary>,
     );
     document.body.classList.add("wb-active");
     launcher.hidden = true;
     mounted = true;
+    updateLayoutSwitcher();
     metrics.mountedMs = performance.now();
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
@@ -105,6 +144,7 @@ async function mount() {
   }
 }
 function unmount() {
+  unsubscribeLayout?.(); unsubscribeLayout = undefined;
   root?.unmount();
   root = undefined;
   host?.destroy();
@@ -129,7 +169,8 @@ function unmount() {
     "wb-rp-overlay-open",
   );
   mounted = false;
-  launcher.hidden = false;
+  launcher.hidden = !!layoutRoot;
+  updateLayoutSwitcher();
 }
 launcher.addEventListener("click", () => {
   context.accountStorage.removeItem("wb-native");
@@ -137,6 +178,12 @@ launcher.addEventListener("click", () => {
 });
 function start() {
   document.body.append(launcher);
+  layoutContainer = document.createElement("div");
+  layoutContainer.id = "wb-layout-root";
+  document.body.append(layoutContainer);
+  layoutRoot = createRoot(layoutContainer);
+  launcher.hidden = true;
+  updateLayoutSwitcher();
   if (context.accountStorage.getItem("wb-native") !== "true") void mount();
 }
 function ready() {
@@ -150,6 +197,7 @@ function initialized() {
 }
 const resize = () => {
   if (!media.matches && mounted && beforeClose()) unmount();
+  updateLayoutSwitcher();
 };
 media.addEventListener("change", resize);
 window.workbench = {
@@ -181,6 +229,8 @@ window.addEventListener(
   () => {
     disposed = true;
     unmount();
+    layoutRoot?.unmount(); layoutRoot = undefined;
+    layoutContainer?.remove(); layoutContainer = undefined;
     launcher.remove();
     media.removeEventListener("change", resize);
     context.eventSource.removeListener(context.eventTypes.APP_READY, ready);

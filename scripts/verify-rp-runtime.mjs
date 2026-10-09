@@ -51,11 +51,11 @@ try {
   await role("预设详情").click(); await settle(); await page.locator(".wb-resource-v3").waitFor(); await role("收起资源侧栏").click(); await settle();
   pass("existing world and preset editors reused with the 180px resource rail");
 
-  await role("自动收纳顶栏").click(); await page.mouse.move(750, 400); await settle();
+  await role("固定顶栏").click(); await page.mouse.move(750, 400); await settle();
   assert.equal(await has("wb-rp-top-collapsed"), true); await page.mouse.move(740, 4); await settle(); assert.equal(await has("wb-rp-top-collapsed"), false);
   await page.mouse.move(740, 400); await settle(); assert.equal(await has("wb-rp-top-collapsed"), true);
   await role("显示顶栏").focus(); await role("显示顶栏").press("Enter"); await settle(); assert.equal(await has("wb-rp-top-collapsed"), false);
-  await role("自动收纳顶栏").click(); await page.mouse.move(700, 400); await settle();
+  await role("固定顶栏").click(); await page.mouse.move(700, 400); await settle();
   pass("top bar hover and keyboard reveal work while its auto-hide preference persists");
 
   await role("输入回应").click(); await settle(); const input = page.locator("#send_textarea"), draft = "WB_RP_DRAFT **MD**\n<story>{{char}}</story>";

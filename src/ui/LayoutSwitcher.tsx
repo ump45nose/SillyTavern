@@ -1,0 +1,52 @@
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { BookOpen, ChevronDown, PanelsTopLeft, Theater } from "lucide-react";
+import { usePresence } from "./Motion";
+
+export type LayoutMode = "novel" | "rp" | "native";
+const modes = [
+  { id:"novel", name:"Noval", detail:"阅读工作台", Icon:BookOpen },
+  { id:"rp", name:"RP", detail:"双立绘舞台", Icon:Theater },
+  { id:"native", name:"原生", detail:"酒馆原版", Icon:PanelsTopLeft },
+] as const;
+
+/** Stays mounted independently of the workbench so native mode has the same entry. */
+export function LayoutSwitcher({ mode, desktop, onChange }: { mode:LayoutMode; desktop:boolean; onChange:(mode:LayoutMode)=>Promise<boolean> }) {
+  const [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), presence = usePresence(open ? true : null);
+  const selected = modes.find(item => item.id === mode)!;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("wb-layout-menu", { detail:open }));
+    return () => { window.dispatchEvent(new CustomEvent("wb-layout-menu", { detail:false })); };
+  }, [open]);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => (root.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]:not(:disabled)') || root.current?.querySelector<HTMLButtonElement>('button[role="menuitemradio"]:not(:disabled)'))?.focus({ preventScroll:true }));
+    const outside = (event:PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("pointerdown", outside);
+    return () => { cancelAnimationFrame(frame); document.removeEventListener("pointerdown", outside); };
+  }, [open]);
+  const choose = async (next:LayoutMode) => {
+    if (busy) return;
+    if (next === mode) { setOpen(false); trigger.current?.focus(); return; }
+    setBusy(true); setError("");
+    try { if (await onChange(next)) { setOpen(false); trigger.current?.focus({ preventScroll:true }); } }
+    catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+    finally { setBusy(false); }
+  };
+  return <div ref={root} className={`wb-layout-switcher wb-ui ${mode === "rp" ? "is-rp" : ""}`} onKeyDown={event => {
+    if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); trigger.current?.focus(); }
+  }}>
+    <button ref={trigger} className="wb-layout-trigger" aria-label="切换工作台" title={`切换工作台 · 当前 ${selected.name}`} aria-haspopup="menu" aria-expanded={open} aria-controls="wb-layout-menu" disabled={busy} onClick={() => { setError(""); setOpen(!open); }} onKeyDown={event => {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); }
+    }}><selected.Icon size={17}/><span>{selected.name}</span><ChevronDown className="wb-layout-chevron" size={13}/></button>
+    {presence.value && <div id="wb-layout-menu" className="wb-layout-menu" role="menu" aria-label="工作台模式" data-wb-exiting={presence.exiting || undefined} inert={presence.exiting} onKeyDown={event => {
+      if (event.key === "Tab") { setOpen(false); return; }
+      const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')], index = items.indexOf(document.activeElement as HTMLButtonElement);
+      const next = event.key === "ArrowDown" ? (index + 1) % items.length : event.key === "ArrowUp" ? (index - 1 + items.length) % items.length : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : -1;
+      if (next >= 0) { event.preventDefault(); items[next]?.focus(); }
+    }}>
+      {modes.map(({ id, name, detail, Icon }) => <button key={id} role="menuitemradio" aria-checked={mode === id} disabled={busy || (!desktop && id !== "native")} title={!desktop && id !== "native" ? "工作台需要至少 1024px 的横屏窗口" : undefined} onClick={() => void choose(id)}><Icon size={19}/><span><strong>{name}</strong><small>{detail}</small></span><i className="wb-layout-dot" aria-hidden="true"/></button>)}
+      {error && <p className="wb-layout-error" role="alert">{error}</p>}
+    </div>}
+  </div>;
+}

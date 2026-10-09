@@ -15,12 +15,15 @@ body.wb-rp .wb-contexts { transform:translateX(24px); }
 body.wb-rp .wb-identity img { border-radius:50%; object-fit:cover; object-position:50% 24%; }
 body.wb-rp .wb-top-right .wb-top-action { width:36px; height:36px; min-height:36px; padding:7px; }
 body.wb-rp.wb-rp-top-collapsed .wb-top { transform:translateY(-100%); opacity:0; visibility:hidden; }
+body.wb-rp .wb-top { transition:transform 220ms,opacity 160ms,visibility 0s; }
+body.wb-rp.wb-rp-top-collapsed .wb-top { transition:transform 220ms,opacity 160ms,visibility 0s 220ms; }
 body.wb-rp .wb-rp-visibility { position:fixed; top:18px; right:24px; width:36px; height:36px; min-height:36px; padding:8px; z-index:60; background:transparent; border:1px solid transparent; }
 body.wb-rp:is(.wb-focus,.wb-rp-top-collapsed) .wb-rp-visibility { background:var(--wb-surface); border-color:var(--wb-line); }
-.wb-rp-top-trigger { position:fixed; inset:0 68px auto 0; height:14px; border:0; border-radius:0; padding:0; background:transparent; z-index:31; }
+.wb-ui .wb-rp-top-trigger { position:fixed; inset:0 68px auto 0; height:14px; min-height:14px; border:0; border-radius:0; padding:0; background:transparent !important; box-shadow:none; z-index:31; }
 .wb-rp-top-trigger span { width:40px; height:3px; border-radius:3px; background:var(--wb-muted); opacity:0; transition:opacity 160ms; }
 body.wb-rp-top-collapsed .wb-rp-top-trigger span { opacity:.5; }
-.wb-rp-top-trigger:focus-visible { outline-offset:-3px; background:var(--wb-surface); }
+body.wb-rp:not(.wb-rp-top-collapsed) .wb-rp-top-trigger { pointer-events:none; }
+.wb-rp-top-trigger:focus-visible { outline-offset:-3px; }
 body.wb-rp .wb-rp-stage-nav { position:fixed; top:calc(var(--wb-rp-chrome) + 12px); left:var(--wb-left); right:var(--wb-right); padding:0 22px; display:flex; justify-content:space-between; pointer-events:none !important; z-index:14; transition:top 220ms,left 220ms,right 220ms,opacity 160ms,visibility 160ms; }
 body.wb-rp-top-auto .wb-rp-stage-nav { top:18px; padding-right:68px; }
 .wb-rp-stage-nav .wb-icon { width:32px; height:32px; min-height:32px; padding:6px; background:var(--wb-surface); border:1px solid var(--wb-line); border-radius:7px; pointer-events:auto; }

@@ -51,6 +51,7 @@ export function Header({ snap, panel, chooser, setChooser, goPanel, next, select
     <div className="wb-top-right">
       <button className={`wb-top-action ${panel === "trace" ? "is-active" : ""}`} title="Trace" aria-label="Trace" aria-pressed={panel === "trace"} onClick={() => goPanel(panel === "trace" ? null : "trace")}><Activity size={24} /></button>
       {actions ?? <button className={`wb-top-action wb-focus-toggle ${focused ? "is-active" : ""}`} title={`专注模式${focusShortcut?" · "+focusShortcut:""}`} aria-label="专注模式" aria-pressed={focused} onClick={focus}><ScanLine size={24} /></button>}
+      <span className="wb-layout-space" aria-hidden="true"/>
     </div>
   </header>;
 }

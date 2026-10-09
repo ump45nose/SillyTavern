@@ -15,7 +15,7 @@ export function RPAppearance({ host }: { host: HostAdapter }) {
       <label className="wb-field"><span>对白字号<output>{boundedPreference(prefs.rpTextSize, 19, 14, 26)} px</output></span><input aria-label="RP 对白字号" type="range" min="14" max="26" value={boundedPreference(prefs.rpTextSize, 19, 14, 26)} onChange={e => host.preference({ rpTextSize: Number(e.target.value) })} /></label>
       <label className="wb-field"><span>对白区域宽度<output>{boundedPreference(prefs.rpDialogWidth, 88, 65, 94)}%</output></span><input aria-label="RP 对白宽度" type="range" min="65" max="94" value={boundedPreference(prefs.rpDialogWidth, 88, 65, 94)} onChange={e => host.preference({ rpDialogWidth: Number(e.target.value) })} /></label>
       <label className="wb-field"><span>角色立绘大小<output>{boundedPreference(prefs.rpSpriteScale, 91, 55, 100)}%</output></span><input aria-label="RP 立绘大小" type="range" min="55" max="100" value={boundedPreference(prefs.rpSpriteScale, 91, 55, 100)} onChange={e => host.preference({ rpSpriteScale: Number(e.target.value) })} /></label>
-      <label className="wb-check"><input type="checkbox" checked={!!prefs.rpTopAuto} onChange={e => host.preference({ rpTopAuto: e.target.checked })} />自动收纳顶栏</label>
+      <label className="wb-check"><input type="checkbox" checked={!!prefs.rpTopAuto} onChange={e => host.preference({ rpTopAuto: e.target.checked })} />鼠标悬浮显示顶栏</label>
       <label className="wb-check"><input type="checkbox" checked={prefs.rpShowPortraits !== false} onChange={e => host.preference({ rpShowPortraits: e.target.checked })} />没有立绘时显示角色画像</label>
     </div></Popover>}
   </>;

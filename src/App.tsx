@@ -10,6 +10,7 @@ import {ReadingPresentation,ReadingSettings} from "./ui/Reading";
 import { Operations, shortcutAction, shortcutHint } from "./host/operations";
 import {Shortcuts} from "./ui/Shortcuts";
 import {RPStage} from "./ui/RPStage";
+import type {LayoutMode} from "./ui/LayoutSwitcher";
 import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
 import {
@@ -41,11 +42,13 @@ export default function App({
   trace,
   toolbar,
   onExit,
+  onLayout,
 }: {
   host: HostAdapter;
   trace: any;
   toolbar: HTMLElement;
   onExit: () => void;
+  onLayout: (layout:LayoutMode) => void;
 }) {
   const [operations] = useState(() => new Operations());
   const snap = useHost(host),
@@ -66,14 +69,43 @@ export default function App({
     [help, setHelp] = useState(false),
     [externalError, setExternalError] = useState("");
   const rp = host.prefs().layout === "rp", topAuto = rp && !!host.prefs().rpTopAuto;
-  const [topHot, setTopHot] = useState(false), [topFocus, setTopFocus] = useState(false);
-  const topCollapsed = topAuto && !topHot && !topFocus && !chooser;
-  const switchLayout = (layout: "novel" | "rp") => {
-    if (!beforeClose()) return;
+  const [topHot, setTopHot] = useState(false), [topFocus, setTopFocus] = useState(false), [layoutMenu, setLayoutMenu] = useState(false);
+  const topCollapsed = topAuto && !topHot && !topFocus && !chooser && !layoutMenu;
+  const topPointer = useRef(Infinity);
+  const lastLayout = useRef(rp);
+  useLayoutEffect(() => {
+    if (lastLayout.current === rp) return;
+    lastLayout.current = rp;
     setPanel(null); setChooser(null); setPopup(null); setWorkspace(null); setDeep(null); setFocus(false); setTopHot(false); setTopFocus(false);
-    setLeft(layout === "rp" ? false : host.prefs().left);
-    host.preference({layout});
-  };
+    setLeft(rp ? false : host.prefs().left);
+  }, [rp, host]);
+  const switchLayout = onLayout;
+  useEffect(() => {
+    const menu = (event:Event) => { const open = !!(event as CustomEvent).detail; setLayoutMenu(open); if (open) setChooser(null); };
+    window.addEventListener("wb-layout-menu", menu);
+    return () => window.removeEventListener("wb-layout-menu", menu);
+  }, []);
+  useEffect(() => {
+    if (!rp) return;
+    setTopHot(topAuto && topPointer.current <= (topCollapsed ? 14 : 74));
+    let hide:ReturnType<typeof setTimeout> | undefined;
+    const clear = () => { if (hide) clearTimeout(hide); hide = undefined; };
+    const leave = () => { if (!hide) hide = setTimeout(() => {
+      setTopHot(false);
+      if (!document.querySelector('.wb-top :focus-visible,.wb-rp-top-trigger:focus-visible')) setTopFocus(false);
+      hide = undefined;
+    }, 140); };
+    const move = (event:PointerEvent) => {
+      if (event.pointerType === "touch") return;
+      topPointer.current = event.clientY;
+      if (!topAuto) return;
+      // The reveal strip and header form one hover region, without relying on display:contents hit boxes.
+      if (event.clientY <= (topCollapsed ? 14 : 74)) { clear(); setTopHot(true); }
+      else leave();
+    };
+    document.addEventListener("pointermove", move); document.documentElement.addEventListener("pointerleave", leave);
+    return () => { clear(); document.removeEventListener("pointermove", move); document.documentElement.removeEventListener("pointerleave", leave); };
+  }, [rp, topAuto, topCollapsed]);
   const selectedIds = useRef<Partial<Record<NonNullable<Panel>, string>>>({});
   const popupPresence=usePresence(popup),workspacePresence=usePresence(workspace),helpPresence=usePresence(help?true:null);
   const openPopup=useCallback((next:ComposerPopup)=>setPopup(prev=>prev?.kind===next.kind&&prev.anchor===next.anchor?null:next),[]);
@@ -206,10 +238,10 @@ export default function App({
   return (
     <>
       <ClickFeedback/>
-      <div className="wb-header-shell" inert={rp && (focus || topCollapsed)} onMouseEnter={()=>setTopHot(true)} onMouseLeave={e=>{setTopHot(false);if(!e.currentTarget.querySelector(':focus-visible'))setTopFocus(false);}} onFocusCapture={()=>setTopFocus(true)} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setTopFocus(false);}}>
+      <div className="wb-header-shell" inert={rp && (focus || topCollapsed)} onPointerLeave={e=>{if(e.pointerType!=="touch"&&!e.currentTarget.querySelector(':focus-visible'))setTopFocus(false);}} onFocusCapture={()=>setTopFocus(true)} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setTopFocus(false);}}>
       <Header snap={snap} panel={panel} chooser={chooser} setChooser={setChooser} goPanel={goPanel}
         next={kind => operations.run(`next.${kind}`)} model={host.model()} focus={toggleFocus} focused={focus}
-        actions={rp ? <button className={`wb-top-action ${topAuto?"is-active":""}`} aria-label="自动收纳顶栏" title="自动收纳顶栏" aria-pressed={topAuto} onClick={()=>host.preference({rpTopAuto:!topAuto})}>{topAuto?<PinOff size={20}/>:<Pin size={20}/>}</button> : undefined}
+        actions={rp ? <button className={`wb-top-action wb-top-pin ${!topAuto?"is-active":""}`} aria-label="固定顶栏" title={topAuto?"固定顶栏":"取消固定 · 鼠标悬浮显示"} aria-pressed={!topAuto} onClick={()=>{setTopHot(true);setTopFocus(!!document.querySelector('.wb-top-pin:focus-visible'));host.preference({rpTopAuto:!topAuto});}}>{topAuto?<PinOff size={20}/>:<Pin size={20}/>}</button> : undefined}
         focusShortcut={host.prefs().shortcutsEnabled===false?"":shortcutHint("toggle.focus",host.prefs().shortcuts)}
         select={(kind, id, enabled) => task.run(async () => {
           if (kind === "world") await host.toggleBook(id, enabled);
@@ -217,7 +249,7 @@ export default function App({
         })} />
       </div>
       {rp && <><button className="wb-rp-visibility wb-icon" aria-label={focus?"显示界面":"隐藏界面"} title={focus?"显示界面":"隐藏界面"} aria-pressed={focus} onClick={toggleFocus}>{focus?<Eye size={20}/>:<EyeOff size={20}/>}</button>
-      {topAuto && !focus && <button className="wb-rp-top-trigger" aria-label="显示顶栏" onMouseEnter={()=>setTopHot(true)} onMouseLeave={e=>{if(!(e.relatedTarget as Element)?.closest?.('.wb-top'))setTopHot(false);}} onFocus={()=>setTopFocus(true)} onBlur={e=>{if(!(e.relatedTarget as Element)?.closest?.('.wb-top'))setTopFocus(false);}} onClick={()=>{setTopHot(true);setTopFocus(true);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('.wb-selector-value')?.focus());}}><span/></button>}</>}
+      {topAuto && !focus && <button className="wb-rp-top-trigger" aria-label="显示顶栏" tabIndex={topCollapsed?0:-1} onFocus={()=>setTopFocus(true)} onBlur={e=>{if(!(e.relatedTarget as Element)?.closest?.('.wb-top'))setTopFocus(false);}} onClick={()=>{setTopHot(true);setTopFocus(true);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('.wb-selector-value')?.focus());}}><span/></button>}</>}
       {!rp &&
       <div className="wb-reading-bar">
         {!focus && <IconButton title={`收纳左栏${host.prefs().shortcutsEnabled!==false&&shortcutHint("toggle.left",host.prefs().shortcuts)?" · "+shortcutHint("toggle.left",host.prefs().shortcuts):""}`} onClick={() => operations.run("toggle.left")}>
@@ -235,7 +267,7 @@ export default function App({
       }
       {rp && <nav className={`wb-rp-stage-nav ${focus?"is-hidden":""}`} inert={focus} aria-label="边栏操作"><IconButton title={leftVisible?"收纳左边栏":"展开左边栏"} onClick={toggleLeft}>{leftVisible?<PanelLeftClose size={18}/>:<PanelLeftOpen size={18}/>}</IconButton><IconButton title={panel?"关闭右栏":"角色与资源侧栏"} onClick={()=>goPanel(panel?null:"character")}>{panel?<PanelRightClose size={18}/>:<PanelRightOpen size={18}/>}</IconButton></nav>}
       <Navigation host={host} snap={snap} visible={leftVisible} settings={openSettings} open={openPopup}
-        help={() => setHelp(true)} exit={() => { if (beforeClose()) onExit(); }} run={task.run} />
+        help={() => setHelp(true)} exit={onExit} run={task.run} />
       <aside id="wb-resource-rail" ref={setRailTarget} className={`wb-resource-rail ${railVisible?"is-open":""}`} inert={!railVisible} aria-hidden={!railVisible} aria-label="资源列表与角色信息"/>
       <aside className={`wb-right ${panel && !focus ? "is-open" : ""}`} inert={!panel || focus} aria-hidden={!panel || focus} aria-label="角色与资源">
         <div className="wb-panel-header-row"><button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button>{rp&&<IconButton title="收起资源侧栏" onClick={()=>goPanel(null)}><X size={17}/></IconButton>}</div>
