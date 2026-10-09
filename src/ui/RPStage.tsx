@@ -47,6 +47,7 @@ export function RPStage({ host, hidden, blocked, width, readingLayout, run }: {
   useEffect(() => { const resize = () => setHeight(innerHeight); window.addEventListener("resize", resize); return () => window.removeEventListener("resize", resize); }, []);
   const capacity = Math.max(120, Math.round((width * dialogWidth / 100 - 56) / textSize * Math.max(2, (Math.min(360, Math.max(180, height * .25)) - 50) / (textSize * 1.9))));
   const messages = useNativeDialogue(host, capacity), [cursor, setCursor] = useState<Cursor>({ id: -1, page: -1, compose: false });
+  const beforeImage=useRef<Cursor|null>(null),cursorNow=useRef(cursor);cursorNow.current=cursor;
   const [history, setHistory] = useState(false), [expanded, setExpanded] = useState(false), [mediaRevision, setMediaRevision] = useState(0);
   const [scroll, setScroll] = useState({ overflow:false, scrolled:false, end:true });
   const originals = useRef(new Map<HTMLElement, { inert: boolean; aria: string | null }>()), partsSeen = useRef(new Set<HTMLElement>());
@@ -67,10 +68,12 @@ export function RPStage({ host, hidden, blocked, width, readingLayout, run }: {
   }, [messages, cursor.id]);
   useEffect(() => {
     const jump = (e: Event) => { live.current = false; setHistory(false); setCursor({ id: (e as CustomEvent<number>).detail, page: 0, compose: false }); };
-    const imageCompose=()=>{live.current=false;setHistory(false);setCursor(old=>({...old,compose:true}));};
+    const imageCompose=()=>{beforeImage.current??={...cursorNow.current};live.current=false;setHistory(false);setCursor(old=>({...old,compose:true}));};
+    const imageEnd=()=>{if(beforeImage.current){setCursor(beforeImage.current);beforeImage.current=null;}};
     window.addEventListener("wb-image-compose", imageCompose);
+    window.addEventListener("wb-image-compose-end", imageEnd);
     window.addEventListener("wb-rp-jump", jump);
-    return () => {window.removeEventListener("wb-rp-jump", jump);window.removeEventListener("wb-image-compose", imageCompose);};
+    return () => {window.removeEventListener("wb-rp-jump", jump);window.removeEventListener("wb-image-compose", imageCompose);window.removeEventListener("wb-image-compose-end", imageEnd);};
   }, []);
   useEffect(() => {
     let frame = 0;

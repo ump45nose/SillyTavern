@@ -1,6 +1,7 @@
 import { randomId } from "../../host/ids";
 import type { AddonRuntime, MessageTarget, StoryReply, TaskHost, TaskState } from '../types';
 import { configuration, generateImage } from './backends';
+import {normalizeReferences,type ImageReference} from './reference-files';
 import { cleanPrompts, sceneSource } from './prompts';
 export interface ImageResult {
     id: string;
@@ -14,7 +15,7 @@ export interface ImageResult {
 export function createRuntime(host: TaskHost): AddonRuntime {
     const metadata = host.metadata(), key = host.snapshot().chatKey, listeners = new Set<() => void>();
     let version = 0, disposed = false, controller: AbortController | undefined, task: TaskState = { status: 'idle', label: '' }, target: MessageTarget | undefined;
-    let data = { positive: '', negative: '', source: '', results: (Array.isArray(metadata.results) ? metadata.results : []) as ImageResult[], auto: { enabled: false, every: 3, delivery: 'insert', ...(metadata.auto || {}) }, count: 0 };
+    let data = { references: [] as ImageReference[], referencesReading:0, positive: '', negative: '', source: '', results: (Array.isArray(metadata.results) ? metadata.results : []) as ImageResult[], auto: { enabled: false, every: 3, delivery: 'insert', ...(metadata.auto || {}) }, count: 0 };
     for (const result of data.results) {
         try {
             const current = host.target(result.target.id);
@@ -32,10 +33,11 @@ export function createRuntime(host: TaskHost): AddonRuntime {
     };
     const source = (selected: MessageTarget) => sceneSource(host.exportSnapshot().messages, selected.id, configuration(host.config()).before);
     async function execute(kind: string, options: any = {}) {
+        if(data.referencesReading&&kind!=='rewrite')throw new Error('参考图正在读取，请稍候。');
         if (task.status === 'running')
             throw new Error('已有生图任务，请等待或取消。');
         target = options.target || target || host.target(host.exportSnapshot().messages.at(-1)?.id ?? 0);
-        const captured = target!, config = configuration(host.config());
+        const captured = target!, config = configuration(host.config()), references=normalizeReferences(options.references??data.references);
         controller = new AbortController();
         const signal = controller.signal;
         task = { status: 'running', label: kind === 'generate' ? '正在生图' : '正在转写提示词' };
@@ -61,7 +63,7 @@ export function createRuntime(host: TaskHost): AddonRuntime {
             data = { ...data, ...final };
             task = { status: 'running', label: '正在生成并保存图片' };
             emit();
-            const image = await generateImage(config, final.positive, final.negative, host, signal);
+            const image = await generateImage(config, final.positive, final.negative, host, signal, references);
             if (signal.aborted || disposed)
                 return;
             const url = await host.saveImage(image, signal);
@@ -99,6 +101,8 @@ export function createRuntime(host: TaskHost): AddonRuntime {
             emit();
             return;
         }
+        if(name==='references-reading'){data.referencesReading=Math.max(0,data.referencesReading+(args[0]?1:-1));emit();return;}
+        if(name==='references'){data.references=normalizeReferences(args[0]);emit();return;}
         if (name === 'patch') {
             data = { ...data, ...args[0] };
             emit();

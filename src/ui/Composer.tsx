@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUp, Menu, MoreHorizontal, WandSparkles } from "lucide-react";
+import { ArrowUp, ImagePlus, Menu, MoreHorizontal, WandSparkles } from "lucide-react";
 import { addonEnabled } from "../addons/catalog";
 import { pinnedTools } from "../host/tools";
 import { composerTools, toolIcon } from "./ToolIcon";
@@ -13,6 +13,8 @@ export function Composer({ host, toolbar, busy, open, activate }: {
   open: (popup:ComposerPopup) => void; activate: (id: string, anchor: HTMLElement) => void;
 }) {
   useTools();
+  const [imageMode,setImageMode]=useState(false);
+  useEffect(()=>{const begin=()=>setImageMode(true),end=()=>setImageMode(false);window.addEventListener('wb-image-compose',begin);window.addEventListener('wb-image-compose-end',end);return()=>{window.removeEventListener('wb-image-compose',begin);window.removeEventListener('wb-image-compose-end',end);};},[]);
   const actions = [...composerTools, ...pinnedTools(host.prefs().pinnedTools).filter(tool => tool.id !== "wb:export" || addonEnabled(host.prefs(), "record-export"))], actionRow = useRef<HTMLDivElement>(null), [available, setAvailable] = useState(Infinity);
   useEffect(() => { const node = actionRow.current!; const observer = new ResizeObserver(() => setAvailable(node.clientWidth)); observer.observe(node); setAvailable(node.clientWidth); return () => observer.disconnect(); }, []);
   const slots = Math.max(0, Math.floor((available + 5) / 39)), visible = actions.slice(0, actions.length > slots ? Math.max(0, slots - 1) : slots), overflow = actions.slice(visible.length);
@@ -42,7 +44,7 @@ export function Composer({ host, toolbar, busy, open, activate }: {
     const disconnected = "连接模型后开始创作，或先写下草稿…";
     input.setAttribute("connected_text", connected);
     input.setAttribute("no_connection_text", disconnected);
-    const sync = () => input.setAttribute("placeholder", host.snapshot().online ? connected : disconnected);
+    const sync = () => input.setAttribute("placeholder", document.body.classList.contains('wb-image-input-mode')?'描述画面、人物、动作与风格… 可结合参考图生成':host.snapshot().online ? connected : disconnected);
     const unsubscribe = host.subscribe(sync); sync();
     return () => { unsubscribe(); names.forEach((name, i) => { if (previous[i] === null) input.removeAttribute(name); else input.setAttribute(name, previous[i]!); }); };
   }, [host]);
@@ -69,7 +71,7 @@ export function Composer({ host, toolbar, busy, open, activate }: {
   return <>
     {nativeIcon("options_button", <Menu className="wb-native-icon" size={18} aria-hidden="true" />)}
     {nativeIcon("extensionsMenuButton", <WandSparkles className="wb-native-icon" size={18} aria-hidden="true" />)}
-    {nativeIcon("send_but", <ArrowUp className="wb-native-icon wb-send-icon" size={22} aria-hidden="true" />)}
+    {nativeIcon("send_but", imageMode?<ImagePlus className="wb-native-icon wb-send-icon" size={20} aria-hidden="true"/>:<ArrowUp className="wb-native-icon wb-send-icon" size={22} aria-hidden="true" />)}
     {createPortal(<>
       <button className="wb-input-grip" role="separator" aria-label="调整输入框高度" aria-orientation="horizontal" aria-valuemin={20} aria-valuemax={60} aria-valuenow={Math.round(ratio * 100)} title="上拉增加输入高度 · 双击恢复" onPointerDown={e => {
         if (e.button !== 0) return;

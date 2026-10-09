@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState, useRef, useSyncExternalStore } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef, useSyncExternalStore, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { ImagePlus, Pause, Play, Square, X, ListTree } from 'lucide-react';
 import type { HostAdapter } from '../host/adapter';
@@ -6,6 +6,7 @@ import type { MessageTarget } from '../addons/types';
 import { addonEnabled } from '../addons/catalog';
 import { addonManager } from '../addons/runtime';
 import { useHost } from './common';
+const References=lazy(()=>import('../addons/image-gen/References'));
 /** Persistent task controls live above the content, independently of either sidebar. */
 export function AddonTasks({ host }: {
     host: HostAdapter;
@@ -119,7 +120,6 @@ export function ImageInputMode({ host }: {
             input.value = '';
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.focus();
-            window.dispatchEvent(new Event('wb-image-compose'));
         };
         window.addEventListener('wb-image-input', receive);
         const anchor = document.createElement('div');
@@ -136,6 +136,7 @@ export function ImageInputMode({ host }: {
             input.setSelectionRange(mode.start, mode.end);
         }
         setMode(null);
+        window.dispatchEvent(new Event('wb-image-compose-end'));
     };
     useEffect(() => {
         if (mode && (mode.target.chatKey !== manager.bridge.key() || !addonEnabled(host.prefs(), 'image-gen'))) {
@@ -149,8 +150,10 @@ export function ImageInputMode({ host }: {
         if (!mode)
             return;
         const input = document.getElementById('send_textarea') as HTMLTextAreaElement, placeholder = input.placeholder;
-        input.placeholder = '输入独立生图提示词，发送后为目标楼层生成图片…';
+        input.placeholder = '描述画面、人物、动作与风格… 可结合参考图生成';
+        const sendButton=document.getElementById('send_but')!, previousLabel=sendButton.getAttribute('aria-label');sendButton.setAttribute('aria-label','生成图片');
         document.body.classList.add('wb-image-input-mode');
+        window.dispatchEvent(new Event('wb-image-compose'));
         const send = (event: Event) => {
             const target = event.target as Element;
             if (event.type === 'keydown') {
@@ -166,6 +169,7 @@ export function ImageInputMode({ host }: {
                 host.report('请等待当前回复完成后生图。');
                 return;
             }
+            if(manager.get('image-gen')?.state().referencesReading){host.report('参考图正在读取，请稍候。');return;}
             const prompt = input.value.trim();
             if (!prompt) {
                 input.focus();
@@ -175,10 +179,21 @@ export function ImageInputMode({ host }: {
             cancel();
             void manager.ensure('image-gen').then(runtime => runtime.action('generate', { target: captured, prompt, insert: true })).catch(e => host.report(e));
         };
+        const files=async(event:ClipboardEvent|DragEvent)=>{
+            if(event.target!==input)return;
+            const list=event instanceof ClipboardEvent?event.clipboardData?.files:event.dataTransfer?.files;
+            if(!list?.length)return;
+            event.preventDefault();event.stopImmediatePropagation();
+            const captured=modeRef.current,runtime=manager.get('image-gen');if(!runtime)return;
+            await runtime.action('references-reading',true);
+            try{const {readReference}=await import('../addons/image-gen/reference-files');const loaded=await Promise.all([...list].map(readReference));if(modeRef.current===captured)await runtime.action('references',[...runtime.state().references,...loaded]);}catch(error){host.report(error);}finally{await runtime.action('references-reading',false);}
+        };
+        const drag=(event:DragEvent)=>{if(event.target===input&&event.dataTransfer?.types.includes('Files')){event.preventDefault();event.stopImmediatePropagation();}};
+        document.addEventListener('paste',files,true);document.addEventListener('drop',files,true);document.addEventListener('dragover',drag,true);
         document.addEventListener('click', send, true);
         document.addEventListener('keydown', send, true);
         document.addEventListener('submit', send, true);
-        return () => { document.removeEventListener('click', send, true); document.removeEventListener('keydown', send, true); document.removeEventListener('submit', send, true); input.placeholder = placeholder; document.body.classList.remove('wb-image-input-mode'); };
+        return () => { document.removeEventListener('click', send, true); document.removeEventListener('keydown', send, true); document.removeEventListener('submit', send, true); input.placeholder = placeholder; previousLabel===null?sendButton.removeAttribute('aria-label'):sendButton.setAttribute('aria-label',previousLabel);document.removeEventListener('paste',files,true);document.removeEventListener('drop',files,true);document.removeEventListener('dragover',drag,true);document.body.classList.remove('wb-image-input-mode');window.dispatchEvent(new Event('wb-image-compose-end')); };
     }, [mode, host, manager]);
-    return mode && anchor ? createPortal(<div className="wb-image-input-label"><ImagePlus size={15}/><strong>手动生图</strong><span>第 {mode.target.id + 1} 层 · 原聊天草稿已暂存</span><button aria-label="打开生图工作区" onClick={() => manager.api('image-gen').open('workspace')}>查看结果</button><button aria-label="取消手动生图" onClick={cancel}><X size={15}/></button></div>, anchor) : null;
+    return mode && anchor ? createPortal(<><div className="wb-image-input-label"><ImagePlus size={16}/><strong>手动生图</strong><span>第 {mode.target.id + 1} 层</span><small>聊天草稿已暂存</small><button aria-label="打开生图工作区" onClick={() => manager.api('image-gen').open('workspace')}>查看结果</button><button aria-label="取消手动生图" onClick={cancel}><X size={16}/></button></div><Suspense fallback={null}>{manager.get('image-gen')&&<References runtime={manager.get('image-gen')!} compact/>}</Suspense></>, anchor) : null;
 }

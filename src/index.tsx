@@ -165,6 +165,8 @@ function unmount() {
   document.body.classList.remove(
     "wb-active",
     "wb-left-open",
+    "wb-left-hover-open",
+    "wb-right-hover-open",
     "wb-right-open",
     "wb-rail-open",
     "wb-focus",

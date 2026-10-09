@@ -49,3 +49,10 @@ body.reduced-motion .wb-layout-switcher * { animation:none !important; transitio
 /* Native expression containers can be transparent yet intercept the input
    toolbar on wide screens. They stay connected for the extension to manage. */
 body.wb-active :is(#expression-wrapper,#visual-novel-wrapper) { pointer-events:none !important; }
+
+/* Mouse reveals overlay the reading area without changing its width. */
+body.wb-left-hover-open .wb-left { z-index:25; box-shadow:8px 0 24px #34291e0d; }
+body.wb-right-hover-open .wb-right { z-index:25; box-shadow:-8px 0 24px #34291e0d; }
+body.wb-right-hover-open .wb-resource-rail { right:var(--wb-right-size); z-index:24; }
+
+body.wb-left-hover-open .wb-edge-nav,body.wb-right-hover-open .wb-edge-nav { z-index:26; }

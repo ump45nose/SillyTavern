@@ -491,3 +491,6 @@ body.wb-active .wb-ui .wb-information .wb-fold-toggle[aria-expanded=true]:hover 
  .wb-current-chat { margin-bottom:6px; }
  .wb-chat-shortcuts { margin-bottom:6px; }
 }
+
+.wb-nav-chat.is-open > div { max-height:none; overflow:hidden; }
+.wb-nav-chat { flex:none; }
