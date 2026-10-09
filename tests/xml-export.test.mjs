@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { transform } from 'esbuild';
-const { code } = await transform(await readFile(new URL('../src/host/xml-export.ts', import.meta.url), 'utf8'), { loader: 'ts', format: 'esm' });
+const { code } = await transform(await readFile(new URL('../src/addons/record-export/xml-export.ts', import.meta.url), 'utf8'), { loader: 'ts', format: 'esm' });
 const { scanXml, parseMessage, filterContent, filterMessage, tagStatistics, exportParts } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
 const parsed = text => parseMessage({ id: 0, name: '角色', role: 'assistant', text });
 const options = { mode: 'include', tags: ['content', 'after'], keepTags: false, roles: ['assistant', 'user'], from: 1, to: 100, keyword: '' };

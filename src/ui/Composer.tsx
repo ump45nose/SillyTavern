@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowUp, Menu, MoreHorizontal, WandSparkles } from "lucide-react";
+import { addonEnabled } from "../addons/catalog";
 import { pinnedTools } from "../host/tools";
 import { composerTools, toolIcon } from "./ToolIcon";
 import { useTools } from "./useTools";
@@ -12,7 +13,7 @@ export function Composer({ host, toolbar, busy, open, activate }: {
   open: (popup:ComposerPopup) => void; activate: (id: string, anchor: HTMLElement) => void;
 }) {
   useTools();
-  const actions = [...composerTools, ...pinnedTools(host.prefs().pinnedTools)], actionRow = useRef<HTMLDivElement>(null), [available, setAvailable] = useState(Infinity);
+  const actions = [...composerTools, ...pinnedTools(host.prefs().pinnedTools).filter(tool => tool.id !== "wb:export" || addonEnabled(host.prefs(), "record-export"))], actionRow = useRef<HTMLDivElement>(null), [available, setAvailable] = useState(Infinity);
   useEffect(() => { const node = actionRow.current!; const observer = new ResizeObserver(() => setAvailable(node.clientWidth)); observer.observe(node); setAvailable(node.clientWidth); return () => observer.disconnect(); }, []);
   const slots = Math.max(0, Math.floor((available + 5) / 39)), visible = actions.slice(0, actions.length > slots ? Math.max(0, slots - 1) : slots), overflow = actions.slice(visible.length);
   const nativeTools = new Map([...host.menuItems("menu"), ...host.menuItems("tools")].filter(tool => tool.pinnable).map(tool => [tool.id, tool]));

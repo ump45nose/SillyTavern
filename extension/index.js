@@ -3,5 +3,5 @@
 import { captureStartup } from './startup.js';
 captureStartup(window.SillyTavern?.getContext?.());
 const entry = new URL('./dist/index.js', import.meta.url);
-entry.search = new URL(import.meta.url).search || '?v=0.2.0';
+entry.search = new URL(import.meta.url).search || '?v=0.2.1';
 await import(entry.href);

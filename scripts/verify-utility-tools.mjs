@@ -18,7 +18,7 @@ try {
   await page.setViewportSize({ width: 1496, height: 817 }); await ready(page, urls.validation);
   await page.waitForFunction(() => window.workbench?.mounted && window.workbench.metrics.workbenchReadyMs);
   const role = name => page.getByRole('button', { name, exact: true }), settle = () => page.waitForTimeout(350);
-  await page.evaluate(() => { workbench.host.preference({ layout: 'novel', pinnedTools: [{ id: 'wb:export', label: '记录导出' }] }); window.__utilityNative = { input: document.getElementById('send_textarea'), chat: document.getElementById('chat') }; }); await settle();
+  await page.evaluate(() => { workbench.host.preference({ layout: 'novel', pinnedTools: [{ id: 'wb:export', label: '记录导出' }], addons: { 'record-export': true } }); window.__utilityNative = { input: document.getElementById('send_textarea'), chat: document.getElementById('chat') }; }); await settle();
   const ensureLeft = async () => { if (await page.locator('.wb-edge-left').getAttribute('aria-expanded') === 'false') { await page.locator('.wb-edge-left').click(); await settle(); } };
   const settingsGroup = async group => { await ensureLeft(); await role('用户设置').click(); await page.getByRole('navigation', { name: '设置分组' }).getByRole('button', { name: group, exact: true }).click(); };
   const tool = id => page.locator(`.wb-composer-actions [data-wb-tool="${id}"]`);
@@ -29,7 +29,7 @@ try {
   const preview = async () => exportPanel.getByRole('button', { name: /^结果预览/ }).click();
   const downloadText = async () => { const downloading = page.waitForEvent('download'); await exportPanel.getByRole('button', { name: '导出', exact: true }).click(); const file = await downloading; return { text: fs.readFileSync(await file.path(), 'utf8'), name: file.suggestedFilename() }; };
 
-  assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').some(x => /ChatExport-|export-worker/.test(x.name))), false);
+  assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').some(x => /addons\/record-export\/|export-worker/.test(x.name))), false);
   const arrows = await page.locator('.wb-edge-arrow').evaluateAll(nodes => nodes.map(node => ({ width: node.getBoundingClientRect().width, icon: node.querySelector('svg').getBoundingClientRect().width, background: getComputedStyle(node).backgroundColor })));
   arrows.forEach(arrow => { assert.equal(arrow.width, 36); assert.equal(arrow.icon, 28); assert.equal(arrow.background, 'rgba(0, 0, 0, 0)'); });
   pass('larger 28px unbacked edge arrows; export code remains unloaded until requested');

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 export { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
-export function useHost(host: HostAdapter) {
+export function useHost<S>(host: { subscribe: (listener: () => void) => () => void; revision: () => number; snapshot: () => S }) {
   useSyncExternalStore(host.subscribe, host.revision);
   return host.snapshot();
 }

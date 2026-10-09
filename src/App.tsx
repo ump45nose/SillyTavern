@@ -1,6 +1,8 @@
 import React, { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ScanLine, X, Activity, BookOpen, FileOutput, SlidersHorizontal, UserRound, UsersRound, Plug, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff } from "lucide-react";
 import { resolveTool } from "./host/tools";
+import { addonEnabled } from "./addons/catalog";
+import AddonWorkspace from "./ui/AddonWorkspace";
 import { ResourceRailContext } from "./ui/ResourcePicker";
 import {ClickFeedback,usePresence} from "./ui/Motion";
 import { Header } from "./ui/Header";
@@ -26,7 +28,6 @@ const World = lazy(() => import("./modules/World"));
 const Characters = lazy(() => import("./modules/Characters"));
 const Resources = lazy(() => import("./modules/Resources"));
 const Trace = lazy(() => import("./modules/Trace"));
-const ChatExport = lazy(() => import("./modules/ChatExport"));
 const SettingsWorkspace=lazy(()=>import("./modules/SettingsWorkspace"));
 const labels = {
   connection: "连接",
@@ -70,6 +71,8 @@ export default function App({
     [workspace,setWorkspace]=useState<{page:SettingsPage;group?:string;initial?:string}|null>(null),
     [help, setHelp] = useState(false),
     [externalError, setExternalError] = useState("");
+  const exportEnabled = addonEnabled(host.prefs(), "record-export");
+  useEffect(() => { if (!exportEnabled && panel === "export") setPanel(null); }, [exportEnabled, panel]);
   const rp = host.prefs().layout === "rp", topAuto = rp && !!host.prefs().rpTopAuto;
   const [topHot, setTopHot] = useState(false), [topFocus, setTopFocus] = useState(false), [layoutMenu, setLayoutMenu] = useState(false);
   const topCollapsed = topAuto && !topHot && !topFocus && !chooser && !layoutMenu;
@@ -113,6 +116,7 @@ export default function App({
   const openPopup=useCallback((next:ComposerPopup)=>setPopup(prev=>prev?.kind===next.kind&&prev.anchor===next.anchor?null:next),[]);
   const openSettings=(page:SettingsPage,group?:string,initial?:string)=>{if(!beforeClose())return;setPopup(null);setPanel(null);setChooser(null);setDeep(null);setWorkspace({page,group,initial});};
   const goPanel = (next: Panel, id?: string) => {
+    if (next === "export" && !exportEnabled) return;
     if (!beforeClose()) return;
     if (next && id !== undefined) selectedIds.current[next] = id;
     setPanel(next);
@@ -237,7 +241,7 @@ export default function App({
     ) : kind === "character" ? (
       <Characters host={host} onManage={group => group?openSettings("character",group):goDeep("library")} />
     ) : kind === "export" ? (
-      <ChatExport host={host} />
+      <AddonWorkspace host={host} id="record-export" active={panel === "export" && !workspace && !deep} />
     ) : kind === "trace" ? (
       <Trace host={host} trace={trace} />
     ) : kind ? (
@@ -285,7 +289,7 @@ export default function App({
         <div className="wb-panel-header-row"><button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel==="export"?"记录导出":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button></div>
         <div className={`wb-panel-tabs-fold ${tabsOpen?"is-open":""}`} inert={!tabsOpen}>
         <div className="wb-panel-tabs">
-          {([["character", "角色", UsersRound], ["world", "世界书", BookOpen], ["preset", "预设", SlidersHorizontal], ["connection", "连接", Plug], ["persona", "用户设定", UserRound], ["trace", "Trace", Activity], ["export", "记录导出", FileOutput]] as const).map(([kind, label, Icon]) =>
+          {([["character", "角色", UsersRound], ["world", "世界书", BookOpen], ["preset", "预设", SlidersHorizontal], ["connection", "连接", Plug], ["persona", "用户设定", UserRound], ["trace", "Trace", Activity], ["export", "记录导出", FileOutput]] as const).filter(([kind]) => kind !== "export" || exportEnabled).map(([kind, label, Icon]) =>
             <button key={kind} className={panel === kind ? "is-active" : ""} aria-pressed={panel === kind} onClick={() => {goPanel(kind);setTabsOpen(false);}}><Icon size={15} />{label}</button>)}
         </div>
         </div>

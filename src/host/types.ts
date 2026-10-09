@@ -26,6 +26,7 @@ export interface Preferences {
   readingInset?: number;
   shortcuts?: Record<string, string>;
   shortcutsEnabled?: boolean;
+  addons?: Record<string, boolean>;
   pinnedTools?: { id: string; label: string }[];
   userCollapsed?: boolean;
   messageMeta?: "hover" | "always" | "never";
