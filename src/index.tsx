@@ -15,6 +15,7 @@ import "./selection.css";
 import "./preferences.css";
 import "./rp.css";
 import "./layout.css";
+import "./utility.css";
 class Boundary extends React.Component<
   { children: React.ReactNode },
   { failed: boolean }
@@ -35,6 +36,7 @@ const context = window.SillyTavern?.getContext?.();
 const metrics: Record<string, number> = {
   extensionLoadedMs: performance.now(),
 };
+window.workbenchStartup?.mark("extensionLoadedMs", metrics.extensionLoadedMs);
 let root: Root | undefined,
   container: HTMLElement | undefined,
   toolbar: HTMLElement | undefined,
@@ -131,8 +133,10 @@ async function mount() {
     metrics.mountedMs = performance.now();
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        if (mounted && document.querySelector(".wb-top"))
+        if (mounted && document.querySelector(".wb-top")) {
           metrics.workbenchReadyMs = performance.now();
+          window.workbenchStartup?.mark("workbenchReadyMs", metrics.workbenchReadyMs);
+        }
       }),
     );
   } catch (error) {

@@ -1,5 +1,6 @@
 import type { Data, HostSnapshot, Item, Preferences, Resource } from "./types";
 import { clone, mergeBook, mergeEdits, validateBook, validatePreset } from "./model";
+import { nativeMenuItems } from "./tools";
 const load = (path: string): Promise<any> => import(/* @vite-ignore */ path);
 const ctx = () => window.SillyTavern.getContext();
 export const nativeNodes = {
@@ -828,11 +829,7 @@ export class HostAdapter {
     node.value = text; node.dispatchEvent(new Event("input", {bubbles:true})); node.focus(); node.setSelectionRange(text.length,text.length);
   }
   menuItems(kind: "menu" | "tools") {
-    const source=document.querySelector(kind==="menu"?"#options .options-content":"#extensionsMenu");
-    const excluded=new Set(["option_start_new_chat","option_select_chat","option_convert_to_group","option_close_chat","option_delete_mes","option_impersonate","option_regenerate","option_continue","option_settings"]);
-    const names:Record<string,string>={option_toggle_AN:"作者注释",option_toggle_CFG:"CFG 引导",option_toggle_logprobs:"Token 概率",option_new_bookmark:"保存检查点",option_back_to_main:"返回父对话"};
-    const candidates=kind==="menu"?[...(source?.querySelectorAll<HTMLElement>("a,button")||[])]:[...(source?.querySelectorAll<HTMLElement>(".list-group-item,.menu_button,a,button")||[])].filter(n=>!n.parentElement?.closest(".list-group-item,.menu_button,a,button"));
-    return candidates.filter(n=>!excluded.has(n.id)&&!n.classList.contains("displayNone")&&getComputedStyle(n).display!=="none").map((node,i)=>({id:node.id||`tool-${i}`,label:names[node.id]||node.textContent?.trim()||node.title||"扩展工具",node,disabled:node.classList.contains("disabled")||node.getAttribute("aria-disabled")==="true"}));
+    return nativeMenuItems(kind);
   }
   async renameChat(name: string, next: string) { if(this.snapshot().busy)throw new Error("生成中不能重命名聊天。");await ctx().renameChat(name.replace(/\.jsonl$/,""),next.trim().replace(/\.jsonl$/,""));this.refresh(); }
   async newChat() {if(this.snapshot().busy)throw new Error("请先停止生成。");const script=await load("/script.js");await script.saveChatConditional();await script.doNewChat();this.refresh();}
@@ -863,6 +860,11 @@ export class HostAdapter {
     const script=await load("/script.js");await script.saveChatConditional();
     const data=await (await this.request("/api/chats/export",{is_group:!!ctx().groupId,avatar_url:this.snapshot().character?.id,file:name.replace(/\.jsonl$/,"")+".jsonl",exportfilename:name,format:"jsonl"})).json();
     if(typeof data.result!=="string")throw new Error("聊天导出未返回内容。");this.download(new Blob([data.result],{type:"application/jsonl"}),name.replace(/\.jsonl$/,"")+".jsonl");
+  }
+  exportSnapshot() {
+    const c = ctx();
+    return { key: `${c.groupId || this.snapshot().character?.id || ""}:${c.getCurrentChatId() || ""}`, timestamp: Date.now(),
+      messages: c.chat.map((message: Data, id: number) => ({ id, name: String(message.name || ""), text: String(message.mes || ""), role: message.is_system ? "system" as const : message.is_user ? "user" as const : "assistant" as const })) };
   }
   /** Lease original controls with their handlers intact; every lease restores its exact origin. */
   leaseNative(id: string, container: HTMLElement) {

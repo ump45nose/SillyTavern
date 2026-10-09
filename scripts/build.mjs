@@ -3,7 +3,7 @@ import { mkdir, readdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 const directory = path.resolve("extension/dist");
 const result = await build({
-  entryPoints: ["src/index.tsx"],
+  entryPoints: { index: "src/index.tsx", "export-worker": "src/modules/export-worker.ts" },
   outdir: directory,
   bundle: true,
   splitting: true,

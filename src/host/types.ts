@@ -1,5 +1,5 @@
 export type Resource = "connection" | "preset" | "world" | "persona";
-export type Panel = Resource | "character" | "trace" | null;
+export type Panel = Resource | "character" | "trace" | "export" | null;
 export type SettingsPage = "generation" | "connection" | "formatting" | "world" | "settings" | "background" | "extensions" | "persona" | "character";
 export type Data = Record<string, any>;
 export interface Item {
@@ -26,6 +26,7 @@ export interface Preferences {
   readingInset?: number;
   shortcuts?: Record<string, string>;
   shortcutsEnabled?: boolean;
+  pinnedTools?: { id: string; label: string }[];
   userCollapsed?: boolean;
   messageMeta?: "hover" | "always" | "never";
   bindings: Record<string, string>;
@@ -49,6 +50,7 @@ declare global {
     jQuery: any;
     workbench: any;
     workbenchProbe: any;
+    workbenchStartup?: any;
     storyWorkspace?: any;
   }
 }

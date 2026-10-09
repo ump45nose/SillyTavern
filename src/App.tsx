@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ScanLine, X, Activity, BookOpen, SlidersHorizontal, UserRound, UsersRound, Plug, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff } from "lucide-react";
+import { ScanLine, X, Activity, BookOpen, FileOutput, SlidersHorizontal, UserRound, UsersRound, Plug, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff } from "lucide-react";
+import { resolveTool } from "./host/tools";
 import { ResourceRailContext } from "./ui/ResourcePicker";
 import {ClickFeedback,usePresence} from "./ui/Motion";
 import { Header } from "./ui/Header";
@@ -25,6 +26,7 @@ const World = lazy(() => import("./modules/World"));
 const Characters = lazy(() => import("./modules/Characters"));
 const Resources = lazy(() => import("./modules/Resources"));
 const Trace = lazy(() => import("./modules/Trace"));
+const ChatExport = lazy(() => import("./modules/ChatExport"));
 const SettingsWorkspace=lazy(()=>import("./modules/SettingsWorkspace"));
 const labels = {
   connection: "连接",
@@ -127,6 +129,18 @@ export default function App({
     setPanel(null);
     setChooser(null);
   };
+  const activateTool = (id: string, anchor: HTMLElement) => {
+    setPopup(null);
+    if (id === "wb:export") { goPanel("export"); return; }
+    if (id === "builtin:quick") { setPopup({ kind: "quick", anchor }); return; }
+    const selectors: Record<string, string> = { "builtin:continue": "#option_continue", "builtin:regenerate": "#option_regenerate", "builtin:impersonate": "#option_impersonate", "builtin:attachment": "#attachFile" };
+    if (selectors[id]) { void task.run(() => host.click(selectors[id])); return; }
+    const item = resolveTool(id);
+    if (!item || item.disabled) { host.report("此工具当前不可用，请检查插件是否启用。"); return; }
+    if (item.node.id === "option_toggle_AN" || item.node.id === "option_toggle_CFG") {
+      setPopup({ kind: "tool", toolId: id, anchor });
+    } else { void task.run(() => item.node.click()); }
+  };
   const next = (kind: Resource) =>
     task.run(async () => {
       const items = snap.resources[kind];
@@ -157,7 +171,7 @@ export default function App({
   operations.register("open.trace", () => goPanel("trace"));
   operations.register("open.character", () => goPanel("character"));
   const leftWidth = width <= 1400 ? 240 : 260, rightWidth = width <= 1400 ? 440 : 460;
-  const railVisible=!!panel&&panel!=="trace"&&railOpen&&!focus;
+  const railVisible=!!panel&&panel!=="trace"&&panel!=="export"&&railOpen&&!focus;
   const leftVisible = left && !focus && (!panel || ((!rp || width > 1100) && width - leftWidth - rightWidth - (railVisible?180:0) >= 420));
   const toggleLeft = () => { if (rp && width <= 1100 && !left) {goPanel(null);setLeft(true);} else if (left && !leftVisible && !focus) goPanel(null); else setLeft(v => !v); };
   const toggleFocus = () => { setChooser(null); setFocus(v => !v); };
@@ -222,6 +236,8 @@ export default function App({
       />
     ) : kind === "character" ? (
       <Characters host={host} onManage={group => group?openSettings("character",group):goDeep("library")} />
+    ) : kind === "export" ? (
+      <ChatExport host={host} />
     ) : kind === "trace" ? (
       <Trace host={host} trace={trace} />
     ) : kind ? (
@@ -266,10 +282,10 @@ export default function App({
         help={() => setHelp(true)} exit={onExit} run={task.run} />
       <aside id="wb-resource-rail" ref={setRailTarget} className={`wb-resource-rail ${railVisible?"is-open":""}`} inert={!railVisible} aria-hidden={!railVisible} aria-label="资源列表与角色信息"/>
       <aside className={`wb-right ${panel && !focus ? "is-open" : ""}`} inert={!panel || focus} aria-hidden={!panel || focus} aria-label="角色与资源">
-        <div className="wb-panel-header-row"><button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button></div>
+        <div className="wb-panel-header-row"><button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel==="export"?"记录导出":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button></div>
         <div className={`wb-panel-tabs-fold ${tabsOpen?"is-open":""}`} inert={!tabsOpen}>
         <div className="wb-panel-tabs">
-          {([["character", "角色", UsersRound], ["world", "世界书", BookOpen], ["preset", "预设", SlidersHorizontal], ["connection", "连接", Plug], ["persona", "用户设定", UserRound], ["trace", "Trace", Activity]] as const).map(([kind, label, Icon]) =>
+          {([["character", "角色", UsersRound], ["world", "世界书", BookOpen], ["preset", "预设", SlidersHorizontal], ["connection", "连接", Plug], ["persona", "用户设定", UserRound], ["trace", "Trace", Activity], ["export", "记录导出", FileOutput]] as const).map(([kind, label, Icon]) =>
             <button key={kind} className={panel === kind ? "is-active" : ""} aria-pressed={panel === kind} onClick={() => {goPanel(kind);setTabsOpen(false);}}><Icon size={15} />{label}</button>)}
         </div>
         </div>
@@ -293,7 +309,7 @@ export default function App({
         收起原生面板 <X size={16} />
       </button>
       {rp ? <RPStage host={host} hidden={focus} blocked={width<=1100&&!!(leftVisible||panel)} width={width-(width>1100?(leftVisible?leftWidth:0)+(panel&&!focus?rightWidth+(railVisible?180:0):0):0)} readingLayout={()=>switchLayout("novel")} run={task.run}/> : <ReadingPresentation host={host}/>}
-      {popupPresence.value&&<ComposerPopovers key={popupPresence.value.kind} host={host} popup={popupPresence.value} exiting={popupPresence.exiting} close={()=>setPopup(null)} settings={openSettings}/>}
+      {popupPresence.value&&<ComposerPopovers key={popupPresence.value.kind+":"+(popupPresence.value.toolId||"")} host={host} popup={popupPresence.value} exiting={popupPresence.exiting} close={()=>setPopup(null)} settings={openSettings} activate={activateTool}/>}
       {workspacePresence.value&&<Suspense fallback={<Loading/>}><SettingsWorkspace host={host} page={workspacePresence.value.page} group={workspacePresence.value.group} initial={workspacePresence.value.initial} exiting={workspacePresence.exiting} onClose={()=>setWorkspace(null)}/></Suspense>}
       {deep && (
         <Dialog
@@ -321,7 +337,7 @@ export default function App({
           <Shortcuts host={host}/>
         </Dialog>
       )}
-      <Composer host={host} toolbar={toolbar} busy={snap.busy} run={task.run} open={openPopup} />
+      <Composer host={host} toolbar={toolbar} busy={snap.busy} open={openPopup} activate={activateTool} />
     </>
   );
 }

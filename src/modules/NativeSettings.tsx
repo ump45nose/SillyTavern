@@ -33,6 +33,12 @@ export default function NativeSettings({host,page,group,extensionId}:{host:HostA
  useLayoutEffect(()=>{
   if(!config)return;const container=ref.current!;let restore:(()=>void)|undefined,frame=0;const origins:{node:Node;mark:Comment}[]=[],selects:{node:HTMLSelectElement;slot:HTMLElement}[]=[],added:HTMLElement[]=[],moved=new Set<Element>(),decorations:{node:HTMLElement;slot:HTMLElement;Icon:LucideIcon}[]=[],semantics:{node:HTMLElement;role:string|null;tab:string|null;key:(e:KeyboardEvent)=>void}[]=[];
   try{
+   // Initialize the native editor immediately before leasing it, so lazy loading
+   // cannot briefly display its original floating window behind our popover.
+   if(page==="note"||page==="cfg"){
+    const node=document.getElementById(config.id);
+    if(node&&getComputedStyle(node).display!=="flex")host.click(page==="note"?"#option_toggle_AN":"#option_toggle_CFG");
+   }
    restore=host.leaseNative(config.id,container);const root=container.firstElementChild as HTMLElement;root.classList.add("wb-native-settings-root");nativeRoot.current=root;
    const hiddenStates=new Map<HTMLElement,boolean>(),grids=new Set<HTMLElement>(),labels=new Map<HTMLElement,string|null>();
    const buckets=config.sections.map(section=>{const el=document.createElement("section");el.className="wb-settings-native-group";el.dataset.group=section.label;return el;});

@@ -46,3 +46,6 @@ body.wb-rp .wb-layout-space { width:160px; }
 }
 @media(prefers-reduced-motion:reduce) { .wb-layout-switcher * { animation:none !important; transition:none !important; } }
 body.reduced-motion .wb-layout-switcher * { animation:none !important; transition:none !important; }
+/* Native expression containers can be transparent yet intercept the input
+   toolbar on wide screens. They stay connected for the extension to manage. */
+body.wb-active :is(#expression-wrapper,#visual-novel-wrapper) { pointer-events:none !important; }

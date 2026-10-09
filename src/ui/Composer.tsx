@@ -1,13 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Play, ArrowUp, Menu, MessagesSquare, Paperclip, RotateCcw, UserRoundPen, WandSparkles } from "lucide-react";
+import { ArrowUp, Menu, MoreHorizontal, WandSparkles } from "lucide-react";
+import { pinnedTools } from "../host/tools";
+import { composerTools, toolIcon } from "./ToolIcon";
+import { useTools } from "./useTools";
 import type {ComposerPopup} from "./ComposerPopovers";
 import type { HostAdapter } from "../host/adapter";
 /** Decorate native controls in-place: event handlers, selection and plugin nodes stay owned by ST. */
-export function Composer({ host, toolbar, busy, run, open }: {
+export function Composer({ host, toolbar, busy, open, activate }: {
   host: HostAdapter; toolbar: HTMLElement; busy: boolean;
-  run: (fn: () => unknown) => unknown; open: (popup:ComposerPopup) => void;
+  open: (popup:ComposerPopup) => void; activate: (id: string, anchor: HTMLElement) => void;
 }) {
+  useTools();
+  const actions = [...composerTools, ...pinnedTools(host.prefs().pinnedTools)], actionRow = useRef<HTMLDivElement>(null), [available, setAvailable] = useState(Infinity);
+  useEffect(() => { const node = actionRow.current!; const observer = new ResizeObserver(() => setAvailable(node.clientWidth)); observer.observe(node); setAvailable(node.clientWidth); return () => observer.disconnect(); }, []);
+  const slots = Math.max(0, Math.floor((available + 5) / 39)), visible = actions.slice(0, actions.length > slots ? Math.max(0, slots - 1) : slots), overflow = actions.slice(visible.length);
+  const nativeTools = new Map([...host.menuItems("menu"), ...host.menuItems("tools")].filter(tool => tool.pinnable).map(tool => [tool.id, tool]));
+  const disabled = (id: string) => id.startsWith("builtin:") ? busy && ["builtin:continue", "builtin:regenerate", "builtin:impersonate"].includes(id) : id !== "wb:export" && (!nativeTools.has(id) || !!nativeTools.get(id)?.disabled);
   const [ratio, setRatio] = useState(Math.min(.6, Math.max(.2, host.prefs().inputRatio ?? .2)));
   const ratioRef = useRef(ratio), drag = useRef<{y: number; ratio: number; height: number} | null>(null);
   ratioRef.current = ratio;
@@ -77,12 +86,9 @@ export function Composer({ host, toolbar, busy, run, open }: {
         if (value === null) return;
         e.preventDefault(); const next = Math.min(.6, Math.max(.2, value)); setRatio(next); host.preference({ inputRatio: next });
       }}><span /></button>
-      <div className="wb-composer-actions">
-        <button title="续写" aria-label="续写" disabled={busy} onClick={() => run(() => host.click("#option_continue"))}><Play size={16} /></button>
-        <button title="重生成" aria-label="重生成" disabled={busy} onClick={() => run(() => host.click("#option_regenerate"))}><RotateCcw size={16} /></button>
-        <button title="快速回复" aria-label="快速回复" aria-haspopup="dialog" onClick={e=>open({kind:"quick",anchor:e.currentTarget})}><MessagesSquare size={16} /></button>
-        <button title="AI 帮答" aria-label="AI 帮答" disabled={busy} onClick={()=>run(()=>host.click("#option_impersonate"))}><UserRoundPen size={17}/></button>
-        <button title="附件" aria-label="附件" onClick={() => run(() => host.click("#attachFile"))}><Paperclip size={16} /></button>
+      <div className="wb-composer-actions" ref={actionRow}>
+        {visible.map(tool => { const Icon = toolIcon(tool.id, tool.label); return <button key={tool.id} data-wb-tool={tool.id} title={disabled(tool.id) ? `${tool.label} · 当前不可用` : tool.label} aria-label={tool.label} disabled={disabled(tool.id)} onClick={e => activate(tool.id, e.currentTarget)}><Icon size={17} /></button>; })}
+        {!!overflow.length && <button title="更多工具" aria-label="更多工具" aria-haspopup="dialog" onClick={e => open({ kind: "pinned", toolIds: overflow.map(t => t.id), anchor: e.currentTarget })}><MoreHorizontal size={18} /></button>}
       </div>
     </>, toolbar)}
   </>;
