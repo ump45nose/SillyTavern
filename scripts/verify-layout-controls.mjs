@@ -166,21 +166,48 @@ try {
           await page.screenshot({path:directory+'/swipe-failure.png'});throw error;
         }
         await page.waitForFunction(() => window.__layoutSwipeReady()); await settle();
-        const footer = await page.evaluate(() => {
-          const mes=document.querySelector('#chat .last_mes'),body=mes.querySelector('.mes_block').getBoundingClientRect();
-          return [...mes.querySelectorAll('.swipe_left,.swipe_right,.swipes-counter')].map(n=>({bodyBottom:body.bottom,top:n.getBoundingClientRect().top,bottom:n.getBoundingClientRect().bottom,mesBottom:mes.getBoundingClientRect().bottom}));
+        const gutters = await page.evaluate(() => {
+          const mes=document.querySelector('#chat .last_mes');
+          const rect = n => {const {left,right,top,bottom}=n.getBoundingClientRect();return {left,right,top,bottom};};
+          return {text:rect(mes.querySelector('.mes_text')),left:rect(mes.querySelector('.swipe_left')),right:rect(mes.querySelector('.swipe_right')),counter:rect(mes.querySelector('.swipes-counter')),padding:Number.parseFloat(getComputedStyle(mes).paddingBottom)};
         });
-        for(const item of footer) { assert.ok(item.top >= item.bodyBottom + 10,JSON.stringify({width,inset,variant,footer})); assert.ok(item.bottom <= item.mesBottom,JSON.stringify({width,inset,variant,footer})); }
+        assert.ok(gutters.left.right <= gutters.text.left - 7,JSON.stringify({width,inset,variant,gutters}));
+        assert.ok(gutters.right.left >= gutters.text.right + 7,JSON.stringify({width,inset,variant,gutters}));
+        assert.ok(gutters.counter.left >= gutters.text.right + 7,JSON.stringify({width,inset,variant,gutters}));
+        assert.ok(gutters.left.top < gutters.text.bottom && gutters.right.top < gutters.text.bottom,JSON.stringify({width,inset,variant,gutters}));
+        assert.ok(gutters.padding <= 25.5,JSON.stringify({width,inset,variant,gutters}));
       }
       await page.locator('.wb-edge-right').click(); await settle();
     }
   }
-  pass("native swipe arrows and counter stay below short/long bodies at both inset limits; original swipe handlers work with a sidebar open");
+  pass("native swipe controls stay in side gutters beside short/long text with no extra bottom row; original swipe handlers work at both inset limits");
   await page.evaluate(async () => {
     const ctx=SillyTavern.getContext();ctx.chat.splice(0,ctx.chat.length,...__layoutRealChat);delete window.__layoutRealChat;delete window.__layoutSwipeReady;
     await (await import('/script.js')).printMessages();workbench.host.preference({readingInset:64,readingSize:17});
-  }); await page.setViewportSize({width:1496,height:817}); await settle(); await page.screenshot({path:directory+'/noval-edges-footer.png'});
+  }); await page.setViewportSize({width:1496,height:817}); await settle(); await page.screenshot({path:directory+'/noval-edges-gutters.png'});
   await choose("RP");
+  await page.evaluate(async () => {
+    const ctx=SillyTavern.getContext();window.__layoutRealChat=structuredClone(ctx.chat);
+    const mes=Array.from({length:5},(_,i)=>`第 ${i+1} 段。`+"樱花落在书页上，她停下脚步，静静听你讲述这一路遇到的故事。".repeat(7)).join('\n\n');
+    ctx.chat.splice(0,ctx.chat.length,{name:ctx.characters[ctx.characterId]?.name || '布局验证',is_user:false,is_system:false,send_date:'2026-10-09T10:57:00',mes,extra:{}});
+    await (await import('/script.js')).printMessages();
+  }); await settle();
+  assert.ok(await page.locator('.wb-rp-page-dots>button:not(.wb-icon)').count()>1);
+  const dotLabel=await page.locator('.wb-rp-page-dots>button:not(.wb-icon)').first().getAttribute('aria-label');
+  await role(dotLabel).click(); await page.waitForTimeout(70);
+  assert.equal(await role(dotLabel).evaluate(n=>n.getAnimations().some(a=>a.playState==='running')),true); await settle();
+  assert.equal(await role(dotLabel).getAttribute('aria-current'),'true');
+  for(const width of [1024,1496,2992]) {
+    await page.setViewportSize({width,height:817});await settle();
+    const dots=await page.locator('.wb-rp-page-dots>button:not(.wb-icon)').evaluateAll(nodes=>nodes.map(n=>{
+      const dot=getComputedStyle(n,'::before'),matrix=new DOMMatrixReadOnly(dot.transform==='none'?undefined:dot.transform),rect=n.getBoundingClientRect(),caption=n.closest('.wb-rp-caption').getBoundingClientRect();
+      return {width:Number.parseFloat(dot.width)*matrix.a,height:Number.parseFloat(dot.height)*matrix.d,radius:dot.borderRadius,background:getComputedStyle(n).backgroundColor,hitWidth:rect.width,hitHeight:rect.height,inside:rect.left>=caption.left&&rect.right<=caption.right};
+    }));
+    for(const dot of dots){assert.ok(Math.abs(dot.width-dot.height)<.01,JSON.stringify(dot));assert.equal(dot.radius,'50%');assert.equal(dot.background,'rgba(0, 0, 0, 0)');assert.ok(dot.hitWidth>=23.9&&dot.hitHeight>=23.9);assert.equal(dot.inside,true);}
+  }
+  await page.setViewportSize({width:1496,height:817});await settle();await page.screenshot({path:directory+'/rp-round-dots.png'});
+  pass("RP pagination markers remain circular with larger invisible hit areas; selecting a dot changes the page and retains click animation");
+  await page.evaluate(async () => {const ctx=SillyTavern.getContext();ctx.chat.splice(0,ctx.chat.length,...__layoutRealChat);delete window.__layoutRealChat;await (await import('/script.js')).printMessages();});await settle();
   await role("RP 外观").click();
   const checkbox = page.getByRole("checkbox", {name:"鼠标悬浮显示顶栏",exact:true});
   await checkbox.check(); await page.keyboard.press("Escape"); await page.mouse.move(750,400); await settle();

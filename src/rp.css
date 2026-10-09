@@ -69,9 +69,12 @@ body.wb-rp .wb-rp-deck-actions>button:hover { background:var(--wb-selected) !imp
 .wb-rp-page-control .wb-icon { width:28px; height:28px; min-height:28px; padding:5px; }
 .wb-rp-page-control span { min-width:40px; text-align:center; font:11px/1.5 system-ui; }
 .wb-rp-caption { height:34px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 20px; border:1px solid var(--wb-line); border-bottom:0; border-radius:12px 12px 0 0; background:color-mix(in srgb,var(--wb-surface) 97%,transparent); color:var(--wb-muted); font:10px/1.5 system-ui; }
-.wb-rp-page-dots { display:flex; align-items:center; gap:5px; pointer-events:auto; }
-.wb-rp-page-dots>button:not(.wb-icon) { width:6px; height:6px; min-width:6px; min-height:6px; padding:0; border:0; border-radius:50%; background:var(--wb-line); transition:width 200ms,background 160ms; }
-.wb-rp-page-dots>button[aria-current=true]:not(.wb-icon) { width:18px; background:var(--wb-accent); }
+.wb-rp-page-dots { display:flex; align-items:center; gap:2px; pointer-events:auto; }
+.wb-ui .wb-rp-page-dots>button:not(.wb-icon) { width:24px; height:24px; min-width:24px; min-height:24px; padding:0; border:0; border-radius:6px; background:transparent; }
+.wb-rp-page-dots>button:not(.wb-icon)::before { content:""; display:block; flex:none; width:7px; height:7px; border-radius:50%; background:var(--wb-line); transition:background 160ms,transform 180ms; }
+.wb-rp-page-dots>button[aria-current=true]:not(.wb-icon)::before { background:var(--wb-accent); transform:scale(1.15); }
+.wb-rp-page-dots>button:not(.wb-icon):hover::before { background:color-mix(in srgb,var(--wb-accent) 55%,var(--wb-line)); }
+.wb-rp-page-dots>button[aria-current=true]:not(.wb-icon):hover::before { background:var(--wb-accent); }
 .wb-rp-page-dots .wb-icon { width:24px; height:24px; min-height:24px; padding:4px; }
 body.wb-active.wb-rp:not(.wb-rp-history) #chat { position:absolute; inset:0; height:100%; padding:0 28px 36px !important; display:flex; flex-direction:column; justify-content:safe center; overflow:auto; transition:opacity 160ms,transform 200ms,visibility 160ms; }
 body.wb-rp:not(.wb-rp-history) #chat>.mes:not(.wb-rp-current),body.wb-rp:not(.wb-rp-history) #show_more_messages { display:none !important; }
