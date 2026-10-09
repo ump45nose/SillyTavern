@@ -68,7 +68,7 @@ body.wb-active .wb-ui .wb-primary svg,body.wb-active .wb-ui .wb-primary svg *,bo
 .wb-reading-bar .wb-icon { width:32px; height:32px; padding:5px; }
 /* Plain edge handles follow the panel boundary, outside the reading inset and top controls. */
 .wb-edge-nav { position:fixed; top:calc(50vh + var(--wb-header) / 2); left:var(--wb-edge-left,0px); right:var(--wb-edge-right,0px); display:flex; justify-content:space-between; pointer-events:none !important; z-index:19; transform:translateY(-50%); transition:top 220ms,left 220ms,right 220ms,opacity 160ms,visibility 160ms; }
-.wb-ui .wb-edge-arrow { width:24px; height:52px; min-height:52px; padding:2px; border:0; border-radius:0; background:transparent !important; box-shadow:none !important; pointer-events:auto; opacity:.68; transition:opacity 160ms,color 160ms; }
+.wb-ui .wb-edge-arrow { width:36px; height:56px; min-height:56px; padding:4px; border:0; border-radius:0; background:transparent !important; box-shadow:none !important; pointer-events:auto; opacity:.86; transition:opacity 160ms,color 160ms; }
 .wb-edge-arrow:hover,.wb-edge-arrow:focus-visible { opacity:1; }
 .wb-edge-arrow svg { transition:transform 180ms; }
 .wb-edge-left:hover svg { transform:translateX(-2px); }

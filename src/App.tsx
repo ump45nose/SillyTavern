@@ -259,8 +259,8 @@ export default function App({
       </div>
       }
       <nav className={`wb-edge-nav ${focus?"is-hidden":""}`} style={{"--wb-edge-left":`${leftVisible?leftWidth:0}px`,"--wb-edge-right":`${panel&&!focus?rightWidth+(railVisible?180:0):0}px`} as React.CSSProperties} inert={focus} aria-hidden={focus} aria-label="边栏操作">
-        <button className="wb-edge-arrow wb-edge-left" aria-label={leftVisible?"收纳左边栏":"展开左边栏"} title={`${leftVisible?"收纳左边栏":"展开左边栏"}${host.prefs().shortcutsEnabled!==false&&shortcutHint("toggle.left",host.prefs().shortcuts)?" · "+shortcutHint("toggle.left",host.prefs().shortcuts):""}`} aria-expanded={leftVisible} onClick={toggleLeft}>{leftVisible?<ChevronLeft size={20}/>:<ChevronRight size={20}/>}</button>
-        <button className="wb-edge-arrow wb-edge-right" aria-label={panel?"关闭右栏":"角色与资源侧栏"} title={panel?"关闭右栏":"角色与资源侧栏"} aria-expanded={!!panel} onClick={()=>goPanel(panel?null:"character")}>{panel?<ChevronRight size={20}/>:<ChevronLeft size={20}/>}</button>
+        <button className="wb-edge-arrow wb-edge-left" aria-label={leftVisible?"收纳左边栏":"展开左边栏"} title={`${leftVisible?"收纳左边栏":"展开左边栏"}${host.prefs().shortcutsEnabled!==false&&shortcutHint("toggle.left",host.prefs().shortcuts)?" · "+shortcutHint("toggle.left",host.prefs().shortcuts):""}`} aria-expanded={leftVisible} onClick={toggleLeft}>{leftVisible?<ChevronLeft size={28}/>:<ChevronRight size={28}/>}</button>
+        <button className="wb-edge-arrow wb-edge-right" aria-label={panel?"关闭右栏":"角色与资源侧栏"} title={panel?"关闭右栏":"角色与资源侧栏"} aria-expanded={!!panel} onClick={()=>goPanel(panel?null:"character")}>{panel?<ChevronRight size={28}/>:<ChevronLeft size={28}/>}</button>
       </nav>
       <Navigation host={host} snap={snap} visible={leftVisible} settings={openSettings} open={openPopup}
         help={() => setHelp(true)} exit={onExit} run={task.run} />
