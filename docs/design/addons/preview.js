@@ -25,6 +25,7 @@ const initialMessages = [
   {id:'m2', user:true, text:'我跟上她的脚步，望向林间若隐若现的小屋。'},
   {id:'m3', user:false, text:'木窗半掩着，淡淡的茶香从屋里飘出来。Seraphina 停在窗边，指尖轻轻拨开垂落的花枝。', dialogue:'“还记得我们说过，等灯塔重新亮起，就一起去看看海吗？”'},
 ];
+let manualImage=null;
 const state = {
   nodes:structuredClone(initialNodes), selected:'promise', collapsed:new Set(), briefs:new Set(['promise']), query:'', outlineTab:'content', imageTab:'prompt', panel:'outline', left:true, right:true, mode:'novel', deep:null, preview:true,
   enabled:{outline:true,image:true}, insertion:'insert', sendAfterInsert:false, runScope:'from', writing:{phase:'idle', queue:[], index:0, round:0, completed:0, total:0, timer:null, pauseRequested:false},
@@ -85,8 +86,8 @@ function syncShell() {
   $('.edge-right').setAttribute('aria-expanded',state.right);$('.edge-right').setAttribute('aria-label',state.right?'收起右侧工作区':'展开右侧工作区');
   $('.navigation').inert=!state.left;$('#workarea').inert=!state.right;
   $('#outline-tab').classList.toggle('is-selected',state.panel==='outline');$('#image-tab').classList.toggle('is-selected',state.panel==='image');
-  $('#outline-entry').classList.toggle('is-selected',state.right&&state.panel==='outline');$('#image-entry').classList.toggle('is-selected',state.right&&state.panel==='image');
-  $('#outline-entry').hidden=!state.enabled.outline;$('#outline-tab').hidden=!state.enabled.outline;$('#image-entry').hidden=!state.enabled.image;$('#image-tab').hidden=!state.enabled.image;
+  $('#outline-entry').classList.toggle('is-selected',state.right&&state.panel==='outline');
+  $('#outline-entry').hidden=!state.enabled.outline;$('#outline-tab').hidden=!state.enabled.outline;document.querySelectorAll('[data-image-entry]').forEach(button=>button.hidden=!state.enabled.image);$('#image-tab').hidden=!state.enabled.image;
   $('#mode-button').innerHTML=icon(state.mode==='rp'?'theater':'book');$('.reading-heading small').textContent=state.mode==='rp'?'RP':'Noval';
   document.querySelectorAll('#mode-menu button').forEach(b=>b.classList.toggle('is-selected',b.dataset.action===`mode-${state.mode}`));
 }
@@ -112,7 +113,7 @@ function writingControls() {
   return `${progress}<div class="section-heading">快速插入</div><div class="setting-row"><div>输入处理<small>快速插入与自动写作共用</small></div>${select('insertion',state.insertion,[['insert','插入光标处'],['replace','覆盖输入框']],'aria-label="输入处理方式"')}</div>${check('快速插入后立即发送','send-after',state.sendAfterInsert)}<div class="section-heading spaced">自动写作</div>${field('执行范围',select('run-scope',state.runScope,[['from','从选中节点开始'],['subtree','选中节点及子树']]))}<div class="two-columns">${field('当前节点轮数',input('node-rounds',n.rounds,'type="number" min="1" max="50" aria-label="节点写作轮数"'))}${field('完成后', '<div class="muted-note">标记已完成<br>推进至下一叶节点</div>')}</div><p class="muted-note">跳过已完成节点。暂停等待当前回复结束；停止立即结束任务。手动输入或编辑大纲会暂停任务。</p><div class="button-group spaced">${button('start-writing','开始自动写作','play','primary',['running','pausing'].includes(w.phase)?'disabled':'')}${button('shortcuts','快捷键','keyboard','text-button')}</div>`;
 }
 function renderMessages(scroll=false) {
-  $('#messages').innerHTML=state.messages.map((m,index)=>`<article class="message ${m.user?'is-user':''}" data-message="${m.id}"><header><span>${index+1} 层 · ${m.user?'你的输入':'Seraphina'}</span><span class="grow"></span><small>${m.generated?'写作预览':'示例'}</small></header><p>${esc(m.text)}</p>${m.dialogue?`<p class="dialogue">${esc(m.dialogue)}</p>`:''}${m.image?`<figure class="message-media"><img src="${sampleImage}" alt="图片附件示例"><figcaption>正文后的图片附件<span class="grow"></span>${ib('remove-attachment','移除图片附件','trash',`data-id="${m.id}"`)}</figcaption></figure>`:''}</article>`).join('');
+  $('#messages').innerHTML=state.messages.map((m,index)=>`<article class="message ${m.user?'is-user':''}" data-message="${m.id}"><header><span>${index+1} 层 · ${m.user?'你的输入':'Seraphina'}</span><span class="grow"></span><small>${m.generated?'写作预览':'示例'}</small>${ib('edit-demo','编辑正文','pencil',`data-id="${m.id}"`)}${ib('manual-image','输入生图提示词','image',`data-image-entry data-id="${m.id}"`)}</header><p>${esc(m.text)}</p>${m.dialogue?`<p class="dialogue">${esc(m.dialogue)}</p>`:''}${m.image?`<figure class="message-media"><img src="${sampleImage}" alt="图片附件示例"><figcaption>正文后的图片附件<span class="grow"></span>${ib('remove-attachment','移除图片附件','trash',`data-id="${m.id}"`)}</figcaption></figure>`:''}</article>`).join('');
   $('#message-count').textContent=state.messages.length;
   if(scroll)$('#messages').scrollTop=$('#messages').scrollHeight;
 }
@@ -125,6 +126,7 @@ function addReply(text) {
 }
 function sendDemo() {
   const draft=$('#draft');if(!draft.value.trim()){toast('请先输入内容');return;}
+  if(manualImage){state.positive=draft.value;draft.value=manualImage.draft;manualImage=null;$('#manual-image-note').hidden=true;startImage('generate-direct');return;}
   state.messages.push({id:`u${Date.now()}`,user:true,text:draft.value});draft.value='';renderMessages(true);
   setTimeout(()=>{addReply('她稍稍放慢了脚步，等你走到身旁。小径另一端，灯塔在暮色中亮起第一束光。');if(state.panel==='image'&&state.right&&!state.deep)renderPanel();},650);
 }
@@ -301,6 +303,9 @@ function adjustNode(key) {
   if(key==='ArrowLeft'&&n.parent){const parent=getNode(n.parent);n.parent=parent?.parent||null;pauseWriting();renderTrees();}
 }
 const handlers = {
+  'edit-demo':()=>toast('正文编辑沿用酒馆原生控件'),
+  'manual-image':el=>{state.image.target=el.dataset.id;manualImage={draft:$('#draft').value};$('#draft').value='';$('#draft').placeholder='输入生图提示词…';$('#draft').focus();$('#manual-image-note').hidden=false;},
+  'cancel-manual-image':()=>{if(manualImage)$('#draft').value=manualImage.draft;manualImage=null;$('#manual-image-note').hidden=true;},
   'panel-outline':()=>showPanel('outline'),'panel-image':()=>showPanel('image'),
   'toggle-left':()=>{state.left=!state.left;if(innerWidth<=1100&&state.left)state.right=false;syncShell();},
   'toggle-right':()=>{state.right=!state.right;if(innerWidth<=1100&&state.right)state.left=false;syncShell();},'close-right':()=>{state.right=false;syncShell();},

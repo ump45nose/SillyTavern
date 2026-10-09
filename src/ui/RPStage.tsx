@@ -1,10 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, BookOpen, Check, ChevronLeft, ChevronRight, Clock3, CornerDownLeft, History, MapPin, Maximize2, Minimize2, PencilLine, RotateCcw, Square, X } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ChevronLeft, ChevronRight, Clock3, CornerDownLeft, History, MapPin, Maximize2, Minimize2, PencilLine, RotateCcw, Square, X, ImagePlus } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import { boundedPreference, dialoguePages } from "../host/rp";
 import { IconButton, useHost } from "./common";
 import { ReadingPresentation } from "./Reading";
+import { beginImage } from "./AddonControls";
+import { addonEnabled } from "../addons/catalog";
 import { RPAppearance } from "./RPAppearance";
 import { motionAllowed } from "./Motion";
 
@@ -65,8 +67,10 @@ export function RPStage({ host, hidden, blocked, width, readingLayout, run }: {
   }, [messages, cursor.id]);
   useEffect(() => {
     const jump = (e: Event) => { live.current = false; setHistory(false); setCursor({ id: (e as CustomEvent<number>).detail, page: 0, compose: false }); };
+    const imageCompose=()=>{live.current=false;setHistory(false);setCursor(old=>({...old,compose:true}));};
+    window.addEventListener("wb-image-compose", imageCompose);
     window.addEventListener("wb-rp-jump", jump);
-    return () => window.removeEventListener("wb-rp-jump", jump);
+    return () => {window.removeEventListener("wb-rp-jump", jump);window.removeEventListener("wb-image-compose", imageCompose);};
   }, []);
   useEffect(() => {
     let frame = 0;
@@ -176,7 +180,7 @@ export function RPStage({ host, hidden, blocked, width, readingLayout, run }: {
       <div className="wb-rp-deck-header"><div className="wb-rp-speaker"><strong>{compose ? presentation.userName : current?.name || presentation.name}</strong><small>{compose ? "你的回应" : current?.user ? "你的输入" : "对白"}</small></div>
         <div className="wb-rp-deck-actions"><button aria-label="查看对话记录" title="对话记录" onClick={() => setHistory(true)}><History size={15} /><span>记录</span></button><IconButton title="切换阅读布局" onClick={readingLayout}><BookOpen size={16} /></IconButton><RPAppearance host={host} />
           {host.isGenerating() && <IconButton title="停止生成" onClick={() => run(() => host.click("#mes_stop"))}><Square size={16} /></IconButton>}
-          {current?.editing ? <><IconButton title="保存对白编辑" onClick={() => nativeAction(".mes_edit_done")}><Check size={16} /></IconButton><IconButton title="取消对白编辑" onClick={() => nativeAction(".mes_edit_cancel")}><X size={16} /></IconButton></> : <><IconButton title="重生成当前回复" disabled={snap.busy || !current || current.user || current.id !== snap.messages.length - 1} onClick={() => run(() => host.click("#option_regenerate"))}><RotateCcw size={16} /></IconButton><IconButton title="编辑当前对白" disabled={snap.busy || !current || compose} onClick={() => nativeAction(".mes_edit")}><PencilLine size={16} /></IconButton></>}
+          {current?.editing ? <><IconButton title="保存对白编辑" onClick={() => nativeAction(".mes_edit_done")}><Check size={16} /></IconButton><IconButton title="取消对白编辑" onClick={() => nativeAction(".mes_edit_cancel")}><X size={16} /></IconButton></> : <><IconButton title="重生成当前回复" disabled={snap.busy || !current || current.user || current.id !== snap.messages.length - 1} onClick={() => run(() => host.click("#option_regenerate"))}><RotateCcw size={16} /></IconButton><IconButton title="编辑当前对白" disabled={snap.busy || !current || compose} onClick={() => nativeAction(".mes_edit")}><PencilLine size={16} /></IconButton>{addonEnabled(prefs,"image-gen")&&<IconButton title="为当前对白生图" disabled={snap.busy||!current||compose} onClick={()=>beginImage(host,current!.id)}><ImagePlus size={16}/></IconButton>}</>}
           <div className="wb-rp-page-control"><IconButton title="上一段对白" disabled={(!compose && current === messages[0] && page === 0 && !scroll.scrolled) || !current || current.editing} onClick={() => turn(-1)}><ChevronLeft size={17} /></IconButton><span aria-live="polite">{compose ? "输入" : `${page + 1} / ${current?.pages.length || 1}`}</span><IconButton title="下一段对白或输入" disabled={compose || !!current?.editing} onClick={() => turn(1)}><ChevronRight size={17} /></IconButton></div>
         </div>
       </div>

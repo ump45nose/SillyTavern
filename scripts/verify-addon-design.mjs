@@ -165,6 +165,7 @@ try {
   assert.match(await field('positive').inputValue(), /soft lighting/);
   await click('generate-direct'); await click('close-right'); await page.waitForTimeout(1850);
   assert.equal(await page.locator('#task-badges .task-badge').count(), 0);
+  if(await page.locator('[data-action="panel-image"]:visible').count()===0){await click('toggle-right');await settle();}
   await click('panel-image');
   assert.equal(await page.locator('.result-image').count(), 1);
   await click('insert-image'); assert.equal(await page.locator('[data-message="m3"] .message-media').count(), 1);
@@ -182,6 +183,7 @@ try {
   await field('image-delivery').selectOption('workspace'); await field('auto-image').check();
   await click('simulate-round'); await click('close-right'); await page.waitForTimeout(3000);
   assert.equal(await page.locator('.message-media').count(), 0);
+  if(await page.locator('[data-action="panel-image"]:visible').count()===0){await click('toggle-right');await settle();}
   await click('panel-image'); await panel().locator('[data-action="image-tab"][data-value="results"]').click();
   assert.equal(await page.locator('.result-image').count(), 1);
   await panel().locator('[data-action="image-tab"][data-value="automatic"]').click();
@@ -214,6 +216,7 @@ try {
   await click('mode-menu'); await click('mode-rp');
   assert.equal(await page.locator('.edge-left').getAttribute('aria-expanded'), 'false');
   assert.equal(await page.locator('.edge-right').getAttribute('aria-expanded'), 'false');
+  if(await page.locator('[data-action="panel-image"]:visible').count()===0){await click('toggle-right');await settle();}
   await click('panel-image'); await settle();
   await page.screenshot({ path: `${directory}/rp-workspace-1496.png` });
   await page.emulateMedia({ reducedMotion: 'reduce' });

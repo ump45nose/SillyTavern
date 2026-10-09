@@ -5,6 +5,8 @@ const directory = path.resolve("extension/dist");
 const result = await build({
   entryPoints: {
     index: "src/index.tsx",
+    "addons/outline/index": "src/addons/outline/index.tsx",
+    "addons/image-gen/index": "src/addons/image-gen/index.tsx",
     "addons/record-export/index": "src/addons/record-export/index.tsx",
     "addons/record-export/export-worker": "src/addons/record-export/export-worker.ts",
   },

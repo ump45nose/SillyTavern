@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { HostAdapter, nativeNodes } from "./host/adapter";
+import {disposeAddons} from "./addons/runtime";
 import App, { beforeClose } from "./App";
 import { LayoutSwitcher, type LayoutMode } from "./ui/LayoutSwitcher";
 import { createTrace } from "../extension/trace.js";
@@ -16,6 +17,7 @@ import "./preferences.css";
 import "./rp.css";
 import "./layout.css";
 import "./utility.css";
+import "./addon-shell.css";
 class Boundary extends React.Component<
   { children: React.ReactNode },
   { failed: boolean }
@@ -151,6 +153,7 @@ function unmount() {
   unsubscribeLayout?.(); unsubscribeLayout = undefined;
   root?.unmount();
   root = undefined;
+  if(host)disposeAddons(host);
   host?.destroy();
   host = undefined;
   trace?.destroy();

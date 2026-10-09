@@ -40,3 +40,13 @@
 - `npm run verify:utilities`：142 条聊天、组合 XML 规则、下载内容、手动标签、聊天切换、取消任务与 Noval／RP 布局。
 
 网页验证回放设置及聊天写入，不改共享账号。检查图和机器报告位于忽略入库的 `artifacts/addons/`、`artifacts/utility-tools/`。
+
+## API v2：大纲与生图
+
+记录导出保持 API v1。新模块使用 v2，增加 Sidebar/Workspace/完整编辑视图、createRuntime 和独立任务生命周期。`src/addons/runtime.ts` 的轻量管理器和 `src/host/addon-api.ts` 的完成事件桥随主界面加载，不导入业务模块。任务运行对象按 HostAdapter/当前聊天缓存，关闭 UI 只释放 CSS 和 UI 订阅；聊天切换、停用或退出工作台释放运行对象并取消任务。
+
+数据以 `chatMetadata.workbench_addons[id]` 隔离；生图配置存 `extensionSettings.workbench.addonSettings[id]`。宿主能力是冻结对象，提供按插件命名空间的保存、独立连接请求、原输入/续写及原生图片附件；不暴露上下文或密钥仓库。聊天保存串行、使用当前最新元数据/消息，生成期间等待空闲；保存成功前不推进写作轮数。图片目标捕获聊天、消息对象标识和回复签名，附件写入前后再次验证。HTTP 局域网使用 getRandomValues 生成标识，不依赖仅安全上下文可用的 randomUUID。
+
+生图引擎仅导入固定提交的 QIG 库，无上游自动初始化/界面。已有原生 OpenAI/NovelAI 服务转发可选复用，其余自定义后端浏览器直连。ComfyUI 不使用全局 interrupt。数据库总结保留 `summary()` 只读接口，当前返回 null。
+
+完整操作、后端要求及验证见 [大纲与生图](../workbench-writing-addons.md)。

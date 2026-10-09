@@ -15,6 +15,11 @@ export class Operations {
   }
 }
 export const shortcutActions = [
+  { id: "outline.editor", label: "完整大纲编辑", binding: "" },
+  { id: "open.outline", label: "打开大纲工作区", binding: "Alt+Shift+KeyO" },
+  { id: "outline.insert", label: "插入当前大纲节点", binding: "Alt+Shift+KeyI" },
+  { id: "outline.pause", label: "暂停／继续自动写作", binding: "Alt+Shift+KeyP" },
+  { id: "open.image-gen", label: "打开生图工作区", binding: "Alt+Shift+KeyG" },
   { id: "open.connection", label: "打开连接", binding: "Alt+Shift+Digit1" },
   { id: "open.preset", label: "打开预设", binding: "Alt+Shift+Digit2" },
   { id: "open.world", label: "打开世界书", binding: "Alt+Shift+Digit3" },

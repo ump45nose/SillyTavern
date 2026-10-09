@@ -1,7 +1,9 @@
 import React, { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ScanLine, X, Activity, BookOpen, FileOutput, SlidersHorizontal, UserRound, UsersRound, Plug, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff } from "lucide-react";
+import { ScanLine, X, Activity, BookOpen, FileOutput, SlidersHorizontal, UserRound, UsersRound, Plug, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff, ListTree, ImagePlus } from "lucide-react";
 import { resolveTool } from "./host/tools";
 import { addonEnabled } from "./addons/catalog";
+import { addonManager } from "./addons/runtime";
+import { AddonTasks, MessageImageControls, ImageInputMode } from "./ui/AddonControls";
 import AddonWorkspace from "./ui/AddonWorkspace";
 import { ResourceRailContext } from "./ui/ResourcePicker";
 import {ClickFeedback,usePresence} from "./ui/Motion";
@@ -71,8 +73,12 @@ export default function App({
     [workspace,setWorkspace]=useState<{page:SettingsPage;group?:string;initial?:string}|null>(null),
     [help, setHelp] = useState(false),
     [externalError, setExternalError] = useState("");
+  const manager=addonManager(host);
+  useEffect(()=>()=>manager.dispose(),[manager]);
+  useEffect(()=>{const handler=(event:Event)=>{const {id,view}=(event as CustomEvent).detail;if(!addonEnabled(host.prefs(),id))return;if(view==='editor'){if(beforeClose()){setDeep(id);setWorkspace(null);setPanel(null);}}else goPanel(id);};window.addEventListener('wb-addon-open',handler);return()=>window.removeEventListener('wb-addon-open',handler);});
   const exportEnabled = addonEnabled(host.prefs(), "record-export");
   useEffect(() => { if (!exportEnabled && panel === "export") setPanel(null); }, [exportEnabled, panel]);
+  useEffect(()=>{if((panel==='outline'||panel==='image-gen')&&!addonEnabled(host.prefs(),panel))setPanel(null);if((deep==='outline'||deep==='image-gen')&&!addonEnabled(host.prefs(),deep))setDeep(null);},[host.revision(),panel,deep]);
   const rp = host.prefs().layout === "rp", topAuto = rp && !!host.prefs().rpTopAuto;
   const [topHot, setTopHot] = useState(false), [topFocus, setTopFocus] = useState(false), [layoutMenu, setLayoutMenu] = useState(false);
   const topCollapsed = topAuto && !topHot && !topFocus && !chooser && !layoutMenu;
@@ -84,6 +90,7 @@ export default function App({
     setPanel(null); setChooser(null); setPopup(null); setWorkspace(null); setDeep(null); setFocus(false); setTopHot(false); setTopFocus(false);
     setLeft(rp ? false : host.prefs().left);
   }, [rp, host]);
+  useEffect(()=>{const compose=()=>{if(rp&&width<=1100){setPanel(null);setLeft(false);}};window.addEventListener('wb-image-input',compose);return()=>window.removeEventListener('wb-image-input',compose);},[rp,width]);
   const switchLayout = onLayout;
   useEffect(() => {
     const menu = (event:Event) => { const open = !!(event as CustomEvent).detail; setLayoutMenu(open); if (open) setChooser(null); };
@@ -117,6 +124,7 @@ export default function App({
   const openSettings=(page:SettingsPage,group?:string,initial?:string)=>{if(!beforeClose())return;setPopup(null);setPanel(null);setChooser(null);setDeep(null);setWorkspace({page,group,initial});};
   const goPanel = (next: Panel, id?: string) => {
     if (next === "export" && !exportEnabled) return;
+    if((next==='outline'||next==='image-gen')&&!addonEnabled(host.prefs(),next))return;
     if (!beforeClose()) return;
     if (next && id !== undefined) selectedIds.current[next] = id;
     setPanel(next);
@@ -173,9 +181,14 @@ export default function App({
     operations.register(`next.${kind}`, () => next(kind));
   }
   operations.register("open.trace", () => goPanel("trace"));
+  operations.register("outline.editor",()=>{if(addonEnabled(host.prefs(),"outline"))manager.api("outline").open("editor");});
+  operations.register("open.outline",()=>goPanel("outline"));
+  operations.register("outline.insert",()=>{if(addonEnabled(host.prefs(),'outline'))void manager.ensure('outline').then(r=>r.action('insert')).catch(e=>host.report(e));});
+  operations.register("outline.pause",()=>{const r=manager.get('outline');if(r)void r.action(r.task().status==='running'?'pause':'resume').catch(e=>host.report(e));});
+  operations.register("open.image-gen",()=>goPanel("image-gen"));
   operations.register("open.character", () => goPanel("character"));
   const leftWidth = width <= 1400 ? 240 : 260, rightWidth = width <= 1400 ? 440 : 460;
-  const railVisible=!!panel&&panel!=="trace"&&panel!=="export"&&railOpen&&!focus;
+  const railVisible=!!panel&&panel!=="trace"&&panel!=="export"&&panel!=="outline"&&panel!=="image-gen"&&railOpen&&!focus;
   const leftVisible = left && !focus && (!panel || ((!rp || width > 1100) && width - leftWidth - rightWidth - (railVisible?180:0) >= 420));
   const toggleLeft = () => { if (rp && width <= 1100 && !left) {goPanel(null);setLeft(true);} else if (left && !leftVisible && !focus) goPanel(null); else setLeft(v => !v); };
   const toggleFocus = () => { setChooser(null); setFocus(v => !v); };
@@ -242,6 +255,8 @@ export default function App({
       <Characters host={host} onManage={group => group?openSettings("character",group):goDeep("library")} />
     ) : kind === "export" ? (
       <AddonWorkspace host={host} id="record-export" active={panel === "export" && !workspace && !deep} />
+    ) : kind === "outline" || kind === "image-gen" ? (
+      <AddonWorkspace host={host} id={kind} active={independent || (panel===kind&&!workspace&&!deep)} view={independent?"editor":"workspace"}/>
     ) : kind === "trace" ? (
       <Trace host={host} trace={trace} />
     ) : kind ? (
@@ -258,6 +273,9 @@ export default function App({
   return (
     <>
       <ClickFeedback/>
+      <AddonTasks host={host}/>
+      <MessageImageControls host={host}/>
+      <ImageInputMode host={host}/>
       <div className="wb-header-shell" inert={rp && (focus || topCollapsed)} onPointerLeave={e=>{if(e.pointerType!=="touch"&&!e.currentTarget.querySelector(':focus-visible'))setTopFocus(false);}} onFocusCapture={()=>setTopFocus(true)} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setTopFocus(false);}}>
       <Header snap={snap} panel={panel} chooser={chooser} setChooser={setChooser} goPanel={goPanel}
         next={kind => operations.run(`next.${kind}`)} model={host.model()} focus={toggleFocus} focused={focus}
@@ -286,10 +304,10 @@ export default function App({
         help={() => setHelp(true)} exit={onExit} run={task.run} />
       <aside id="wb-resource-rail" ref={setRailTarget} className={`wb-resource-rail ${railVisible?"is-open":""}`} inert={!railVisible} aria-hidden={!railVisible} aria-label="资源列表与角色信息"/>
       <aside className={`wb-right ${panel && !focus ? "is-open" : ""}`} inert={!panel || focus} aria-hidden={!panel || focus} aria-label="角色与资源">
-        <div className="wb-panel-header-row"><button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel==="export"?"记录导出":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button></div>
+        <div className="wb-panel-header-row"><button className="wb-panel-switch" aria-label="展开资源分类" aria-expanded={tabsOpen} onClick={()=>setTabsOpen(!tabsOpen)}><span>{panel==="character"?"角色":panel==="trace"?"Trace":panel==="export"?"记录导出":panel==="outline"?"大纲":panel==="image-gen"?"生图":panel?labels[panel]:"角色与资源"}</span><ChevronDown size={14}/></button></div>
         <div className={`wb-panel-tabs-fold ${tabsOpen?"is-open":""}`} inert={!tabsOpen}>
         <div className="wb-panel-tabs">
-          {([["character", "角色", UsersRound], ["world", "世界书", BookOpen], ["preset", "预设", SlidersHorizontal], ["connection", "连接", Plug], ["persona", "用户设定", UserRound], ["trace", "Trace", Activity], ["export", "记录导出", FileOutput]] as const).filter(([kind]) => kind !== "export" || exportEnabled).map(([kind, label, Icon]) =>
+          {([["character", "角色", UsersRound], ["world", "世界书", BookOpen], ["preset", "预设", SlidersHorizontal], ["connection", "连接", Plug], ["persona", "用户设定", UserRound], ["trace", "Trace", Activity], ["export", "记录导出", FileOutput], ["outline", "大纲", ListTree], ["image-gen", "生图", ImagePlus]] as const).filter(([kind]) => kind === "export"?exportEnabled:kind === "outline"||kind === "image-gen"?addonEnabled(host.prefs(),kind):true).map(([kind, label, Icon]) =>
             <button key={kind} className={panel === kind ? "is-active" : ""} aria-pressed={panel === kind} onClick={() => {goPanel(kind);setTabsOpen(false);}}><Icon size={15} />{label}</button>)}
         </div>
         </div>
@@ -315,7 +333,8 @@ export default function App({
       {rp ? <RPStage host={host} hidden={focus} blocked={width<=1100&&!!(leftVisible||panel)} width={width-(width>1100?(leftVisible?leftWidth:0)+(panel&&!focus?rightWidth+(railVisible?180:0):0):0)} readingLayout={()=>switchLayout("novel")} run={task.run}/> : <ReadingPresentation host={host}/>}
       {popupPresence.value&&<ComposerPopovers key={popupPresence.value.kind+":"+(popupPresence.value.toolId||"")} host={host} popup={popupPresence.value} exiting={popupPresence.exiting} close={()=>setPopup(null)} settings={openSettings} activate={activateTool}/>}
       {workspacePresence.value&&<Suspense fallback={<Loading/>}><SettingsWorkspace host={host} page={workspacePresence.value.page} group={workspacePresence.value.group} initial={workspacePresence.value.initial} exiting={workspacePresence.exiting} onClose={()=>setWorkspace(null)}/></Suspense>}
-      {deep && (
+      {(deep==='outline'||deep==='image-gen')&&<section className="wb-addon-editor" aria-label="附加功能完整编辑页"><header><strong>{deep==='outline'?'大纲 · 完整编辑':'生图 · 完整配置'}</strong><button onClick={()=>{if(beforeClose())setDeep(null);}}>返回工作台<X size={15}/></button></header><AddonWorkspace host={host} id={deep} active view="editor"/></section>}
+      {deep && deep!=='outline' && deep!=='image-gen' && (
         <Dialog
           wide
           title={

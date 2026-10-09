@@ -20,7 +20,7 @@ export function loadAddon(id: AddonId) {
     const response = await fetch(manifestURL, { cache: "no-cache", signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error("附加插件文件未找到，请确认完整安装了工作台插件。");
     const manifest = await response.json() as AddonManifest;
-    if (manifest.id !== id || manifest.apiVersion !== 1 || typeof manifest.version !== "string" || typeof manifest.entry !== "string" || typeof manifest.css !== "string")
+    if (manifest.id !== id || manifest.apiVersion !== (id === "record-export" ? 1 : 2) || typeof manifest.version !== "string" || typeof manifest.entry !== "string" || typeof manifest.css !== "string")
       throw new Error("附加插件版本不兼容，请更新工作台。");
     const entryURL = new URL(assetURL(manifest.entry, manifestURL, manifest.version, ".js")), css = assetURL(manifest.css, manifestURL, manifest.version, ".css");
     // Browsers cache failed module imports too. Only retries need a fresh module URL.
@@ -28,7 +28,7 @@ export function loadAddon(id: AddonId) {
     if (retry) entryURL.searchParams.set("retry", String(retry));
     // URL import intentionally stays outside the main static dependency graph.
     const module = await import(entryURL.href) as AddonModule;
-    if (module.id !== id || module.apiVersion !== 1 || typeof module.Workspace !== "function")
+    if (module.id !== id || module.apiVersion !== manifest.apiVersion || typeof module.Workspace !== "function")
       throw new Error("附加插件入口不兼容，请更新工作台。");
     return { module, css };
   })();

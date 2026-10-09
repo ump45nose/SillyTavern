@@ -1,5 +1,5 @@
 export type Resource = "connection" | "preset" | "world" | "persona";
-export type Panel = Resource | "character" | "trace" | "export" | null;
+export type Panel = Resource | "character" | "trace" | "export" | "outline" | "image-gen" | null;
 export type SettingsPage = "generation" | "connection" | "formatting" | "world" | "settings" | "background" | "extensions" | "persona" | "character";
 export type Data = Record<string, any>;
 export interface Item {
@@ -27,6 +27,7 @@ export interface Preferences {
   shortcuts?: Record<string, string>;
   shortcutsEnabled?: boolean;
   addons?: Record<string, boolean>;
+  addonSettings?: Record<string, Data>;
   pinnedTools?: { id: string; label: string }[];
   userCollapsed?: boolean;
   messageMeta?: "hover" | "always" | "never";
