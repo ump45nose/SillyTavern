@@ -328,6 +328,8 @@ export class HostAdapter {
       sprite: sprite && !sprite.includes("/expressions/images/") ? sprite : "",
       userName: c.name1 || "你",
       userPortrait: snap.current.persona ? "/User%20Avatars/" + encodeURIComponent(snap.current.persona) : "",
+      // A chat can supply a transparent user sprite without replacing its persona avatar.
+      userSprite: typeof c.chatMetadata?.workbenchRP?.userSprite === "string" ? c.chatMetadata.workbenchRP.userSprite : "",
       scene: scene && typeof scene === "object" ? scene as Record<string, unknown> : {},
     };
   }

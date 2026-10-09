@@ -37,9 +37,9 @@ body.wb-rp :is(#expression-wrapper,#visual-novel-wrapper) { opacity:0 !important
 .wb-rp-actor,.wb-rp-user { position:absolute; bottom:0; transform:translateX(-50%); transition:left 220ms,filter 260ms,opacity 200ms; }
 .wb-rp-actor { left:calc(var(--wb-left) + var(--wb-rp-area) * .63); }
 .wb-rp-user { left:calc(var(--wb-left) + var(--wb-rp-area) * .29); }
-.wb-rp-actor.is-sprite { height:min(var(--wb-rp-sprite,91vh),calc(100vh - var(--wb-rp-chrome) - 20px),calc(var(--wb-rp-area) * .98)); max-width:calc(var(--wb-rp-area) * .57); }
-.wb-rp-actor.is-sprite img { width:100%; height:100%; object-fit:contain; object-position:center bottom; }
-.wb-rp-actor.is-sprite span { display:none; }
+.wb-rp-stage .is-sprite { height:min(var(--wb-rp-sprite,91vh),calc(100vh - var(--wb-rp-chrome) - 20px),calc(var(--wb-rp-area) * .98)); max-width:calc(var(--wb-rp-area) * .57); }
+.wb-rp-stage .is-sprite img { width:100%; height:100%; object-fit:contain; object-position:center bottom; }
+.wb-rp-stage .is-sprite span { display:none; }
 .wb-rp-stage .is-listening { filter:saturate(.72) brightness(.9); }
 /* Portrait cards are the deliberate fallback when no transparent sprite exists. */
 .wb-rp-stage .is-portrait { top:calc(var(--wb-rp-chrome) + 70px); bottom:auto; height:min(320px,calc(var(--wb-rp-sprite,91vh) * .43),calc(100vh - var(--wb-rp-chrome) - 148px - var(--wb-rp-deck) - var(--wb-rp-bottom))); width:min(220px,calc(var(--wb-rp-sprite,91vh) * .32),calc(var(--wb-rp-area) * .27)); border:1px solid #ffffffa0; border-radius:12px; background:var(--wb-soft); box-shadow:0 12px 38px #241f2914; overflow:hidden; }
