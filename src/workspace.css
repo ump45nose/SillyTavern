@@ -14,8 +14,8 @@
 .wb-ui input[type=range]::-moz-range-thumb { width:10px; height:10px; border:2px solid var(--wb-surface); border-radius:50%; background:var(--wb-accent); }
 .wb-ui .wb-select-trigger > span { animation:wb-value-in 180ms ease; }
 @keyframes wb-value-in { from { opacity:.35; transform:translateY(3px); } to { opacity:1; transform:none; } }
-/* Upper two thirds are information; all nine settings remain visible below. */
-.wb-navigation-v4 { display:grid; grid-template-rows:minmax(0,2fr) minmax(232px,1fr); gap:0; padding:0; overflow:hidden; }
+/* The outline uses the space released by the collapsible settings group. */
+.wb-navigation-v4 { display:grid; grid-template-rows:minmax(0,1fr) auto; gap:0; padding:0; overflow:hidden; }
 .wb-information { min-height:0; overflow:auto; padding:18px 17px 12px; }
 .wb-information .wb-section-title { gap:8px; margin:0 0 8px; color:var(--wb-control-ink); font-size:12px; }
 .wb-information .wb-section-title .wb-icon { width:27px; height:27px; min-height:27px; padding:5px; }
@@ -40,7 +40,18 @@
 .wb-floor-copy { min-width:0; color:var(--wb-control-ink); font-size:11px; line-height:1.65; }
 .wb-floor-copy > span { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1; overflow:hidden; }
 .wb-settings-zone { display:flex; flex-direction:column; min-height:0; border-top:1px solid var(--wb-line); padding:12px 16px 9px; }
-.wb-settings-caption { font-size:10px; margin:0 0 7px 6px; }
+.wb-settings-actions { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+.wb-settings-actions > button { padding:5px 4px; min-height:30px; gap:5px; border:0; background:transparent; font-size:11px; color:var(--wb-control-ink); }
+.wb-settings-actions svg { transition:transform 220ms; }
+.wb-settings-actions svg.is-rotated { transform:rotate(180deg); }
+.wb-nav-settings-body.is-open > div { max-height:none; overflow:hidden; }
+.wb-settings-actions + .wb-nav-settings-body.is-open > div { padding-top:6px; }
+.wb-nav-settings-body .wb-nav-footer { margin-top:8px; }
+.wb-navigation-v4.is-outline-expanded .wb-information { display:flex; flex-direction:column; }
+.wb-navigation-v4.is-outline-expanded .wb-information > * { flex-shrink:0; }
+.wb-navigation-v4.is-outline-expanded .wb-information .wb-outline-placeholder { display:flex; flex-direction:column; flex:1; min-height:160px; }
+.wb-navigation-v4.is-outline-expanded .wb-outline-placeholder > .wb-fold-body { flex:1; min-height:0; }
+.wb-navigation-v4.is-outline-expanded .wb-outline-placeholder > .wb-fold-body > div { display:flex; flex-direction:column; max-height:none; overflow:hidden; }
 .wb-settings-zone .wb-left-bottom { position:static; display:grid; grid-template-columns:1fr 1fr; gap:2px 4px; padding:0; margin:0; border:0; background:transparent; }
 .wb-settings-zone .wb-left-bottom > button { gap:8px; padding:6px; min-height:30px; border:0; font-size:11px; justify-content:flex-start; }
 .wb-nav-footer { display:flex; gap:5px; border-top:1px solid var(--wb-line); margin-top:auto; padding-top:6px; }
@@ -215,7 +226,7 @@ body.wb-active .wb-native-settings-slot #advanced-ai-config-block { display:grid
 .wb-settings-body > .wb-characters.is-management,.wb-settings-body > .wb-resource-v2 { height:100%; }
 .wb-settings-body > .wb-resource-v2.is-deep .wb-resource-detail { max-width:900px; }
 @media (max-width:1400px) { .wb-manager-grid { grid-template-columns:180px minmax(0,1fr); } .wb-settings-layout { grid-template-columns:156px minmax(0,1fr); } .wb-manager-editor .wb-world.is-managed .wb-world-grid { grid-template-columns:minmax(180px,.9fr) minmax(240px,1.6fr) minmax(190px,.9fr); } }
-@media (max-height:800px) { .wb-navigation-v4 { grid-template-rows:minmax(0,2fr) 224px; } .wb-information { padding-top:12px; } .wb-settings-zone { padding-top:8px; } .wb-settings-zone .wb-left-bottom > button { min-height:28px; padding:5px 6px; } .wb-settings-caption { margin-bottom:3px; } }
+@media (max-height:800px) { .wb-information { padding-top:12px; } .wb-settings-zone { padding-top:8px; } .wb-settings-zone .wb-left-bottom > button { min-height:28px; padding:5px 6px; } }
 @media (prefers-reduced-motion:reduce) { body.wb-active .wb-ui *,body.wb-active #chat *,body.wb-active #send_form *,body.wb-active #sheld { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
 .wb-information .wb-outline-placeholder { min-height:0; flex:none; }
 .wb-information .wb-floors,.wb-information .wb-recent-section { border-top:0; }

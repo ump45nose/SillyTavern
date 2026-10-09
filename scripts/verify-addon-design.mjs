@@ -34,12 +34,28 @@ try {
   await page.screenshot({ path: `${directory}/outline-workspace-1496.png` });
   pass('LAN entry, no-store and real 1496×817 geometry');
 
+  assert.equal(await page.getByText('工作台设置 · 沿用当前组件', {exact:true}).count(),0);
+  assert.equal(await page.locator('#nav-settings').evaluate(el=>el.inert),true);
+  assert.equal(await page.locator('#nav-settings-actions button').count(),2);
+  const expandedTreeHeight=await page.locator('#nav-tree').evaluate(el=>el.getBoundingClientRect().height);
+  await click('fold-settings');await page.waitForTimeout(100);
+  const animatedSettingsHeight=await page.locator('#nav-settings').evaluate(el=>el.getBoundingClientRect().height);
+  await settle();
+  assert.ok(animatedSettingsHeight>1&&animatedSettingsHeight<await page.locator('#nav-settings').evaluate(el=>el.getBoundingClientRect().height));
+  assert.equal(await page.locator('#nav-settings').evaluate(el=>el.inert),false);
+  assert.ok(await page.locator('#nav-tree').evaluate(el=>el.getBoundingClientRect().height)<expandedTreeHeight-100);
+  await click('fold-settings');await settle();
+  await page.locator('#nav-settings-actions [data-action="settings"]').click();assert.equal(await deep().isVisible(),true);await click('close-deep');
+  pass('outline frees settings space; two controls expand with motion or open the settings page');
+
   const leftHeight = await page.locator('#nav-outline').evaluate(el => el.getBoundingClientRect().height);
   await click('fold-tree'); await page.waitForTimeout(100);
   const middleHeight = await page.locator('#nav-outline').evaluate(el => el.getBoundingClientRect().height);
   assert.ok(middleHeight > 1 && middleHeight < leftHeight);
   await settle();
   assert.ok(await page.locator('#nav-outline').evaluate(el => el.getBoundingClientRect().height) < 2);
+  assert.equal(await page.locator('#nav-settings').evaluate(el=>el.inert),false);
+  assert.equal(await page.locator('#nav-settings-actions').isVisible(),false);
   await page.screenshot({ path: `${directory}/outline-left-collapsed-1496.png` });
   await click('fold-tree'); await settle();
   const branch = page.locator('#nav-tree [data-action="branch"][data-id="chapter1"]');
@@ -99,7 +115,7 @@ try {
   assert.equal(await field('node-title').inputValue(), '新章节');
   pass('JSON export, invalid graph rejection and Markdown preview before replacement');
 
-  await reset(); await click('shortcuts');
+  await reset(); await click('fold-settings'); await settle(); await click('shortcuts');
   const binding = page.getByRole('textbox', { name: '打开完整大纲快捷键', exact: true });
   await binding.press('Control+R'); assert.match(await page.locator('#shortcut-error').textContent(), /冲突/);
   await binding.press('Control+Alt+O'); assert.equal(await binding.inputValue(), 'Ctrl+Alt+O');

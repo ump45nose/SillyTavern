@@ -27,7 +27,7 @@ const initialMessages = [
 ];
 let manualImage=null;
 const state = {
-  nodes:structuredClone(initialNodes), selected:'promise', collapsed:new Set(), briefs:new Set(['promise']), query:'', outlineTab:'content', imageTab:'prompt', panel:'outline', left:true, right:true, mode:'novel', deep:null, preview:true,
+  nodes:structuredClone(initialNodes), selected:'promise', collapsed:new Set(), briefs:new Set(['promise']), query:'', outlineOpen:true, settingsExpanded:false, outlineTab:'content', imageTab:'prompt', panel:'outline', left:true, right:true, mode:'novel', deep:null, preview:true,
   enabled:{outline:true,image:true}, insertion:'insert', sendAfterInsert:false, runScope:'from', writing:{phase:'idle', queue:[], index:0, round:0, completed:0, total:0, timer:null, pauseRequested:false},
   messages:structuredClone(initialMessages), rewrite:'根据以下聊天场景，提取可见人物、动作、环境和光线。\n只输出正面提示词与负面提示词，不解释，不包含思考过程。\n{{scene}}', positive:'1girl, elf, silver hair, gentle smile, wooden cottage, cherry blossoms, warm sunset, cinematic lighting', negative:'text, watermark, low quality, extra fingers',
   image:{phase:'idle', target:'m3', before:3, backend:'OpenAI 兼容', profile:'current', format:'tags', automatic:false, every:3, counted:0, delivery:'insert', results:[], selected:null, timer:null, token:0, error:'', simulateFailure:false, configTab:'backend', sourceOpen:false, templateOpen:false, excludeThink:true,excludeSystem:true,excludeMedia:true},
@@ -88,6 +88,10 @@ function syncShell() {
   $('#outline-tab').classList.toggle('is-selected',state.panel==='outline');$('#image-tab').classList.toggle('is-selected',state.panel==='image');
   $('#outline-entry').classList.toggle('is-selected',state.right&&state.panel==='outline');
   $('#outline-entry').hidden=!state.enabled.outline;$('#outline-tab').hidden=!state.enabled.outline;document.querySelectorAll('[data-image-entry]').forEach(button=>button.hidden=!state.enabled.image);$('#image-tab').hidden=!state.enabled.image;
+  const outlineExpanded=state.enabled.outline&&state.outlineOpen,settingsVisible=!outlineExpanded||state.settingsExpanded;
+  $('[data-action="fold-tree"]').setAttribute('aria-expanded',outlineExpanded);$('#nav-outline').classList.toggle('is-open',outlineExpanded);$('#nav-outline').inert=!outlineExpanded;
+  $('#nav-settings-actions').hidden=!outlineExpanded;$('#nav-settings').classList.toggle('is-open',settingsVisible);$('#nav-settings').inert=!settingsVisible;$('#nav-settings').setAttribute('aria-hidden',!settingsVisible);
+  const settingsToggle=$('[data-action="fold-settings"]');settingsToggle.setAttribute('aria-expanded',settingsVisible);settingsToggle.querySelector('span').textContent=settingsVisible?'收纳设置':'展开设置';
   $('#mode-button').innerHTML=icon(state.mode==='rp'?'theater':'book');$('.reading-heading small').textContent=state.mode==='rp'?'RP':'Noval';
   document.querySelectorAll('#mode-menu button').forEach(b=>b.classList.toggle('is-selected',b.dataset.action===`mode-${state.mode}`));
 }
@@ -309,7 +313,8 @@ const handlers = {
   'panel-outline':()=>showPanel('outline'),'panel-image':()=>showPanel('image'),
   'toggle-left':()=>{state.left=!state.left;if(innerWidth<=1100&&state.left)state.right=false;syncShell();},
   'toggle-right':()=>{state.right=!state.right;if(innerWidth<=1100&&state.right)state.left=false;syncShell();},'close-right':()=>{state.right=false;syncShell();},
-  'fold-tree':el=>{const open=el.getAttribute('aria-expanded')!=='true';el.setAttribute('aria-expanded',open);$('#nav-outline').classList.toggle('is-open',open);$('#nav-outline').inert=!open;if(open)setTimeout(()=>scrollBrief(state.selected),240);},
+  'fold-tree':()=>{state.outlineOpen=!state.outlineOpen;state.settingsExpanded=false;syncShell();if(state.outlineOpen)setTimeout(()=>scrollBrief(state.selected),240);},
+  'fold-settings':()=>{state.settingsExpanded=!state.settingsExpanded;syncShell();},
   'branch':el=>{const id=el.dataset.id,expanded=state.collapsed.has(id);expanded?state.collapsed.delete(id):state.collapsed.add(id);document.querySelectorAll(`[data-branch-container="${id}"]`).forEach(group=>{group.classList.toggle('is-open',expanded);group.inert=!expanded;group.setAttribute('aria-hidden',!expanded);});document.querySelectorAll(`[data-action="branch"][data-id="${id}"]`).forEach(button=>{button.querySelector('.icon').classList.toggle('down',expanded);button.setAttribute('aria-label',`${expanded?'收起':'展开'}${getNode(id).title}`);button.closest('.tree-row').setAttribute('aria-expanded',expanded);});},
   'node-brief':el=>{const id=el.dataset.id,expanded=!state.briefs.has(id);expanded?state.briefs.add(id):state.briefs.delete(id);const group=$(`[data-brief-container="${id}"]`);group.classList.toggle('is-open',expanded);group.inert=!expanded;el.setAttribute('aria-expanded',expanded);el.querySelector('.icon').classList.toggle('down',expanded);el.setAttribute('aria-label',`${expanded?'收起':'展开'}${getNode(id).title}的内容`);if(expanded)setTimeout(()=>scrollBrief(id),240);},
   'insert-brief':el=>{state.selected=el.dataset.id;handlers['quick-insert']();renderTrees();if(state.panel==='outline'&&state.right)renderPanel();},
