@@ -75,7 +75,16 @@ try {
   await role("输入回应").click(); await page.locator("#send_textarea").fill("WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
   await choose("Noval");
   assert.equal(await page.locator(".wb-reading-bar").count(), 1);
+  assert.equal(await page.locator('.wb-reading-bar .lucide-theater').count(), 0);
+  assert.equal(await page.locator('.wb-layout-trigger').innerText(), "");
   assert.equal(await page.locator("#send_textarea").inputValue(), "WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
+  for (const [direction, expected] of [["上一个", "native"], ["上一个", "rp"], ["上一个", "novel"], ["下一个", "rp"], ["下一个", "native"], ["下一个", "novel"]]) {
+    await page.getByRole("button", {name:new RegExp(`^${direction}工作台`)}).click();
+    await page.waitForFunction(() => document.querySelector('.wb-layout-trigger:not(:disabled)')); await settle();
+    assert.equal(await page.evaluate(() => workbench.mounted ? workbench.host.prefs().layout : "native"), expected);
+    assert.equal(await page.locator("#send_textarea").inputValue(), "WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
+  }
+  pass("icon-only center opens the menu; both quick arrows cycle modes and preserve drafts");
   await ready(page, urls.validation, { probe:true }); await settle();
   assert.equal(await page.evaluate(() => workbench.host.prefs().layout), "novel");
   await page.screenshot({ path:directory + "/noval.png" });
@@ -95,23 +104,90 @@ try {
   await page.evaluate(() => workbench.host.preference({ rpTopAuto:false })); await settle();
   for (const layout of ["rp", "novel"]) {
     if (layout === "novel") await choose("Noval");
+    if (await page.locator('.wb-edge-left[aria-expanded=true]').count()) { await page.locator('.wb-edge-left').click(); await settle(); }
     for (const [width, height] of [[1024,768],[1100,800],[1366,768],[1496,817],[1920,1080],[2992,1634]]) {
       await page.setViewportSize({ width, height }); await settle();
       const rects = await page.evaluate(() => {
         const rect = selector => { const { left,right,top,bottom } = document.querySelector(selector).getBoundingClientRect(); return { left,right,top,bottom }; };
-        return { width:innerWidth, contexts:rect(".wb-contexts"), actions:rect(".wb-top-right"), pin:rect(".wb-top-right button:last-of-type"), trigger:rect(".wb-layout-trigger"), eye:document.querySelector(".wb-rp-visibility") ? rect(".wb-rp-visibility") : null, overflow:document.documentElement.scrollWidth > innerWidth };
+        return { width:innerWidth, contexts:rect(".wb-contexts"), actions:rect(".wb-top-right"), pin:rect(".wb-top-right button:last-of-type"), trigger:rect(".wb-layout-controls"), eye:document.querySelector(".wb-rp-visibility") ? rect(".wb-rp-visibility") : null, overflow:document.documentElement.scrollWidth > innerWidth };
       });
       assert.equal(rects.overflow, false); assert.ok(rects.contexts.right <= rects.actions.left + 1, JSON.stringify(rects));
       assert.ok(rects.pin.right < rects.trigger.left, JSON.stringify(rects)); assert.ok(rects.trigger.right <= width, JSON.stringify(rects));
       if (rects.eye) assert.ok(rects.trigger.right < rects.eye.left, JSON.stringify(rects));
+      for (const state of ["closed", "left", "right", "closed-again"]) {
+        if (state === "left") await page.locator(".wb-edge-left").click();
+        if (state === "right") await page.locator(".wb-edge-right").click();
+        if (state === "closed-again") {
+          if (await page.locator('.wb-edge-right[aria-expanded=true]').count()) { await page.locator(".wb-edge-right").click(); await settle(); }
+          if (await page.locator('.wb-edge-left[aria-expanded=true]').count()) await page.locator(".wb-edge-left").click();
+        }
+        await settle();
+        const edges = await page.evaluate(() => {
+          const rect = n => {const {left,right,top,bottom}=n.getBoundingClientRect();return {left,right,top,bottom};};
+          const mode=rect(document.querySelector('.wb-layout-controls'));
+          const handles=[...document.querySelectorAll('.wb-edge-arrow')].map(n=>({ ...rect(n),background:getComputedStyle(n).backgroundColor, hit:document.elementFromPoint(n.getBoundingClientRect().x+n.getBoundingClientRect().width/2,n.getBoundingClientRect().y+26)?.closest('button')===n }));
+          return {mode,handles,overflow:document.documentElement.scrollWidth>innerWidth};
+        });
+        assert.equal(edges.overflow,false);for (const handle of edges.handles) {
+          assert.equal(handle.background,"rgba(0, 0, 0, 0)"); assert.equal(handle.hit,true,JSON.stringify({layout,width,state,edges}));
+          assert.ok(handle.top >= edges.mode.bottom + 12); assert.ok(handle.left >= 0 && handle.right <= width,JSON.stringify({layout,width,state,edges}));
+        }
+      }
     }
   }
-  pass("six desktop widths in both layouts keep resource selectors, pin, mode entry and eye separate");
-  await page.setViewportSize({width:1496,height:817}); await choose("RP");
+  pass("six desktop widths in both layouts separate header controls and plain edge arrows, with panels open or closed");
+  await page.setViewportSize({width:1496,height:817}); await settle();
+  await page.locator('.wb-edge-left').click(); await page.waitForTimeout(70);
+  const edgeMotion=await page.locator('.wb-edge-nav').evaluate(n=>n.getBoundingClientRect().left);
+  assert.ok(edgeMotion>0&&edgeMotion<260,String(edgeMotion));
+  assert.equal(await page.locator('.wb-edge-left').evaluate(n=>n.getAnimations().some(a=>a.playState==='running')),true);
+  await settle(); await page.locator('.wb-edge-left').click(); await settle();
+  await page.emulateMedia({reducedMotion:'reduce'}); await page.locator('.wb-edge-left').click();
+  assert.equal(await page.locator('.wb-edge-nav').evaluate(n=>getComputedStyle(n).transitionDuration),'0s');
+  await page.locator('.wb-edge-left').click(); await page.emulateMedia({reducedMotion:'no-preference'}); await settle();
+  pass("plain edge controls retain click feedback and sliding animation, and respect reduced motion");
+  await page.evaluate(async () => {
+    const ctx=SillyTavern.getContext(); window.__layoutRealChat=structuredClone(ctx.chat);
+    const long="夕阳穿过樱花，落在白芷手中的书页上。她抬起头，笑着走近。\n\n".repeat(30), short="夕阳穿过樱花，落在白芷手中的书页上。\n\n\"你来了。沿着这条小径走走吧，我有一件事想告诉你。\"";
+    ctx.chat.splice(0,ctx.chat.length,{name:ctx.characters[ctx.characterId]?.name || "布局验证",is_user:false,is_system:false,send_date:"2026-10-09T10:57:00",mes:long,swipes:[long,short],swipe_id:0,extra:{}});
+    const native = await import("/script.js"); window.__layoutSwipeReady = native.isSwipingAllowed; await native.printMessages();
+  }); await settle();
+  for (const width of [1024,1496,2992]) {
+    await page.setViewportSize({width,height:817}); await settle();
+    for (const inset of [24,128]) {
+      await page.evaluate(inset=>workbench.host.preference({readingInset:inset,readingSize:24}),inset); await settle();
+      await page.locator('.wb-edge-right').click(); await settle();
+      for (const variant of [1,0]) {
+        await page.waitForFunction(() => window.__layoutSwipeReady());
+        await page.locator(`#chat .last_mes .swipe_${variant===1?"right":"left"}`).click();
+        try { await page.waitForFunction(variant=>SillyTavern.getContext().chat.at(-1).swipe_id===variant,variant,{timeout:10000}); }
+        catch (error) {
+          console.log('Swipe diagnostic', {width,inset,variant},await page.evaluate(async()=>({allowed:(await import('/script.js')).isSwipingAllowed(),id:SillyTavern.getContext().chat.at(-1).swipe_id,toast:document.querySelector('#toast-container')?.textContent})));
+          await page.screenshot({path:directory+'/swipe-failure.png'});throw error;
+        }
+        await page.waitForFunction(() => window.__layoutSwipeReady()); await settle();
+        const footer = await page.evaluate(() => {
+          const mes=document.querySelector('#chat .last_mes'),body=mes.querySelector('.mes_block').getBoundingClientRect();
+          return [...mes.querySelectorAll('.swipe_left,.swipe_right,.swipes-counter')].map(n=>({bodyBottom:body.bottom,top:n.getBoundingClientRect().top,bottom:n.getBoundingClientRect().bottom,mesBottom:mes.getBoundingClientRect().bottom}));
+        });
+        for(const item of footer) { assert.ok(item.top >= item.bodyBottom + 10,JSON.stringify({width,inset,variant,footer})); assert.ok(item.bottom <= item.mesBottom,JSON.stringify({width,inset,variant,footer})); }
+      }
+      await page.locator('.wb-edge-right').click(); await settle();
+    }
+  }
+  pass("native swipe arrows and counter stay below short/long bodies at both inset limits; original swipe handlers work with a sidebar open");
+  await page.evaluate(async () => {
+    const ctx=SillyTavern.getContext();ctx.chat.splice(0,ctx.chat.length,...__layoutRealChat);delete window.__layoutRealChat;delete window.__layoutSwipeReady;
+    await (await import('/script.js')).printMessages();workbench.host.preference({readingInset:64,readingSize:17});
+  }); await page.setViewportSize({width:1496,height:817}); await settle(); await page.screenshot({path:directory+'/noval-edges-footer.png'});
+  await choose("RP");
   await role("RP 外观").click();
   const checkbox = page.getByRole("checkbox", {name:"鼠标悬浮显示顶栏",exact:true});
   await checkbox.check(); await page.keyboard.press("Escape"); await page.mouse.move(750,400); await settle();
   assert.equal(await collapsed(), true);
+  const floating = await page.evaluate(()=>[...document.querySelectorAll('.wb-edge-arrow')].map(n=>({arrowBottom:n.getBoundingClientRect().bottom,modeBottom:document.querySelector('.wb-layout-controls').getBoundingClientRect().bottom,arrowTop:n.getBoundingClientRect().top})));
+  for(const item of floating) assert.ok(item.arrowTop>item.modeBottom+12);
+  await page.screenshot({path:directory+'/rp-edges-floating.png'});
   await page.mouse.move(740,4); await settle(); assert.equal(await role("固定顶栏").getAttribute("aria-pressed"), "false");
   await role("固定顶栏").click(); await page.mouse.move(750,400); await settle();
   await role("隐藏界面").click(); await settle(); assert.equal(await role("切换工作台").isVisible(), true);

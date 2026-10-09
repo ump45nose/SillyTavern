@@ -22,7 +22,7 @@ try {
   const settle = () => page.waitForTimeout(350), css = (selector, key) => page.locator(selector).first().evaluate((n, key) => getComputedStyle(n)[key], key);
   const has = c => page.evaluate(c => document.body.classList.contains(c), c);
   const role = name => page.getByRole("button", { name, exact: true });
-  await role("切换 RP 布局").click(); await settle();
+  await role("切换工作台").click(); await page.getByRole("menuitemradio", {name:/RP/}).click(); await settle();
   assert.equal(await has("wb-rp"), true); assert.equal(await has("wb-left-open"), false); assert.equal(await has("wb-right-open"), false);
   assert.equal(await page.evaluate(() => __rpNative.chat === document.getElementById("chat") && __rpNative.input === document.getElementById("send_textarea") && __rpNative.form === document.getElementById("send_form")), true);
   pass("RP opens with both panels closed and the original native chat, form and input");
@@ -47,8 +47,8 @@ try {
 
   await role("世界书详情").click(); await settle(); await page.locator(".wb-world").waitFor();
   assert.equal(await page.locator("#wb-resource-rail").evaluate(n => n.getBoundingClientRect().width), 180);
-  await role("收起资源侧栏").click(); await settle();
-  await role("预设详情").click(); await settle(); await page.locator(".wb-resource-v3").waitFor(); await role("收起资源侧栏").click(); await settle();
+  await role("关闭右栏").click(); await settle();
+  await role("预设详情").click(); await settle(); await page.locator(".wb-resource-v3").waitFor(); await role("关闭右栏").click(); await settle();
   pass("existing world and preset editors reused with the 180px resource rail");
 
   await role("固定顶栏").click(); await page.mouse.move(750, 400); await settle();
@@ -122,7 +122,7 @@ try {
     assert.equal(metrics.overflow, false); assert(metrics.dialog.left >= 0 && metrics.dialog.right <= width + 1 && metrics.dialog.bottom <= height + 1, JSON.stringify(metrics));
     assert(metrics.selectors.right <= metrics.actions.left + 1, JSON.stringify(metrics));
     await role("世界书详情").click(); await settle(); if (width <= 1100) assert.equal(await page.locator("#sheld").evaluate(n => n.inert), true);
-    await role("收起资源侧栏").click(); await settle(); pass(`viewport ${width}×${height}`, metrics);
+    await role("关闭右栏").click(); await settle(); pass(`viewport ${width}×${height}`, metrics);
   }
   await page.setViewportSize({ width:1496, height:817 }); await settle();
   await role("展开左边栏").click(); await settle(); await page.locator(".wb-floor-list > button").first().click(); await settle();
@@ -134,7 +134,7 @@ try {
     return { header: header.toJSON(), speaker: speaker.toJSON(), actions: actions.toJSON() };
   });
   assert(compact.speaker.right < compact.actions.left && compact.actions.right <= compact.header.right + 1, JSON.stringify(compact));
-  await role("收起资源侧栏").click(); await role("收纳左边栏").click(); await settle();
+  await role("关闭右栏").click(); await role("收纳左边栏").click(); await settle();
   pass("both panels can open together without dialogue controls overlapping the speaker", compact);
   await withReducedMotion(page, async () => assert.equal(await css("#sheld", "transitionDuration"), "0s")); pass("reduced motion is honored and the account preference restored");
   await role("切换阅读布局").click(); await settle(); assert.equal(await has("wb-rp"), false); assert.equal(await page.locator(".wb-reading-bar").count(), 1);
@@ -150,7 +150,7 @@ try {
   }
   pass("reading mode keeps its centered header, native input grip and icon controls at four desktop sizes");
   await page.setViewportSize({ width:1496, height:817 });
-  await role("切换 RP 布局").click(); await settle(); await page.evaluate(async () => { workbench.unmount(); await workbench.mount(); }); await settle();
+  await role("切换工作台").click(); await page.getByRole("menuitemradio", {name:/RP/}).click(); await settle(); await page.evaluate(async () => { workbench.unmount(); await workbench.mount(); }); await settle();
   assert.equal(await has("wb-rp"), true); assert.equal(await has("wb-left-open"), false); assert.equal(await has("wb-right-open"), false);
   await page.evaluate(() => workbench.unmount()); assert.equal(await page.evaluate(() => !document.body.classList.contains("wb-rp") && !document.querySelector(".wb-rp-stage,.wb-rp-part") && !document.getElementById("sheld").inert && __rpNative.input.isConnected), true);
   pass("reading/RP switching, RP remount defaults and native fallback clean up all presentation state");

@@ -66,6 +66,15 @@ body.wb-active .wb-ui .wb-primary svg,body.wb-active .wb-ui .wb-primary svg *,bo
 .wb-top-right button:hover { background:#817a6c0a; }
 .wb-reading-bar { position:absolute; top:var(--wb-header); left:var(--wb-left); right:var(--wb-right); height:52px; padding:0 23px; display:flex; align-items:center; gap:9px; background:var(--wb-paper); transition:top 220ms,left 220ms,right 220ms; z-index:4; }
 .wb-reading-bar .wb-icon { width:32px; height:32px; padding:5px; }
+/* Plain edge handles follow the panel boundary, outside the reading inset and top controls. */
+.wb-edge-nav { position:fixed; top:calc(50vh + var(--wb-header) / 2); left:var(--wb-edge-left,0px); right:var(--wb-edge-right,0px); display:flex; justify-content:space-between; pointer-events:none !important; z-index:19; transform:translateY(-50%); transition:top 220ms,left 220ms,right 220ms,opacity 160ms,visibility 160ms; }
+.wb-ui .wb-edge-arrow { width:24px; height:52px; min-height:52px; padding:2px; border:0; border-radius:0; background:transparent !important; box-shadow:none !important; pointer-events:auto; opacity:.68; transition:opacity 160ms,color 160ms; }
+.wb-edge-arrow:hover,.wb-edge-arrow:focus-visible { opacity:1; }
+.wb-edge-arrow svg { transition:transform 180ms; }
+.wb-edge-left:hover svg { transform:translateX(-2px); }
+.wb-edge-right:hover svg { transform:translateX(2px); }
+.wb-edge-arrow:focus-visible { outline-offset:-2px; }
+.wb-edge-nav.is-hidden { opacity:0; visibility:hidden; pointer-events:none !important; }
 .wb-chat-name { font-size:12px; color:var(--wb-muted); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .wb-exit-focus { background:transparent !important; border:0 !important; color:var(--wb-muted) !important; font-size:12px !important; }
 .wb-pop-dismiss { inset:74px 0 0; }

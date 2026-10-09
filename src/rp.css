@@ -24,9 +24,8 @@ body.wb-rp:is(.wb-focus,.wb-rp-top-collapsed) .wb-rp-visibility { background:var
 body.wb-rp-top-collapsed .wb-rp-top-trigger span { opacity:.5; }
 body.wb-rp:not(.wb-rp-top-collapsed) .wb-rp-top-trigger { pointer-events:none; }
 .wb-rp-top-trigger:focus-visible { outline-offset:-3px; }
-body.wb-rp .wb-rp-stage-nav { position:fixed; top:calc(var(--wb-rp-chrome) + 12px); left:var(--wb-left); right:var(--wb-right); padding:0 22px; display:flex; justify-content:space-between; pointer-events:none !important; z-index:14; transition:top 220ms,left 220ms,right 220ms,opacity 160ms,visibility 160ms; }
-body.wb-rp-top-auto .wb-rp-stage-nav { top:18px; padding-right:68px; }
-.wb-rp-stage-nav .wb-icon { width:32px; height:32px; min-height:32px; padding:6px; background:var(--wb-surface); border:1px solid var(--wb-line); border-radius:7px; pointer-events:auto; }
+body.wb-rp .wb-edge-nav { top:calc(50vh + var(--wb-rp-chrome) / 2); }
+body.wb-rp .wb-edge-arrow svg { filter:drop-shadow(0 1px 2px #fffefaaf); }
 body.wb-rp .wb-left { top:var(--wb-rp-chrome); z-index:16; transition:transform 220ms,opacity 160ms,visibility 220ms,top 220ms; }
 body.wb-rp .wb-right { top:var(--wb-rp-chrome); z-index:18; transition:transform 220ms,opacity 160ms,visibility 220ms,top 220ms; }
 body.wb-rp .wb-resource-rail { top:var(--wb-rp-chrome); z-index:17; transition:transform 200ms,opacity 160ms,visibility 200ms,top 220ms; }
@@ -101,7 +100,7 @@ body.wb-rp:not(.wb-rp-history) .edit_textarea { min-height:90px; max-height:calc
 body.wb-active.wb-rp.wb-rp-history #sheld { inset:calc(var(--wb-rp-chrome) + 52px) var(--wb-right) 0 var(--wb-left) !important; width:auto !important; height:auto !important; border:0 !important; border-radius:0 !important; display:flex !important; background:var(--wb-paper) !important; }
 body.wb-rp.wb-rp-history #chat { height:100%; overflow-y:auto; }
 body.wb-rp.wb-rp-history #form_sheld { display:none; }
-body.wb-rp :is(.wb-rp-situation,.wb-rp-dialog-shell,.wb-rp-stage-nav).is-hidden,body.wb-rp.wb-focus #sheld,body.wb-rp.wb-rp-overlay-open #sheld { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
+body.wb-rp :is(.wb-rp-situation,.wb-rp-dialog-shell).is-hidden,body.wb-rp.wb-focus #sheld,body.wb-rp.wb-rp-overlay-open #sheld { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
 body.wb-rp.wb-focus .wb-rp-history-bar { opacity:0; visibility:hidden; }
 @media(max-width:1400px) { body.wb-rp .wb-top { grid-template-columns:minmax(110px,1fr) minmax(0,860px) minmax(94px,1fr); padding-left:18px; gap:14px; } }
 @media(max-width:1100px) {

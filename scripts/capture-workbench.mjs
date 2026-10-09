@@ -23,7 +23,7 @@ try {
   await page.waitForTimeout(300);
   if (!(await page.locator(".wb-left").isVisible()))
     await page
-      .getByRole("button", { name: "收纳左栏 · Alt+Shift+L", exact: true })
+      .getByRole("button", { name: "展开左边栏", exact: true })
       .click();
   for (const [width, height] of [
     [1366, 768],

@@ -38,8 +38,8 @@ try {
   await role("展开左边栏").click(); await role("世界书详情").click(); await settle();
   await page.screenshot({ path:`${dir}/native-both-1496.png` });
   await page.setViewportSize({ width:1366, height:768 }); await settle(); await page.screenshot({ path:`${dir}/native-both-1366.png` });
-  await role("收起资源侧栏").click(); await role("收纳左边栏").click(); await page.setViewportSize({ width:1496, height:817 }); await settle();
-  await role("自动收纳顶栏").click(); await role("下一段对白或输入").focus(); await page.mouse.move(740,400); await settle();
+  await role("关闭右栏").click(); await role("收纳左边栏").click(); await page.setViewportSize({ width:1496, height:817 }); await settle();
+  await role("固定顶栏").click(); await role("下一段对白或输入").focus(); await page.mouse.move(740,400); await settle();
   await page.screenshot({ path:`${dir}/native-top-hidden-1496.png` });
   await role("隐藏界面").click(); await settle(); await page.screenshot({ path:`${dir}/native-stage-only-1496.png` });
   console.log(`Captured native RP screenshots in ${dir}`);
