@@ -4,7 +4,7 @@
 // - Workbench rules that only reach isolated UI go into @layer wb.legacy.
 // - Rules that reach native DOM stay unlayered (the future native-bridge.css).
 // - Mixed or unobserved rules are emitted in both places (safe under the isolation rule).
-// - Native element-level globals are copied into @layer wb.reset so isolated UI keeps today's defaults.
+// - Native element-level globals are copied to the head of wb.legacy, keeping their specificity contest.
 // - One unlayered isolation rule reverts native unlayered styles inside workbench UI.
 // Declarations are copied as source text: CSSOM re-serialization drops var() shorthands.
 // Throwaway: `npm run build` restores the original bundle.
@@ -114,9 +114,8 @@ for (const file of ["style.css", "css/st-tailwind.css"]) {
 const scope = ":is(#wb-root,#wb-layout-root,.wb-ui,#wb-x#wb-x#wb-x#wb-x#wb-x)";
 const leased = ":not(.wb-native-embedded,.wb-native-embedded *)";
 const css = [
-  "@layer wb.reset,wb.legacy;",
-  `@layer wb.reset{${reset.join("\n")}}`,
-  `@layer wb.legacy{${layered}${focus.join("")}}`,
+  "@layer wb.legacy;",
+  `@layer wb.legacy{${reset.join("\n")}\n${layered}${focus.join("")}}`,
   unlayered,
   `${scope}${leased},${scope} *${leased}{all:revert-layer}`,
 ].join("\n");

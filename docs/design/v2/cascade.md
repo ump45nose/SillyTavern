@@ -24,6 +24,7 @@ D1 方案可行，并在原方案上做了两处修正。插件 UI 内的样式�
 ## 验证结果
 
 1. **截图**：`scripts/visual/spike-layer.mjs` 把构建产物改写成分层结构后，30 个状态与 `artifacts/baseline-0.4/screens` 逐像素一致，差异为 0 个像素。
+1. **计算样式**：用 `scripts/visual/computed.mjs` 采集每个状态下所有已渲染元素及其 `::before` / `::after` 的全部计算属性和几何尺寸，逐项对比，30/30 无差异。这个工具比截图更严格，会作为 B 阶段的验收门槛。基线在 `artifacts/baseline-0.4/computed/`。
 2. **注入恶意的原生全局规则**：插入 `button{letter-spacing:9px}` 和 `p{color:…}` 后，插件 UI 内都没有生效。
 3. **租借的原生控件**：`#rm_api_block` 里的 `select` 仍然接收原生规则（注入的 5px 字间距生效了）。
 4. **主题变量**：自定义属性不受 `all` 影响。改一个 `--wb-ink`，有 840 个元素随之变化。
@@ -39,7 +40,9 @@ D1 方案可行，并在原方案上做了两处修正。插件 UI 内的样式�
 | 两边都命中 | 62 | 主要是 `.wb-ui button/input/select` 这类通用控件规则，同时命中了租借控件。两边各放一份，B3 再把租借部分改写成明确的 bridge 规则 |
 | 30 个状态里都没命中 | 788 | 按选择器文本分类（规则见 B3），并用已命中的那部分规则校验分类准确率 |
 
-当前会作用到插件 UI 上的原生规则，全是元素级全局样式：`*`、`button`、`input`、`select`、`option`、`textarea`、checkbox、range、`small`、`p`、`h2`–`h4`、`br`、`kbd`。B 阶段把它们原样复制到 `wb.reset` 层，保证外观不变；D 阶段由 `base.css` 接管后再删掉。
+当前会作用到插件 UI 上的原生规则，全是元素级全局样式：`*`、`button`、`input`、`select`、`option`、`textarea`、checkbox、range、`small`、`p`、`h2`–`h4`、`br`、`kbd`。
+
+B 阶段把这些规则原样复制到 `wb.legacy` 层的**最前面**，不单独放一个前置的 reset 层。原因是有些原生规则原本靠选择器权重赢过插件规则，例如 `input[type=checkbox]:disabled` 的灰色。只有放在同一层、并保持「原生在前」的顺序，权重竞争才和现在完全一样；放进前置层的话，计算样式比对会出现差异。D 阶段由 `base.css` 接管之后，这部分副本就删掉。
 
 ## 实施时必须处理的事项
 
