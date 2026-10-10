@@ -15,14 +15,15 @@ try{
  for(const [name,id] of sections){
   const toggle=page.locator('.wb-navigation-v4 .wb-fold-toggle').filter({hasText:name});await toggle.click();await wait();
   assert.equal(await page.locator('.wb-nav-chat').evaluate(n=>n.inert),true);assert.equal(await page.locator('#wb-nav-settings').evaluate(n=>n.inert),true);
-  for(const [,peer] of sections){const folded=await page.locator('#wb-nav-'+peer).evaluate(n=>({inert:n.inert,hidden:n.getAttribute('aria-hidden'),height:n.getBoundingClientRect().height}));if(peer===id){assert.equal(folded.inert,false);assert.ok(folded.height>37);}else{assert.equal(folded.inert,true);assert.equal(folded.hidden,'true');assert.ok(folded.height<1,'peer title and content should fold away: '+peer);}}
+  for(const [,peer] of sections){const folded=await page.locator('#wb-nav-'+peer).evaluate(n=>{const button=n.querySelector('.wb-fold-toggle'),content=n.querySelector('section>.wb-fold-body');return{inert:n.inert,height:n.getBoundingClientRect().height,heading:button.getBoundingClientRect().height,expanded:button.getAttribute('aria-expanded'),contentInert:content.inert,contentHeight:content.getBoundingClientRect().height};});assert.equal(folded.inert,false);if(peer===id){assert.equal(folded.expanded,'true');assert.ok(folded.height>37);}else{assert.equal(folded.expanded,'false');assert.ok(folded.heading>=32);assert.ok(Math.abs(folded.height-folded.heading)<2,'peer should show only its original collapsed heading: '+peer);assert.equal(folded.contentInert,true);assert.ok(folded.contentHeight<1);}}
   await page.screenshot({path:dir+`/focus-${id}-1496.png`});
   await button('展开设置').click();await wait();assert.equal(await page.locator('#wb-nav-settings').evaluate(n=>n.inert),false);
   await toggle.click();await wait();assert.equal(await page.locator('.wb-nav-chat').evaluate(n=>n.inert),false);assert.equal(await page.locator('#wb-nav-settings').evaluate(n=>n.inert),false);
   const restored=await page.locator('.wb-nav-section').evaluateAll(nodes=>nodes.map(n=>({inert:n.inert,height:n.getBoundingClientRect().height})));
   restored.forEach((node,i)=>{assert.equal(node.inert,false);assert.ok(Math.abs(node.height-initialHeights[i])<1,'peer should restore its original height');});
  }
- pass('each expanded chat section folds peer titles/content and chat/settings, then restores the original navigation');
+ await button('历史对话').click();await wait();await button('展开设置').click();await button('大纲').click();await page.getByRole('tree',{name:'当前聊天大纲'}).waitFor();await wait();assert.equal(await button('历史对话').getAttribute('aria-expanded'),'false');assert.equal(await button('大纲').getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#wb-nav-settings').evaluate(n=>n.inert),true);await button('大纲').click();await wait();
+ pass('expanded chat sections fold peer content while preserving clickable collapsed headings; direct switches and closing restore navigation');
  await button('大纲').click();await page.getByRole('tree',{name:'当前聊天大纲'}).waitFor();await wait();await page.screenshot({path:dir+'/outline-1496.png'});await button('大纲').click();await wait();
  await page.locator('.wb-edge-left').click();await page.mouse.move(600,350);await wait();
  const reading=await page.locator('#sheld').boundingBox();await page.mouse.move(2,400);await page.waitForFunction(()=>document.body.classList.contains('wb-left-hover-open'));await wait();
