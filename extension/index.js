@@ -3,6 +3,6 @@
 import { captureStartup } from './startup.js';
 captureStartup(window.SillyTavern?.getContext?.());
 const entry = new URL('./dist/index.js', import.meta.url);
-entry.search = new URL(import.meta.url).search || '?v=0.3.0';
-entry.searchParams.set('wb', '0.3.0');
+entry.search = new URL(import.meta.url).search || '?v=0.4.0';
+entry.searchParams.set('wb', '0.4.0');
 await import(entry.href);

@@ -19,7 +19,7 @@ export function ReadingSettings({host}:{host:HostAdapter}){
 }
 const iconMap:Record<string,any>={mes_edit:PencilLine,mes_copy:Copy,mes_translate:Languages,mes_narrate:Volume2,mes_prompt:FileText,mes_hide:Eye,mes_embed:Paperclip,mes_create_bookmark:Flag,mes_create_branch:GitBranch,mes_edit_done:Check,mes_edit_copy:Copy,mes_edit_add_reasoning:Lightbulb,mes_edit_delete:Trash2,mes_edit_up:ArrowUp,mes_edit_down:ArrowDown,mes_edit_cancel:X};
 /** Only add siblings and presentation classes; native text/media/iframe nodes remain owned by ST. */
-export function ReadingPresentation({host}:{host:HostAdapter}){
+export function ReadingPresentation({host,chatStyle=false}:{host:HostAdapter;chatStyle?:boolean}){
  const folds=useRef(new Map<HTMLElement,boolean>()),animations=useRef(new Map<HTMLElement,Animation>());
  const controls=useRef(new Map<HTMLElement,{role:string|null;tab:string|null;label:string|null}>());
  const snap=useHost(host),prefs=host.prefs(),[nodes,setNodes]=useState<HTMLElement[]>([]),[expanded,setExpanded]=useState<Map<HTMLElement,boolean>>(new Map());
@@ -36,7 +36,7 @@ export function ReadingPresentation({host}:{host:HostAdapter}){
  useLayoutEffect(()=>{
   for(const node of nodes){
    if(node.getAttribute("is_user")!=="true")continue;
-   const open=(expanded.get(node)??prefs.userCollapsed===false)||!!node.querySelector(".edit_textarea");
+   const open=(chatStyle||(expanded.get(node)??prefs.userCollapsed===false))||!!node.querySelector(".edit_textarea");
    const changed=folds.current.has(node),wasOpen=folds.current.get(node);
    const bodies=[...node.querySelectorAll<HTMLElement>(".mes_text,.mes_img_container,.mes_file_container,.mes_reasoning_details")].filter(n=>!n.parentElement?.closest(".mes_text,.mes_img_container,.mes_file_container,.mes_reasoning_details"));
    const heights=bodies.map(n=>n.getBoundingClientRect().height),styles=bodies.map(n=>getComputedStyle(n)),opacities=styles.map(n=>n.opacity),margins=styles.map(n=>n.marginTop);
@@ -54,13 +54,13 @@ export function ReadingPresentation({host}:{host:HostAdapter}){
    folds.current.set(node,open);
   }
   for(const node of folds.current.keys())if(!nodes.includes(node))folds.current.delete(node);
- },[nodes,expanded,prefs.userCollapsed]);
+ },[nodes,expanded,prefs.userCollapsed,chatStyle]);
  useEffect(()=>{setExpanded(new Map());},[snap.chatName,prefs.userCollapsed]);
  useEffect(()=>{document.body.dataset.wbMeta=prefs.messageMeta||"hover";document.body.style.setProperty("--wb-reading-font",prefs.readingFont==="sans"?"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif":"'Noto Serif CJK SC','Source Han Serif SC','Songti SC',SimSun,serif");document.body.style.setProperty("--wb-reading-size",(prefs.readingSize??17)+"px");document.body.style.setProperty("--wb-reading-leading",String(prefs.readingLeading??2));const inset=Number(prefs.readingInset??64);document.body.style.setProperty("--wb-reading-inset",Math.max(24,Math.min(128,Number.isFinite(inset)?inset:64))+"px");},[prefs.readingFont,prefs.readingSize,prefs.readingLeading,prefs.messageMeta,prefs.readingInset]);
  const output:React.ReactNode[]=[];
  for(const node of nodes){
   const id=Number(node.getAttribute("mesid")),m=snap.messages[id],editing=!!node.querySelector(".edit_textarea"),user=node.getAttribute("is_user")==="true",block=node.querySelector<HTMLElement>(".mes_block");if(!block)continue;
-  const open=(expanded.get(node)??prefs.userCollapsed===false)||editing;
+  const open=(chatStyle||(expanded.get(node)??prefs.userCollapsed===false))||editing;
   if(user){let heading=block.querySelector<HTMLElement>(":scope>.wb-user-heading");if(!heading){heading=document.createElement("div");heading.className="wb-user-heading";block.prepend(heading);}const summary=String(m?.text||"").replace(/<[^>]*>/g,"").replace(/\s+/g," ").slice(0,110);
    output.push(createPortal(<button aria-label={`展开用户输入 ${id+1} 层`} aria-expanded={open} disabled={editing} onClick={()=>{setExpanded(prev=>{const next=new Map(prev);next.set(node,!open);return next;});}}>{<ChevronRight size={14} className={open?"is-open":""}/>}<span>你的输入</span>{!open&&<small>{summary}</small>}</button>,heading,"user-"+id));
   }

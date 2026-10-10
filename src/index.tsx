@@ -18,6 +18,7 @@ import "./rp.css";
 import "./layout.css";
 import "./utility.css";
 import "./addon-shell.css";
+import "./mobile.css";
 class Boundary extends React.Component<
   { children: React.ReactNode },
   { failed: boolean }
@@ -51,11 +52,10 @@ let layoutRoot:Root | undefined, layoutContainer:HTMLElement | undefined, unsubs
 const launcher = document.createElement("button");
 launcher.id = "wb-launcher";
 launcher.textContent = "创作工作台";
-const media = matchMedia("(min-width: 1024px)");
 function updateLayoutSwitcher() {
   if (!layoutRoot || disposed) return;
   const mode:LayoutMode = mounted ? host?.prefs().layout === "rp" ? "rp" : "novel" : "native";
-  layoutRoot.render(<LayoutSwitcher mode={mode} desktop={media.matches} onChange={changeLayout}/>);
+  layoutRoot.render(<LayoutSwitcher mode={mode} onChange={changeLayout}/>);
 }
 async function changeLayout(mode:LayoutMode) {
   if (!beforeClose()) return false;
@@ -73,7 +73,6 @@ async function changeLayout(mode:LayoutMode) {
     unmount();
     return true;
   }
-  if (!media.matches) throw new Error("工作台需要至少 1024px 的横屏窗口。");
   if (window.storyWorkspace) throw new Error("请先停用 Story Workspace，再切换工作台。");
   context.accountStorage.removeItem("wb-native");
   if (!mounted) {
@@ -88,10 +87,6 @@ async function changeLayout(mode:LayoutMode) {
 }
 async function mount() {
   if (mounted || mounting || disposed) return;
-  if (!media.matches) {
-    launcher.title = "横屏工作台需要至少 1024px 宽度";
-    return;
-  }
   if (window.storyWorkspace) {
     launcher.textContent = "请先停用 Story Workspace";
     return;
@@ -135,7 +130,7 @@ async function mount() {
     metrics.mountedMs = performance.now();
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        if (mounted && document.querySelector(".wb-top")) {
+        if (mounted && document.querySelector(".wb-top,.wb-mobile-header")) {
           metrics.workbenchReadyMs = performance.now();
           window.workbenchStartup?.mark("workbenchReadyMs", metrics.workbenchReadyMs);
         }
@@ -164,6 +159,15 @@ function unmount() {
   toolbar = undefined;
   document.body.classList.remove(
     "wb-active",
+    "wb-mobile",
+    "wb-mobile-rp",
+    "wb-mobile-editor",
+    "wb-mobile-tools",
+    "wb-mobile-lowered",
+    "wb-mobile-keyboard",
+    "wb-mobile-dragging",
+    "wb-mobile-busy",
+    "wb-mobile-offline",
     "wb-left-open",
     "wb-left-hover-open",
     "wb-right-hover-open",
@@ -204,11 +208,6 @@ context.eventSource.on(context.eventTypes.APP_INITIALIZED, initialized);
 function initialized() {
   metrics.appInitializedMs = performance.now();
 }
-const resize = () => {
-  if (!media.matches && mounted && beforeClose()) unmount();
-  updateLayoutSwitcher();
-};
-media.addEventListener("change", resize);
 window.workbench = {
   mount,
   unmount,
@@ -241,7 +240,6 @@ window.addEventListener(
     layoutRoot?.unmount(); layoutRoot = undefined;
     layoutContainer?.remove(); layoutContainer = undefined;
     launcher.remove();
-    media.removeEventListener("change", resize);
     context.eventSource.removeListener(context.eventTypes.APP_READY, ready);
     context.eventSource.removeListener(
       context.eventTypes.APP_INITIALIZED,

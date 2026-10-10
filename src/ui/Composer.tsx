@@ -8,9 +8,10 @@ import { useTools } from "./useTools";
 import type {ComposerPopup} from "./ComposerPopovers";
 import type { HostAdapter } from "../host/adapter";
 /** Decorate native controls in-place: event handlers, selection and plugin nodes stay owned by ST. */
-export function Composer({ host, toolbar, busy, open, activate }: {
+export function Composer({ host, toolbar, busy, open, activate, mobile=false }: {
   host: HostAdapter; toolbar: HTMLElement; busy: boolean;
   open: (popup:ComposerPopup) => void; activate: (id: string, anchor: HTMLElement) => void;
+  mobile?:boolean;
 }) {
   useTools();
   const actions = [...composerTools, ...pinnedTools(host.prefs().pinnedTools).filter(tool => tool.id !== "wb:export" || addonEnabled(host.prefs(), "record-export"))], actionRow = useRef<HTMLDivElement>(null), [available, setAvailable] = useState(Infinity);
@@ -38,14 +39,14 @@ export function Composer({ host, toolbar, busy, open, activate }: {
     const input = document.getElementById("send_textarea")!;
     const names = ["placeholder", "connected_text", "no_connection_text"];
     const previous = names.map(name => input.getAttribute(name));
-    const connected = "写下接下来发生的事… 支持 Markdown、XML 与酒馆宏";
-    const disconnected = "连接模型后开始创作，或先写下草稿…";
+    const connected = mobile ? "写下接下来发生的事…" : "写下接下来发生的事… 支持 Markdown、XML 与酒馆宏";
+    const disconnected = mobile ? "写下草稿，或连接模型开始创作…" : "连接模型后开始创作，或先写下草稿…";
     input.setAttribute("connected_text", connected);
     input.setAttribute("no_connection_text", disconnected);
     const sync = () => input.setAttribute("placeholder", document.body.classList.contains('wb-image-input-mode')?'输入生图提示词… 可拖入或粘贴参考图':host.snapshot().online ? connected : disconnected);
     const unsubscribe = host.subscribe(sync); sync();
     return () => { unsubscribe(); names.forEach((name, i) => { if (previous[i] === null) input.removeAttribute(name); else input.setAttribute(name, previous[i]!); }); };
-  }, [host]);
+  }, [host,mobile]);
   useEffect(() => {
     const area = document.getElementById("sheld")!;
     const apply = () => document.body.style.setProperty("--wb-composer-height", `${Math.max(152, area.clientHeight * ratioRef.current)}px`);
@@ -71,18 +72,19 @@ export function Composer({ host, toolbar, busy, open, activate }: {
     {nativeIcon("extensionsMenuButton", <WandSparkles className="wb-native-icon" size={18} aria-hidden="true" />)}
     {nativeIcon("send_but", <ArrowUp className="wb-native-icon wb-send-icon" size={22} aria-hidden="true" />)}
     {createPortal(<>
-      <button className="wb-input-grip" role="separator" aria-label="调整输入框高度" aria-orientation="horizontal" aria-valuemin={20} aria-valuemax={60} aria-valuenow={Math.round(ratio * 100)} title="上拉增加输入高度 · 双击恢复" onPointerDown={e => {
+      <button className="wb-input-grip" role={mobile?undefined:"separator"} aria-label={mobile?"全屏编辑草稿":"调整输入框高度"} aria-orientation={mobile?undefined:"horizontal"} aria-valuemin={mobile?undefined:20} aria-valuemax={mobile?undefined:60} aria-valuenow={mobile?undefined:Math.round(ratio * 100)} title={mobile?"上拉或点击，全屏编辑":"上拉增加输入高度 · 双击恢复"} onClick={()=>{if(mobile)window.dispatchEvent(new Event('wb-mobile-editor-open'));}} onPointerDown={e => {
         if (e.button !== 0) return;
         e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId);
         const height = document.getElementById("sheld")!.clientHeight;
         drag.current = { y: e.clientY, ratio: document.getElementById("send_form")!.getBoundingClientRect().height / height, height };
-        document.body.classList.add("wb-resizing");
+        if(!mobile)document.body.classList.add("wb-resizing");
       }} onPointerMove={e => {
         const start = drag.current;
-        if (start) setRatio(Math.min(.6, Math.max(.2, start.ratio + (start.y - e.clientY) / start.height)));
-      }} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
+        if (start&&!mobile) setRatio(Math.min(.6, Math.max(.2, start.ratio + (start.y - e.clientY) / start.height)));
+      }} onPointerUp={e=>{if(mobile){if(drag.current&&drag.current.y-e.clientY>35)window.dispatchEvent(new Event('wb-mobile-editor-open'));drag.current=null;}else finish();}} onPointerCancel={()=>{if(mobile)drag.current=null;else finish();}} onLostPointerCapture={()=>{if(mobile)drag.current=null;else finish();}}
       onDoubleClick={() => { setRatio(.2); host.preference({ inputRatio: .2 }); }}
       onKeyDown={e => {
+        if(mobile)return;
         const value = e.key === "ArrowUp" ? ratio + .025 : e.key === "ArrowDown" ? ratio - .025 : e.key === "Home" ? .2 : e.key === "End" ? .6 : null;
         if (value === null) return;
         e.preventDefault(); const next = Math.min(.6, Math.max(.2, value)); setRatio(next); host.preference({ inputRatio: next });

@@ -162,13 +162,14 @@ try {
 
     const mobile = await session(browser, { mobile: true });
     await ready(mobile.page, urls.validation);
+    await mobile.page.waitForFunction(()=>workbench.mounted&&document.body.classList.contains("wb-mobile"));
     const mobileState = await mobile.page.evaluate(() => ({
         width:innerWidth,mounted:workbench.mounted,sameInput:workbench.nativeNodes.input===document.getElementById('send_textarea'),secureContext:isSecureContext,
     }));
-    assert.equal(mobileState.mounted,false);
+    assert.equal(mobileState.mounted,true);
     assert.equal(mobileState.sameInput,true);
-    await mobile.page.screenshot({path:path.join(artifacts,'mobile-native.png')});
-    check('narrow viewport retains the original UI; PWA is outside this release',mobileState);
+    await mobile.page.screenshot({path:path.join(artifacts,'mobile-workbench.png')});
+    check('narrow viewport mounts PWA while retaining native input',mobileState);
     assert.deepEqual(mobile.errors, []);
     await mobile.context.close();
     results.passed = true;

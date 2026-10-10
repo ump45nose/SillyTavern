@@ -1,4 +1,4 @@
-# SillyTavern Workbench · 横屏 Novel / RP
+# SillyTavern Workbench · Novel / RP · 桌面与 PWA
 
 基于官方 SillyTavern 1.19.0 的前端工作台扩展。首版采用已确认的暖纸布局，保留原生聊天、输入节点、模型调用与数据格式。
 
@@ -7,11 +7,11 @@
 | 实例 | 地址 | 用途 |
 | --- | --- | --- |
 | 官方基线 | http://192.168.31.201:32011 | 官方运行时与性能对照 |
-| 工作台验证版 | http://192.168.31.201:32012 | Novel / RP 横屏工作台、酒馆助手与合成测试数据 |
+| 工作台验证版 | http://192.168.31.201:32012 | Novel / RP 桌面和手机工作台、酒馆助手与合成测试数据 |
 
 使用现有测试账号；凭据保存在项目 `.env`，不纳入 Git。原生产实例 `32001` 未部署本次工作台。验证实例内不要保存需要保留的真实聊天，测试会修改明确命名的合成角色、世界书、预设等数据。
 
-横屏宽度至少 1024px 时默认挂载。左下“返回原界面”可退出，右下“创作工作台”重新进入。窄屏保留原生界面，PWA 尚未实现。检测到 `storyWorkspace` 时停止挂载，避免两个布局插件同时接管页面。
+默认挂载工作台：1024px 及以上使用桌面布局，更窄窗口使用已确认的 PWA 布局。桌面右上控件、手机顶栏三点菜单可切换 Novel / RP / 原生；原生页面保留工作台切换入口。检测到 `storyWorkspace` 时停止挂载，避免两个布局插件同时接管页面。移动操作见 [PWA 使用说明](docs/workbench-pwa.md)。
 
 ## 首版功能
 
@@ -65,7 +65,7 @@ npm run start
 ```bash
 npm run check              # TypeScript、观察器与测试模型语法
 npm test                   # 保存冲突 / 数据保留 / Trace 单元测试
-npm run verify             # 原生生成、助手、回退、停用与窄屏回归
+npm run verify             # 原生生成、助手、回退、停用与手机挂载回归
 npm run verify:workbench    # 工作台配置、编辑、布局与 Trace
 npm run verify:compat      # 批量角色、快捷回复、STscript、附件、正则与保存失败
 npm run verify:interactions # 菜单、阅读、九类设置、批量资源、聊天文件与草稿恢复
@@ -87,7 +87,7 @@ npm run stop               # 停止隔离实例，保留数据
 ## 源码与维护
 
 - `src/host/`：状态、命令、版本相关接口、保存与冲突检查；所有宿主访问集中在这里。
-- `src/ui/` 与 `src/App.tsx`：公共组件和横屏布局；`src/modules/`：按需加载的世界书、角色、资源编辑和 Trace。
+- `src/ui/` 与 `src/App.tsx`：公共组件及桌面 / 手机布局；`src/modules/`：按需加载的世界书、角色、资源编辑和 Trace。
 - `extension/addons/`：附加插件清单；`extension/dist/addons/`：独立入口与 Worker，由主插件按需加载。
 - `extension/trace.js`：已验证的请求观察器；`extension/dist/`：可直接部署的构建产物。
 - `extension/startup.js`：只读加载诊断；`src/addons/record-export/`：记录导出附加插件（UI、样式和分析 Worker）。
@@ -96,7 +96,7 @@ npm run stop               # 停止隔离实例，保留数据
 
 [总体架构](docs/architecture/overall-architecture.md) · [第一阶段验证](docs/stage-1-report.md) · [横屏 Noval 实现报告](docs/stage-2-report.md)
 
-新官方 release 先更新隔离基线并运行回归，再迁移生产；官方文件、工作台、助手版本分别维护。真实供应商差异、其他第三方插件、生产规模负载和实际手机 PWA 仍需独立验证。独立生图编排、图片文件导出和目录同步属于后续模块。
+新官方 release 先更新隔离基线并运行回归，再迁移生产；官方文件、工作台、助手版本分别维护。真实供应商差异、其他第三方插件、生产规模负载和安装后的真机键盘与系统手势仍需独立验证。独立生图编排、图片文件导出和目录同步属于后续模块。
 
 ## 横屏 Noval 主页重做
 

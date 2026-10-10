@@ -812,7 +812,7 @@ export class HostAdapter {
       await new Promise((r) => setTimeout(r, 20));
       node = document.querySelector(selector);
     }
-    if (this.prefs().layout === "rp") {
+    if (this.prefs().layout === "rp" && !document.body.classList.contains("wb-mobile")) {
       window.dispatchEvent(new CustomEvent("wb-rp-jump", { detail: id }));
       return;
     }

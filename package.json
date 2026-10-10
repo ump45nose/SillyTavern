@@ -1,6 +1,6 @@
 {
   "name": "sillytavern-workbench",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -29,7 +29,8 @@
     "verify:addons": "node scripts/verify-addons.mjs",
     "verify:utilities": "node scripts/verify-utility-tools.mjs",
     "benchmark:startup": "node scripts/benchmark-startup-readonly.mjs",
-    "verify:writing-addons": "node scripts/verify-writing-addons.mjs"
+    "verify:writing-addons": "node scripts/verify-writing-addons.mjs",
+    "verify:pwa": "node scripts/verify-pwa-runtime.mjs"
   },
   "devDependencies": {
     "@types/react": "19.2.2",
