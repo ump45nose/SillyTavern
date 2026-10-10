@@ -37,12 +37,39 @@ export const fixture = {
       name: "雾港志",
       enabled: true,
       entries: [
-        { key: ["灯塔"], comment: "灯塔", content: "雾港北岬的灯塔已经熄灭七年，守塔人下落不明。", order: 100 },
-        { key: ["旧书店", "书店"], comment: "旧书店", content: "临街的木门上挂着铜铃，推门时只响半声。", order: 90 },
-        { key: [], comment: "雾港 · 码头区", content: "码头区终年有雾，船只靠钟声辨认航道。", constant: true, order: 80 },
+        {
+          key: ["灯塔"],
+          comment: "灯塔",
+          content: "雾港北岬的灯塔已经熄灭七年，守塔人下落不明。",
+          order: 100,
+        },
+        {
+          key: ["旧书店", "书店"],
+          comment: "旧书店",
+          content: "临街的木门上挂着铜铃，推门时只响半声。",
+          order: 90,
+        },
+        {
+          key: [],
+          comment: "雾港 · 码头区",
+          content: "码头区终年有雾，船只靠钟声辨认航道。",
+          constant: true,
+          order: 80,
+        },
         { key: ["雨季"], comment: "雨季", content: "雨季从五月持续到秋末。", disable: true, order: 70 },
-        { key: ["渡船"], comment: "未寄出的船票", content: "抽屉深处夹着一张没有用过的渡船票。", vectorized: true, order: 60 },
-        { key: ["钟声", "钟"], comment: "钟楼", content: "码头钟楼每天整点敲三下，雾大时改为五下。", order: 50 },
+        {
+          key: ["渡船"],
+          comment: "未寄出的船票",
+          content: "抽屉深处夹着一张没有用过的渡船票。",
+          vectorized: true,
+          order: 60,
+        },
+        {
+          key: ["钟声", "钟"],
+          comment: "钟楼",
+          content: "码头钟楼每天整点敲三下，雾大时改为五下。",
+          order: 50,
+        },
       ],
     },
     {
@@ -51,18 +78,44 @@ export const fixture = {
       entries: [
         { key: ["林间"], comment: "林间", content: "林间与守塔人是远亲。", order: 100 },
         { key: ["沈砚"], comment: "沈砚", content: "沈砚七年前离开雾港，此后音讯全无。", order: 90 },
-        { key: [], comment: "称呼约定", content: "林间称呼用户为“你”，不用敬称。", constant: true, order: 80 },
+        {
+          key: [],
+          comment: "称呼约定",
+          content: "林间称呼用户为“你”，不用敬称。",
+          constant: true,
+          order: 80,
+        },
       ],
     },
   ],
   personas: [
-    { name: "作者视角", file: "wb-visual-author.png", title: "旁白 · 第三人称", description: "以作者视角叙述，保持克制的第三人称。" },
-    { name: "沈砚", file: "wb-visual-shen.png", title: "归乡者", description: "七年后回到雾港的人，带着一封没有拆开的信。" },
+    {
+      name: "作者视角",
+      file: "wb-visual-author.png",
+      title: "旁白 · 第三人称",
+      description: "以作者视角叙述，保持克制的第三人称。",
+    },
+    {
+      name: "沈砚",
+      file: "wb-visual-shen.png",
+      title: "归乡者",
+      description: "七年后回到雾港的人，带着一封没有拆开的信。",
+    },
   ],
   presets: [{ name: "长篇 · 细腻", values: { temperature: 0.9, openai_max_tokens: 1200 } }],
   profiles: [
-    { id: "wb-visual-claude-daily", name: "Claude · 日常", group: "Claude", data: { model: "workbench-fixture" } },
-    { id: "wb-visual-claude-long", name: "Claude · 长文", group: "Claude", data: { model: "workbench-fixture" } },
+    {
+      id: "wb-visual-claude-daily",
+      name: "Claude · 日常",
+      group: "Claude",
+      data: { model: "workbench-fixture" },
+    },
+    {
+      id: "wb-visual-claude-long",
+      name: "Claude · 长文",
+      group: "Claude",
+      data: { model: "workbench-fixture" },
+    },
     { id: "wb-visual-local", name: "本地 · 草稿", group: "本地模型", data: { model: "workbench-fixture" } },
   ],
   chat: {
@@ -78,7 +131,9 @@ export const fixture = {
       "2026-10-01T12:09:00.000Z",
     ],
     messages: [
-      { text: "雨是在傍晚停的。\n\n林间推开书店的门时，铜铃只响了半声。屋檐还在滴水，积水里倒映着刚亮起的路灯。" },
+      {
+        text: "雨是在傍晚停的。\n\n林间推开书店的门时，铜铃只响了半声。屋檐还在滴水，积水里倒映着刚亮起的路灯。",
+      },
       { user: true, text: "我站在门口，把伞收起来。“还开着吗？”" },
       {
         text:
@@ -87,8 +142,7 @@ export const fixture = {
       },
       { user: true, text: "“修信？”我走近柜台，看见那个信封上的字迹，忽然停住。" },
       {
-        text:
-          "<content>她没有抬头，只把信封往你这边推了半寸。\n\n“七年前寄出的，”她说，“昨天才到。收件人写的是这家店，可这家店那时候还不是我的。”\n\n窗外的钟楼敲了五下。雾又起来了。</content>",
+        text: "<content>她没有抬头，只把信封往你这边推了半寸。\n\n“七年前寄出的，”她说，“昨天才到。收件人写的是这家店，可这家店那时候还不是我的。”\n\n窗外的钟楼敲了五下。雾又起来了。</content>",
       },
       { user: true, text: "我认得那是谁的字。我没有伸手。" },
       {
@@ -98,13 +152,11 @@ export const fixture = {
       },
       { user: true, text: "“好。”我在靠窗的位置坐下。" },
       {
-        text:
-          "<content>茶是旧茶，泡得很淡。林间把杯子放在你面前，自己在对面坐下，膝盖上摊着那本夹了信的书。\n\n“你知道灯塔的事吗？”她忽然问。\n\n“北岬那座。已经灭了七年。”她顿了顿，“和这封信寄出的时间一样。”</content>",
+        text: "<content>茶是旧茶，泡得很淡。林间把杯子放在你面前，自己在对面坐下，膝盖上摊着那本夹了信的书。\n\n“你知道灯塔的事吗？”她忽然问。\n\n“北岬那座。已经灭了七年。”她顿了顿，“和这封信寄出的时间一样。”</content>",
       },
       { user: true, text: "我握着茶杯，热气模糊了眼镜。“你想说什么？”" },
       {
-        text:
-          "<content>“我什么也不想说。”林间合上书，“我只是修信的人。信里写了什么，要你自己读。”\n\n她把书推到桌子中间，正好在你们两人之间。\n\n钟楼又敲了五下。雾已经大到看不见对面的街。</content>",
+        text: "<content>“我什么也不想说。”林间合上书，“我只是修信的人。信里写了什么，要你自己读。”\n\n她把书推到桌子中间，正好在你们两人之间。\n\n钟楼又敲了五下。雾已经大到看不见对面的街。</content>",
       },
       {
         user: true,

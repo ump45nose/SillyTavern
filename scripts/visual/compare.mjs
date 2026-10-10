@@ -12,7 +12,10 @@ fs.mkdirSync(diffDir, { recursive: true });
 const browser = await launch();
 const page = await (await browser.newContext()).newPage();
 const results = [];
-for (const file of fs.readdirSync(baseDir).filter((f) => f.endsWith(".png")).sort()) {
+for (const file of fs
+  .readdirSync(baseDir)
+  .filter((f) => f.endsWith(".png"))
+  .sort()) {
   const current = path.join(currentDir, file);
   if (!fs.existsSync(current)) {
     results.push({ file, missing: true });
@@ -39,7 +42,8 @@ for (const file of fs.readdirSync(baseDir).filter((f) => f.endsWith(".png")).sor
         g.drawImage(img, 0, 0);
         return g.getImageData(0, 0, img.width, img.height);
       };
-      const da = canvas(ia), db = canvas(ib);
+      const da = canvas(ia),
+        db = canvas(ib);
       const out = document.createElement("canvas");
       out.width = ia.width;
       out.height = ia.height;
@@ -63,7 +67,8 @@ for (const file of fs.readdirSync(baseDir).filter((f) => f.endsWith(".png")).sor
     },
     { a: encode(path.join(baseDir, file)), b: encode(current) },
   );
-  if (result.image && result.changed) fs.writeFileSync(path.join(diffDir, file), Buffer.from(result.image.split(",")[1], "base64"));
+  if (result.image && result.changed)
+    fs.writeFileSync(path.join(diffDir, file), Buffer.from(result.image.split(",")[1], "base64"));
   delete result.image;
   results.push({ file, ...result, pass: !result.sizeMismatch && result.ratio <= limit });
 }

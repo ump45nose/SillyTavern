@@ -26,7 +26,9 @@ try {
       const h = workbench.host;
       const json = (body) => ({ method: "POST", headers: c.getRequestHeaders(), body: JSON.stringify(body) });
       const image = (file) =>
-        new File([Uint8Array.from(atob(assets[file]), (ch) => ch.charCodeAt(0))], file, { type: "image/webp" });
+        new File([Uint8Array.from(atob(assets[file]), (ch) => ch.charCodeAt(0))], file, {
+          type: "image/webp",
+        });
       const upload = async (endpoint, fields, file, filename) => {
         const body = new FormData();
         for (const [key, value] of Object.entries(fields)) body.set(key, value);
@@ -70,7 +72,11 @@ try {
 
       // Personas share uploaded avatar files; descriptions use the native settings shape.
       for (const persona of fixture.personas) {
-        const file = await upload("/api/avatars/upload", { overwrite_name: persona.file }, "r-user-character.webp");
+        const file = await upload(
+          "/api/avatars/upload",
+          { overwrite_name: persona.file },
+          "r-user-character.webp",
+        );
         const id = JSON.parse(file).path || persona.file;
         c.powerUserSettings.personas[id] = persona.name;
         c.powerUserSettings.persona_descriptions[id] = {
@@ -87,14 +93,24 @@ try {
       const manager = c.getPresetManager();
       for (const preset of fixture.presets) {
         if (manager.getAllPresets().includes(preset.name)) continue;
-        await manager.savePreset(preset.name, { ...h.presetData(manager.getSelectedPresetName()), ...preset.values });
+        await manager.savePreset(preset.name, {
+          ...h.presetData(manager.getSelectedPresetName()),
+          ...preset.values,
+        });
       }
 
       // Connection profiles with manual model groups (an intentional workbench feature).
       const cm = c.extensionSettings.connectionManager;
       for (const profile of fixture.profiles) {
         if (!cm.profiles.some((p) => p.id === profile.id))
-          cm.profiles.push({ mode: "cc", api: "custom", "api-url": fixture.mockApi, ...profile.data, id: profile.id, name: profile.name });
+          cm.profiles.push({
+            mode: "cc",
+            api: "custom",
+            "api-url": fixture.mockApi,
+            ...profile.data,
+            id: profile.id,
+            name: profile.name,
+          });
       }
       h.preference({ groups: Object.fromEntries(fixture.profiles.map((p) => [p.id, p.group])) });
 
@@ -120,13 +136,24 @@ try {
       }));
       const saved = await fetch(
         "/api/chats/save",
-        json({ ch_name: actor.name, file_name: fixture.chat.file, chat: [header, ...messages], avatar_url: actor.avatar, force: true }),
+        json({
+          ch_name: actor.name,
+          file_name: fixture.chat.file,
+          chat: [header, ...messages],
+          avatar_url: actor.avatar,
+          force: true,
+        }),
       );
       if (!saved.ok) throw new Error("chat save failed " + saved.status);
 
       // RP presentation: character sprite and chat background, as the RP demo does.
       await upload("/api/sprites/upload", { name: actor.name, label: "neutral" }, "r-character.webp");
-      const background = await upload("/api/backgrounds/upload", {}, "r-background.webp", "workbench-visual-sakura.webp");
+      const background = await upload(
+        "/api/backgrounds/upload",
+        {},
+        "r-background.webp",
+        "workbench-visual-sakura.webp",
+      );
 
       await c.selectCharacterById(c.characters.indexOf(actor));
       await c.openCharacterChat(fixture.chat.file);
@@ -144,7 +171,11 @@ try {
       if (firstPersona) await h.select("persona", firstPersona);
       h.preference({ layout: "novel", left: true });
       await h.persistSettings();
-      return { chat: current.chatId, characters: current.characters.length, worlds: current.getWorldInfoNames() };
+      return {
+        chat: current.chatId,
+        characters: current.characters.length,
+        worlds: current.getWorldInfoNames(),
+      };
     },
     { fixture, assets },
   );
