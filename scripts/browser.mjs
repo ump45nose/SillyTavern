@@ -14,6 +14,8 @@ export const urls = {
     validation: `http://${env.WB_BIND_ADDRESS}:32012`,
     mock: 'http://127.0.0.1:32013',
 };
+// The URL the tavern server uses to reach the deterministic provider (Docker DNS by default).
+export const mockApi = env.WB_MOCK_API || 'http://mock-model:4010/v1';
 
 export function resetSyntheticChats() {
     // Only the explicitly named synthetic fixture in these isolated data roots.
@@ -32,7 +34,9 @@ export function resetSyntheticChats() {
 }
 
 export async function launch() {
-    const executablePath = process.env.WB_CHROMIUM ?? '/home/yuwk/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome';
+    const hostChromium = '/home/yuwk/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome';
+    // Fall back to Playwright's own download (npx playwright install chromium) on other machines.
+    const executablePath = process.env.WB_CHROMIUM ?? (fs.existsSync(hostChromium) ? hostChromium : undefined);
     return chromium.launch({ executablePath, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--no-proxy-server'] });
 }
 
@@ -148,12 +152,12 @@ export async function connect(page) {
     await page.waitForTimeout(400);
     await page.evaluate(() => jQuery('#chat_completion_source').val('custom').trigger('change'));
     await page.waitForTimeout(200);
-    await page.evaluate(() => {
-        jQuery('#custom_api_url_text').val('http://mock-model:4010/v1').trigger('input');
+    await page.evaluate(url => {
+        jQuery('#custom_api_url_text').val(url).trigger('input');
         jQuery('#custom_model_id').val('workbench-fixture').trigger('input');
         SillyTavern.getContext().chatCompletionSettings.stream_openai = true;
         document.querySelector('#api_button_openai').click();
-    });
+    }, mockApi);
     await page.waitForFunction(() => SillyTavern.getContext().onlineStatus !== 'no_connection', null, { timeout: 30_000 });
 }
 

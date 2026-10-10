@@ -48,4 +48,5 @@ const server = http.createServer(async (req, res) => {
     }, slow ? 250 : 30);
     res.on('close', () => clearInterval(interval));
 });
-server.listen(4010, '0.0.0.0', () => console.log('Deterministic test provider listening on 4010; no external model calls.'));
+const port = Number(process.env.PORT) || 4010, host = process.env.HOST || '0.0.0.0';
+server.listen(port, host, () => console.log(`Deterministic test provider listening on ${port}; no external model calls.`));

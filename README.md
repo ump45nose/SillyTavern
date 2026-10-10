@@ -82,6 +82,8 @@ npm run benchmark:chat     # 400 条内存合成消息的渲染与滚动对照
 npm run stop               # 停止隔离实例，保留数据
 ```
 
+没有 Docker 的机器（如 macOS 开发机）可用 `npm run local:start` 直接以 node 运行锁定的官方 release：基线、验证实例和确定性模型分别监听 `127.0.0.1:32011/32012/32013`，数据位于 `runtime/`，凭据写入本地 `.env`。工作台以用户级扩展挂载本目录的 `extension/`；酒馆助手需设置 `WB_HELPER_SOURCE` 指向锁定版本的资产，否则相关检查跳过。`npm run local:stop` 停止。
+
 浏览器使用已有 Chromium，可用 `WB_CHROMIUM` 指定路径。上述集成验证只访问两个隔离实例及本地确定性测试模型，不读取生产聊天或调用真实模型。请串行运行集成测试和性能测试，以免同时修改同一个隔离账号。
 
 ## 源码与维护

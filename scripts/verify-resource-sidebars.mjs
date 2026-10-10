@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue,mockApi} from './browser.mjs';
 const dir='artifacts/resource-sidebars';fs.mkdirSync(dir,{recursive:true});const b=await launch(),checks=[];const pass=name=>{checks.push(name);console.log('PASS',name)};
 try {
  const {page,errors}=await session(b);await ready(page,urls.validation,{probe:true});await createCharacter(page);await connect(page);
@@ -44,7 +44,7 @@ try {
  await selectPaper(page,'接口类型','openai');await page.locator('.wb-resource-detail').evaluate(e=>e.scrollTop=0);await page.screenshot({path:dir+'/connection-1440.png'});
  await selectPaper(page,'服务商','custom');await page.getByRole('textbox',{name:'运行模型',exact:true}).fill('workbench-fixture');
  assert.equal(await page.evaluate(()=>SillyTavern.getContext().chatCompletionSettings.custom_model),'workbench-fixture');
- await page.locator('[data-control=custom_api_url_text] input').fill('http://mock-model:4010/v1');
+ await page.locator('[data-control=custom_api_url_text] input').fill(mockApi);
  assert(await page.locator('[data-control=api_key_custom] input').isVisible());assert(await page.locator('.page-connection .wb-designed-actions').getByRole('button',{name:"管理 API 凭据",exact:true}).isVisible());
  const quick=page.locator('.wb-connection-quick');await quick.getByRole('button',{name:'连接',exact:true}).click();await page.waitForFunction(()=>workbench.host.snapshot().online);await settle();
  const tested=page.waitForResponse(r=>r.url().endsWith('/api/backends/chat-completions/generate')&&r.request().method()==='POST');await quick.getByRole('button',{name:'测试',exact:true}).click();assert.equal((await tested).status(),200);

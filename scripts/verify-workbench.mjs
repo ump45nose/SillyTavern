@@ -9,6 +9,7 @@ import {
   selectPaper,
   save,
   artifacts,
+  mockApi,
 } from "./browser.mjs";
 const browser = await launch(),
   report = { checkedAt: new Date().toISOString(), checks: [] };
@@ -143,7 +144,7 @@ try {
   check(
     "character favorites, search and independent management operate on host characters",
   );
-  const resources = await page.evaluate(async () => {
+  const resources = await page.evaluate(async (mockApi) => {
     const h = workbench.host,
       c = SillyTavern.getContext(),
       manager = c.getPresetManager();
@@ -173,7 +174,7 @@ try {
           mode: "cc",
           api: "custom",
           model: "workbench-fixture",
-          "api-url": "http://mock-model:4010/v1",
+          "api-url": mockApi,
         });
       if (
         ![...document.querySelector("#connection_profiles").options].some(
@@ -206,7 +207,7 @@ try {
     function assertLocal(v, message) {
       if (!v) throw new Error(message);
     }
-  });
+  }, mockApi);
   assert.equal(resources.bound, "WorkbenchFixturePreset");
   assert.equal(resources.persona, "作者身份验证 {{user}}");
   assert.deepEqual(resources.presetUnknown, { keep: "yes" });
