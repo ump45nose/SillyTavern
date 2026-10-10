@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { HostAdapter, nativeNodes } from "./host/adapter";
-import {disposeAddons} from "./addons/runtime";
+import { disposeAddons } from "./addons/runtime";
 import App, { beforeClose } from "./App";
 import { LayoutSwitcher, type LayoutMode } from "./ui/LayoutSwitcher";
 import { createTrace } from "../extension/trace.js";
@@ -19,10 +19,7 @@ import "./layout.css";
 import "./utility.css";
 import "./addon-shell.css";
 import "./mobile.css";
-class Boundary extends React.Component<
-  { children: React.ReactNode },
-  { failed: boolean }
-> {
+class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
@@ -48,23 +45,28 @@ let root: Root | undefined,
 let mounted = false,
   mounting = false,
   disposed = false;
-let layoutRoot:Root | undefined, layoutContainer:HTMLElement | undefined, unsubscribeLayout:(()=>void) | undefined;
+let layoutRoot: Root | undefined,
+  layoutContainer: HTMLElement | undefined,
+  unsubscribeLayout: (() => void) | undefined;
 const launcher = document.createElement("button");
 launcher.id = "wb-launcher";
 launcher.textContent = "创作工作台";
 function updateLayoutSwitcher() {
   if (!layoutRoot || disposed) return;
-  const mode:LayoutMode = mounted ? host?.prefs().layout === "rp" ? "rp" : "novel" : "native";
-  layoutRoot.render(<LayoutSwitcher mode={mode} onChange={changeLayout}/>);
+  const mode: LayoutMode = mounted ? (host?.prefs().layout === "rp" ? "rp" : "novel") : "native";
+  layoutRoot.render(<LayoutSwitcher mode={mode} onChange={changeLayout} />);
 }
-async function changeLayout(mode:LayoutMode) {
+async function changeLayout(mode: LayoutMode) {
   if (!beforeClose()) return false;
   if (mode === "native") {
     const previous = context.accountStorage.getItem("wb-native");
     context.accountStorage.setItem("wb-native", "true");
     try {
       if (host) await host.persistSettings();
-      else { const scriptPath = "/script.js"; await (await import(scriptPath)).saveSettings(); }
+      else {
+        const scriptPath = "/script.js";
+        await (await import(scriptPath)).saveSettings();
+      }
     } catch (error) {
       if (previous === null) context.accountStorage.removeItem("wb-native");
       else context.accountStorage.setItem("wb-native", previous);
@@ -79,7 +81,7 @@ async function changeLayout(mode:LayoutMode) {
     context.extensionSettings.workbench ??= {};
     context.extensionSettings.workbench.layout = mode;
     await mount();
-  } else host!.preference({ layout:mode });
+  } else host!.preference({ layout: mode });
   if (!mounted || !host) throw new Error("工作台未能载入，请刷新后重试。");
   await host.persistSettings();
   updateLayoutSwitcher();
@@ -117,9 +119,11 @@ async function mount() {
           trace={trace}
           toolbar={toolbar}
           onExit={() => {
-            void changeLayout("native").catch(error => host?.report(error));
+            void changeLayout("native").catch((error) => host?.report(error));
           }}
-          onLayout={mode => { void changeLayout(mode).catch(error => host?.report(error)); }}
+          onLayout={(mode) => {
+            void changeLayout(mode).catch((error) => host?.report(error));
+          }}
         />
       </Boundary>,
     );
@@ -145,10 +149,11 @@ async function mount() {
   }
 }
 function unmount() {
-  unsubscribeLayout?.(); unsubscribeLayout = undefined;
+  unsubscribeLayout?.();
+  unsubscribeLayout = undefined;
   root?.unmount();
   root = undefined;
-  if(host)disposeAddons(host);
+  if (host) disposeAddons(host);
   host?.destroy();
   host = undefined;
   trace?.destroy();
@@ -237,14 +242,13 @@ window.addEventListener(
   () => {
     disposed = true;
     unmount();
-    layoutRoot?.unmount(); layoutRoot = undefined;
-    layoutContainer?.remove(); layoutContainer = undefined;
+    layoutRoot?.unmount();
+    layoutRoot = undefined;
+    layoutContainer?.remove();
+    layoutContainer = undefined;
     launcher.remove();
     context.eventSource.removeListener(context.eventTypes.APP_READY, ready);
-    context.eventSource.removeListener(
-      context.eventTypes.APP_INITIALIZED,
-      initialized,
-    );
+    context.eventSource.removeListener(context.eventTypes.APP_INITIALIZED, initialized);
   },
   { once: true },
 );

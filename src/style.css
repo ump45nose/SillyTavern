@@ -73,13 +73,7 @@ body.wb-active #chat .mes {
   padding: 12px 0 24px !important;
 }
 body.wb-active #chat .mes_text {
-  font-family: var(
-    --wb-theme-reading-font,
-    "Noto Serif CJK SC",
-    "Source Han Serif SC",
-    Georgia,
-    serif
-  );
+  font-family: var(--wb-theme-reading-font, "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif);
   font-size: 17px !important;
   line-height: 2 !important;
   color: var(--wb-ink);
@@ -114,11 +108,7 @@ body.wb-active #chat .mes_buttons {
   opacity: 0.6;
 }
 body.wb-active #chat .mes[is_user="true"] {
-  background: color-mix(
-    in srgb,
-    var(--wb-selected) 35%,
-    transparent
-  ) !important;
+  background: color-mix(in srgb, var(--wb-selected) 35%, transparent) !important;
   padding: 16px !important;
   border-radius: 8px !important;
 }

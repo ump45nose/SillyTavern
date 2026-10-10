@@ -1,20 +1,12 @@
-import React, {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
-import {
-  X,
-  Search,
-  LoaderCircle,
-  ArrowUpRight,
-  ChevronRight,
-} from "lucide-react";
+import React, { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { X, Search, LoaderCircle, ArrowUpRight, ChevronRight } from "lucide-react";
 export { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
-export function useHost<S>(host: { subscribe: (listener: () => void) => () => void; revision: () => number; snapshot: () => S }) {
+export function useHost<S>(host: {
+  subscribe: (listener: () => void) => () => void;
+  revision: () => number;
+  snapshot: () => S;
+}) {
   useSyncExternalStore(host.subscribe, host.revision);
   return host.snapshot();
 }
@@ -69,7 +61,8 @@ export function SearchBox({
 export function useTask() {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const alive = useRef(true),running=useRef(false);
+  const alive = useRef(true),
+    running = useRef(false);
   useEffect(
     () => () => {
       alive.current = false;
@@ -82,14 +75,15 @@ export function useTask() {
     setError,
     run: async (fn: () => unknown) => {
       if (running.current) return;
-      running.current=true;setBusy(true);
+      running.current = true;
+      setBusy(true);
       setError("");
       try {
         await fn();
       } catch (e) {
         if (alive.current) setError(e instanceof Error ? e.message : String(e));
       } finally {
-        running.current=false;
+        running.current = false;
         if (alive.current) setBusy(false);
       }
     },
@@ -129,7 +123,7 @@ export function Dialog({
   wide?: boolean;
   exiting?: boolean;
 }) {
-  const titleId=useId();
+  const titleId = useId();
   const ref = useRef<HTMLDialogElement>(null),
     close = useRef(onClose);
   close.current = onClose;
@@ -166,13 +160,7 @@ export function Dialog({
     </dialog>
   );
 }
-export function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="wb-field">
       <span>{label}</span>
