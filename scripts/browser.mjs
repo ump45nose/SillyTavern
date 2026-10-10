@@ -13,6 +13,8 @@ export const urls = {
     baseline: `http://${env.WB_BIND_ADDRESS}:32011`,
     validation: `http://${env.WB_BIND_ADDRESS}:32012`,
     mock: 'http://127.0.0.1:32013',
+    // Disposable, reseeded instance for screenshot baselines (local runtime only).
+    visual: `http://${env.WB_BIND_ADDRESS}:32014`,
 };
 // The URL the tavern server uses to reach the deterministic provider (Docker DNS by default).
 export const mockApi = env.WB_MOCK_API || 'http://mock-model:4010/v1';

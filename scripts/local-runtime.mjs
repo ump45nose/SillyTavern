@@ -13,7 +13,8 @@ const upstream = path.join(root, "upstream", "SillyTavern");
 const runtime = path.join(root, "runtime");
 const pidFile = path.join(runtime, "local-pids.json");
 const envPath = path.join(root, ".env");
-const instances = { baseline: 32011, validation: 32012 };
+// visual: a disposable instance reseeded for screenshot baselines (scripts/visual/*).
+const instances = { baseline: 32011, validation: 32012, visual: 32014 };
 const mockPort = 32013;
 
 function readEnv() {
@@ -87,9 +88,11 @@ extensions:
       fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
     }
   }
-  // The validation instance loads this checkout's extension as a user-scoped third-party extension.
-  const probe = path.join(runtime, "validation/data/default-user/extensions/workbench-probe");
-  if (!fs.existsSync(probe)) fs.symlinkSync(path.join(root, "extension"), probe, "dir");
+  // Validation and visual instances load this checkout's extension as a user-scoped third-party extension.
+  for (const name of ["validation", "visual"]) {
+    const probe = path.join(runtime, name, "data/default-user/extensions/workbench-probe");
+    if (!fs.existsSync(probe)) fs.symlinkSync(path.join(root, "extension"), probe, "dir");
+  }
   const helperSource = process.env.WB_HELPER_SOURCE;
   const helperTarget = path.join(runtime, "validation/data/default-user/extensions/JS-Slash-Runner");
   if (!fs.existsSync(helperTarget)) {
@@ -136,8 +139,9 @@ async function start() {
   if (!fs.existsSync(path.join(runtime, "validation/config/config.yaml"))) prepare();
   const pids = running();
   if (!pids.mock) pids.mock = launch("mock", process.execPath, [path.join(root, "fixtures/mock-model.mjs")], { env: { ...process.env, PORT: String(mockPort), HOST: "127.0.0.1" } });
-  for (const [name, port] of Object.entries(instances)) {
-    if (process.argv.includes("--validation-only") && name !== "validation") continue;
+  const only = process.argv.slice(3).filter((arg) => !arg.startsWith("--"));
+  for (const [name] of Object.entries(instances)) {
+    if (only.length && !only.includes(name)) continue;
     if (!pids[name]) {
       pids[name] = launch(name, process.execPath, ["server.js", "--configPath", path.join(runtime, name, "config/config.yaml")], { cwd: upstream, env: { ...process.env, NODE_ENV: "production" } });
     }
@@ -147,17 +151,32 @@ async function start() {
   console.log("Running:", Object.entries(pids).map(([name, pid]) => `${name}(${pid})`).join(", "));
 }
 
-function stop() {
-  for (const [name, pid] of Object.entries(running())) {
+function stop(only = []) {
+  const pids = running();
+  for (const [name, pid] of Object.entries(pids)) {
+    if (only.length && !only.includes(name)) continue;
     try { process.kill(-pid, "SIGTERM"); } catch { try { process.kill(pid, "SIGTERM"); } catch {} }
     console.log(`Stopped ${name}`);
+    delete pids[name];
   }
-  fs.rmSync(pidFile, { force: true });
+  if (Object.keys(pids).length) fs.writeFileSync(pidFile, JSON.stringify(pids, null, 2));
+  else fs.rmSync(pidFile, { force: true });
+}
+
+// Recreate the visual instance from scratch so screenshot baselines start from identical data.
+async function resetVisual() {
+  stop(["visual"]);
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  fs.rmSync(path.join(runtime, "visual"), { recursive: true, force: true });
+  prepare();
+  process.argv = [process.argv[0], process.argv[1], "start", "visual"];
+  await start();
 }
 
 const command = process.argv[2];
 if (command === "prepare") prepare();
 else if (command === "start") await start();
-else if (command === "stop") stop();
+else if (command === "stop") stop(process.argv.slice(3));
+else if (command === "reset-visual") await resetVisual();
 else if (command === "status") console.log(running());
-else console.log("Usage: node scripts/local-runtime.mjs prepare|start [--validation-only]|stop|status");
+else console.log("Usage: node scripts/local-runtime.mjs prepare | start [instance...] | stop [instance...] | reset-visual | status");
