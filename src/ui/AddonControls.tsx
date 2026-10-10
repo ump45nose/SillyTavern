@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useState, useRef, useSyncExternalStore, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
-import { ImagePlus, Pause, Play, Square, X, ListTree } from 'lucide-react';
+import { ImagePlus, Pause, Play, Square, X, ListTree, Images } from 'lucide-react';
 import type { HostAdapter } from '../host/adapter';
 import type { MessageTarget } from '../addons/types';
 import { addonEnabled } from '../addons/catalog';
@@ -150,7 +150,7 @@ export function ImageInputMode({ host }: {
         if (!mode)
             return;
         const input = document.getElementById('send_textarea') as HTMLTextAreaElement, placeholder = input.placeholder;
-        input.placeholder = '描述画面、人物、动作与风格… 可结合参考图生成';
+        input.placeholder = '输入生图提示词… 可拖入或粘贴参考图';
         const sendButton=document.getElementById('send_but')!, previousLabel=sendButton.getAttribute('aria-label');sendButton.setAttribute('aria-label','生成图片');
         document.body.classList.add('wb-image-input-mode');
         window.dispatchEvent(new Event('wb-image-compose'));
@@ -195,5 +195,5 @@ export function ImageInputMode({ host }: {
         document.addEventListener('submit', send, true);
         return () => { document.removeEventListener('click', send, true); document.removeEventListener('keydown', send, true); document.removeEventListener('submit', send, true); input.placeholder = placeholder; previousLabel===null?sendButton.removeAttribute('aria-label'):sendButton.setAttribute('aria-label',previousLabel);document.removeEventListener('paste',files,true);document.removeEventListener('drop',files,true);document.removeEventListener('dragover',drag,true);document.body.classList.remove('wb-image-input-mode');window.dispatchEvent(new Event('wb-image-compose-end')); };
     }, [mode, host, manager]);
-    return mode && anchor ? createPortal(<><div className="wb-image-input-label"><ImagePlus size={16}/><strong>手动生图</strong><span>第 {mode.target.id + 1} 层</span><small>聊天草稿已暂存</small><button aria-label="打开生图工作区" onClick={() => manager.api('image-gen').open('workspace')}>查看结果</button><button aria-label="取消手动生图" onClick={cancel}><X size={16}/></button></div><Suspense fallback={null}>{manager.get('image-gen')&&<References runtime={manager.get('image-gen')!} compact/>}</Suspense></>, anchor) : null;
+    return mode && anchor ? createPortal(<><div className="wb-image-input-label" title="手动生图 · 聊天草稿已暂存，退出后恢复"><ImagePlus size={17}/><span>生图</span><small>第 {mode.target.id + 1} 层</small></div><Suspense fallback={null}>{manager.get('image-gen')&&<References runtime={manager.get('image-gen')!} compact/>}</Suspense><div className="wb-image-input-actions"><button aria-label="打开生图工作区" title="查看生图结果" onClick={() => manager.api('image-gen').open('workspace')}><Images size={17}/></button><button aria-label="取消手动生图" title="退出生图 · 恢复聊天草稿" onClick={cancel}><X size={18}/></button></div></>, anchor) : null;
 }

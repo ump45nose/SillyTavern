@@ -13,8 +13,8 @@ export default function References({runtime,compact=false}:{runtime:AddonRuntime
  };
  return <div className={`wb-image-references ${compact?'is-compact':''}`} aria-label="生图参考图" onDragOver={e=>{if(e.dataTransfer.types.includes('Files'))e.preventDefault();}} onDrop={e=>{if(e.dataTransfer.files.length){e.preventDefault();e.stopPropagation();void add([...e.dataTransfer.files]);}}} onPaste={e=>{const files=[...e.clipboardData.files].filter(f=>f.type.startsWith('image/'));if(files.length){e.preventDefault();e.stopPropagation();void add(files);}}}>
   <input ref={input} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple aria-label="选择生图参考图" disabled={reading} onChange={e=>{void add([...e.target.files||[]]);e.target.value='';}}/>
-  <button type="button" disabled={reading||refs.length>=referenceLimit} onClick={()=>input.current?.click()}><ImagePlus size={15}/>{reading?'读取中…':'插入参考图'}</button>
-  {!refs.length&&<small>可拖入或粘贴图片</small>}
+  <button type="button" aria-label="插入参考图" title={reading?'正在读取参考图…':'插入参考图 · 也可拖入或粘贴'} disabled={reading||refs.length>=referenceLimit} onClick={()=>input.current?.click()}><ImagePlus size={compact?17:15}/>{!compact&&(reading?'读取中…':'插入参考图')}</button>
+  {!compact&&!refs.length&&<small>可拖入或粘贴图片</small>}
   <div className="wb-image-reference-list">{refs.map((ref,i)=><figure key={ref.id}><img src={ref.dataUrl} alt={`参考图 ${i+1}：${ref.name}`}/><button type="button" aria-label={`移除参考图 ${i+1}`} onClick={()=>void runtime.action('references',refs.filter(r=>r.id!==ref.id))}><X size={12}/></button></figure>)}</div>
   {!!error&&<p role="alert">{error}</p>}
  </div>;

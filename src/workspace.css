@@ -494,3 +494,14 @@ body.wb-active .wb-ui .wb-information .wb-fold-toggle[aria-expanded=true]:hover 
 
 .wb-nav-chat.is-open > div { max-height:none; overflow:hidden; }
 .wb-nav-chat { flex:none; }
+
+/* Expanding one chat section temporarily folds all its peers, including titles. */
+.wb-nav-section.is-open > div { max-height:none; overflow:hidden; }
+.wb-navigation-v4.is-section-expanded .wb-information { display:flex; flex-direction:column; }
+.wb-navigation-v4.is-section-expanded .wb-information > * { flex-shrink:0; }
+.wb-navigation-v4.is-section-expanded .wb-nav-section.is-focused { flex:1; min-height:0; }
+.wb-nav-section.is-focused > div { display:flex; flex-direction:column; }
+.wb-nav-section.is-focused > div > section { display:flex; flex-direction:column; flex:1; min-height:0!important; }
+.wb-nav-section.is-focused section > .wb-fold-body { flex:1; min-height:0; }
+.wb-nav-section.is-focused .wb-recent-section > .wb-fold-body > div { max-height:none; overflow:auto; }
+.wb-nav-section.is-focused .wb-floor-list { flex:1; min-height:0; overflow:auto; }
