@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { clone } from "./model";
 import { ctx, internal } from "./internals";
+import type { ChatObserver, MediaObserver } from "./chat-observer";
 
 export const defaults: Preferences = { left: true, bindings: {}, groups: {} };
 
@@ -64,6 +65,9 @@ export class HostCore {
   bindingRun = false;
   suspendedDialogs: HTMLDialogElement[] = [];
   generating = false;
+  /** Created in init; the only observers on #chat and on the native sprite wrappers. */
+  chatObserver!: ChatObserver;
+  media!: MediaObserver;
   listen(name: string, fn: (...args: any[]) => void) {
     const c = ctx(),
       event = c.eventTypes[name];

@@ -166,34 +166,14 @@ export function ReadingPresentation({ host, chatStyle = false }: { host: HostAda
     [expanded, setExpanded] = useState<Map<HTMLElement, boolean>>(new Map());
   useEffect(() => {
     const chat = document.getElementById("chat")!;
-    let frame = 0;
     const scan = () => {
       for (const n of controls.current.keys()) if (!chat.contains(n)) controls.current.delete(n);
       const next = [...chat.querySelectorAll<HTMLElement>(".mes")];
       setNodes((old) => (old.length === next.length && old.every((n, i) => n === next[i]) ? [...old] : next));
     };
     scan();
-    const observer = new MutationObserver((records) => {
-      if (
-        !records.some(
-          (r) =>
-            r.type === "attributes" ||
-            [...r.addedNodes, ...r.removedNodes].some(
-              (n) =>
-                n instanceof Element &&
-                (n.matches(".mes,.edit_textarea") || n.querySelector(".mes,.edit_textarea")),
-            ),
-        )
-      )
-        return;
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(scan);
-    });
-    observer.observe(chat, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["mesid", "is_user"],
+    const off = host.chatObserver.subscribe((change) => {
+      if (change.nodes || change.editing) scan();
     });
     const edit = (e: Event) => {
       const node = (e.target as Element)?.closest<HTMLElement>(".mes_edit")?.closest<HTMLElement>(".mes");
@@ -212,8 +192,7 @@ export function ReadingPresentation({ host, chatStyle = false }: { host: HostAda
       animations.current.forEach((a) => a.cancel());
       animations.current.clear();
       folds.current.clear();
-      observer.disconnect();
-      cancelAnimationFrame(frame);
+      off();
       chat.removeEventListener("click", edit, true);
       chat.removeEventListener("keydown", key);
       controls.current.forEach((attrs, n) => {

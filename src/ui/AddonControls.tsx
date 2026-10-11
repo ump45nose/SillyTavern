@@ -82,7 +82,6 @@ export function MessageImageControls({ host }: { host: HostAdapter }) {
     }
     const chat = document.getElementById("chat")!,
       owned = new Set<HTMLElement>();
-    let frame = 0;
     const scan = () => {
       const next = [...chat.querySelectorAll<HTMLElement>(".mes")].flatMap((message) => {
         const pencil = message.querySelector(".mes_edit");
@@ -103,19 +102,10 @@ export function MessageImageControls({ host }: { host: HostAdapter }) {
       );
     };
     scan();
-    const observer = new MutationObserver((records) => {
-      if (
-        records.some((r) =>
-          [...r.addedNodes, ...r.removedNodes].some(
-            (n) => n instanceof Element && (n.matches(".mes,.mes_edit") || n.querySelector(".mes,.mes_edit")),
-          ),
-        )
-      ) {
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(scan);
-      }
+    // Renumbered floors rescan too, so a slot never keeps a stale mesid.
+    const off = host.chatObserver.subscribe((change) => {
+      if (change.nodes || change.editing) scan();
     });
-    observer.observe(chat, { childList: true, subtree: true });
     const over = (e: DragEvent) => {
       if (
         e.dataTransfer?.types.includes("application/x-wb-image") &&
@@ -144,8 +134,7 @@ export function MessageImageControls({ host }: { host: HostAdapter }) {
     chat.addEventListener("dragover", over);
     chat.addEventListener("drop", drop);
     return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
+      off();
       chat.removeEventListener("dragover", over);
       chat.removeEventListener("drop", drop);
       owned.forEach((slot) => slot.remove());

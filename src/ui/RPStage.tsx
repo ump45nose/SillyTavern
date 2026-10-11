@@ -43,56 +43,42 @@ function useNativeDialogue(host: HostAdapter, capacity: number) {
   const [messages, setMessages] = useState<Message[]>([]);
   useLayoutEffect(() => {
     const chat = document.getElementById("chat")!;
-    let frame = 0;
-    const scan = () => {
-      const snapshot = host.snapshot();
-      setMessages(
-        [...chat.querySelectorAll<HTMLElement>(".mes")].map((node) => {
-          const id = Number(node.getAttribute("mesid")),
-            text = node.querySelector<HTMLElement>(".mes_text"),
-            message = snapshot.messages.find((m) => m.id === id);
-          // Mixed text/HTML and nested plugin output stay together as a single scrollable page.
-          const mixed = [...(text?.childNodes || [])].some(
-            (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
-          );
-          const parts = mixed ? [] : ([...(text?.children || [])] as HTMLElement[]);
-          const pages = dialoguePages(
-            parts.map((part) => ({
-              length: part.textContent?.length || 1,
-              atomic:
-                part.matches("iframe,pre,table,img,video,audio,svg,canvas") ||
-                !!part.querySelector("iframe,pre,table,img,video,audio,canvas"),
-            })),
-            capacity,
-          );
-          return {
-            node,
-            id,
-            name: message?.name || node.querySelector(".name_text")?.textContent || "",
-            user: node.getAttribute("is_user") === "true",
-            parts,
-            pages,
-            editing: !!node.querySelector(".edit_textarea"),
-          };
-        }),
+    const read = (node: HTMLElement): Message => {
+      const id = Number(node.getAttribute("mesid")),
+        text = node.querySelector<HTMLElement>(".mes_text");
+      // Mixed text/HTML and nested plugin output stay together as a single scrollable page.
+      const mixed = [...(text?.childNodes || [])].some(
+        (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
       );
+      const parts = mixed ? [] : ([...(text?.children || [])] as HTMLElement[]);
+      const pages = dialoguePages(
+        parts.map((part) => ({
+          length: part.textContent?.length || 1,
+          atomic:
+            part.matches("iframe,pre,table,img,video,audio,svg,canvas") ||
+            !!part.querySelector("iframe,pre,table,img,video,audio,canvas"),
+        })),
+        capacity,
+      );
+      return {
+        node,
+        id,
+        name: host.slice("chat")[id]?.name || node.querySelector(".name_text")?.textContent || "",
+        user: node.getAttribute("is_user") === "true",
+        parts,
+        pages,
+        editing: !!node.querySelector(".edit_textarea"),
+      };
     };
+    const scan = () => setMessages([...chat.querySelectorAll<HTMLElement>(".mes")].map(read));
     scan();
-    const observer = new MutationObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(scan);
+    const off = host.chatObserver.subscribe((change) => {
+      if (change.nodes || change.editing) scan();
+      // Streaming only touches the last floor: re-read just the floors that changed.
+      else if (change.content.size)
+        setMessages((prev) => prev.map((m) => (change.content.has(m.id) ? read(m.node) : m)));
     });
-    observer.observe(chat, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["mesid", "is_user"],
-    });
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-    };
+    return off;
   }, [host, capacity]);
   return messages;
 }
@@ -202,33 +188,7 @@ export function RPStage({
       window.removeEventListener("wb-image-compose-end", imageEnd);
     };
   }, []);
-  useEffect(() => {
-    let frame = 0;
-    const observer = new MutationObserver((records) => {
-      if (
-        records.some(
-          (r) =>
-            (r.target as Element).closest?.("#expression-wrapper,#visual-novel-wrapper") ||
-            [...r.addedNodes].some(
-              (n) => n instanceof Element && n.matches("#expression-wrapper,#visual-novel-wrapper"),
-            ),
-        )
-      ) {
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => setMediaRevision((v) => v + 1));
-      }
-    });
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["src", "data-avatar"],
-    });
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-    };
-  }, []);
+  useEffect(() => host.media.subscribe(() => setMediaRevision((v) => v + 1)), [host]);
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-rp-compose", compose && !history);
     document.body.classList.toggle("wb-rp-expanded", expanded && compose && !history);

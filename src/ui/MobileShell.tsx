@@ -151,25 +151,7 @@ export function MobileShell({
     return () => window.removeEventListener("resize", resize);
   }, []);
   // The live expression remains owned by its native extension; only its URL is presented here.
-  useEffect(() => {
-    let frame = 0;
-    const observer = new MutationObserver((records) => {
-      if (records.some((r) => (r.target as Element).closest?.("#expression-wrapper,#visual-novel-wrapper"))) {
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => setMediaVersion((v) => v + 1));
-      }
-    });
-    observer.observe(document.body, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["src"],
-    });
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-    };
-  }, []);
+  useEffect(() => host.media.subscribe(() => setMediaVersion((v) => v + 1)), [host]);
   useLayoutEffect(() => {
     const chat = document.getElementById("sheld")!,
       previous = chat.inert;

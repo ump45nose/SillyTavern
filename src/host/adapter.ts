@@ -1,5 +1,6 @@
 import { clone } from "./model";
-import { assertContext, ctx, internal } from "./internals";
+import { assertContext, ctx, internal, nativeNodes } from "./internals";
+import { ChatObserver, MediaObserver } from "./chat-observer";
 import { HostCore, defaults, sliceNames } from "./core";
 import type { Slice } from "./types";
 import { draftsMethods } from "./domains/drafts";
@@ -31,6 +32,12 @@ export class HostAdapter extends HostCore {
       internal("openai"),
     ]);
     assertContext();
+    this.chatObserver = new ChatObserver(nativeNodes.chat!);
+    this.media = new MediaObserver();
+    this.cleanup.push(
+      () => this.chatObserver.disconnect(),
+      () => this.media.disconnect(),
+    );
     const c = ctx();
     // Which slices each SillyTavern event can change. Native selects all emit one of these, so
     // nothing listens for raw DOM change events.
