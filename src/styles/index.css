@@ -1,0 +1,19 @@
+/* Workbench stylesheet entry. Layer order is declared once, before any sheet (including lazy ones) loads. */
+@layer wb.reset, wb.tokens, wb.base, wb.legacy, wb.components, wb.layouts, wb.modes;
+
+@import "./legacy/native-defaults.css";
+@import "./legacy/style.css";
+@import "./legacy/home.css";
+@import "./legacy/controls.css";
+@import "./legacy/resources.css";
+@import "./legacy/workspace.css";
+@import "./legacy/rework.css";
+@import "./legacy/polish.css";
+@import "./legacy/selection.css";
+@import "./legacy/preferences.css";
+@import "./legacy/rp.css";
+@import "./legacy/layout.css";
+@import "./legacy/utility.css";
+@import "./legacy/addon-shell.css";
+@import "./legacy/mobile.css";
+@import "./native-bridge.css";

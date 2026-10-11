@@ -18,6 +18,8 @@ const result = await build({
   minify: true,
   sourcemap: true,
   legalComments: "eof",
+  // Host assets referenced by copied native defaults resolve against the SillyTavern origin.
+  external: ["/img/*"],
   write: false,
 });
 await mkdir(directory, { recursive: true });
@@ -25,14 +27,13 @@ for (const file of result.outputFiles) {
   await mkdir(path.dirname(file.path), { recursive: true });
   await writeFile(file.path, file.contents);
 }
-const current = new Set(
-  result.outputFiles.map((file) => path.relative(directory, file.path)),
-);
+const current = new Set(result.outputFiles.map((file) => path.relative(directory, file.path)));
 async function clean(folder) {
   for (const entry of await readdir(folder, { withFileTypes: true })) {
     const filename = path.join(folder, entry.name);
     if (entry.isDirectory()) await clean(filename);
-    else if (!current.has(path.relative(directory, filename)) && /\.(js|css)(\.map)?$/.test(entry.name)) await unlink(filename);
+    else if (!current.has(path.relative(directory, filename)) && /\.(js|css)(\.map)?$/.test(entry.name))
+      await unlink(filename);
   }
 }
 await clean(directory);

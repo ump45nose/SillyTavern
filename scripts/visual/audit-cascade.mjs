@@ -111,11 +111,18 @@ function inspect() {
         ![...el.classList].some((c) => /^(wb-|lucide|is-|has-)/.test(c)),
     )
     .map((el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + "." + [...el.classList].join("."));
-  return { plugin, native, foreign: [...new Set(foreign)] };
+  // Where each class and id lives, used to classify selectors no state matched.
+  const tokens = {};
+  for (const el of document.body.querySelectorAll("*")) {
+    const side = inScope(el) ? "in" : "out";
+    for (const c of el.classList) (tokens["." + c] ??= { in: 0, out: 0 })[side]++;
+    if (el.id) (tokens["#" + el.id] ??= { in: 0, out: 0 })[side]++;
+  }
+  return { plugin, native, tokens, foreign: [...new Set(foreign)] };
 }
 
 const browser = await launch();
-const merged = { plugin: {}, native: {}, foreign: {}, states: [] };
+const merged = { plugin: {}, native: {}, tokens: {}, foreign: {}, states: [] };
 try {
   for (const state of states) {
     if (filter && !filter.test(state.name)) continue;
@@ -131,6 +138,11 @@ try {
         const entry = (merged.native[selector] ??= { ...hit, in: 0, states: [] });
         entry.in += hit.in;
         entry.states.push(state.name);
+      }
+      for (const [token, hit] of Object.entries(result.tokens)) {
+        const entry = (merged.tokens[token] ??= { in: 0, out: 0 });
+        entry.in += hit.in;
+        entry.out += hit.out;
       }
       for (const item of result.foreign) (merged.foreign[item] ??= []).push(state.name);
       merged.states.push(state.name);

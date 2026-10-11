@@ -5,20 +5,7 @@ import { disposeAddons } from "./addons/runtime";
 import App, { beforeClose } from "./App";
 import { LayoutSwitcher, type LayoutMode } from "./ui/LayoutSwitcher";
 import { createTrace } from "../extension/trace.js";
-import "./style.css";
-import "./home.css";
-import "./controls.css";
-import "./resources.css";
-import "./workspace.css";
-import "./rework.css";
-import "./polish.css";
-import "./selection.css";
-import "./preferences.css";
-import "./rp.css";
-import "./layout.css";
-import "./utility.css";
-import "./addon-shell.css";
-import "./mobile.css";
+import "./styles/index.css";
 class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
