@@ -2,6 +2,7 @@ import React from "react";
 import type { HostAdapter } from "../host/adapter";
 import NativeSettings from "./NativeSettings";
 import { InstalledExtensions, ReadingForm } from "./DesignedSettings";
+import { bus } from "../host/bus";
 /** Lease whole native components. Their lists, local actions and dynamic editors remain owned by the host. */
 export default function ComponentSettings({
   host,
@@ -28,11 +29,7 @@ export default function ComponentSettings({
       {installed ? (
         <InstalledExtensions
           host={host}
-          open={(id) =>
-            window.dispatchEvent(
-              new CustomEvent("wb-settings-group", { detail: { group: "扩展设置", extension: id } }),
-            )
-          }
+          open={(id) => bus.emit("settings-group", { group: "扩展设置", extension: id })}
         />
       ) : (
         <NativeSettings host={host} page={page} group={group} extensionId={extensionId} />

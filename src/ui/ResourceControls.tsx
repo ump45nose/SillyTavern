@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
 import { clone } from "../host/model";
+import { guards } from "../host/bus";
 export function Fold({
   title,
   children,
@@ -113,20 +114,17 @@ export function useDraft(read: () => Data, version: number, cache?: { host: Host
     }
   }, [version]);
   useEffect(() => {
-    const guard = (e: Event) => {
-      if (cache) return;
-      if (dirty && !confirm("有未保存修改，放弃这些修改？")) e.preventDefault();
-    };
+    const guard = () => !!cache || !dirty || confirm("有未保存修改，放弃这些修改？");
     const unload = (e: BeforeUnloadEvent) => {
       if (dirty) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
-    window.addEventListener("wb-before-close", guard);
+    const off = guards.add(guard);
     window.addEventListener("beforeunload", unload);
     return () => {
-      window.removeEventListener("wb-before-close", guard);
+      off();
       window.removeEventListener("beforeunload", unload);
     };
   }, [dirty]);

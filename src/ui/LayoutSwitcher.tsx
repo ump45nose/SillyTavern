@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, PanelsTopLeft, Theater } from "lucide-react";
 import { usePresence } from "./Motion";
+import { bus } from "../host/bus";
 
 export type LayoutMode = "novel" | "rp" | "native";
 const modes = [
@@ -28,10 +29,8 @@ export function LayoutSwitcher({
     previous = modes[(index + modes.length - 1) % modes.length],
     next = modes[(index + 1) % modes.length];
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("wb-layout-menu", { detail: open }));
-    return () => {
-      window.dispatchEvent(new CustomEvent("wb-layout-menu", { detail: false }));
-    };
+    bus.emit("layout-menu", open);
+    return () => bus.emit("layout-menu", false);
   }, [open]);
   useLayoutEffect(() => {
     if (!open) return;

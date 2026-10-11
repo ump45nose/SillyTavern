@@ -12,6 +12,7 @@ import type {
 import { clone } from "./model";
 import { ctx, internal } from "./internals";
 import type { ChatObserver, MediaObserver } from "./chat-observer";
+import { bus } from "./bus";
 
 export const defaults: Preferences = { left: true, bindings: {}, groups: {} };
 
@@ -147,11 +148,7 @@ export class HostCore {
     return this.busy || this.resourceAction || this.generating;
   }
   report(error: unknown) {
-    window.dispatchEvent(
-      new CustomEvent("wb-error", {
-        detail: error instanceof Error ? error.message : String(error),
-      }),
-    );
+    bus.emit("error", error instanceof Error ? error.message : String(error));
   }
   prefs(): Preferences {
     return { ...clone(defaults), ...ctx().extensionSettings.workbench };

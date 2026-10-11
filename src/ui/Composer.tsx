@@ -7,6 +7,7 @@ import { composerTools, toolIcon } from "./ToolIcon";
 import { useTools } from "./useTools";
 import type { ComposerPopup } from "./ComposerPopovers";
 import type { HostAdapter } from "../host/adapter";
+import { bus } from "../host/bus";
 /** Decorate native controls in-place: event handlers, selection and plugin nodes stay owned by ST. */
 export function Composer({
   host,
@@ -172,7 +173,7 @@ export function Composer({
             aria-valuenow={mobile ? undefined : Math.round(ratio * 100)}
             title={mobile ? "上拉或点击，全屏编辑" : "上拉增加输入高度 · 双击恢复"}
             onClick={() => {
-              if (mobile) window.dispatchEvent(new Event("wb-mobile-editor-open"));
+              if (mobile) bus.emit("mobile-editor-open");
             }}
             onPointerDown={(e) => {
               if (e.button !== 0) return;
@@ -193,8 +194,7 @@ export function Composer({
             }}
             onPointerUp={(e) => {
               if (mobile) {
-                if (drag.current && drag.current.y - e.clientY > 35)
-                  window.dispatchEvent(new Event("wb-mobile-editor-open"));
+                if (drag.current && drag.current.y - e.clientY > 35) bus.emit("mobile-editor-open");
                 drag.current = null;
               } else finish();
             }}

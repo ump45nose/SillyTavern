@@ -3,6 +3,7 @@ import { AddonBridge } from "../host/addon-api";
 import { addonEnabled, type AddonId } from "./catalog";
 import { loadAddon } from "./loader";
 import type { AddonRuntime, TaskHost } from "./types";
+import { bus } from "../host/bus";
 const managers = new WeakMap<HostAdapter, AddonManager>();
 export class AddonManager {
   readonly bridge: AddonBridge;
@@ -60,9 +61,7 @@ export class AddonManager {
     this.listeners.forEach((fn) => fn());
   };
   api(id: AddonId): TaskHost {
-    return this.bridge.api(id, (view) =>
-      window.dispatchEvent(new CustomEvent("wb-addon-open", { detail: { id, view } })),
-    );
+    return this.bridge.api(id, (view) => bus.emit("addon-open", { id, view }));
   }
   get(id: AddonId) {
     return this.runtimes.get(id);

@@ -1,6 +1,7 @@
 import { clone } from "./model";
 import { assertContext, ctx, internal, nativeNodes } from "./internals";
 import { ChatObserver, MediaObserver } from "./chat-observer";
+import { guards, type Guard } from "./bus";
 import { HostCore, defaults, sliceNames } from "./core";
 import type { Slice } from "./types";
 import { draftsMethods } from "./domains/drafts";
@@ -120,16 +121,12 @@ export class HostAdapter extends HostCore {
       });
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
-    const guard = (e: Event) => {
-      if (this.resourceAction) {
-        e.preventDefault();
-        return;
-      }
-      if ((e as CustomEvent).detail?.preserveDrafts) return;
-      if (this.dirtyDraftKeys().length) {
-        if (!confirm("有未保存的资源草稿，放弃这些修改？")) e.preventDefault();
-        else this.drafts.clear();
-      }
+    const guard: Guard = ({ preserveDrafts }) => {
+      if (this.resourceAction) return false;
+      if (preserveDrafts || !this.dirtyDraftKeys().length) return true;
+      if (!confirm("有未保存的资源草稿，放弃这些修改？")) return false;
+      this.drafts.clear();
+      return true;
     };
     const unload = (e: BeforeUnloadEvent) => {
       if (this.dirtyDraftKeys().length || this.resourceAction) {
@@ -137,12 +134,8 @@ export class HostAdapter extends HostCore {
         e.returnValue = "";
       }
     };
-    window.addEventListener("wb-before-close", guard);
     window.addEventListener("beforeunload", unload);
-    this.cleanup.push(() => {
-      window.removeEventListener("wb-before-close", guard);
-      window.removeEventListener("beforeunload", unload);
-    });
+    this.cleanup.push(guards.add(guard), () => window.removeEventListener("beforeunload", unload));
     this.refresh();
   }
   destroy() {

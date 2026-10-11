@@ -25,13 +25,14 @@ import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat }
 import { Check, Fold, useDraft } from "../ui/ResourceControls";
 import { ResourcePicker } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
+import { guards } from "../host/bus";
 export const labels: Record<Resource, string> = {
   connection: "连接",
   preset: "预设",
   world: "世界书",
   persona: "用户设定",
 };
-const safeToLeave = () => window.dispatchEvent(new Event("wb-before-close", { cancelable: true }));
+const safeToLeave = () => guards.check();
 export default function Resources({
   host,
   kind,
@@ -70,13 +71,7 @@ export default function Resources({
   }, [snap.resources[kind], id, kind]);
   const current = snap.resources[kind].find((x) => x.id === id);
   const choose = (next: string) => {
-    if (
-      deep
-        ? window.dispatchEvent(
-            new CustomEvent("wb-before-close", { cancelable: true, detail: { preserveDrafts: true } }),
-          )
-        : safeToLeave()
-    ) {
+    if (deep ? guards.check({ preserveDrafts: true }) : safeToLeave()) {
       pendingCreation.current = null;
       setId(next);
     }

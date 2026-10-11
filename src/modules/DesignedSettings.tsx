@@ -23,6 +23,7 @@ import { HostControl, HostWidget, type FormControl } from "../ui/HostControl";
 import { Check, Fold } from "../ui/ResourceControls";
 import { Select } from "../ui/Select";
 import { nativePages } from "./NativeSettings";
+import { bus } from "../host/bus";
 const titles: Record<string, string> = {
   themes: "UI 主题",
   avatar_style: "头像样式",
@@ -309,14 +310,13 @@ export default function DesignedSettings({
   }, [root, host]);
   const sections = config.sections,
     selected = sections.find((s) => s.label === group) || sections[0];
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const id = (e as CustomEvent).detail.extension;
-      if (id) setExtension(id);
-    };
-    window.addEventListener("wb-settings-group", handler);
-    return () => window.removeEventListener("wb-settings-group", handler);
-  }, []);
+  useEffect(
+    () =>
+      bus.on("settings-group", ({ extension }) => {
+        if (extension) setExtension(extension);
+      }),
+    [],
+  );
   const allBlocks = root
     ? [
         ...new Set(
@@ -613,9 +613,7 @@ export default function DesignedSettings({
         <InstalledExtensions
           host={host}
           open={(id) => {
-            window.dispatchEvent(
-              new CustomEvent("wb-settings-group", { detail: { group: "扩展设置", extension: id } }),
-            );
+            bus.emit("settings-group", { group: "扩展设置", extension: id });
             setExtension(id);
           }}
         />

@@ -14,6 +14,7 @@ import type { MessageTarget } from "../addons/types";
 import { addonEnabled } from "../addons/catalog";
 import { addonManager } from "../addons/runtime";
 import { useHostSlices, withoutChat } from "./common";
+import { bus } from "../host/bus";
 const References = lazy(() => import("../addons/image-gen/References"));
 /** Persistent task controls live above the content, independently of either sidebar. */
 export function AddonTasks({ host }: { host: HostAdapter }) {
@@ -187,8 +188,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
   );
   useEffect(() => {
     const input = document.getElementById("send_textarea") as HTMLTextAreaElement;
-    const receive = (event: Event) => {
-      const target = (event as CustomEvent<MessageTarget>).detail;
+    const receive = (target: MessageTarget) => {
       if (target.chatKey !== manager.bridge.key() || !addonEnabled(host.prefs(), "image-gen")) return;
       setMode((previous) =>
         previous
@@ -199,13 +199,13 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.focus();
     };
-    window.addEventListener("wb-image-input", receive);
+    const off = bus.on("image-input", receive);
     const anchor = document.createElement("div");
     anchor.className = "wb-image-input-anchor";
     input.before(anchor);
     setAnchor(anchor);
     return () => {
-      window.removeEventListener("wb-image-input", receive);
+      off();
       anchor.remove();
     };
   }, [host, manager]);
@@ -217,7 +217,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
       input.setSelectionRange(mode.start, mode.end);
     }
     setMode(null);
-    window.dispatchEvent(new Event("wb-image-compose-end"));
+    bus.emit("image-compose-end");
   };
   useEffect(() => {
     if (mode && (mode.target.chatKey !== manager.bridge.key() || !addonEnabled(host.prefs(), "image-gen"))) {
@@ -234,7 +234,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
       previousLabel = sendButton.getAttribute("aria-label");
     sendButton.setAttribute("aria-label", "生成图片");
     document.body.classList.add("wb-image-input-mode");
-    window.dispatchEvent(new Event("wb-image-compose"));
+    bus.emit("image-compose");
     const send = (event: Event) => {
       const target = event.target as Element;
       if (event.type === "keydown") {
@@ -309,7 +309,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
       document.removeEventListener("drop", files, true);
       document.removeEventListener("dragover", drag, true);
       document.body.classList.remove("wb-image-input-mode");
-      window.dispatchEvent(new Event("wb-image-compose-end"));
+      bus.emit("image-compose-end");
     };
   }, [mode, host, manager]);
   return mode && anchor

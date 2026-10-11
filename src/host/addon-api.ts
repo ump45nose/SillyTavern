@@ -4,6 +4,7 @@ import type { Data } from "./types";
 import type { AddonId } from "../addons/catalog";
 import type { MessageTarget, StoryReply, TaskHost } from "../addons/types";
 import { ctx as context, internal } from "./internals";
+import { bus, guards } from "./bus";
 const credentialField = /^(?:key|api[-_]?key|token|secret|password|authorization|credentials?)$/i;
 function safeMetadata(value: any): any {
   if (Array.isArray(value)) return value.map(safeMetadata);
@@ -183,7 +184,7 @@ export class AddonBridge {
     input.focus();
     const position = mode === "replace" ? text.length : start + text.length;
     input.setSelectionRange(position, position);
-    window.dispatchEvent(new Event("wb-image-compose"));
+    bus.emit("image-compose");
   }
   async write(text: string | null, signal: AbortSignal, allowDraft = false): Promise<StoryReply> {
     if (document.body.classList.contains("wb-image-input-mode"))
@@ -352,10 +353,10 @@ export class AddonBridge {
       inputMode: (target: MessageTarget) => {
         grant("image-gen");
         bridge.inputs.forEach((fn) => fn());
-        window.dispatchEvent(new CustomEvent("wb-image-input", { detail: target }));
+        bus.emit("image-input", target);
       },
       open,
-      beforeClose: () => window.dispatchEvent(new Event("wb-before-close", { cancelable: true })),
+      beforeClose: () => guards.check(),
       summary: async () => null,
     });
   }

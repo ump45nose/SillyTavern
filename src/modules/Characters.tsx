@@ -30,6 +30,7 @@ import {
   withoutChat,
 } from "../ui/common";
 import { ResourceRailContext } from "../ui/ResourcePicker";
+import { guards, type Guard } from "../host/bus";
 
 function CharacterInfo({ item, onEdit }: { item?: Item; onEdit: (id: string) => void }) {
   const data = item?.data?.data ?? item?.data;
@@ -332,8 +333,7 @@ export default function Characters({
             <button
               className="wb-link"
               onClick={() => {
-                if (window.dispatchEvent(new Event("wb-before-close", { cancelable: true })))
-                  setEditing(null);
+                if (guards.check()) setEditing(null);
               }}
             >
               ← 返回角色库
@@ -412,20 +412,18 @@ function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
     if (base && draft) host.drafts.set("character:" + id, { base: clone(base), draft: clone(draft) });
   }, [base, draft, id]);
   useEffect(() => {
-    const guard = (e: Event) => {
-      if ((e as CustomEvent).detail?.preserveDrafts) return;
-      if (dirty && !confirm("角色有未保存修改，放弃这些修改？")) e.preventDefault();
-    };
+    const guard: Guard = ({ preserveDrafts }) =>
+      preserveDrafts || !dirty || confirm("角色有未保存修改，放弃这些修改？");
     const unload = (e: BeforeUnloadEvent) => {
       if (dirty) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
-    window.addEventListener("wb-before-close", guard);
+    const off = guards.add(guard);
     window.addEventListener("beforeunload", unload);
     return () => {
-      window.removeEventListener("wb-before-close", guard);
+      off();
       window.removeEventListener("beforeunload", unload);
     };
   }, [dirty]);

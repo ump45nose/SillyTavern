@@ -29,6 +29,7 @@ import { ResourceControls } from "./Header";
 import { ReadingSettings } from "./Reading";
 import { composerTools, toolIcon } from "./ToolIcon";
 import { usePresence } from "./Motion";
+import { bus } from "../host/bus";
 
 type Sheet = "management" | "tools" | HTMLElement | null;
 const interactive = "button,input,textarea,select,a,[contenteditable=true],iframe,video";
@@ -132,16 +133,14 @@ export function MobileShell({
         setEditor(false);
         closeDrawers();
       };
-    window.addEventListener("wb-mobile-editor-open", edit);
-    window.addEventListener("wb-image-compose", image);
+    const off = [bus.on("mobile-editor-open", edit), bus.on("image-compose", image)];
     const nativeEdit = (e: Event) => {
       if ((e.target as Element)?.closest(".mes_edit")) setLower(0);
     };
     document.getElementById("chat")?.addEventListener("click", nativeEdit);
     return () => {
       input.removeEventListener("input", changed);
-      window.removeEventListener("wb-mobile-editor-open", edit);
-      window.removeEventListener("wb-image-compose", image);
+      off.forEach((f) => f());
       document.getElementById("chat")?.removeEventListener("click", nativeEdit);
     };
   }, []);

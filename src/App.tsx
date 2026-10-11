@@ -41,6 +41,7 @@ import type { LayoutMode } from "./ui/LayoutSwitcher";
 import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
 import { useTask, IconButton, Empty, Dialog, Loading, useHostSlices, withoutChat } from "./ui/common";
+import { bus, guards } from "./host/bus";
 const World = lazy(() => import("./modules/World"));
 const Characters = lazy(() => import("./modules/Characters"));
 const Resources = lazy(() => import("./modules/Resources"));
@@ -53,7 +54,7 @@ const labels = {
   persona: "用户设定",
 };
 export function beforeClose() {
-  return window.dispatchEvent(new Event("wb-before-close", { cancelable: true }));
+  return guards.check();
 }
 export default function App({
   host,
@@ -121,20 +122,19 @@ export default function App({
   const manager = addonManager(host);
   useEffect(() => () => manager.dispose(), [manager]);
   useEffect(() => {
-    const handler = (event: Event) => {
-      const { id, view } = (event as CustomEvent).detail;
+    return bus.on("addon-open", ({ id, view }) => {
       if (!addonEnabled(host.prefs(), id)) return;
+      // The record-export add-on's panel is "export".
+      const target: Panel = id === "record-export" ? "export" : id;
       if (view === "editor") {
         if (beforeClose()) {
-          setDeep(id);
+          setDeep(target);
           setWorkspace(null);
           setPanel(null);
           if (mobile) setLeft(false);
         }
-      } else goPanel(id);
-    };
-    window.addEventListener("wb-addon-open", handler);
-    return () => window.removeEventListener("wb-addon-open", handler);
+      } else goPanel(target);
+    });
   });
   const exportEnabled = addonEnabled(host.prefs(), "record-export");
   useEffect(() => {
@@ -185,18 +185,14 @@ export default function App({
         setLeft(false);
       }
     };
-    window.addEventListener("wb-image-input", compose);
-    return () => window.removeEventListener("wb-image-input", compose);
+    return bus.on("image-input", compose);
   }, [rp, width]);
   const switchLayout = onLayout;
   useEffect(() => {
-    const menu = (event: Event) => {
-      const open = !!(event as CustomEvent).detail;
+    return bus.on("layout-menu", (open) => {
       setLayoutMenu(open);
       if (open) setChooser(null);
-    };
-    window.addEventListener("wb-layout-menu", menu);
-    return () => window.removeEventListener("wb-layout-menu", menu);
+    });
   }, []);
   useEffect(() => {
     if (!rp) return;
@@ -436,9 +432,7 @@ export default function App({
     mobile,
   ]);
   useEffect(() => {
-    const handler = (e: Event) => setExternalError((e as CustomEvent).detail);
-    window.addEventListener("wb-error", handler);
-    return () => window.removeEventListener("wb-error", handler);
+    return bus.on("error", setExternalError);
   }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {

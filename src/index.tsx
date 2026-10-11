@@ -7,6 +7,7 @@ import App, { beforeClose } from "./App";
 import { LayoutSwitcher, type LayoutMode } from "./ui/LayoutSwitcher";
 import { createTrace } from "../extension/trace.js";
 import "./styles/index.css";
+import { bus, guards } from "./host/bus";
 class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
@@ -205,6 +206,9 @@ window.workbench = {
   unmount,
   metrics,
   nativeNodes,
+  // Internal event bus and leave guards, for verification scripts and debugging.
+  bus,
+  guards,
   get mounted() {
     return mounted;
   },

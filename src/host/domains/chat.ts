@@ -1,6 +1,7 @@
 import type { HostAdapter } from "../adapter";
 import type { Data } from "../types";
 import { ctx, internal, nativeNodes } from "../internals";
+import { bus } from "../bus";
 
 /** Chat files, floors, quick replies, input and RP presentation. */
 export const chatMethods = {
@@ -101,7 +102,7 @@ export const chatMethods = {
       node = document.querySelector(selector);
     }
     if (this.prefs().layout === "rp" && !document.body.classList.contains("wb-mobile")) {
-      window.dispatchEvent(new CustomEvent("wb-rp-jump", { detail: id }));
+      bus.emit("rp-jump", id);
       return;
     }
     node?.scrollIntoView({

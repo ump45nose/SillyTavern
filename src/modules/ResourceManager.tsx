@@ -4,6 +4,7 @@ import type { HostAdapter } from "../host/adapter";
 import { Dialog, Empty, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";
 import World from "./World";
+import { guards } from "../host/bus";
 type Kind = "preset" | "connection" | "world";
 export default function ResourceManager({
   host,
@@ -42,12 +43,7 @@ export default function ResourceManager({
     onPosition(id);
   }, [id]);
   const browse = (next: string) => {
-    if (
-      window.dispatchEvent(
-        new CustomEvent("wb-before-close", { cancelable: true, detail: { preserveDrafts: true } }),
-      )
-    )
-      setId(next);
+    if (guards.check({ preserveDrafts: true })) setId(next);
   };
   const batch = (action: "copy" | "delete" | "export") =>
     task.run(async () => {

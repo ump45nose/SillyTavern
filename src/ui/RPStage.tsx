@@ -26,6 +26,7 @@ import { beginImage } from "./AddonControls";
 import { addonEnabled } from "../addons/catalog";
 import { RPAppearance } from "./RPAppearance";
 import { motionAllowed } from "./Motion";
+import { bus } from "../host/bus";
 
 type Message = {
   node: HTMLElement;
@@ -162,10 +163,10 @@ export function RPStage({
     lastCount.current = messages.length;
   }, [messages, cursor.id]);
   useEffect(() => {
-    const jump = (e: Event) => {
+    const jump = (id: number) => {
       live.current = false;
       setHistory(false);
-      setCursor({ id: (e as CustomEvent<number>).detail, page: 0, compose: false });
+      setCursor({ id, page: 0, compose: false });
     };
     const imageCompose = () => {
       beforeImage.current ??= { ...cursorNow.current };
@@ -179,14 +180,12 @@ export function RPStage({
         beforeImage.current = null;
       }
     };
-    window.addEventListener("wb-image-compose", imageCompose);
-    window.addEventListener("wb-image-compose-end", imageEnd);
-    window.addEventListener("wb-rp-jump", jump);
-    return () => {
-      window.removeEventListener("wb-rp-jump", jump);
-      window.removeEventListener("wb-image-compose", imageCompose);
-      window.removeEventListener("wb-image-compose-end", imageEnd);
-    };
+    const off = [
+      bus.on("image-compose", imageCompose),
+      bus.on("image-compose-end", imageEnd),
+      bus.on("rp-jump", jump),
+    ];
+    return () => off.forEach((f) => f());
   }, []);
   useEffect(() => host.media.subscribe(() => setMediaRevision((v) => v + 1)), [host]);
   useLayoutEffect(() => {

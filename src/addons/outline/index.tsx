@@ -21,6 +21,7 @@ import { Check } from "../../ui/ResourceControls";
 import { createRuntime } from "./runtime";
 import { orderedNodes, markdownExport, parseImport, type OutlineData, type OutlineNode } from "./model";
 import "./style.css";
+import { bus, guards } from "../../host/bus";
 export { createRuntime };
 export const apiVersion = 2,
   id = "outline";
@@ -260,20 +261,18 @@ export function Workspace(props: AddonViewProps) {
   const dirty = !!node && (node.title !== draft.title || node.content !== draft.content);
   useEffect(() => {
     if (!dirty) return;
-    const guard = (event: Event) => {
-      event.preventDefault();
-      window.dispatchEvent(
-        new CustomEvent("wb-error", { detail: "大纲节点有未保存内容，请先保存或撤销草稿。" }),
-      );
+    const guard = () => {
+      bus.emit("error", "大纲节点有未保存内容，请先保存或撤销草稿。");
+      return false;
     };
     const unload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
-    window.addEventListener("wb-before-close", guard);
+    const off = guards.add(guard);
     window.addEventListener("beforeunload", unload);
     return () => {
-      window.removeEventListener("wb-before-close", guard);
+      off();
       window.removeEventListener("beforeunload", unload);
     };
   }, [dirty]);

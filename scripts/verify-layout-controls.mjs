@@ -66,10 +66,10 @@ try {
   assert.equal(await role("切换工作台").getAttribute("aria-expanded"), "false");
   pass("resource and mode menus keep the floating header visible; mode options have icons and keyboard navigation");
 
-  await page.evaluate(() => { window.__denyLayout = event => event.preventDefault(); window.addEventListener("wb-before-close", __denyLayout); });
+  await page.evaluate(() => { window.__denyLayout = workbench.guards.add(() => false); });
   await role("切换工作台").click(); await option("Noval").click(); await settle();
   assert.equal(await page.evaluate(() => workbench.host.prefs().layout), "rp");
-  await page.evaluate(() => window.removeEventListener("wb-before-close", __denyLayout)); await page.keyboard.press("Escape"); await settle();
+  await page.evaluate(() => window.__denyLayout()); await page.keyboard.press("Escape"); await settle();
   pass("an editor's unsaved-change guard can cancel a layout switch");
 
   await role("输入回应").click(); await page.locator("#send_textarea").fill("WB_LAYOUT_DRAFT **Markdown**\n{{char}}");

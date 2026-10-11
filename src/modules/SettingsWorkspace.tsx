@@ -18,6 +18,7 @@ import type { SettingsPage } from "../host/types";
 import { Dialog, Loading, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import { ReadingSettings } from "../ui/Reading";
 import { nativePages } from "./NativeSettings";
+import { bus, guards } from "../host/bus";
 const ComponentSettings = lazy(() => import("./ComponentSettings")),
   WorldBindings = lazy(() => import("./WorldBindings")),
   Groups = lazy(() => import("./Groups")),
@@ -70,14 +71,14 @@ export default function SettingsWorkspace({
     [selected, setSelected] = useState<Record<string, string[]>>({}),
     task = useTask(),
     ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const handler = (e: Event) => {
-      setGroup((e as CustomEvent).detail.group);
-      setExtensionId((e as CustomEvent).detail.extension || "");
-    };
-    window.addEventListener("wb-settings-group", handler);
-    return () => window.removeEventListener("wb-settings-group", handler);
-  }, []);
+  useEffect(
+    () =>
+      bus.on("settings-group", ({ group, extension }) => {
+        setGroup(group);
+        setExtensionId(extension || "");
+      }),
+    [],
+  );
   const resource = page === "generation" ? "preset" : page === "connection" || page === "world" ? page : null;
   const groups = resource
     ? page === "world"
@@ -101,11 +102,7 @@ export default function SettingsWorkspace({
     def = settingsPages.find((p) => p[0] === page)!,
     PageIcon = def[2];
   const switchPage = (next: SettingsPage) => {
-    if (
-      window.dispatchEvent(
-        new CustomEvent("wb-before-close", { cancelable: true, detail: { preserveDrafts: true } }),
-      )
-    ) {
+    if (guards.check({ preserveDrafts: true })) {
       setPage(next);
       setGroup("");
     }
@@ -183,15 +180,7 @@ export default function SettingsWorkspace({
                 aria-pressed={active === g}
                 disabled={host.resourceAction}
                 onClick={() => {
-                  if (
-                    window.dispatchEvent(
-                      new CustomEvent("wb-before-close", {
-                        cancelable: true,
-                        detail: { preserveDrafts: true },
-                      }),
-                    )
-                  )
-                    setGroup(g);
+                  if (guards.check({ preserveDrafts: true })) setGroup(g);
                 }}
               >
                 {g}

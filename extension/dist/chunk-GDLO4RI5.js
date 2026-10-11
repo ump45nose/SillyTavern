@@ -1,0 +1,2 @@
+var s=class{handlers=new Map;on(e,t){let n=this.handlers.get(e);return n||this.handlers.set(e,n=new Set),n.add(t),()=>{n.delete(t)}}emit(e,...[t]){for(let n of[...this.handlers.get(e)??[]])n(t)}},a=new s,o=class{list=new Set;add(e){return this.list.add(e),()=>{this.list.delete(e)}}check(e={}){for(let t of[...this.list])if(!t(e))return!1;return!0}},d=new o;export{a,d as b};
+//# sourceMappingURL=chunk-GDLO4RI5.js.map
