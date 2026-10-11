@@ -233,7 +233,7 @@ try {
   await page.getByRole("button", { name: "独立深度编辑", exact: true }).click();
   await page.getByLabel("预设 JSON").waitFor();
   // 0.4 embeds native advanced settings in the editor itself; the old "原生高级设置" detour
-  // (host.native, NativeLink) has no entry point any more.
+  // (host.native, NativeLink) was removed after phase C.
   await page.getByRole("button", { name: "返回工作台", exact: true }).click();
   // The modal workspace keeps the page inert until its exit animation finishes.
   await page.locator(".wb-settings-workspace").waitFor({ state: "detached" });

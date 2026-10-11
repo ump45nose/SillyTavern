@@ -209,26 +209,6 @@ body.wb-active #top-settings-holder {
   visibility: hidden;
   z-index: 10010 !important;
 }
-body.wb-active.wb-native-panel #top-settings-holder {
-  visibility: visible;
-  background: var(--wb-surface) !important;
-  border: 1px solid var(--wb-line);
-  max-width: 90vw;
-}
-body.wb-active.wb-native-panel .drawer-content {
-  background: var(--wb-surface) !important;
-  color: var(--wb-ink) !important;
-  text-shadow: none !important;
-  box-shadow: 0 18px 70px #34291e30 !important;
-}
-body.wb-active.wb-native-panel .drawer-content input,
-body.wb-active.wb-native-panel .drawer-content textarea,
-body.wb-active.wb-native-panel .drawer-content select {
-  min-height: 36px;
-  color: var(--wb-ink);
-  background: var(--wb-paper);
-  border-color: var(--wb-line);
-}
 body.wb-active #options,
 body.wb-active #extensionsMenu {
   background: var(--wb-surface);

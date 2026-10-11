@@ -1104,16 +1104,6 @@
     color: var(--wb-ink);
     background: transparent;
   }
-  .wb-native-return {
-    display: none !important;
-    position: fixed;
-    right: 20px;
-    top: 14px;
-    z-index: 11000;
-  }
-  .wb-native-panel .wb-native-return {
-    display: flex !important;
-  }
   @media (max-width: 1280px) {
     .wb-left {
       width: 180px;

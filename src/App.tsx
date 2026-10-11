@@ -369,11 +369,7 @@ export default function App({
           dispatch({ type: "chooser", chooser: null });
           return;
         }
-        if (s.focus) {
-          dispatch({ type: "focus", on: false });
-          return;
-        }
-        host.closeNative();
+        if (s.focus) dispatch({ type: "focus", on: false });
         return;
       }
     };
@@ -716,9 +712,6 @@ export default function App({
           </IconButton>
         </div>
       )}
-      <button className="wb-native-return" onClick={() => host.closeNative()}>
-        收起原生面板 <X size={16} />
-      </button>
       {rp && !mobile ? (
         <RPStage
           host={host}

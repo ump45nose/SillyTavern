@@ -208,7 +208,7 @@
 | 时序 | verify、workbench、home、resources | React 18 异步提交后再数监听器；模态工作区退场动画结束后再输入；悬停过渡结束后再取色；颜色按通道容差比较 |
 | 夹具 | writing-addons、pwa | 大纲数据存在聊天元数据里，先选中夹具角色；聊天里有多条消息，手势取第一条 |
 
-删掉了一项：verify:workbench 里「原生高级设置」挂起和恢复独立编辑器的检查。0.4.0 已在编辑器内嵌原生设置，`host.native()` 和 `NativeLink` 没有任何入口，属死代码，会在 C 阶段删除。
+删掉了一项：verify:workbench 里「原生高级设置」挂起和恢复独立编辑器的检查。0.4.0 已在编辑器内嵌原生设置，`host.native()` 和 `NativeLink` 没有任何入口，属死代码，已在 C 阶段删除（连同 `closeNative`、「收起原生面板」按钮和 `.wb-native-panel` 样式）。
 
 确认的 0.4.0 缺陷（留给 E 阶段修复）：
 - 专注模式下，悬浮的布局切换器盖住「退出专注」按钮，鼠标点不到（脚本用 `exitFocus()` 直接派发点击，并打印 `KNOWN`）。

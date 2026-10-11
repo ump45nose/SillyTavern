@@ -142,7 +142,6 @@ export class HostAdapter extends HostCore {
     this.cleanup.forEach((fn) => fn());
     this.cleanup = [];
     this.listeners.clear();
-    this.closeNative();
   }
 }
 export interface HostAdapter

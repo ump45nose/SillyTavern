@@ -168,7 +168,6 @@ function unmount() {
     "wb-rail-open",
     "wb-focus",
     "wb-resizing",
-    "wb-native-panel",
     "wb-rp",
     "wb-rp-top-auto",
     "wb-rp-top-collapsed",

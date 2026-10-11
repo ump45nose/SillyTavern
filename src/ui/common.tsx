@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { X, Search, LoaderCircle, ArrowUpRight, ChevronRight } from "lucide-react";
+import { X, Search, LoaderCircle, ChevronRight } from "lucide-react";
 export { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Slice, Slices } from "../host/types";
@@ -115,20 +115,6 @@ export function Notice({ error }: { error: string }) {
       {error}
     </p>
   ) : null;
-}
-export function NativeLink({
-  onClick,
-  children = "原生高级设置",
-}: {
-  onClick: () => void;
-  children?: React.ReactNode;
-}) {
-  return (
-    <button className="wb-link" onClick={onClick}>
-      {children}
-      <ArrowUpRight size={14} />
-    </button>
-  );
 }
 export function Dialog({
   title,

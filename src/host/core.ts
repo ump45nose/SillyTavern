@@ -64,7 +64,6 @@ export class HostCore {
   resourceAction = false;
   chatsVersion = 0;
   bindingRun = false;
-  suspendedDialogs: HTMLDialogElement[] = [];
   generating = false;
   /** Created in init; the only observers on #chat and on the native sprite wrappers. */
   chatObserver!: ChatObserver;
