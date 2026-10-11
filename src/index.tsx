@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
 import { HostAdapter, nativeNodes } from "./host/adapter";
+import { internal } from "./host/internals";
 import { disposeAddons } from "./addons/runtime";
 import App, { beforeClose } from "./App";
 import { LayoutSwitcher, type LayoutMode } from "./ui/LayoutSwitcher";
@@ -51,8 +52,7 @@ async function changeLayout(mode: LayoutMode) {
     try {
       if (host) await host.persistSettings();
       else {
-        const scriptPath = "/script.js";
-        await (await import(scriptPath)).saveSettings();
+        await (await internal("script")).saveSettings();
       }
     } catch (error) {
       if (previous === null) context.accountStorage.removeItem("wb-native");

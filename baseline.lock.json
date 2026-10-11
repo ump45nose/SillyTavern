@@ -14,12 +14,15 @@
   "helper": {
     "source": "/vol2/1000/Docker/sillytavern/extensions/JS-Slash-Runner",
     "version": "4.8.18",
-    "provenance": "Snapshot of installed deployment assets; not asserted to be a clean upstream checkout.",
+    "provenance": "Tag 4.8.18 of the upstream repository; manifest.json, dist/index.js and dist/index.css match the recorded deployment hashes (verified 2026-10-11).",
     "snapshotSha256": "2308b75dacd410ea236e21631a18692af5cd7a532541e371f90531e1308168b3",
     "assetSha256": {
       "manifest.json": "284ef95936768fca1838d203f245e6e10f5fcbf2e76cb736bd42204b846f7ea4",
       "dist/index.js": "4e35d9f2584a24255c2b02b562410d2ad985a465dc91f1da4cbae9247a64ed25",
       "dist/index.css": "453a71fa4848a95b82388b8be8c929e32fc78a974b51e8b0d1c0982913093dca"
-    }
+    },
+    "repository": "https://github.com/n0vi028/JS-Slash-Runner",
+    "tag": "4.8.18",
+    "commit": "209477948fbbdc97b2343c79e293339d06b4de27"
   }
 }

@@ -3,7 +3,7 @@ import type { HostAdapter } from "./adapter";
 import type { Data } from "./types";
 import type { AddonId } from "../addons/catalog";
 import type { MessageTarget, StoryReply, TaskHost } from "../addons/types";
-const context = () => window.SillyTavern.getContext();
+import { ctx as context, internal } from "./internals";
 const credentialField = /^(?:key|api[-_]?key|token|secret|password|authorization|credentials?)$/i;
 function safeMetadata(value: any): any {
   if (Array.isArray(value)) return value.map(safeMetadata);
@@ -300,8 +300,7 @@ export class AddonBridge {
       profiles: () => host.snapshot().resources.connection.map((p) => ({ id: p.id, name: p.name })),
       rewrite: async (prompt: string, profile: string, signal: AbortSignal) => {
         grant("image-gen");
-        const path = "/scripts/extensions/shared.js",
-          { ConnectionManagerRequestService } = await import(path);
+        const { ConnectionManagerRequestService } = await internal("shared");
         const c = context(),
           selected = profile || c.extensionSettings.connectionManager?.selectedProfile;
         if (!selected) throw new Error("请在生图配置中选择独立转写连接，或先保存当前连接配置。");
