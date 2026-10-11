@@ -1,4 +1,5 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
+import { lazyChunk } from "../ui/lazyChunk";
 import {
   ArrowLeft,
   BookOpen,
@@ -20,16 +21,16 @@ import { ReadingSettings } from "../ui/Reading";
 import { nativePages } from "./NativeSettings";
 import { bus, guards } from "../host/bus";
 import { settingsLabels } from "../host/labels";
-const ComponentSettings = lazy(() => import("./ComponentSettings")),
-  WorldBindings = lazy(() => import("./WorldBindings")),
-  Groups = lazy(() => import("./Groups")),
-  PersonaManager = lazy(() => import("./PersonaManager")),
-  ResourceManager = lazy(() => import("./ResourceManager")),
-  Resources = lazy(() => import("./Resources")),
-  Characters = lazy(() => import("./Characters"));
-const AddonSettings = lazy(() => import("./AddonSettings"));
-const ToolSettings = lazy(() => import("./ToolSettings")),
-  StartupDiagnostics = lazy(() => import("./StartupDiagnostics"));
+const ComponentSettings = lazyChunk(() => import("./ComponentSettings")),
+  WorldBindings = lazyChunk(() => import("./WorldBindings")),
+  Groups = lazyChunk(() => import("./Groups")),
+  PersonaManager = lazyChunk(() => import("./PersonaManager")),
+  ResourceManager = lazyChunk(() => import("./ResourceManager")),
+  Resources = lazyChunk(() => import("./Resources")),
+  Characters = lazyChunk(() => import("./Characters"));
+const AddonSettings = lazyChunk(() => import("./AddonSettings"));
+const ToolSettings = lazyChunk(() => import("./ToolSettings")),
+  StartupDiagnostics = lazyChunk(() => import("./StartupDiagnostics"));
 export const settingsPages = (
   [
     ["generation", SlidersHorizontal],

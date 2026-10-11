@@ -1,12 +1,5 @@
-import React, {
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useRef,
-  useSyncExternalStore,
-  lazy,
-  Suspense,
-} from "react";
+import React, { useEffect, useLayoutEffect, useState, useRef, useSyncExternalStore, Suspense } from "react";
+import { lazyChunk } from "./lazyChunk";
 import { createPortal } from "react-dom";
 import { ImagePlus, Pause, Play, Square, X, ListTree, Images } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
@@ -15,7 +8,7 @@ import { addonEnabled } from "../addons/catalog";
 import { addonManager } from "../addons/runtime";
 import { useHostSlices, withoutChat } from "./common";
 import { bus } from "../host/bus";
-const References = lazy(() => import("../addons/image-gen/References"));
+const References = lazyChunk(() => import("../addons/image-gen/References"));
 /** Persistent task controls live above the content, independently of either sidebar. */
 export function AddonTasks({ host }: { host: HostAdapter }) {
   const manager = addonManager(host);

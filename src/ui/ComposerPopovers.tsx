@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
+import { lazyChunk } from "./lazyChunk";
 import {
   Download,
   FileText,
@@ -18,7 +19,7 @@ import { addonEnabled } from "../addons/catalog";
 import { pinnedTools, resolveTool } from "../host/tools";
 import { composerTools, toolIcon } from "./ToolIcon";
 import { useTools } from "./useTools";
-const NativeSettings = lazy(() => import("../modules/NativeSettings"));
+const NativeSettings = lazyChunk(() => import("../modules/NativeSettings"));
 export type ComposerPopup = {
   kind: "menu" | "tools" | "quick" | "chat" | "files" | "rename" | "pinned" | "tool";
   anchor: HTMLElement;

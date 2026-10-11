@@ -1,5 +1,4 @@
 import React, {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -9,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { lazyChunk } from "./ui/lazyChunk";
 import {
   ScanLine,
   X,
@@ -71,11 +71,11 @@ import {
   type Env,
   type Sizes,
 } from "./ui/layout/model";
-const World = lazy(() => import("./modules/World"));
-const Characters = lazy(() => import("./modules/Characters"));
-const Resources = lazy(() => import("./modules/Resources"));
-const Trace = lazy(() => import("./modules/Trace"));
-const SettingsWorkspace = lazy(() => import("./modules/SettingsWorkspace"));
+const World = lazyChunk(() => import("./modules/World"));
+const Characters = lazyChunk(() => import("./modules/Characters"));
+const Resources = lazyChunk(() => import("./modules/Resources"));
+const Trace = lazyChunk(() => import("./modules/Trace"));
+const SettingsWorkspace = lazyChunk(() => import("./modules/SettingsWorkspace"));
 export function beforeClose() {
   return guards.check();
 }
