@@ -11,7 +11,8 @@ const read = (dir, name) => {
   if (!fs.existsSync(file)) return null;
   const lines = fs.readFileSync(file, "utf8").split("\n");
   return {
-    passes: new Set(lines.filter((l) => l.startsWith("PASS")).map((l) => l.trim())),
+    // A PASS line is keyed by its label; trailing JSON measurements vary run to run.
+    passes: new Set(lines.filter((l) => l.startsWith("PASS")).map((l) => l.replace(/\s[[{].*$/, "").trim())),
     // First error line, with volatile parts (durations, ports, ids, paths) blanked.
     error:
       lines

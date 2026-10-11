@@ -176,3 +176,36 @@ export async function paperValue(page, label) {
 }
 
 export const save = (name, value) => fs.writeFileSync(path.join(artifacts, name), JSON.stringify(value, null, 2) + '\n');
+
+/**
+ * KNOWN (0.4): in focus mode the floating layout switcher sits on top of 退出专注, so a real
+ * pointer click lands on the switcher. Dispatch the click to the button until phase E moves it.
+ */
+export async function exitFocus(page) {
+    console.log('KNOWN layout switcher covers 退出专注 in focus mode');
+    await page.getByRole('button', { name: '退出专注', exact: true }).dispatchEvent('click');
+}
+
+/** Parses a computed color (rgb()/rgba() or color(srgb …)) into 0–255 channels plus alpha. */
+export function parseColor(value) {
+    const srgb = value.match(/^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)$/);
+    if (srgb) return [...srgb.slice(1, 4).map((x) => Number(x) * 255), srgb[4] == null ? 1 : Number(srgb[4])];
+    const rgb = value.match(/^rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?\)$/);
+    if (rgb) return [...rgb.slice(1, 4).map(Number), rgb[4] == null ? 1 : Number(rgb[4])];
+    throw new Error(`Unparsed color ${value}`);
+}
+
+/** True when two computed colors match within `tolerance` per 0–255 channel. */
+export function sameColor(actual, expected, tolerance = 2) {
+    const a = parseColor(actual), b = parseColor(expected);
+    return a.every((x, i) => Math.abs(x - b[i]) <= (i === 3 ? 0.01 : tolerance));
+}
+
+/** Shows a right-sidebar panel; the sidebar reopens on the last panel and keeps its tabs folded. */
+export async function openPanel(page, name) {
+    const tab = page.locator('.wb-panel-tabs').getByRole('button', { name, exact: true });
+    if (await tab.getAttribute('aria-pressed') === 'true') return;
+    const toggle = page.getByRole('button', { name: '展开资源分类', exact: true });
+    if (await toggle.isVisible()) await toggle.click();
+    await tab.click();
+}

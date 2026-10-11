@@ -46,7 +46,7 @@ try{
  let closeAnimation;
  const closeHelp=async()=>{await help().getByRole('button',{name:'返回工作台',exact:true}).click();if(!closeAnimation){await page.waitForTimeout(40);closeAnimation=await page.locator('.wb-dialog[data-wb-exiting=true]').evaluate(n=>({animations:n.getAnimations().length,opacity:parseFloat(getComputedStyle(n).opacity),inert:n.inert}));assert(closeAnimation.animations>0&&closeAnimation.opacity>0&&closeAnimation.opacity<1&&closeAnimation.inert);}await help().waitFor({state:'detached'});await settle();};
  const recorder=label=>help().getByRole('button',{name:'修改快捷键 '+label,exact:true});
- await openHelp();assert.equal(await help().locator('.wb-shortcut-row').count(),9);
+ await openHelp();/* Nine core operations plus five from the bundled outline and image add-ons. */assert.equal(await help().locator('.wb-shortcut-row').count(),14);
  const r=await help().boundingBox();assert(r.x>=0&&r.y>=0&&r.x+r.width<=1496&&r.y+r.height<=817);
  await recorder('进入／退出专注').click();await page.keyboard.press('Alt+Shift+3');await help().getByRole('alert').waitFor();assert((await help().getByRole('alert').innerText()).includes('打开世界书'));assert.equal(await page.evaluate(()=>workbench.host.prefs().shortcuts?.['toggle.focus']),undefined);
  await page.keyboard.press('Shift+A');assert((await help().getByRole('alert').innerText()).includes('修饰键'));

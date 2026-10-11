@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {gunzipSync} from 'node:zlib';
-import {launch,session,ready,urls,artifacts} from './browser.mjs';
+import {launch,session,ready,urls,artifacts,createCharacter} from './browser.mjs';
 const directory=artifacts+'/writing-addons';fs.mkdirSync(directory,{recursive:true});
 const browser=await launch(),checks=[],report={checkedAt:new Date().toISOString(),checks};let page;
 const pass=name=>{checks.push(name);console.log('PASS',name);};
@@ -18,6 +18,8 @@ try{
  await page.route('**/user/images/wb-test-*.png',r=>r.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}));
  for(const endpoint of ['**/api/backends/chat-completions/generate','**/api/backends/text-completions/generate'])await page.route(endpoint,r=>{blocked.push(r.request().url());return r.fulfill({status:418,body:'Real model requests prohibited in test'});});
  await page.setViewportSize({width:1496,height:817});await ready(page,urls.validation);await page.waitForFunction(()=>window.workbench?.mounted&&window.workbench.metrics.workbenchReadyMs);
+ // Outline state lives in chat metadata, so a character chat must be open; a fresh instance has none selected.
+ await createCharacter(page);await page.waitForFunction(()=>!!SillyTavern.getContext().getCurrentChatId());
  await page.evaluate(()=>{window.__writingNative={input:document.getElementById('send_textarea'),chat:document.getElementById('chat')};window.__writingChat=JSON.stringify(SillyTavern.getContext().chat);});
  assert.equal(requests.some(url=>/addons\/(outline|image-gen)\//.test(url)),false);assert.equal(await page.locator('[data-wb-tool="wb:outline"],[data-wb-tool="wb:image-gen"]').count(),0);pass('startup fetches no new manifests, modules or CSS; no outline/image entries in bottom toolbar');
  const button=name=>page.getByRole('button',{name,exact:true});const settle=()=>page.waitForTimeout(300);

@@ -52,13 +52,16 @@ try {
       throw new Error("World enable did not reach native state");
   });
   await page.keyboard.press("Alt+Shift+Digit3");
+  // The sidebar picks books from the resource rail; the book column only shows in the full editor.
   await page
-    .locator(".wb-book-row button")
-    .filter({ hasText: "WorkbenchFixtureWorld" })
+    .locator(".wb-resource-menu .wb-picker-copy")
+    .filter({ hasText: /^WorkbenchFixtureWorld$/ })
     .click();
   await page.getByLabel("灯塔 激活方式").waitFor();
   await selectPaper(page, "灯塔 激活方式", "constant");
   assert.equal(await page.getByLabel("启用条目 灯塔").isChecked(), true);
+  // The sidebar keeps the entry editor collapsed until an entry is opened for editing.
+  await page.getByRole("button", { name: "编辑条目 灯塔", exact: true }).click();
   await page.getByLabel("世界书正文").fill("WB_LORE_CONTENT：新版灯塔。");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await page.getByText("已保存", { exact: true }).waitFor();
@@ -73,14 +76,15 @@ try {
   check(
     "world sidebar edits activation separately from enabled state; unknown fields survive real save",
   );
-  await page.getByRole("button", { name: "深度编辑", exact: true }).click();
+  await page.getByRole("button", { name: "独立深度编辑", exact: true }).click();
   await page.getByRole("dialog").waitFor();
   await page.getByRole("dialog").getByRole("button", { name: "触发条件", exact: true }).click();
   const activationMenu = page.getByRole("dialog").getByRole("combobox", { name: "激活方式", exact: true });
   await activationMenu.click();
   await page.getByRole("listbox", { name: "激活方式", exact: true }).waitFor();
   await activationMenu.press("Escape");
-  assert.equal(await page.getByRole("listbox", { name: "激活方式", exact: true }).count(), 0);
+  // The listbox animates out before it detaches.
+  await page.getByRole("listbox", { name: "激活方式", exact: true }).waitFor({ state: "detached", timeout: 2000 });
   assert(await page.getByRole("dialog").isVisible());
   await page.getByRole("dialog").getByRole("button", { name: "正文", exact: true }).click();
   assert.equal(
@@ -107,6 +111,10 @@ try {
   await page
     .getByRole("button", { name: "角色与资源侧栏", exact: true })
     .click();
+  // The sidebar reopens on the last panel (world); switch to the character panel via the
+  // collapsed panel switcher.
+  await page.getByRole("button", { name: "展开资源分类", exact: true }).click();
+  await page.locator(".wb-panel-tabs").getByRole("button", { name: "角色", exact: true }).click();
   await page.getByRole("button", { name: "当前角色", exact: true }).click();
   await page.getByLabel("角色描述", { exact: true }).waitFor();
   await page
@@ -224,17 +232,11 @@ try {
   await page.locator(".wb-resources").waitFor();
   await page.getByRole("button", { name: "独立深度编辑", exact: true }).click();
   await page.getByLabel("预设 JSON").waitFor();
-  await page.getByRole("button", { name: "原生高级设置", exact: true }).click();
-  await page.waitForFunction(() =>
-    document.body.classList.contains("wb-native-panel"),
-  );
-  assert.equal(await page.getByRole("dialog").count(), 0);
-  await page.getByRole("button", { name: "收起原生面板" }).click();
-  await page.getByRole("dialog").waitFor();
-  check(
-    "independent editor suspends and resumes around native advanced settings",
-  );
+  // 0.4 embeds native advanced settings in the editor itself; the old "原生高级设置" detour
+  // (host.native, NativeLink) has no entry point any more.
   await page.getByRole("button", { name: "返回工作台", exact: true }).click();
+  // The modal workspace keeps the page inert until its exit animation finishes.
+  await page.locator(".wb-settings-workspace").waitFor({ state: "detached" });
   await page
     .locator("#send_textarea")
     .fill("**编辑草稿**\n<xml>{{char}}</xml>");

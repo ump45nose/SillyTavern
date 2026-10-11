@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue,mockApi} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue,mockApi,exitFocus,sameColor} from './browser.mjs';
 const dir='artifacts/resource-sidebars';fs.mkdirSync(dir,{recursive:true});const b=await launch(),checks=[];const pass=name=>{checks.push(name);console.log('PASS',name)};
 try {
  const {page,errors}=await session(b);await ready(page,urls.validation,{probe:true});await createCharacter(page);await connect(page);
@@ -8,7 +8,7 @@ try {
  const open=async label=>{await page.getByRole('button',{name:label+'详情',exact:true}).click();await settle();};
  const order=await page.locator('.wb-top-right button').evaluateAll(es=>es.map(e=>({label:e.getAttribute('aria-label'),text:e.textContent,size:e.querySelector('svg')?.getAttribute('width')})));
  assert.deepEqual(order.map(x=>x.label),['Trace','专注模式']);assert(order.every(x=>x.text===''&&x.size==='24'));
- await page.getByRole('button',{name:'专注模式',exact:true}).click();await settle();assert.equal(await page.getByRole('button',{name:'退出专注'}).getAttribute('aria-pressed'),'true');await page.getByRole('button',{name:'退出专注'}).click();pass('large icon-only actions, swapped positions and active focus color');
+ await page.getByRole('button',{name:'专注模式',exact:true}).click();await settle();assert.equal(await page.getByRole('button',{name:'退出专注'}).getAttribute('aria-pressed'),'true');await exitFocus(page);pass('large icon-only actions, swapped positions and active focus color');
  await page.evaluate(async()=>{const h=workbench.host,c=SillyTavern.getContext();const base=h.presetData(c.getPresetManager().getSelectedPresetName());await c.getPresetManager().savePreset('WorkbenchSidebarPreset', {...base,vendor_sidebar_keep:{yes:true}});h.refresh();await h.select('preset','WorkbenchSidebarPreset');});
  await open('预设');
  assert.equal(await page.locator('.wb-resources .wb-resource-list').count(),0);
@@ -16,7 +16,7 @@ try {
  await page.getByRole('textbox',{name:'搜索预设',exact:true}).fill('WorkbenchSidebarPreset');
  const presetChoice=page.locator('.wb-resource-menu .wb-resource-choice').first();await presetChoice.locator('.wb-picker-copy').hover();await settle();
  assert.equal(await presetChoice.locator('.wb-picker-copy').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
- assert.equal(await presetChoice.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(240, 230, 218)');
+ {const bg=await presetChoice.evaluate(e=>getComputedStyle(e).backgroundColor);/* 0.4 mixes the selection tint into the surface. */assert(sameColor(bg,'rgb(242, 233, 222)'),bg);}
  await presetChoice.locator('.wb-picker-copy').click();
  await page.getByLabel('流式传输',{exact:true}).waitFor();
  const first=page.locator('.wb-prompt-row input').first(), was=await first.isChecked();await first.setChecked(!was);

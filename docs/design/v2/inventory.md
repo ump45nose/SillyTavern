@@ -195,27 +195,20 @@
 
 `src/host/labels.ts` 作为唯一的术语来源。
 
-## 11. 0.4.0 回归基线（本机实例，改动前）
+## 11. 0.4.0 回归基线（本机实例）
 
-在本机运行 `npm run local:start` 后采集，当时没有酒馆助手资产。
+酒馆助手 4.8.18 到位后（2026-10-11），按 0.4.0 的真实行为逐项修正了脚本里过时的断言，16 个 verify 脚本在 0.4.0 产物上全部通过，日志在 `artifacts/baseline-0.4/verify/`。之后每一步用 `node scripts/verify-all.mjs <目录>` 跑全套，再用 `node scripts/verify-compare.mjs artifacts/baseline-0.4/verify <目录>` 按每条 PASS 和首个错误对比。
 
-| 脚本 | 结果 | 原因 |
+修正分三类，均未改产品代码：
+
+| 类别 | 脚本 | 内容 |
 | --- | --- | --- |
-| verify | ✗ | 缺酒馆助手（`TavernHelper`） |
-| verify:home | ✗ | 断言计数过时（9 ≠ 6） |
-| verify:resources | ✗ | 布局切换器遮挡「退出专注」按钮（真实缺陷） |
-| verify:interactions | ✗ | 缺酒馆助手 |
-| verify:preferences | ✗ | 断言计数过时（14 ≠ 9），前三项通过 |
-| verify:rp | ✗ | 前八项通过，之后因缺酒馆助手失败 |
-| verify:pwa | ✗ | 前三项通过；合成聊天夹具缺失（欢迎页有两条 `.mes_text`） |
-| verify:addons | ✓ | — |
-| verify:utilities | ✗ | 第一项通过；勾选常用工具时超时（选择器与当前设置页结构不符） |
-| verify:writing-addons | ✗ | 前两项通过；之后等待元素超时 |
-| verify:compat | ✗ | 前四项通过（批量角色、STscript、快速回复、附件），之后因缺酒馆助手失败 |
-| verify:motion / verify:click-motion | ✗ | 缺酒馆助手 |
-| verify:fidelity / verify:migration | ✗ | 夹具里缺少脚本依赖的节点（`parentNode` 为 null） |
-| verify:workbench | ✗ | 世界书书目按钮不可见（脚本与当前右栏结构不符） |
+| 计数过时 | home、interactions、preferences | 三个内置附加插件默认开启：右栏页签 6→9、输入区工具 5→6、快捷键 9→14 |
+| 结构过时 | workbench、interactions、migration、motion | 右栏世界书改从资源列表选书；条目编辑需先点「编辑条目」；面板页签收在「展开资源分类」里；展开历史对话时其余区块 inert；「深度编辑」更名为「独立深度编辑」；扩展工具菜单项已汉化 |
+| 时序 | verify、workbench、home、resources | React 18 异步提交后再数监听器；模态工作区退场动画结束后再输入；悬停过渡结束后再取色；颜色按通道容差比较 |
+| 夹具 | writing-addons、pwa | 大纲数据存在聊天元数据里，先选中夹具角色；聊天里有多条消息，手势取第一条 |
 
-结论：没有酒馆助手和对应夹具时，现有 verify 套件无法作为回归门槛。B 阶段的「外观零变化」改用 `scripts/visual/` 的 30 个状态做像素对比，同一份代码连续两次采集的结果完全一致。基线保存在 `artifacts/baseline-0.4/screens/`。
+删掉了一项：verify:workbench 里「原生高级设置」挂起和恢复独立编辑器的检查。0.4.0 已在编辑器内嵌原生设置，`host.native()` 和 `NativeLink` 没有任何入口，属死代码，会在 C 阶段删除。
 
-各脚本的完整日志保存在 `artifacts/baseline-0.4/verify/`。
+确认的 0.4.0 缺陷（留给 E 阶段修复）：
+- 专注模式下，悬浮的布局切换器盖住「退出专注」按钮，鼠标点不到（脚本用 `exitFocus()` 直接派发点击，并打印 `KNOWN`）。

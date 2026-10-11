@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { launch, session, ready, urls, createCharacter, connect, withReducedMotion } from './browser.mjs';
+import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, exitFocus } from './browser.mjs';
 const dir = 'artifacts/home-implementation'; fs.mkdirSync(dir,{recursive:true});
 const checks=[], pass=(name, details={})=>{checks.push({name,details,passed:true});console.log('PASS',name);};
 const b=await launch();
@@ -13,7 +13,8 @@ try {
  const settle=()=>page.waitForTimeout(300);
  await settle();
  assert.equal(await page.locator('.wb-left-bottom button').count(),9);
- assert.equal(await page.locator('.wb-panel-tabs button').count(),6);
+ // Six core panels plus the three bundled add-ons (export, outline, image), enabled by default.
+ assert.equal(await page.locator('.wb-panel-tabs button').count(),9);
  assert.equal(await page.locator('.wb-floor-list > button').count(),Math.min(5,await page.evaluate(()=>workbench.host.snapshot().messages.length)));
  assert.equal(await page.locator('.wb-chat-name').textContent(),await page.evaluate(()=>String(SillyTavern.getContext().chatId).replace(/\.jsonl$/,'')));
  assert.equal(await page.locator('.wb-outline-placeholder').count(),1);
@@ -50,7 +51,7 @@ try {
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-left-open')),false);await verifyGeometry();
  await page.keyboard.press('Alt+Shift+F');await settle();assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-focus')),true);
  await page.screenshot({path:`${dir}/focus.png`});
- await page.getByRole('button',{name:'退出专注',exact:true}).click();await settle();
+ await exitFocus(page);await settle();
  assert.equal(await page.locator('.wb-panel-tabs button.is-active').textContent(),'角色');
  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-left-open')),true);
@@ -69,6 +70,8 @@ try {
  await selector.locator('.wb-selector-value').click();await page.locator('.wb-popover').waitFor();
  const motion=await page.locator('.wb-popover').evaluate(e=>getComputedStyle(e).animationName);assert.equal(motion,'wb-menu');
  await page.screenshot({path:`${dir}/selector.png`});await page.keyboard.press('Escape');
+ // Resting color: move off the selector and let the hover transition finish.
+ await page.mouse.move(5,5);await page.waitForTimeout(400);
  const color=await page.locator('.wb-selector-detail svg').first().evaluate(e=>getComputedStyle(e).color);assert.equal(color,'rgb(108, 98, 84)');
  pass('detail targets, active selector, menu animation and warm icon contrast');
  await withReducedMotion(page,async()=>assert.equal(await selector.evaluate(e=>getComputedStyle(e).transitionDuration),'0s'));pass('reduced motion honored and preference restored');

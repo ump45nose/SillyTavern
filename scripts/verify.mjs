@@ -37,6 +37,8 @@ try {
         const count = () => Object.values(events).reduce((sum, x) => sum + x.length, 0);
         const first = count();
         for (let i = 0; i < 5; i++) { probe.unmount(); await probe.mount(); }
+        // React commits the last mount asynchronously; add-on listeners register during that render.
+        await new Promise((resolve) => setTimeout(resolve, 200));
         const last = count();
         probe.unmount();
         const result = {
