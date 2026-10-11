@@ -115,7 +115,7 @@
     --wb-left-size: 260px;
     --wb-right-size: 460px;
     --wb-rail-size: 180px;
-    --wb-edge-lane: 28px; /* hover-reveal lane kept clear of #chat's scrollbar (D2) */
+    --wb-edge-lane: 36px; /* hover lane and edge arrows, kept clear of #chat's scrollbar (D2) */
     --wb-reading-measure: 46em;
 
     /* ── Legacy aliases (0.4 names), removed as screens move to the tokens above ── */

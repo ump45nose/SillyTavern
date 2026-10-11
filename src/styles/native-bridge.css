@@ -10,6 +10,8 @@
 body.wb-active {
   --wb-left: 0px;
   --wb-right: 0px;
+  --wb-lane-left: 0px;
+  --wb-lane-right: 0px;
   background: var(--wb-paper) !important;
   color: var(--wb-ink);
   --SmartThemeBodyColor: var(--wb-ink);
@@ -18,6 +20,19 @@ body.wb-active {
   --SmartThemeBlurTintColor: var(--wb-surface);
   --SmartThemeBorderColor: var(--wb-line);
   --SmartThemeShadowColor: transparent;
+}
+/* Edge reveal on: on each side whose sidebar is closed, a lane for the hover trigger and edge
+   arrow separates #chat (and its scrollbar) from the window edge. A pinned sidebar needs no
+   reveal, so it keeps the full reading width. */
+body.wb-active.wb-edge-hover:not(.wb-mobile) {
+  --wb-lane-left: var(--wb-edge-lane);
+  --wb-lane-right: var(--wb-edge-lane);
+}
+body.wb-active.wb-edge-hover.wb-left-open {
+  --wb-lane-left: 0px;
+}
+body.wb-active.wb-edge-hover.wb-right-open {
+  --wb-lane-right: 0px;
 }
 body.wb-left-open {
   --wb-left: 220px;
@@ -31,7 +46,7 @@ body.wb-active #bg_custom {
 }
 body.wb-active #sheld {
   position: fixed !important;
-  inset: 70px var(--wb-right) 0 var(--wb-left) !important;
+  inset: 70px calc(var(--wb-right) + var(--wb-lane-right)) 0 calc(var(--wb-left) + var(--wb-lane-left)) !important;
   width: auto !important;
   max-width: none !important;
   height: auto !important;
@@ -377,7 +392,7 @@ body.wb-active.wb-right-open {
   --wb-right: var(--wb-right-size);
 }
 body.wb-active #sheld {
-  inset: calc(var(--wb-header) + 52px) var(--wb-right) 0 var(--wb-left) !important;
+  inset: calc(var(--wb-header) + 52px) calc(var(--wb-right) + var(--wb-lane-right)) 0 calc(var(--wb-left) + var(--wb-lane-left)) !important;
   transition: inset var(--wb-motion) ease;
 }
 body.wb-active #chat {
@@ -2964,7 +2979,7 @@ body.wb-rp:not(.wb-rp-history) .edit_textarea {
   resize: vertical;
 }
 body.wb-active.wb-rp.wb-rp-history #sheld {
-  inset: calc(var(--wb-rp-chrome) + 52px) var(--wb-right) 0 var(--wb-left) !important;
+  inset: calc(var(--wb-rp-chrome) + 52px) calc(var(--wb-right) + var(--wb-lane-right)) 0 calc(var(--wb-left) + var(--wb-lane-left)) !important;
   width: auto !important;
   height: auto !important;
   border: 0 !important;

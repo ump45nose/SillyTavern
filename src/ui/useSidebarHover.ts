@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-/** Edge reveals are temporary overlays. Only explicit clicks change saved layout. */
+/**
+ * Edge reveals are temporary overlays. Only explicit clicks change saved layout.
+ *
+ * The trigger is the --wb-edge-lane strip at each window edge; #chat is inset past it, so its
+ * scrollbar never sits in the lane. A reveal also needs intent: no button held (dragging a
+ * scrollbar, selecting text), no wheel scrolling in the last 500 ms, and a 180 ms dwell.
+ */
 export function useSidebarHover(
   enabled: boolean,
   leftPinned: boolean,
@@ -22,6 +28,16 @@ export function useSidebarHover(
       return;
     }
     const timers: Partial<Record<"left" | "right", ReturnType<typeof setTimeout>>> = {};
+    const lane =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--wb-edge-lane")) || 36;
+    let pressed = false,
+      scrolled = 0;
+    const busy = () => pressed || performance.now() - scrolled < 500;
+    // Wheel only: SillyTavern scrolls #chat itself while streaming, and a scrollbar drag is
+    // already a held button.
+    const scroll = () => {
+      scrolled = performance.now();
+    };
     const cancel = (side: "left" | "right") => {
       clearTimeout(timers[side]);
       delete timers[side];
@@ -35,7 +51,7 @@ export function useSidebarHover(
           if (
             !current.enabled ||
             (side === "left" ? current.leftPinned : current.rightPinned) ||
-            (open && suppressed.current[side]) ||
+            (open && (suppressed.current[side] || busy())) ||
             (!open && !current.hot[side])
           )
             return;
@@ -57,6 +73,8 @@ export function useSidebarHover(
       );
     };
     const move = (event: PointerEvent) => {
+      // Read from every move: a press on the native scrollbar may never send pointerup here.
+      pressed = event.buttons !== 0;
       if (event.pointerType === "touch" || !live.current.enabled) return;
       const element = event.target instanceof Element ? event.target : null;
       for (const side of ["left", "right"] as const) {
@@ -65,7 +83,8 @@ export function useSidebarHover(
             side === "left" ? ".wb-left,.wb-edge-left" : ".wb-right,.wb-resource-rail,.wb-edge-right",
           ) || !!(live.current.hot[side] && element?.closest(".wb-popover"));
         const edge =
-          event.clientY > 74 && (side === "left" ? event.clientX <= 12 : event.clientX >= innerWidth - 12);
+          event.clientY > 74 &&
+          (side === "left" ? event.clientX <= lane : event.clientX >= innerWidth - lane);
         if (!inside && !edge) suppressed.current[side] = false;
         const pinned = side === "left" ? live.current.leftPinned : live.current.rightPinned;
         if (pinned) {
@@ -74,6 +93,11 @@ export function useSidebarHover(
           continue;
         }
         const over = inside || edge;
+        // Passing through the lane mid-drag or mid-scroll is not a request to open.
+        if (over && !live.current.hot[side] && busy()) {
+          cancel(side);
+          continue;
+        }
         if (over && !suppressed.current[side]) {
           blocked.current[side] = false;
           if (live.current.hot[side]) cancel(side);
@@ -91,11 +115,13 @@ export function useSidebarHover(
       }
     };
     document.addEventListener("pointermove", move);
+    document.addEventListener("wheel", scroll, { capture: true, passive: true });
     document.documentElement.addEventListener("pointerleave", leave);
     return () => {
       cancel("left");
       cancel("right");
       document.removeEventListener("pointermove", move);
+      document.removeEventListener("wheel", scroll, true);
       document.documentElement.removeEventListener("pointerleave", leave);
     };
   }, [enabled]);

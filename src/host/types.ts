@@ -40,6 +40,8 @@ export interface Preferences {
   pinnedTools?: { id: string; label: string }[];
   userCollapsed?: boolean;
   messageMeta?: "hover" | "always" | "never";
+  /** Reveal a sidebar while the pointer rests at the window edge (default on). */
+  edgeHover?: boolean;
   bindings: Record<string, string>;
   groups: Record<string, string>;
 }

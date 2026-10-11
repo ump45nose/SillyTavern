@@ -34,9 +34,10 @@
     "benchmark:startup": "node scripts/benchmark-startup-readonly.mjs",
     "verify:writing-addons": "node scripts/verify-writing-addons.mjs",
     "verify:pwa": "node scripts/verify-pwa-runtime.mjs",
+    "verify:edge": "node scripts/verify-edge-lane.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "verify:styles": "npm run build && node scripts/visual/computed.mjs snap artifacts/visual/check && node scripts/visual/computed.mjs diff ${WB_STYLE_BASELINE:-artifacts/baseline-c7/computed} artifacts/visual/check"
+    "verify:styles": "npm run build && node scripts/visual/computed.mjs snap artifacts/visual/check && node scripts/visual/computed.mjs diff ${WB_STYLE_BASELINE:-artifacts/baseline-c6/computed} artifacts/visual/check"
   },
   "devDependencies": {
     "@types/react": "19.2.2",

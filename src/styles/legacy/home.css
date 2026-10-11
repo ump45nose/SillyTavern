@@ -268,7 +268,7 @@
       visibility 160ms;
   }
   .wb-ui .wb-edge-arrow {
-    width: 36px;
+    width: var(--wb-edge-lane);
     height: 56px;
     min-height: 56px;
     padding: 4px;

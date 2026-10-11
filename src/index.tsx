@@ -171,6 +171,7 @@ function unmount() {
     "wb-rp",
     "wb-rp-top-auto",
     "wb-rp-top-collapsed",
+    "wb-edge-hover",
     "wb-rp-overlay-open",
   );
   mounted = false;

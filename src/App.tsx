@@ -134,8 +134,9 @@ export default function App({
   const { panel, chooser, focusId, deep, focus, popup, workspace, help, railOpen, tabsOpen } = s;
   const sizes = useMemo(readSizes, [width]);
   const leftShown = leftVisible(s, sizes);
+  const edgeHover = !mobile && prefs.edgeHover !== false;
   const hover = useSidebarHover(
-    !mobile && !focus && !workspace && !deep && !help && !document.querySelector("dialog[open]"),
+    edgeHover && !focus && !workspace && !deep && !help && !document.querySelector("dialog[open]"),
     leftShown,
     !!panel,
     beforeClose,
@@ -286,6 +287,19 @@ export default function App({
     else goPanel(panel ? null : lastAvailable);
   };
   const toggleFocus = () => dispatch({ type: "focus" });
+  // The edge arrows sit in the lane beside #chat's scrollbar. Releasing a scrollbar drag over an
+  // arrow makes the browser fire a click on it, so they act only on presses that began on them.
+  const pressedArrow = useRef<EventTarget | null>(null);
+  const ownClick = (action: () => void) => ({
+    onPointerDown: (e: React.PointerEvent) => {
+      pressedArrow.current = e.currentTarget;
+    },
+    onClick: (e: React.MouseEvent) => {
+      const own = e.detail === 0 || pressedArrow.current === e.currentTarget;
+      pressedArrow.current = null;
+      if (own) action();
+    },
+  });
   // Long-lived subscribers (operations, keyboard, bus) read the current render through this ref,
   // so they are registered once.
   const live = useRef({ s, act, goPanel, next, toggleLeft, toggleFocus });
@@ -354,6 +368,8 @@ export default function App({
   }, [s.left, rp, mobile]);
   const classes = {
     ...bodyClasses(s, hovered, sizes),
+    // Focus mode hides the arrows and the reveal, so the lane would only cost reading width.
+    "wb-edge-hover": edgeHover && !focus,
     "wb-rp-top-auto": topAuto,
     "wb-rp-top-collapsed": topCollapsed,
   };
@@ -593,7 +609,7 @@ export default function App({
             aria-label={hover.left && !leftShown ? "固定左边栏" : leftShown ? "收纳左边栏" : "展开左边栏"}
             title={`${hover.left && !leftShown ? "固定左边栏" : leftShown ? "收纳左边栏" : "展开左边栏"}${host.prefs().shortcutsEnabled !== false && shortcutHint("toggle.left", host.prefs().shortcuts) ? " · " + shortcutHint("toggle.left", host.prefs().shortcuts) : ""}`}
             aria-expanded={navigationShown}
-            onClick={toggleLeft}
+            {...ownClick(toggleLeft)}
           >
             {navigationShown ? <ChevronLeft size={28} /> : <ChevronRight size={28} />}
           </button>
@@ -602,7 +618,7 @@ export default function App({
             aria-label={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
             title={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
             aria-expanded={!!shown}
-            onClick={toggleRight}
+            {...ownClick(toggleRight)}
           >
             {shown ? <ChevronRight size={28} /> : <ChevronLeft size={28} />}
           </button>

@@ -689,6 +689,11 @@ export function ReadingForm({ host }: { host: HostAdapter }) {
           checked={p.userCollapsed !== false}
           onChange={(v) => host.preference({ userCollapsed: v })}
         />
+        <Check
+          label="边缘悬停展开侧栏"
+          checked={p.edgeHover !== false}
+          onChange={(v) => host.preference({ edgeHover: v })}
+        />
       </div>
       <div
         className="wb-reading-sample"
