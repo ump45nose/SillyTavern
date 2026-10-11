@@ -1508,7 +1508,7 @@ body.wb-active .wb-ui input[type="range"]::-webkit-slider-thumb {
 /* ── from rework.css ── */
 /* Incremental migration, checked at 1496 × 817 CSS px. */
 body.wb-active.wb-right-open.wb-rail-open {
-  --wb-right: calc(var(--wb-right-size) + 180px);
+  --wb-right: calc(var(--wb-right-size) + var(--wb-rail-size));
 }
 /* A fixed arrow slot makes expanded body and heading share the same text origin. */
 body.wb-active #chat .mes[is_user="true"],

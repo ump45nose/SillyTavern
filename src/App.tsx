@@ -1,4 +1,14 @@
-import React, { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import {
   ScanLine,
   X,
@@ -42,6 +52,23 @@ import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
 import { useTask, IconButton, Empty, Dialog, Loading, useHostSlices, withoutChat } from "./ui/common";
 import { bus, guards } from "./host/bus";
+import {
+  bodyClasses,
+  initial,
+  lastAvailablePanel,
+  leaves,
+  leftVisible,
+  navigationVisible,
+  railVisible,
+  reduce,
+  sameEnv,
+  shownPanel,
+  stageWidth,
+  type Action,
+  type Deep,
+  type Env,
+  type Sizes,
+} from "./ui/layout/model";
 const World = lazy(() => import("./modules/World"));
 const Characters = lazy(() => import("./modules/Characters"));
 const Resources = lazy(() => import("./modules/Resources"));
@@ -56,6 +83,16 @@ const labels = {
 export function beforeClose() {
   return guards.check();
 }
+/** Sidebar widths come from the --wb-*-size tokens, so CSS breakpoints stay the only source. */
+function readSizes(): Sizes {
+  const style = getComputedStyle(document.documentElement);
+  const px = (name: string, fallback: number) => parseFloat(style.getPropertyValue(name)) || fallback;
+  return {
+    left: px("--wb-left-size", 260),
+    right: px("--wb-right-size", 460),
+    rail: px("--wb-rail-size", 180),
+  };
+}
 export default function App({
   host,
   trace,
@@ -69,131 +106,65 @@ export default function App({
   onExit: () => void;
   onLayout: (layout: LayoutMode) => void;
 }) {
-  const [operations] = useState(() => new Operations());
   const snap = useHostSlices(host, withoutChat),
     task = useTask(),
-    [left, setLeft] = useState(innerWidth < 1024 || host.prefs().layout === "rp" ? false : host.prefs().left),
-    [panel, setPanel] = useState<Panel>(null),
-    [chooser, setChooser] = useState<Resource | null>(null),
-    [focusId, setFocusId] = useState(""),
-    [deep, setDeep] = useState<Panel | "library">(null),
-    [focus, setFocus] = useState(false),
     [width, setWidth] = useState(window.innerWidth),
     [renderedPanel, setRenderedPanel] = useState<Panel>(null),
-    [tabsOpen, setTabsOpen] = useState(false),
-    [railOpen, setRailOpen] = useState(true),
     [railTarget, setRailTarget] = useState<HTMLElement | null>(null),
-    [popup, setPopup] = useState<ComposerPopup | null>(null),
-    [workspace, setWorkspace] = useState<{ page: SettingsPage; group?: string; initial?: string } | null>(
-      null,
-    ),
-    [help, setHelp] = useState(false),
     [externalError, setExternalError] = useState("");
-  const mobile = width < 1024;
+  const prefs = host.prefs(),
+    mobile = width < 1024,
+    rp = prefs.layout === "rp";
   useMobileViewport(mobile);
-  const rp = host.prefs().layout === "rp",
-    leftWidth = width <= 1400 ? 240 : 260,
-    rightWidth = width <= 1400 ? 440 : 460;
-  const pinnedRail =
-    !!panel && !["trace", "export", "outline", "image-gen"].includes(panel) && railOpen && !focus;
-  const leftVisible =
-    left &&
-    !focus &&
-    (mobile
-      ? !panel
-      : !panel || ((!rp || width > 1100) && width - leftWidth - rightWidth - (pinnedRail ? 180 : 0) >= 420));
+  const env: Env = {
+    mode: rp ? "rp" : "novel",
+    mobile,
+    width,
+    addons: {
+      export: addonEnabled(prefs, "record-export"),
+      outline: addonEnabled(prefs, "outline"),
+      "image-gen": addonEnabled(prefs, "image-gen"),
+    },
+  };
+  const [layout, dispatch] = useReducer(reduce, null, () => initial(env, prefs.left));
+  // Mode, device, width and add-on switches arrive as props of the render, so the model catches up
+  // during render (React re-runs it before committing) instead of one stale frame later.
+  const envAction: Action = { type: "env", env, prefLeft: prefs.left };
+  const envChanged = !sameEnv(layout.env, env),
+    modeChanged = envChanged && layout.env.mode !== env.mode,
+    deviceChanged = envChanged && layout.env.mobile !== env.mobile;
+  if (envChanged) dispatch(envAction);
+  const s = envChanged ? reduce(layout, envAction) : layout;
+  const { panel, chooser, focusId, deep, focus, popup, workspace, help, railOpen, tabsOpen } = s;
+  const sizes = useMemo(readSizes, [width]);
+  const leftShown = leftVisible(s, sizes);
   const hover = useSidebarHover(
     !mobile && !focus && !workspace && !deep && !help && !document.querySelector("dialog[open]"),
-    leftVisible,
+    leftShown,
     !!panel,
     beforeClose,
   );
-  const lastPanel = useRef<Panel>("character");
-  if (panel) lastPanel.current = panel;
-  const rememberedPanel = lastPanel.current;
-  const rememberedEnabled =
-    rememberedPanel === "export"
-      ? addonEnabled(host.prefs(), "record-export")
-      : rememberedPanel === "outline" || rememberedPanel === "image-gen"
-        ? addonEnabled(host.prefs(), rememberedPanel)
-        : true;
-  const lastAvailablePanel = rememberedEnabled ? rememberedPanel : "character";
-  const shownPanel = panel || (hover.right ? lastAvailablePanel : null);
+  const hovered = { left: hover.left, right: hover.right };
+  const shown = shownPanel(s, hovered),
+    lastAvailable = lastAvailablePanel(s),
+    railShown = railVisible(s, hovered),
+    navigationShown = navigationVisible(s, hovered, sizes);
   const manager = addonManager(host);
   useEffect(() => () => manager.dispose(), [manager]);
-  useEffect(() => {
-    return bus.on("addon-open", ({ id, view }) => {
-      if (!addonEnabled(host.prefs(), id)) return;
-      // The record-export add-on's panel is "export".
-      const target: Panel = id === "record-export" ? "export" : id;
-      if (view === "editor") {
-        if (beforeClose()) {
-          setDeep(target);
-          setWorkspace(null);
-          setPanel(null);
-          if (mobile) setLeft(false);
-        }
-      } else goPanel(target);
-    });
-  });
-  const exportEnabled = addonEnabled(host.prefs(), "record-export");
-  useEffect(() => {
-    if (!exportEnabled && panel === "export") setPanel(null);
-  }, [exportEnabled, panel]);
-  useEffect(() => {
-    if ((panel === "outline" || panel === "image-gen") && !addonEnabled(host.prefs(), panel)) setPanel(null);
-    if ((deep === "outline" || deep === "image-gen") && !addonEnabled(host.prefs(), deep)) setDeep(null);
-  }, [host.revision(), panel, deep]);
-  const topAuto = !mobile && rp && !!host.prefs().rpTopAuto;
+  const topAuto = !mobile && rp && !!prefs.rpTopAuto;
   const [topHot, setTopHot] = useState(false),
     [topFocus, setTopFocus] = useState(false),
     [layoutMenu, setLayoutMenu] = useState(false);
-  const topCollapsed = topAuto && !topHot && !topFocus && !chooser && !layoutMenu;
-  const topPointer = useRef(Infinity);
-  const lastLayout = useRef(rp);
-  useLayoutEffect(() => {
-    if (lastLayout.current === rp) return;
-    lastLayout.current = rp;
-    setPanel(null);
-    setChooser(null);
-    setPopup(null);
-    setWorkspace(null);
-    setDeep(null);
-    setFocus(false);
+  if (modeChanged || deviceChanged) {
+    hover.dismiss("left");
+    hover.dismiss("right");
+  }
+  if (modeChanged) {
     setTopHot(false);
     setTopFocus(false);
-    hover.dismiss("left");
-    hover.dismiss("right");
-    setLeft(mobile || rp ? false : host.prefs().left);
-  }, [rp, host]);
-  const previousMobile = useRef(mobile);
-  useLayoutEffect(() => {
-    if (previousMobile.current === mobile) return;
-    previousMobile.current = mobile;
-    setLeft(mobile || rp ? false : host.prefs().left);
-    setPanel(null);
-    setChooser(null);
-    setPopup(null);
-    setFocus(false);
-    hover.dismiss("left");
-    hover.dismiss("right");
-  }, [mobile]);
-  useEffect(() => {
-    const compose = () => {
-      if (rp && width <= 1100) {
-        setPanel(null);
-        setLeft(false);
-      }
-    };
-    return bus.on("image-input", compose);
-  }, [rp, width]);
-  const switchLayout = onLayout;
-  useEffect(() => {
-    return bus.on("layout-menu", (open) => {
-      setLayoutMenu(open);
-      if (open) setChooser(null);
-    });
-  }, []);
+  }
+  const topCollapsed = topAuto && !topHot && !topFocus && !chooser && !layoutMenu;
+  const topPointer = useRef(Infinity);
   useEffect(() => {
     if (!rp) return;
     setTopHot(topAuto && topPointer.current <= (topCollapsed ? 14 : 74));
@@ -233,34 +204,25 @@ export default function App({
   const popupPresence = usePresence(popup),
     workspacePresence = usePresence(workspace),
     helpPresence = usePresence(help ? true : null);
-  const openPopup = useCallback(
-    (next: ComposerPopup) =>
-      setPopup((prev) => (prev?.kind === next.kind && prev.anchor === next.anchor ? null : next)),
-    [],
-  );
-  const openSettings = (page: SettingsPage, group?: string, initial?: string) => {
-    if (!beforeClose()) return;
-    setPopup(null);
-    setPanel(null);
-    setChooser(null);
-    setDeep(null);
-    setWorkspace({ page, group, initial });
-    if (mobile) setLeft(false);
+  /** Applies a layout change once the leave guards agree, when it takes the user off the current view. */
+  const act = (action: Action) => {
+    const next = reduce(s, action);
+    if (next === s || (leaves(s, next, shown) && !beforeClose())) return false;
+    dispatch(action);
+    return true;
   };
+  const openPopup = useCallback((popup: ComposerPopup) => dispatch({ type: "toggle-popup", popup }), []);
+  const closePopup = () => dispatch({ type: "popup", popup: null });
+  const setChooser = (chooser: Resource | null) => dispatch({ type: "chooser", chooser });
+  const openSettings = (page: SettingsPage, group?: string, initial?: string) =>
+    act({ type: "settings", workspace: { page, group, initial } });
   const goPanel = (next: Panel, id?: string) => {
-    if (next === "export" && !exportEnabled) return;
-    if ((next === "outline" || next === "image-gen") && !addonEnabled(host.prefs(), next)) return;
-    if (!beforeClose()) return;
+    const focusId = next ? (id ?? selectedIds.current[next] ?? "") : undefined;
+    if (!act({ type: "panel", panel: next, id: focusId })) return;
     if (next && id !== undefined) selectedIds.current[next] = id;
     hover.dismiss("right");
-    setPanel(next);
-    if (mobile && next) setLeft(false);
-    if (rp && next && width <= 1100) setLeft(false);
-    if (next) setRailOpen(true);
-    if (next) setFocusId(id ?? selectedIds.current[next] ?? "");
-    setChooser(null);
   };
-  const goDeep = (next: Panel | "library", id = "") => {
+  const goDeep = (next: Deep, id = "") => {
     if (
       next === "world" ||
       next === "connection" ||
@@ -271,20 +233,17 @@ export default function App({
       openSettings(next === "preset" ? "generation" : next === "library" ? "character" : next, undefined, id);
       return;
     }
-    if (!beforeClose()) return;
-    setDeep(next);
-    setFocusId(id);
-    setPanel(null);
-    setChooser(null);
+    act({ type: "deep", deep: next, id });
   };
+  const closeDeep = () => act({ type: "deep", deep: null });
   const activateTool = (id: string, anchor: HTMLElement) => {
-    setPopup(null);
+    closePopup();
     if (id === "wb:export") {
       goPanel("export");
       return;
     }
     if (id === "builtin:quick") {
-      setPopup({ kind: "quick", anchor });
+      dispatch({ type: "popup", popup: { kind: "quick", anchor } });
       return;
     }
     const selectors: Record<string, string> = {
@@ -303,7 +262,7 @@ export default function App({
       return;
     }
     if (item.node.id === "option_toggle_AN" || item.node.id === "option_toggle_CFG") {
-      setPopup({ kind: "tool", toolId: id, anchor });
+      dispatch({ type: "popup", popup: { kind: "tool", toolId: id, anchor } });
     } else {
       void task.run(() => item.node.click());
     }
@@ -322,128 +281,100 @@ export default function App({
       if (kind === "world") goPanel(kind, item.id);
       else await host.select(kind, item.id);
     });
-  for (const kind of ["connection", "preset", "world", "persona"] as Resource[]) {
-    operations.register(`open.${kind}`, () => goPanel(kind));
-    operations.register(`next.${kind}`, () => next(kind));
-  }
-  operations.register("open.trace", () => goPanel("trace"));
-  operations.register("outline.editor", () => {
-    if (addonEnabled(host.prefs(), "outline")) manager.api("outline").open("editor");
-  });
-  operations.register("open.outline", () => goPanel("outline"));
-  operations.register("outline.insert", () => {
-    if (addonEnabled(host.prefs(), "outline"))
-      void manager
-        .ensure("outline")
-        .then((r) => r.action("insert"))
-        .catch((e) => host.report(e));
-  });
-  operations.register("outline.pause", () => {
-    const r = manager.get("outline");
-    if (r) void r.action(r.task().status === "running" ? "pause" : "resume").catch((e) => host.report(e));
-  });
-  operations.register("open.image-gen", () => goPanel("image-gen"));
-  operations.register("open.character", () => goPanel("character"));
-  const railVisible =
-    !mobile &&
-    !!shownPanel &&
-    shownPanel !== "trace" &&
-    shownPanel !== "export" &&
-    shownPanel !== "outline" &&
-    shownPanel !== "image-gen" &&
-    railOpen &&
-    !focus;
-  const navigationVisible = leftVisible || (hover.left && !focus);
   const toggleLeft = () => {
-    if (mobile) {
-      if (!beforeClose()) return;
-      setPanel(null);
-      setChooser(null);
-      setPopup(null);
-      setLeft((v) => !v);
-      return;
-    }
-    if (hover.left && !leftVisible) {
-      hover.dismiss("left");
-      if (panel) goPanel(null);
-      setLeft(true);
-      return;
-    }
-    hover.dismiss("left");
-    if (rp && width <= 1100 && !left) {
-      goPanel(null);
-      setLeft(true);
-    } else if (left && !leftVisible && !focus) goPanel(null);
-    else setLeft((v) => !v);
+    if (!mobile) hover.dismiss("left");
+    act({ type: "toggle-left", hover: hovered, sizes });
   };
   const toggleRight = () => {
-    if (hover.right && !panel) goPanel(shownPanel);
-    else goPanel(panel ? null : lastAvailablePanel);
+    if (hover.right && !panel) goPanel(shown);
+    else goPanel(panel ? null : lastAvailable);
   };
-  const toggleFocus = () => {
-    setChooser(null);
-    setFocus((v) => !v);
-  };
-  operations.register("toggle.left", toggleLeft);
-  operations.register("toggle.focus", toggleFocus);
+  const toggleFocus = () => dispatch({ type: "focus" });
+  // Long-lived subscribers (operations, keyboard, bus) read the current render through this ref,
+  // so they are registered once.
+  const live = useRef({ s, act, goPanel, next, toggleLeft, toggleFocus });
+  live.current = { s, act, goPanel, next, toggleLeft, toggleFocus };
+  const [operations] = useState(() => {
+    const ops = new Operations();
+    for (const kind of ["connection", "preset", "world", "persona"] as Resource[]) {
+      ops.register(`open.${kind}`, () => live.current.goPanel(kind));
+      ops.register(`next.${kind}`, () => live.current.next(kind));
+    }
+    for (const kind of ["trace", "outline", "image-gen", "character"] as const)
+      ops.register(`open.${kind}`, () => live.current.goPanel(kind));
+    ops.register("outline.editor", () => {
+      if (addonEnabled(host.prefs(), "outline")) manager.api("outline").open("editor");
+    });
+    ops.register("outline.insert", () => {
+      if (addonEnabled(host.prefs(), "outline"))
+        void manager
+          .ensure("outline")
+          .then((r) => r.action("insert"))
+          .catch((e) => host.report(e));
+    });
+    ops.register("outline.pause", () => {
+      const r = manager.get("outline");
+      if (r) void r.action(r.task().status === "running" ? "pause" : "resume").catch((e) => host.report(e));
+    });
+    ops.register("toggle.left", () => live.current.toggleLeft());
+    ops.register("toggle.focus", () => live.current.toggleFocus());
+    return ops;
+  });
+  useEffect(
+    () =>
+      bus.on("addon-open", ({ id, view }) => {
+        // The record-export add-on's panel is "export".
+        const target: Panel = id === "record-export" ? "export" : id;
+        if (view === "editor") live.current.act({ type: "deep", deep: target });
+        else live.current.goPanel(target);
+      }),
+    [],
+  );
+  useEffect(() => bus.on("image-input", () => dispatch({ type: "image-input" })), []);
+  useEffect(
+    () =>
+      bus.on("layout-menu", (open) => {
+        setLayoutMenu(open);
+        dispatch({ type: "layout-menu", open });
+      }),
+    [],
+  );
+  useEffect(() => bus.on("error", setExternalError), []);
   useEffect(() => {
     const resize = () => setWidth(window.innerWidth);
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
   useEffect(() => {
-    if (shownPanel) {
-      setRenderedPanel(shownPanel);
+    if (shown) {
+      setRenderedPanel(shown);
       return;
     }
     const timer = setTimeout(() => setRenderedPanel(null), 220);
     return () => clearTimeout(timer);
-  }, [shownPanel]);
+  }, [shown]);
   useEffect(() => {
-    if (!rp && !mobile) host.preference({ left });
-  }, [left, rp, mobile]);
+    if (!rp && !mobile) host.preference({ left: s.left });
+  }, [s.left, rp, mobile]);
+  const classes = {
+    ...bodyClasses(s, hovered, sizes),
+    "wb-rp-top-auto": topAuto,
+    "wb-rp-top-collapsed": topCollapsed,
+  };
   useLayoutEffect(() => {
-    document.body.classList.toggle("wb-left-open", leftVisible);
-    document.body.classList.toggle("wb-left-hover-open", hover.left && !leftVisible);
-    document.body.classList.toggle("wb-right-hover-open", hover.right && !panel);
-    document.body.classList.toggle("wb-right-open", !!panel && !focus);
-    document.body.classList.toggle("wb-focus", focus);
-    document.body.classList.toggle("wb-rail-open", railVisible && !!panel);
-    document.body.classList.toggle("wb-mobile", mobile);
-    document.body.classList.toggle("wb-mobile-rp", mobile && rp);
-    document.body.classList.toggle("wb-rp", rp && !mobile);
-    document.body.classList.toggle("wb-rp-top-auto", topAuto);
-    document.body.classList.toggle("wb-rp-top-collapsed", topCollapsed);
-    document.body.classList.toggle(
-      "wb-rp-overlay-open",
-      rp && width <= 1100 && !!(leftVisible || (panel && !focus)),
-    );
-  }, [
-    leftVisible,
-    panel,
-    focus,
-    railVisible,
-    rp,
-    topAuto,
-    topCollapsed,
-    width,
-    hover.left,
-    hover.right,
-    mobile,
-  ]);
-  useEffect(() => {
-    return bus.on("error", setExternalError);
-  }, []);
+    for (const [name, on] of Object.entries(classes)) document.body.classList.toggle(name, on);
+  }, [Object.values(classes).join()]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.isComposing || workspace) return;
+      const { s } = live.current;
+      if (e.isComposing || s.workspace) return;
       if (e.key === "Escape") {
-        if (chooser) {
-          setChooser(null);
+        if (s.chooser) {
+          dispatch({ type: "chooser", chooser: null });
           return;
         }
-        if (focus) {
-          setFocus(false);
+        if (s.focus) {
+          dispatch({ type: "focus", on: false });
           return;
         }
         host.closeNative();
@@ -451,14 +382,15 @@ export default function App({
       }
     };
     const shortcut = (e: KeyboardEvent) => {
+      const { s } = live.current;
       if (
         e.defaultPrevented ||
         e.isComposing ||
         e.repeat ||
         e.getModifierState("AltGraph") ||
-        workspace ||
-        deep ||
-        help ||
+        s.workspace ||
+        s.deep ||
+        s.help ||
         document.querySelector("dialog[open]")
       )
         return;
@@ -477,7 +409,7 @@ export default function App({
       document.removeEventListener("keydown", key);
       document.removeEventListener("keydown", shortcut, true);
     };
-  });
+  }, [host, operations]);
   const content = (kind: Panel, independent = false) =>
     kind === "world" ? (
       <World
@@ -493,16 +425,12 @@ export default function App({
         onManage={(group) => (group ? openSettings("character", group) : goDeep("library"))}
       />
     ) : kind === "export" ? (
-      <AddonWorkspace
-        host={host}
-        id="record-export"
-        active={shownPanel === "export" && !workspace && !deep}
-      />
+      <AddonWorkspace host={host} id="record-export" active={shown === "export" && !workspace && !deep} />
     ) : kind === "outline" || kind === "image-gen" ? (
       <AddonWorkspace
         host={host}
         id={kind}
-        active={independent || (shownPanel === kind && !workspace && !deep)}
+        active={independent || (shown === kind && !workspace && !deep)}
         view={independent ? "editor" : "workspace"}
       />
     ) : kind === "trace" ? (
@@ -531,19 +459,14 @@ export default function App({
           host={host}
           snap={snap}
           rp={rp}
-          left={leftVisible}
-          panel={shownPanel}
+          left={leftShown}
+          panel={shown}
           chooser={chooser}
           setChooser={setChooser}
           goPanel={goPanel}
           toggleLeft={toggleLeft}
-          closeDrawers={() => {
-            if (beforeClose()) {
-              setLeft(false);
-              goPanel(null);
-            }
-          }}
-          onLayout={switchLayout}
+          closeDrawers={() => act({ type: "close-drawers" })}
+          onLayout={onLayout}
           settings={openSettings}
           open={openPopup}
           activate={activateTool}
@@ -568,7 +491,7 @@ export default function App({
         >
           <Header
             snap={snap}
-            panel={shownPanel}
+            panel={shown}
             chooser={chooser}
             setChooser={setChooser}
             goPanel={goPanel}
@@ -665,8 +588,8 @@ export default function App({
           className={`wb-edge-nav ${focus ? "is-hidden" : ""}`}
           style={
             {
-              "--wb-edge-left": `${navigationVisible ? leftWidth : 0}px`,
-              "--wb-edge-right": `${shownPanel && !focus ? rightWidth + (railVisible ? 180 : 0) : 0}px`,
+              "--wb-edge-left": `${navigationShown ? sizes.left : 0}px`,
+              "--wb-edge-right": `${shown && !focus ? sizes.right + (railShown ? sizes.rail : 0) : 0}px`,
             } as React.CSSProperties
           }
           inert={focus}
@@ -675,54 +598,51 @@ export default function App({
         >
           <button
             className="wb-edge-arrow wb-edge-left"
-            aria-label={hover.left && !leftVisible ? "固定左边栏" : leftVisible ? "收纳左边栏" : "展开左边栏"}
-            title={`${hover.left && !leftVisible ? "固定左边栏" : leftVisible ? "收纳左边栏" : "展开左边栏"}${host.prefs().shortcutsEnabled !== false && shortcutHint("toggle.left", host.prefs().shortcuts) ? " · " + shortcutHint("toggle.left", host.prefs().shortcuts) : ""}`}
-            aria-expanded={navigationVisible}
+            aria-label={hover.left && !leftShown ? "固定左边栏" : leftShown ? "收纳左边栏" : "展开左边栏"}
+            title={`${hover.left && !leftShown ? "固定左边栏" : leftShown ? "收纳左边栏" : "展开左边栏"}${host.prefs().shortcutsEnabled !== false && shortcutHint("toggle.left", host.prefs().shortcuts) ? " · " + shortcutHint("toggle.left", host.prefs().shortcuts) : ""}`}
+            aria-expanded={navigationShown}
             onClick={toggleLeft}
           >
-            {navigationVisible ? <ChevronLeft size={28} /> : <ChevronRight size={28} />}
+            {navigationShown ? <ChevronLeft size={28} /> : <ChevronRight size={28} />}
           </button>
           <button
             className="wb-edge-arrow wb-edge-right"
             aria-label={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
             title={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
-            aria-expanded={!!shownPanel}
+            aria-expanded={!!shown}
             onClick={toggleRight}
           >
-            {shownPanel ? <ChevronRight size={28} /> : <ChevronLeft size={28} />}
+            {shown ? <ChevronRight size={28} /> : <ChevronLeft size={28} />}
           </button>
         </nav>
       )}
       <Navigation
         host={host}
         snap={snap}
-        visible={navigationVisible}
+        visible={navigationShown}
         settings={openSettings}
         open={openPopup}
-        help={() => {
-          if (mobile) setLeft(false);
-          setHelp(true);
-        }}
+        help={() => dispatch({ type: "help", open: true })}
         exit={onExit}
         run={(fn) =>
           task.run(async () => {
             await fn();
-            if (mobile) setLeft(false);
+            if (mobile) dispatch({ type: "left", open: false });
           })
         }
       />
       <aside
         id="wb-resource-rail"
         ref={setRailTarget}
-        className={`wb-resource-rail ${railVisible ? "is-open" : ""}`}
-        inert={!railVisible}
-        aria-hidden={!railVisible}
+        className={`wb-resource-rail ${railShown ? "is-open" : ""}`}
+        inert={!railShown}
+        aria-hidden={!railShown}
         aria-label="资源列表与角色信息"
       />
       <aside
-        className={`wb-right ${shownPanel && !focus ? "is-open" : ""}`}
-        inert={!shownPanel || focus}
-        aria-hidden={!shownPanel || focus}
+        className={`wb-right ${shown && !focus ? "is-open" : ""}`}
+        inert={!shown || focus}
+        aria-hidden={!shown || focus}
         aria-label="角色与资源"
       >
         <div className="wb-panel-header-row">
@@ -730,21 +650,21 @@ export default function App({
             className="wb-panel-switch"
             aria-label="展开资源分类"
             aria-expanded={tabsOpen}
-            onClick={() => setTabsOpen(!tabsOpen)}
+            onClick={() => dispatch({ type: "tabs", open: !tabsOpen })}
           >
             <span>
-              {shownPanel === "character"
+              {shown === "character"
                 ? "角色"
-                : shownPanel === "trace"
+                : shown === "trace"
                   ? "Trace"
-                  : shownPanel === "export"
+                  : shown === "export"
                     ? "记录导出"
-                    : shownPanel === "outline"
+                    : shown === "outline"
                       ? "大纲"
-                      : shownPanel === "image-gen"
+                      : shown === "image-gen"
                         ? "生图"
-                        : shownPanel
-                          ? labels[shownPanel]
+                        : shown
+                          ? labels[shown]
                           : "角色与资源"}
             </span>
             <ChevronDown size={14} />
@@ -767,7 +687,7 @@ export default function App({
             )
               .filter(([kind]) =>
                 kind === "export"
-                  ? exportEnabled
+                  ? env.addons.export
                   : kind === "outline" || kind === "image-gen"
                     ? addonEnabled(host.prefs(), kind)
                     : true,
@@ -775,11 +695,11 @@ export default function App({
               .map(([kind, label, Icon]) => (
                 <button
                   key={kind}
-                  className={shownPanel === kind ? "is-active" : ""}
-                  aria-pressed={shownPanel === kind}
+                  className={shown === kind ? "is-active" : ""}
+                  aria-pressed={shown === kind}
                   onClick={() => {
                     goPanel(kind);
-                    setTabsOpen(false);
+                    dispatch({ type: "tabs", open: false });
                   }}
                 >
                   <Icon size={15} />
@@ -791,7 +711,15 @@ export default function App({
         {!deep && !workspace && (
           <div className="wb-panel-content" key={renderedPanel}>
             <ResourceRailContext.Provider
-              value={mobile ? null : { open: railOpen, setOpen: setRailOpen, target: railTarget }}
+              value={
+                mobile
+                  ? null
+                  : {
+                      open: railOpen,
+                      setOpen: (open) => dispatch({ type: "rail", open }),
+                      target: railTarget,
+                    }
+              }
             >
               <Suspense fallback={<Loading />}>{content(renderedPanel)}</Suspense>
             </ResourceRailContext.Provider>
@@ -819,14 +747,9 @@ export default function App({
         <RPStage
           host={host}
           hidden={focus}
-          blocked={width <= 1100 && !!(navigationVisible || shownPanel)}
-          width={
-            width -
-            (width > 1100
-              ? (leftVisible ? leftWidth : 0) + (panel && !focus ? rightWidth + (railVisible ? 180 : 0) : 0)
-              : 0)
-          }
-          readingLayout={() => switchLayout("novel")}
+          blocked={width <= 1100 && !!(navigationShown || shown)}
+          width={stageWidth(s, hovered, sizes)}
+          readingLayout={() => onLayout("novel")}
           run={task.run}
         />
       ) : (
@@ -838,7 +761,7 @@ export default function App({
           host={host}
           popup={popupPresence.value}
           exiting={popupPresence.exiting}
-          close={() => setPopup(null)}
+          close={closePopup}
           settings={openSettings}
           activate={activateTool}
         />
@@ -851,7 +774,7 @@ export default function App({
             group={workspacePresence.value.group}
             initial={workspacePresence.value.initial}
             exiting={workspacePresence.exiting}
-            onClose={() => setWorkspace(null)}
+            onClose={() => dispatch({ type: "close-settings" })}
           />
         </Suspense>
       )}
@@ -859,11 +782,7 @@ export default function App({
         <section className="wb-addon-editor" aria-label="附加功能完整编辑页">
           <header>
             <strong>{deep === "outline" ? "大纲 · 完整编辑" : "生图 · 完整配置"}</strong>
-            <button
-              onClick={() => {
-                if (beforeClose()) setDeep(null);
-              }}
-            >
+            <button onClick={closeDeep}>
               返回工作台
               <X size={15} />
             </button>
@@ -879,9 +798,7 @@ export default function App({
               ? "角色管理"
               : `${deep in labels ? labels[deep as Resource] : "资源"} · 深度编辑`
           }
-          onClose={() => {
-            if (beforeClose()) setDeep(null);
-          }}
+          onClose={closeDeep}
         >
           <Suspense fallback={<Loading />}>
             {deep === "library" ? <Characters host={host} management /> : content(deep, true)}
@@ -889,7 +806,11 @@ export default function App({
         </Dialog>
       )}
       {helpPresence.value && (
-        <Dialog title="快捷键" exiting={helpPresence.exiting} onClose={() => setHelp(false)}>
+        <Dialog
+          title="快捷键"
+          exiting={helpPresence.exiting}
+          onClose={() => dispatch({ type: "help", open: false })}
+        >
           <Shortcuts host={host} />
         </Dialog>
       )}
