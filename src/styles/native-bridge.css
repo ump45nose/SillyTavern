@@ -6,16 +6,8 @@
  */
 
 /* ── from style.css ── */
-/* Geometry belongs to the plugin. Theme variables can be overridden by ST themes. */
+/* Tokens live in tokens.css; this rule only carries open/closed geometry and native theme overrides. */
 body.wb-active {
-  --wb-paper: var(--wb-theme-paper, #faf9f5);
-  --wb-surface: var(--wb-theme-surface, #fffefa);
-  --wb-soft: var(--wb-theme-soft, #f0eee6);
-  --wb-ink: var(--wb-theme-ink, #302e29);
-  --wb-muted: var(--wb-theme-muted, #817a6c);
-  --wb-line: var(--wb-theme-line, #dfdcd2);
-  --wb-accent: var(--wb-theme-accent, #b76449);
-  --wb-selected: var(--wb-theme-selected, #f0e6da);
   --wb-left: 0px;
   --wb-right: 0px;
   background: var(--wb-paper) !important;
@@ -398,13 +390,6 @@ body.wb-active .wb-native-icon {
 
 /* ── from home.css ── */
 /* Approved horizontal Noval scene. Resource editors share the base primitives. */
-body.wb-active {
-  --wb-header: 74px;
-  --wb-left-size: 260px;
-  --wb-right-size: 460px;
-  --wb-control-ink: #6c6254;
-  --wb-motion: 220ms;
-}
 body.wb-active.wb-left-open {
   --wb-left: var(--wb-left-size);
 }
@@ -599,12 +584,6 @@ body.wb-active #send_but .wb-native-icon * {
 }
 body.wb-focus {
   --wb-header: 0px;
-}
-@media (max-width: 1400px) {
-  body.wb-active {
-    --wb-left-size: 240px;
-    --wb-right-size: 440px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   body.wb-active *,

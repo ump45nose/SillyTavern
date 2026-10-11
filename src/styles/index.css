@@ -1,6 +1,7 @@
 /* Workbench stylesheet entry. Layer order is declared once, before any sheet (including lazy ones) loads. */
 @layer wb.reset, wb.tokens, wb.base, wb.legacy, wb.components, wb.layouts, wb.modes;
 
+@import "./tokens.css";
 @import "./legacy/native-defaults.css";
 @import "./legacy/style.css";
 @import "./legacy/home.css";

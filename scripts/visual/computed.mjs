@@ -57,7 +57,10 @@ function dump() {
 
 if (command === "snap") {
   const out = path.resolve(a);
+  // A partial filter run keeps other states; a full run starts clean so stale files cannot pass.
+  if (!filter) fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
+  let failures = 0;
   const browser = await launch();
   try {
     for (const state of states) {
@@ -67,12 +70,14 @@ if (command === "snap") {
         fs.writeFileSync(path.join(out, state.name + ".json.gz"), zlib.gzipSync(JSON.stringify(result)));
         console.log("OK  ", state.name, Object.keys(result).length);
       } catch (error) {
+        failures++;
         console.log("FAIL", state.name, String(error.message || error).split("\n")[0]);
       }
     }
   } finally {
     await browser.close();
   }
+  process.exitCode = failures ? 1 : 0;
 } else if (command === "diff") {
   const load = (dir, file) => JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(dir, file))));
   let failed = 0;
@@ -83,7 +88,13 @@ if (command === "snap") {
     .sort()) {
     const name = file.replace(".json.gz", "");
     if (filter && !filter.test(name)) continue;
-    if (!fs.existsSync(path.join(b, file))) continue;
+    if (!fs.existsSync(path.join(b, file))) {
+      if (!filter) {
+        failed++;
+        console.log("MISS", name);
+      }
+      continue;
+    }
     const [x, y] = [load(a, file), load(b, file)];
     const changes = [];
     for (const k of new Set([...Object.keys(x), ...Object.keys(y)])) {
