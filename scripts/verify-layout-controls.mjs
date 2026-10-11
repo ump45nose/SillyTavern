@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { gunzipSync } from "node:zlib";
-import { launch, session, ready, urls, artifacts, chooseLayout } from "./browser.mjs";
+import { launch, session, ready, urls, artifacts, chooseLayout, toggleRight } from "./browser.mjs";
 
 // Real validation UI, with settings persisted only inside this browser's response replay.
 // The user's saved RP demo, preferences, persona and chats are not changed by verification.
@@ -117,9 +117,9 @@ try {
       if (rects.eye) assert.ok(rects.trigger.right < rects.eye.left, JSON.stringify(rects));
       for (const state of ["closed", "left", "right", "closed-again"]) {
         if (state === "left") await page.locator(".wb-edge-left").click();
-        if (state === "right") await page.locator(".wb-edge-right").click();
+        if (state === "right") await toggleRight(page);
         if (state === "closed-again") {
-          if (await page.locator('.wb-edge-right[aria-expanded=true]').count()) { await page.locator(".wb-edge-right").click(); await settle(); }
+          if (await page.locator('.wb-panel-close').isVisible()) { await toggleRight(page); await settle(); }
           if (await page.locator('.wb-edge-left[aria-expanded=true]').count()) await page.locator(".wb-edge-left").click();
         }
         await settle();
@@ -157,7 +157,7 @@ try {
     await page.setViewportSize({width,height:817}); await settle();
     for (const inset of [24,128]) {
       await page.evaluate(inset=>workbench.host.preference({readingInset:inset,readingSize:24}),inset); await settle();
-      await page.locator('.wb-edge-right').click(); await settle();
+      await toggleRight(page); await settle();
       for (const variant of [1,0]) {
         await page.waitForFunction(() => window.__layoutSwipeReady());
         await page.locator(`#chat .last_mes .swipe_${variant===1?"right":"left"}`).click();
@@ -178,7 +178,7 @@ try {
         assert.ok(gutters.left.top < gutters.text.bottom && gutters.right.top < gutters.text.bottom,JSON.stringify({width,inset,variant,gutters}));
         assert.ok(gutters.padding <= 25.5,JSON.stringify({width,inset,variant,gutters}));
       }
-      await page.locator('.wb-edge-right').click(); await settle();
+      await toggleRight(page); await settle();
     }
   }
   pass("native swipe controls stay in side gutters beside short/long text with no extra bottom row; original swipe handlers work at both inset limits");

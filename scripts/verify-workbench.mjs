@@ -111,9 +111,7 @@ try {
   await page
     .getByRole("button", { name: "角色与资源侧栏", exact: true })
     .click();
-  // The sidebar reopens on the last panel (world); switch to the character panel via the
-  // collapsed panel switcher.
-  await page.getByRole("button", { name: "展开资源分类", exact: true }).click();
+  // The sidebar reopens on the last panel (world); switch to the character panel from its tab.
   await page.locator(".wb-panel-tabs").getByRole("button", { name: "角色", exact: true }).click();
   await page.getByRole("button", { name: "当前角色", exact: true }).click();
   await page.getByLabel("角色描述", { exact: true }).waitFor();

@@ -35,7 +35,7 @@ try {
  for(const [width,height] of [[1366,768],[1440,900],[1496,817],[1920,1080]]){
   await page.setViewportSize({width,height});await settle();let g=await verifyGeometry();
   await page.screenshot({path:`${dir}/home-${width}.png`});
-  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();g=await verifyGeometry();assert.equal(g.main.w,width-(width<=1400?240:260)-(width<=1400?440:460)-180-12/* desk gutter beside the panel */);
+  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();g=await verifyGeometry();assert.equal(g.main.w,width-(width<=1400?240:260)-(width<=1400?440:460)-180-24/* the panel card sits between two 12px desk gutters */);
   await page.screenshot({path:`${dir}/roles-${width}.png`});
   await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();pass('desktop geometry '+width,g);
  }

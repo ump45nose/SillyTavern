@@ -75,12 +75,28 @@
   /* Fixed-color icons remain legible even when the host installs light theme icons. */
   body.wb-active .wb-ui svg,
   body.wb-active .wb-ui svg * {
-    color: var(--wb-control-ink) !important;
     stroke: currentColor !important;
     fill: none !important;
   }
-  body.wb-active .wb-ui .is-active > svg,
-  body.wb-active .wb-ui .is-active > svg * {
+  /* Phase E components colour icons through their own text colour (see native-bridge). */
+  body.wb-active
+    .wb-ui
+    svg:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *),
+  body.wb-active
+    .wb-ui
+    svg
+    *:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *) {
+    color: var(--wb-control-ink) !important;
+  }
+  body.wb-active
+    .wb-ui
+    .is-active
+    > svg:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *),
+  body.wb-active
+    .wb-ui
+    .is-active
+    > svg
+    *:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *) {
     color: var(--wb-accent) !important;
   }
   body.wb-active .wb-ui .wb-primary svg,

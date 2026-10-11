@@ -19,4 +19,5 @@
 @import "./legacy/mobile.css";
 @import "./components/feedback.css";
 @import "./layouts/desk.css";
+@import "./layouts/panel.css";
 @import "./native-bridge.css";

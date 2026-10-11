@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {gunzipSync} from 'node:zlib';
-import {launch,session,ready,urls,artifacts,createCharacter} from './browser.mjs';
+import {launch,session,ready,urls,artifacts,createCharacter,toggleRight} from './browser.mjs';
 const directory=artifacts+'/writing-addons';fs.mkdirSync(directory,{recursive:true});
 const browser=await launch(),checks=[],report={checkedAt:new Date().toISOString(),checks};let page;
 const pass=name=>{checks.push(name);console.log('PASS',name);};
@@ -43,7 +43,7 @@ try{
    window.__fakeGeneration=async(type)=>{__writes.push(type);const prompt=document.getElementById('send_textarea').value;document.getElementById('send_textarea').value='';await c.eventSource.emit(c.eventTypes.GENERATION_STARTED,type,{},false);await new Promise(r=>setTimeout(r,350));const id=c.chat.length;c.chat.push({name:'模拟助手',is_user:false,is_system:false,mes:'WB_STORY_'+id+' '+prompt,send_date:new Date().toISOString(),extra:{}});await c.eventSource.emit(c.eventTypes.MESSAGE_RECEIVED,id,type);await c.eventSource.emit(c.eventTypes.GENERATION_ENDED,c.chat.length);};
    window.__originalContext=SillyTavern.getContext;SillyTavern.getContext=()=>({...__originalContext(),generate:(type)=>__fakeGeneration(type)});window.__mockSend=event=>{if(event.target.closest?.('#send_but')){event.preventDefault();event.stopImmediatePropagation();void __fakeGeneration('normal');}};document.addEventListener('click',__mockSend,true);
  });
- await button('从此处开始').click();await page.getByRole('navigation',{name:'边栏操作'}).getByRole('button',{name:'关闭右栏',exact:true}).click();await page.waitForFunction(()=>window.__writes.length>=1);await page.keyboard.press('Alt+Shift+P');await page.waitForFunction(()=>document.querySelector('.wb-addon-task-strip')?.textContent.includes('暂停'));
+ await button('从此处开始').click();await toggleRight(page);await page.waitForFunction(()=>window.__writes.length>=1);await page.keyboard.press('Alt+Shift+P');await page.waitForFunction(()=>document.querySelector('.wb-addon-task-strip')?.textContent.includes('暂停'));
  await page.waitForFunction(()=>SillyTavern.getContext().chatMetadata.workbench_addons.outline.nodes[1].completed===1);assert.equal(await page.evaluate(()=>__writes.length),1);assert.equal(await page.evaluate(()=>SillyTavern.getContext().chatMetadata.workbench_addons.outline.nodes[1].completed),1);
  await page.evaluate(()=>workbench.host.preference({layout:'rp'}));await settle();await page.getByRole('button',{name:'继续自动写作',exact:true}).click();await page.waitForFunction(()=>SillyTavern.getContext().chatMetadata.workbench_addons.outline.nodes[2].status==='done');assert.deepEqual(await page.evaluate(()=>__writes),['normal','continue','normal']);assert.equal(await page.locator('.wb-addon-task-strip').count(),0);pass('automatic writing uses native send/continue, pauses after in-flight reply, resumes across RP switch and closed UI');
  await page.evaluate(()=>{const c=SillyTavern.getContext();SillyTavern.getContext=__originalContext;document.removeEventListener('click',__mockSend,true);}); // Context wrapper is ephemeral; does not replace underlying native chat.

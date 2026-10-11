@@ -632,15 +632,18 @@ export default function App({
           >
             {navigationShown ? <ChevronLeft size={28} /> : <ChevronRight size={28} />}
           </button>
-          <button
-            className="wb-edge-arrow wb-edge-right"
-            aria-label={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
-            title={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
-            aria-expanded={!!shown}
-            {...ownClick(toggleRight)}
-          >
-            {shown ? <ChevronRight size={28} /> : <ChevronLeft size={28} />}
-          </button>
+          {/* A pinned panel closes from its own header; the arrow stays for opening and hover-pinning. */}
+          {!panel && (
+            <button
+              className="wb-edge-arrow wb-edge-right"
+              aria-label={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
+              title={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
+              aria-expanded={!!shown}
+              {...ownClick(toggleRight)}
+            >
+              {shown ? <ChevronRight size={28} /> : <ChevronLeft size={28} />}
+            </button>
+          )}
         </nav>
       )}
       <Navigation
@@ -658,32 +661,14 @@ export default function App({
         }
       />
       <aside
-        id="wb-resource-rail"
-        ref={setRailTarget}
-        className={`wb-resource-rail ${railShown ? "is-open" : ""}`}
-        inert={!railShown}
-        aria-hidden={!railShown}
-        aria-label="资源列表与角色信息"
-      />
-      <aside
         className={`wb-right ${shown && !focus ? "is-open" : ""}`}
         inert={!shown || focus}
         aria-hidden={!shown || focus}
         aria-label="角色与资源"
+        style={{ "--wb-panel-rail": `${railShown ? sizes.rail : 0}px` } as React.CSSProperties}
       >
-        <div className="wb-panel-header-row">
-          <button
-            className="wb-panel-switch"
-            aria-label="展开资源分类"
-            aria-expanded={tabsOpen}
-            onClick={() => dispatch({ type: "tabs", open: !tabsOpen })}
-          >
-            <span>{shown ? panelLabels[shown] : "角色与资源"}</span>
-            <ChevronDown size={14} />
-          </button>
-        </div>
-        <div className={`wb-panel-tabs-fold ${tabsOpen ? "is-open" : ""}`} inert={!tabsOpen}>
-          <div className="wb-panel-tabs">
+        <header className="wb-panel-head">
+          <div className="wb-panel-tabs" role="toolbar" aria-label="右栏面板">
             {(
               [
                 ["character", UsersRound],
@@ -699,38 +684,57 @@ export default function App({
             )
               .filter(([kind]) => available(env, kind))
               .map(([kind, Icon]) => (
-                <button
-                  key={kind}
-                  className={shown === kind ? "is-active" : ""}
-                  aria-pressed={shown === kind}
-                  onClick={() => {
-                    goPanel(kind);
-                    dispatch({ type: "tabs", open: false });
-                  }}
-                >
-                  <Icon size={15} />
-                  {panelLabels[kind]}
-                </button>
+                <React.Fragment key={kind}>
+                  {kind === "trace" && <span className="wb-panel-tab-gap" aria-hidden="true" />}
+                  <button
+                    className={`wb-panel-tab ${shown === kind ? "is-active" : ""}`}
+                    aria-pressed={shown === kind}
+                    aria-label={panelLabels[kind]}
+                    title={panelLabels[kind]}
+                    onClick={() => goPanel(kind)}
+                  >
+                    <Icon size={16} />
+                    {shown === kind && <span className="wb-panel-tab-label">{panelLabels[kind]}</span>}
+                  </button>
+                </React.Fragment>
               ))}
           </div>
+          <button
+            className="wb-panel-close"
+            aria-label="关闭右栏"
+            title="关闭右栏"
+            onClick={() => (panel ? goPanel(null) : hover.dismiss("right"))}
+          >
+            <X size={16} />
+          </button>
+        </header>
+        <div className="wb-panel-body">
+          <aside
+            id="wb-resource-rail"
+            ref={setRailTarget}
+            className={`wb-resource-rail ${railShown ? "is-open" : ""}`}
+            inert={!railShown}
+            aria-hidden={!railShown}
+            aria-label="资源列表与角色信息"
+          />
+          {!deep && !workspace && (
+            <div className="wb-panel-content" key={renderedPanel}>
+              <ResourceRailContext.Provider
+                value={
+                  mobile
+                    ? null
+                    : {
+                        open: railOpen,
+                        setOpen: (open) => dispatch({ type: "rail", open }),
+                        target: railTarget,
+                      }
+                }
+              >
+                <Suspense fallback={<Loading />}>{content(renderedPanel)}</Suspense>
+              </ResourceRailContext.Provider>
+            </div>
+          )}
         </div>
-        {!deep && !workspace && (
-          <div className="wb-panel-content" key={renderedPanel}>
-            <ResourceRailContext.Provider
-              value={
-                mobile
-                  ? null
-                  : {
-                      open: railOpen,
-                      setOpen: (open) => dispatch({ type: "rail", open }),
-                      target: railTarget,
-                    }
-              }
-            >
-              <Suspense fallback={<Loading />}>{content(renderedPanel)}</Suspense>
-            </ResourceRailContext.Provider>
-          </div>
-        )}
       </aside>
       {(task.error || externalError) && (
         <div className="wb-toast" role="alert">

@@ -15,7 +15,7 @@ try {
   });
   await ready(page, urls.validation, { probe: true });
   original = await page.evaluate(() => structuredClone(SillyTavern.getContext().extensionSettings.workbench));
-  await page.evaluate(async () => { workbench.unmount(); SillyTavern.getContext().extensionSettings.workbench.layout = "novel"; await workbench.mount(); });
+  await page.evaluate(async () => { workbench.unmount(); const settings = SillyTavern.getContext().extensionSettings.workbench; settings.layout = "novel"; settings.rpTopAuto = false; await workbench.mount(); });
   await createCharacter(page); await page.evaluate(() => workbench.host.newChat()); await connect(page);
   await page.setViewportSize({ width: 1496, height: 817 });
   await page.evaluate(() => { window.__rpNative = { chat: document.getElementById("chat"), input: document.getElementById("send_textarea"), form: document.getElementById("send_form"), background: document.getElementById("bg1") }; });

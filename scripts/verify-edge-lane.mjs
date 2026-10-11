@@ -50,11 +50,12 @@ try {
  await page.mouse.move(geometry.width-6,400);await page.mouse.move(geometry.width-8,404);await page.waitForTimeout(500);assert.equal(await hot(),false,'edge reveal off');
  await page.evaluate(()=>workbench.host.preference({edgeHover:true}));await settle();
  const arrow=page.getByRole('button',{name:'角色与资源侧栏',exact:true});await arrow.click();await page.waitForFunction(()=>document.body.classList.contains('wb-right-open'));await settle();
- const open=await page.evaluate(()=>{const panel=Math.min(...[...document.querySelectorAll('.wb-right.is-open,.wb-resource-rail.is-open')].map(n=>n.getBoundingClientRect().left));return {panel,chat:document.getElementById('chat').getBoundingClientRect().right,arrow:document.querySelector('.wb-edge-right').getBoundingClientRect().toJSON()}});
- assert(open.chat<=open.panel+0.5&&open.chat>=open.panel-1&&Math.abs(open.arrow.right-open.panel)<1,`a pinned sidebar takes no lane; the arrow sits on its boundary: ${JSON.stringify(open)}`);
- // The arrow now covers part of #chat's scrollbar; a drag released over it must not close the panel.
- await page.mouse.move(open.chat-3,open.arrow.top-80);await page.mouse.down();await page.mouse.move(open.chat-3,open.arrow.top+open.arrow.height/2,{steps:6});await page.mouse.up();await settle();
- assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-right-open')),true,'releasing a scrollbar drag over the arrow must not close the sidebar');
+ const open=await page.evaluate(()=>{const panel=document.querySelector('.wb-right.is-open').getBoundingClientRect().left;return {panel,chat:document.getElementById('chat').getBoundingClientRect().right,arrow:document.querySelectorAll('.wb-edge-right').length}});
+ // The pinned panel is a card on the desk: one gutter separates the sheet from it, and its own header carries close.
+ assert(Math.abs(open.panel-12-open.chat)<1.5&&open.arrow===0,`a pinned sidebar takes no lane and shows no edge arrow: ${JSON.stringify(open)}`);
+ // A scrollbar drag released over the gutter beside the card must not close the panel.
+ await page.mouse.move(open.chat-3,320);await page.mouse.down();await page.mouse.move(open.chat+6,400,{steps:6});await page.mouse.up();await settle();
+ assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-right-open')),true,'releasing a scrollbar drag beside the card must not close the sidebar');
  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await page.waitForFunction(()=>!document.body.classList.contains('wb-right-open'));
  pass('the preference turns the lane and the reveal off together; a pinned sidebar takes no lane; edge arrows toggle on click only');
  assert.deepEqual(errors,[]);passed=true;

@@ -30,13 +30,29 @@
     inset: 0 0 auto;
     height: var(--wb-header);
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+    grid-template-columns: minmax(var(--wb-top-side), 1fr) minmax(0, auto) minmax(var(--wb-top-side), 1fr);
     align-items: center;
     gap: var(--wb-space-4);
     padding: 0 var(--wb-space-5) 0 var(--wb-space-4);
     border: 0;
     background: transparent;
     z-index: var(--wb-z-shell);
+  }
+  /*
+   * Both side columns keep the width of the tools group (Trace, focus or pin, and the switcher's
+   * space), so the pills stay centred and shrink to ellipses before anything overlaps. The RP bar
+   * keeps its own chrome until E4 but shares the columns.
+   */
+  body.wb-active .wb-top {
+    --wb-top-side: 242px;
+  }
+  body.wb-active.wb-rp:not(.wb-mobile) .wb-top {
+    --wb-top-side: 300px;
+    grid-template-columns: minmax(var(--wb-top-side), 1fr) minmax(0, auto) minmax(var(--wb-top-side), 1fr);
+  }
+  body.wb-active .wb-top > .wb-top-pills {
+    justify-self: center;
+    max-width: 100%;
   }
 
   /* ── The sheet's top edge: breadcrumb, exit focus, typography ── */
@@ -79,6 +95,7 @@
   .wb-top-identity {
     justify-self: start;
     display: flex;
+    justify-content: flex-start;
     align-items: center;
     gap: 10px;
     min-width: 0;
@@ -141,6 +158,7 @@
   }
   .wb-pill {
     display: flex;
+    justify-content: flex-start;
     align-items: center;
     gap: var(--wb-space-2);
     width: 100%;
@@ -708,6 +726,7 @@
   }
   .wb-nav-toggle {
     display: flex;
+    justify-content: flex-start;
     align-items: center;
     gap: var(--wb-space-2);
     width: 100%;
@@ -750,6 +769,7 @@
   }
   .wb-nav-row {
     display: flex;
+    justify-content: flex-start;
     align-items: center;
     gap: 10px;
     width: 100%;
@@ -818,6 +838,7 @@
   }
   .wb-nav-foot {
     display: flex;
+    justify-content: flex-start;
     align-items: center;
     gap: 7px;
     height: var(--wb-control-md);

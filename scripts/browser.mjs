@@ -236,3 +236,10 @@ export async function chooseLayout(page, name) {
     await page.getByRole('radiogroup', { name: '切换工作台', exact: true }).getByRole('radio', { name, exact: true }).click();
     await page.waitForFunction(() => !document.querySelector('.wb-layout-controls[aria-busy="true"]'));
 }
+
+/** Opens the right panel from its edge arrow, or closes a pinned one from the card's own 关闭右栏 (E2b). */
+export async function toggleRight(page) {
+    const close = page.locator('.wb-panel-close');
+    if (await close.isVisible()) await close.click();
+    else await page.locator('.wb-edge-right').click();
+}

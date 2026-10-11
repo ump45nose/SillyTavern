@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { gunzipSync } from 'node:zlib';
-import { launch, session, ready, urls, artifacts, openSettings } from './browser.mjs';
+import { launch, session, ready, urls, artifacts, openSettings, toggleRight } from './browser.mjs';
 const directory = artifacts + '/addons'; fs.mkdirSync(directory, { recursive: true });
 const browser = await launch(), checks = [], report = { checkedAt: new Date().toISOString(), checks };
 const pass = name => { checks.push(name); console.log('PASS', name); };
@@ -60,7 +60,7 @@ try {
   await page.getByRole('checkbox', { name: '启用记录导出', exact: true }).uncheck();
   await page.evaluate(() => workbench.host.persistSettings()); await button('返回工作台').click(); await settle();
   assert.equal(await page.locator('[data-wb-tool="wb:export"]').count(), 0);
-  await page.locator('.wb-edge-right').click(); await settle(); await button('展开资源分类').click();
+  await toggleRight(page); await settle();
   assert.equal(await page.locator('.wb-panel-tabs').getByRole('button', { name: '记录导出', exact: true }).count(), 0);
   await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForFunction(() => window.workbench?.mounted);
   assert.equal(await page.evaluate(() => workbench.host.prefs().addons['record-export']), false);
@@ -76,7 +76,7 @@ try {
   await page.route('**/addons/record-export/manifest.json', async route => { requested = true; await gate; await route.continue(); });
   await page.locator('[data-wb-tool="wb:export"]').click();
   while (!requested) await page.waitForTimeout(20);
-  await page.locator('.wb-edge-right').click(); await settle(); release();
+  await toggleRight(page); await settle(); release();
   await page.waitForFunction(() => performance.getEntriesByType('resource').some(entry => /addons\/record-export\/index\.js/.test(entry.name)));
   await settle(); assert.equal(await page.locator('link[data-wb-addon-style]').count(), 0);
   assert.equal(await page.evaluate(() => __addonWorkers.active), 0);
@@ -90,7 +90,7 @@ try {
   const download = page.waitForEvent('download'); await page.locator('.wb-export-footer').getByRole('button', { name: '导出', exact: true }).click();
   assert.ok(fs.readFileSync(await (await download).path(), 'utf8').length > 0);
   const moduleRequests = requests.filter(url => /addons\/record-export\/index\.js/.test(url)).length;
-  await page.locator('.wb-edge-right').click(); await settle();
+  await toggleRight(page); await settle();
   assert.equal(await page.locator('link[data-wb-addon-style]').count(), 0);
   assert.equal(await page.evaluate(() => __addonWorkers.active), 0);
   await page.locator('[data-wb-tool="wb:export"]').click();
@@ -115,7 +115,7 @@ try {
   fail = false; await page.getByRole('button', { name: '重新载入', exact: true }).click();
   await page.getByRole('region', { name: '聊天记录分析与导出' }).waitFor();
   assert.equal(await page.locator('#send_textarea').inputValue(), 'WB_ADDON_FAILURE_DRAFT');
-  await page.locator('.wb-edge-right').click(); await page.waitForFunction(() => __addonWorkers.active === 0);
+  await toggleRight(page); await page.waitForFunction(() => __addonWorkers.active === 0);
   assert.deepEqual(failureTest.errors, []);
   pass('missing add-on files fail only in the right workspace; retry succeeds without losing the native input draft');
   const versionTest = await protectedSession(); page = versionTest.page; let incompatible = true, missingEntry = true;
@@ -137,7 +137,7 @@ try {
   missingEntry = false; await page.getByRole('button', { name: '重新载入', exact: true }).click();
   await page.getByRole('region', { name: '聊天记录分析与导出' }).waitFor();
   assert.ok(entryRequests.at(-1).includes('retry=2'));
-  await page.locator('.wb-edge-right').click(); await page.waitForFunction(() => __addonWorkers.active === 0);
+  await toggleRight(page); await page.waitForFunction(() => __addonWorkers.active === 0);
   assert.deepEqual(versionTest.errors, []);
   pass('incompatible API is rejected before import; a failed module request retries with a fresh URL and leaves the workbench usable');
   report.passed = true; report.errors = [...test.errors, ...failureTest.errors, ...versionTest.errors];

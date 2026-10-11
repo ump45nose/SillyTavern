@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { gunzipSync } from 'node:zlib';
-import { launch, session, ready, urls, artifacts, chooseLayout, openSettings } from './browser.mjs';
+import { launch, session, ready, urls, artifacts, chooseLayout, openSettings, toggleRight } from './browser.mjs';
 const directory = artifacts + '/utility-tools'; fs.mkdirSync(directory, { recursive: true });
 const browser = await launch(), checks = [], report = { checkedAt: new Date().toISOString(), checks };
 const pass = name => { checks.push(name); console.log('PASS', name); };
@@ -61,7 +61,7 @@ try {
   assert.equal(await tool(variable.id).isEnabled(), true);
   pass('anonymous helper identity survives native menu reordering; disabled/missing entries cannot invoke another tool');
 
-  await page.setViewportSize({ width: 1024, height: 768 }); await page.locator('.wb-edge-right').click(); await settle();
+  await page.setViewportSize({ width: 1024, height: 768 }); await toggleRight(page); await settle();
   await role('更多工具').click(); await page.getByRole('dialog', { name: '更多工具' }).waitFor();
   assert.ok(await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '记录导出', exact: true }).count());
   await page.evaluate(id => { const node = [...workbench.host.menuItems('tools')].find(item => item.id === id).node; window.__utilityDisabled = { node, previous: node.getAttribute('aria-disabled') }; node.setAttribute('aria-disabled', 'true'); }, variable.id); await settle();
@@ -69,7 +69,7 @@ try {
   await page.evaluate(() => { const { node, previous } = __utilityDisabled; previous === null ? node.removeAttribute('aria-disabled') : node.setAttribute('aria-disabled', previous); delete window.__utilityDisabled; }); await settle();
   assert.equal(await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '变量管理器', exact: true }).isEnabled(), true);
   const fit = await page.locator('.wb-composer-actions').evaluate(node => [...node.children].every(child => child.getBoundingClientRect().right <= node.getBoundingClientRect().right + 1)); assert.equal(fit, true);
-  await page.keyboard.press('Escape'); await page.locator('.wb-edge-right').click(); await page.setViewportSize({ width: 1496, height: 817 }); await settle();
+  await page.keyboard.press('Escape'); await toggleRight(page); await page.setViewportSize({ width: 1496, height: 817 }); await settle();
   pass('narrow composer keeps a single line with accessible overflow instead of overlapping send controls');
 
   await page.evaluate(async () => {
@@ -125,7 +125,7 @@ try {
   await page.locator('#send_textarea').fill('WB_EXPORT_INPUT_DRAFT'); await exportPanel.getByRole('button', { name: '取消', exact: true }).click();
   assert.ok((await exportPanel.innerText()).includes('分析已取消')); assert.equal(await page.locator('#send_textarea').inputValue(), 'WB_EXPORT_INPUT_DRAFT');
   await page.evaluate(async () => { SillyTavern.getContext = __utilityGetContext; delete window.__utilityGetContext; const c = SillyTavern.getContext(); c.chat.splice(0, c.chat.length, ...__utilityChat); delete window.__utilityChat; await (await import('/script.js')).printMessages(); workbench.host.refresh(); });
-  await page.locator('.wb-edge-right').click(); await settle();
+  await toggleRight(page); await settle();
   pass('chat changes discard prior analysis; a 10,000-message scan can be cancelled while editing the original input');
 
   if (await page.locator('.wb-edge-left[aria-expanded=true]').count()) { await page.locator('.wb-edge-left').click(); await settle(); }
@@ -133,7 +133,7 @@ try {
     await page.setViewportSize({ width, height }); await settle(); await openExport(); await waitResult(1); await settle();
     const geometry = await exportPanel.evaluate(node => ({ left: node.getBoundingClientRect().left, right: node.getBoundingClientRect().right, bottom: node.querySelector('.wb-export-footer').getBoundingClientRect().bottom, scrollHeight: node.querySelector('.wb-export-scroll').getBoundingClientRect().height, overflow: document.documentElement.scrollWidth > innerWidth }));
     assert.equal(geometry.overflow, false); assert.ok(geometry.right <= width + 1 && geometry.left >= 0 && geometry.bottom <= height + 1 && geometry.scrollHeight > 100, JSON.stringify(geometry));
-    await page.screenshot({ path: directory + `/export-noval-${width}.png` }); await page.locator('.wb-edge-right').click(); await settle();
+    await page.screenshot({ path: directory + `/export-noval-${width}.png` }); await toggleRight(page); await settle();
   }
   await page.setViewportSize({ width: 1496, height: 817 });
   await chooseLayout(page,'RP'); await settle();
@@ -143,7 +143,7 @@ try {
   assert.equal(await page.evaluate(() => __utilityNative.input === document.getElementById('send_textarea') && __utilityNative.chat === document.getElementById('chat')), true);
   assert.deepEqual(await page.evaluate(() => workbench.host.prefs().pinnedTools), pins);
   file = await downloadText(); assert.ok(file.text.length > 0);
-  await page.screenshot({ path: directory + '/export-rp-1496.png' }); await page.locator('.wb-edge-right').click(); await settle();
+  await page.screenshot({ path: directory + '/export-rp-1496.png' }); await toggleRight(page); await settle();
   await chooseLayout(page,'Noval'); await settle();
   pass('1024 and 2992 widths keep the export footer and scrolling area usable; RP shares tools, download and original native nodes');
 
