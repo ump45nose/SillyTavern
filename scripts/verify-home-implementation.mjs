@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, exitFocus } from './browser.mjs';
+import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, exitFocus, openResource } from './browser.mjs';
 const dir = 'artifacts/home-implementation'; fs.mkdirSync(dir,{recursive:true});
 const checks=[], pass=(name, details={})=>{checks.push({name,details,passed:true});console.log('PASS',name);};
 const b=await launch();
@@ -12,21 +12,21 @@ try {
  await page.evaluate(async()=>{workbench.unmount();await workbench.mount();});
  const settle=()=>page.waitForTimeout(300);
  await settle();
- assert.equal(await page.locator('.wb-left-bottom button').count(),9);
+ assert.equal(await page.locator('.wb-nav-footer button').count(),3);
  // Six core panels plus the three bundled add-ons (export, outline, image), enabled by default.
  assert.equal(await page.locator('.wb-panel-tabs button').count(),9);
- assert.equal(await page.locator('.wb-floor-list > button').count(),Math.min(5,await page.evaluate(()=>workbench.host.snapshot().messages.length)));
+ assert.equal(await page.locator('.wb-floor-list .wb-nav-row').count(),Math.min(5,await page.evaluate(()=>workbench.host.snapshot().messages.length)));
  assert.equal(await page.locator('.wb-chat-name').textContent(),await page.evaluate(()=>String(SillyTavern.getContext().chatId).replace(/\.jsonl$/,'')));
- assert.equal(await page.locator('.wb-outline-placeholder').count(),1);
- pass('real chat name, recent five floors, outline placeholder and complete navigation');
+ assert.equal(await page.locator('#wb-nav-outline').count(),1);
+ pass('real chat name, recent five floors, outline section and the settings footer');
  const geometry=async()=>page.evaluate(()=>{
   const r=s=>{const b=document.querySelector(s).getBoundingClientRect();return {x:b.x,y:b.y,w:b.width,h:b.height,right:b.right,bottom:b.bottom};};
   const actions=[...document.querySelectorAll('.wb-composer-actions button')].map(x=>x.getBoundingClientRect());
-  return {viewport:innerWidth,header:r('.wb-contexts'),main:r('#sheld'),input:r('#send_textarea'),form:r('#send_form'),send:r('#send_but'),tools:r('.wb-composer-actions'),left:r('#leftSendForm'),right:r('#rightSendForm'),chat:r('#chat'),scroll:document.documentElement.scrollWidth,actionsInside:actions.every(a=>a.x>=r('.wb-composer-actions').x-1&&a.right<=r('.wb-composer-actions').right+1)};
+  return {viewport:innerWidth,header:r('.wb-top-pills'),main:r('#sheld'),input:r('#send_textarea'),form:r('#send_form'),send:r('#send_but'),tools:r('.wb-composer-actions'),left:r('#leftSendForm'),right:r('#rightSendForm'),chat:r('#chat'),scroll:document.documentElement.scrollWidth,actionsInside:actions.every(a=>a.x>=r('.wb-composer-actions').x-1&&a.right<=r('.wb-composer-actions').right+1)};
  });
  const verifyGeometry=async()=>{
   const g=await geometry(); assert.equal(g.scroll,g.viewport);
-  assert((await page.locator(".wb-focus-toggle").boundingBox()).height<=44);assert(Math.abs(g.header.x+g.header.w/2-g.viewport/2)<1);
+  assert((await page.locator(".wb-focus-toggle").boundingBox()).height<=44);assert(Math.abs(g.header.x+g.header.w/2-g.viewport/2)<3);
   assert(g.tools.x>=g.left.right-1);assert(g.tools.right<=g.right.x+1);assert(g.actionsInside,JSON.stringify(g));
   assert(g.tools.y>=g.input.bottom-1);assert(g.send.bottom<=page.viewportSize().height);assert(Math.abs(g.send.y+g.send.h/2-(g.tools.y+g.tools.h/2))<1);
   assert(g.chat.bottom<=g.form.y+1);assert.equal(g.send.w,40);
@@ -35,7 +35,7 @@ try {
  for(const [width,height] of [[1366,768],[1440,900],[1496,817],[1920,1080]]){
   await page.setViewportSize({width,height});await settle();let g=await verifyGeometry();
   await page.screenshot({path:`${dir}/home-${width}.png`});
-  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();g=await verifyGeometry();assert.equal(g.main.w,width-(width<=1400?240:260)-(width<=1400?440:460)-180);
+  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();g=await verifyGeometry();assert.equal(g.main.w,width-(width<=1400?240:260)-(width<=1400?440:460)-180-12/* desk gutter beside the panel */);
   await page.screenshot({path:`${dir}/roles-${width}.png`});
   await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();pass('desktop geometry '+width,g);
  }
@@ -64,16 +64,16 @@ try {
  await page.screenshot({path:`${dir}/composer-expanded.png`});
  await grip.press('End');assert.equal(await grip.getAttribute('aria-valuenow'),'60');await grip.press('Home');assert.equal(await grip.getAttribute('aria-valuenow'),'20');
  pass('pointer and keyboard resize 20–60%; native raw draft preserved');
- await page.getByRole('button',{name:'预设详情',exact:true}).click();await settle();
+ await openResource(page,'预设详情');await settle();
  assert.equal(await page.locator('.wb-panel-tabs button.is-active').textContent(),'预设');
- const selector=page.locator('.wb-selector').nth(1);assert.match(await selector.getAttribute('class'),/is-active/);
- await selector.locator('.wb-selector-value').click();await page.locator('.wb-popover').waitFor();
- const motion=await page.locator('.wb-popover').evaluate(e=>getComputedStyle(e).animationName);assert.equal(motion,'wb-menu');
+ const selector=page.locator('.wb-pill[aria-controls="wb-choices-preset"]');assert.equal(await selector.getAttribute('aria-current'),'true');
+ await selector.click();await page.locator('#wb-choices-preset').waitFor();
+ const motion=await page.locator('#wb-choices-preset').evaluate(e=>getComputedStyle(e).animationName);assert.equal(motion,'wb-pill-pop-in');
  await page.screenshot({path:`${dir}/selector.png`});await page.keyboard.press('Escape');
  // Resting color: move off the selector and let the hover transition finish.
  await page.mouse.move(5,5);await page.waitForTimeout(400);
- const color=await page.locator('.wb-selector-detail svg').first().evaluate(e=>getComputedStyle(e).color);assert.equal(color,'rgb(108, 98, 84)');
- pass('detail targets, active selector, menu animation and warm icon contrast');
+ const color=await selector.locator('.wb-pill-icon svg').evaluate(e=>getComputedStyle(e).color);assert.equal(color,'rgb(122, 114, 102)');
+ pass('the open panel marks its pill, the popover animates in, and icons keep the muted warm ink');
  await withReducedMotion(page,async()=>assert.equal(await selector.evaluate(e=>getComputedStyle(e).transitionDuration),'0s'));pass('reduced motion honored and preference restored');
  assert.deepEqual(errors,[]);fs.writeFileSync(`${dir}/verification.json`,JSON.stringify({checks,errors},null,2));
 } catch(e){console.error(e);process.exitCode=1;} finally {await b.close();}

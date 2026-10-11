@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { launch, session, ready, urls } from "./browser.mjs";
+import { launch, session, ready, urls, openResource } from "./browser.mjs";
 
 // Visual QA is separate from pointer tests. Art uses the installed official sample,
 // projected temporarily through its native nodes; no character/chat edits occur.
@@ -35,7 +35,7 @@ try {
   await page.screenshot({ path:`${dir}/native-input-1496.png` });
   await role("展开 RP 输入区").click(); await settle(); await page.screenshot({ path:`${dir}/native-expanded-1496.png` });
   await role("还原 RP 输入区").click(); await settle(); await role("上一段对白").click(); await settle();
-  await role("展开左边栏").click(); await role("世界书详情").click(); await settle();
+  await role("展开左边栏").click(); await openResource(page,'世界书详情'); await settle();
   await page.screenshot({ path:`${dir}/native-both-1496.png` });
   await page.setViewportSize({ width:1366, height:768 }); await settle(); await page.screenshot({ path:`${dir}/native-both-1366.png` });
   await role("关闭右栏").click(); await role("收纳左边栏").click(); await page.setViewportSize({ width:1496, height:817 }); await settle();

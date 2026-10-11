@@ -145,19 +145,6 @@
       transform 220ms,
       opacity 160ms;
   }
-  .wb-identity {
-    min-width: 0;
-    max-width: 100%;
-    gap: 11px !important;
-  }
-  .wb-identity img,
-  .wb-identity .wb-avatar-fallback {
-    width: 36px;
-    height: 36px;
-  }
-  .wb-identity strong {
-    font-size: 15px;
-  }
   .wb-contexts {
     width: 100%;
     gap: 8px;
@@ -213,19 +200,6 @@
   .wb-dot {
     width: 7px;
     height: 7px;
-  }
-  .wb-top-right {
-    justify-self: end;
-    gap: 6px;
-  }
-  .wb-top-right button {
-    border: 0;
-    background: transparent;
-    color: var(--wb-control-ink);
-    font-size: 13px;
-  }
-  .wb-top-right button:is(:hover, :focus-visible) {
-    background: #817a6c0a;
   }
   .wb-reading-bar {
     position: absolute;
@@ -376,19 +350,6 @@
     opacity: 1;
     visibility: visible;
   }
-  .wb-outline-placeholder {
-    flex: 1;
-    min-height: 132px;
-  }
-  .wb-outline-placeholder .wb-section-title {
-    padding: 0 3px 16px;
-    color: var(--wb-control-ink);
-  }
-  .wb-floors,
-  .wb-recent-section {
-    border-top: 1px solid var(--wb-line);
-    padding: 9px 0;
-  }
   .wb-fold-toggle {
     display: flex !important;
     width: 100%;
@@ -409,49 +370,6 @@
   .wb-fold-toggle .is-rotated {
     transform: rotate(180deg);
   }
-  .wb-floor-list {
-    max-height: 245px;
-    scrollbar-width: thin;
-    transition: max-height 220ms;
-  }
-  .wb-floor-list.is-expanded {
-    max-height: 360px;
-  }
-  .wb-floor-list > button {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 5px;
-    border-radius: 6px;
-  }
-  .wb-floor-list .wb-floor-number {
-    flex: none;
-    width: 20px;
-    font: 11px Georgia;
-    color: #a39987;
-    display: block;
-  }
-  .wb-floor-list .wb-floor-copy {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    gap: 2px;
-  }
-  .wb-floor-copy small {
-    font-size: 10px;
-  }
-  .wb-floor-list .wb-floor-copy > span {
-    display: block;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    color: var(--wb-control-ink);
-    font-size: 11px;
-  }
-  .wb-nav-empty {
-    font-size: 11px;
-    color: var(--wb-muted);
-    padding: 8px 2px;
-  }
   .wb-fold-body {
     display: grid;
     grid-template-rows: 0fr;
@@ -471,34 +389,6 @@
   .wb-fold-body.is-open > div {
     max-height: 170px;
     overflow: auto;
-  }
-  .wb-left-bottom {
-    grid-template-columns: 1fr 1fr;
-    gap: 2px 6px;
-    padding-top: 12px;
-    flex-shrink: 0;
-  }
-  .wb-left-bottom button {
-    padding: 8px 5px;
-    min-height: 34px;
-    gap: 8px;
-    font-size: 11px;
-    border-radius: 7px;
-  }
-  .wb-nav-footer {
-    display: flex;
-    justify-content: space-between;
-    padding-top: 10px;
-    margin-top: 10px;
-    border-top: 1px solid var(--wb-line);
-  }
-  .wb-nav-footer button {
-    padding: 5px 3px;
-    font-size: 10px;
-    min-height: 28px;
-    border: 0;
-    background: transparent;
-    color: var(--wb-muted);
   }
   .wb-right {
     top: var(--wb-header);
@@ -692,9 +582,6 @@
   body.wb-active .wb-composer-tools {
     position: static;
   }
-  .wb-outline-placeholder {
-    min-height: 138px;
-  }
   .wb-selector-value > svg {
     transition: transform 160ms ease;
   }
@@ -705,13 +592,7 @@
   body.wb-active .wb-ui svg[fill="currentColor"] * {
     fill: currentColor !important;
   }
-  .wb-top-right .wb-focus-toggle {
-    white-space: nowrap;
-    padding: 8px 6px;
-    flex-shrink: 0;
-  }
   /* Resource sidebar v2: one paper surface, quiet sections, persistent save bar. */
-  .wb-top-right .wb-top-action,
   .wb-reading-bar .wb-top-action {
     width: 44px;
     height: 44px;
@@ -721,7 +602,6 @@
     border-radius: 10px;
     background: transparent;
   }
-  .wb-top-right .wb-top-action.is-active,
   .wb-reading-bar .wb-top-action.is-active {
     background: var(--wb-selected) !important;
     color: var(--wb-accent) !important;

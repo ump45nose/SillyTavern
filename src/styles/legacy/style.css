@@ -193,15 +193,6 @@
     background: var(--wb-paper);
     z-index: 20;
   }
-  .wb-identity {
-    background: transparent !important;
-    border: 0 !important;
-    padding: 0 !important;
-    min-width: 110px;
-    max-width: 190px;
-    justify-content: flex-start !important;
-  }
-  .wb-identity img,
   .wb-avatar-fallback {
     width: 32px;
     height: 32px;
@@ -213,11 +204,6 @@
     display: grid;
     place-items: center;
     font-family: Georgia;
-  }
-  .wb-identity strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .wb-contexts {
     display: flex;
@@ -266,11 +252,6 @@
   }
   .wb-dot.online {
     background: #5f8b6f;
-  }
-  .wb-top-right {
-    display: flex;
-    gap: 12px;
-    align-items: center;
   }
   .wb-pop-dismiss {
     position: fixed;
@@ -373,50 +354,6 @@
   }
   .wb-left summary small {
     float: right;
-  }
-  .wb-floor-list {
-    max-height: 260px;
-    overflow: auto;
-  }
-  .wb-floor-list button {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    width: 100%;
-    background: transparent;
-    border: 0;
-    padding: 8px 0;
-    font-size: 12px;
-  }
-  .wb-floor-list span {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .wb-recent {
-    width: 100%;
-    border: 0 !important;
-    justify-content: flex-start !important;
-    font-size: 12px !important;
-    text-align: left;
-    overflow-wrap: anywhere;
-    background: none !important;
-  }
-  .wb-left-bottom {
-    border-top: 1px solid var(--wb-line);
-    padding-top: 14px;
-    display: grid;
-    gap: 3px;
-  }
-  .wb-left-bottom button {
-    justify-content: flex-start;
-    border: 0;
-    background: none;
-    color: var(--wb-muted);
-    font-size: 12px;
-    padding: 8px 2px;
   }
   .wb-right {
     position: absolute;
@@ -1113,19 +1050,12 @@
       gap: 8px;
       padding: 0 14px;
     }
-    .wb-identity {
-      min-width: 80px;
-      max-width: 135px;
-    }
     .wb-selector > button:first-child {
       font-size: 12px;
       padding: 8px;
     }
     .wb-contexts {
       gap: 5px;
-    }
-    .wb-top-right {
-      gap: 2px;
     }
     .wb-world.is-deep .wb-world-grid {
       grid-template-columns: 155px 205px minmax(0, 1fr) 185px;

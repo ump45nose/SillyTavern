@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { gunzipSync } from "node:zlib";
-import { launch, session, ready, urls, artifacts } from "./browser.mjs";
+import { launch, session, ready, urls, artifacts, chooseLayout } from "./browser.mjs";
 
 // Real validation UI, with settings persisted only inside this browser's response replay.
 // The user's saved RP demo, preferences, persona and chats are not changed by verification.
@@ -26,10 +26,11 @@ try {
   await page.setViewportSize({ width:1496, height:817 });
   await ready(page, urls.validation, { probe:true }); await page.waitForTimeout(1200);
   const role = name => page.getByRole("button", { name, exact:true });
-  const option = name => page.getByRole("menuitemradio", { name, exact:false });
+  const switcher = () => page.getByRole("radiogroup", { name:"切换工作台", exact:true });
+  const option = name => switcher().getByRole("radio", { name, exact:true });
   const settle = () => page.waitForTimeout(450);
   const collapsed = () => page.evaluate(() => document.body.classList.contains("wb-rp-top-collapsed"));
-  const choose = async name => { await role("切换工作台").click(); await option(name).click(); await page.waitForFunction(() => document.querySelector('.wb-layout-trigger[aria-expanded="false"]:not(:disabled)')); await settle(); };
+  const choose = async name => { await chooseLayout(page, name); await settle(); };
   await page.evaluate(() => { workbench.host.preference({ layout:"rp", rpTopAuto:false }); window.__layoutNative = { chat:document.getElementById("chat"), input:document.getElementById("send_textarea"), form:document.getElementById("send_form") }; }); await settle();
   assert.equal(await role("固定顶栏").getAttribute("aria-pressed"), "true");
   assert.equal(await role("固定顶栏").locator(".lucide-pin").count(), 1);
@@ -55,36 +56,36 @@ try {
 
   await role("固定顶栏").click(); await page.mouse.move(740, 400); await settle();
   await page.mouse.move(740, 4); await settle();
-  await page.locator(".wb-selector-value").first().click(); await page.mouse.move(750, 400); await settle();
-  assert.equal(await collapsed(), false); await role("关闭选择框").click(); await settle();
-  await role("切换工作台").click(); await page.mouse.move(750, 400); await settle();
-  assert.equal(await collapsed(), false); assert.equal(await option("RP").getAttribute("aria-checked"), "true");
-  assert.equal(await page.locator(".wb-layout-menu svg").count(), 3);
-  await page.screenshot({ path:directory + "/rp-menu.png" });
-  await option("RP").press("ArrowDown"); assert.match(await page.evaluate(() => document.activeElement.textContent), /原生/);
-  await page.keyboard.press("Escape"); await settle();
-  assert.equal(await role("切换工作台").getAttribute("aria-expanded"), "false");
-  pass("resource and mode menus keep the floating header visible; mode options have icons and keyboard navigation");
+  await page.locator(".wb-pill").first().click(); await page.mouse.move(750, 400); await settle();
+  assert.equal(await collapsed(), false); await page.keyboard.press("Escape"); await settle();
+  assert.equal(await option("RP").getAttribute("aria-checked"), "true");
+  assert.equal(await switcher().locator('[role="radio"] svg').count(), 3);
+  assert.deepEqual(await switcher().locator('[role="radio"]').evaluateAll(ns => ns.map(n => n.tabIndex)), [-1, 0, -1]);
+  await page.screenshot({ path:directory + "/rp-switcher.png" });
+  pass("an open resource popover keeps the floating header visible; every mode has an icon and one tab stop");
 
   await page.evaluate(() => { window.__denyLayout = workbench.guards.add(() => false); });
-  await role("切换工作台").click(); await option("Noval").click(); await settle();
+  await option("Noval").click(); await settle();
   assert.equal(await page.evaluate(() => workbench.host.prefs().layout), "rp");
-  await page.evaluate(() => window.__denyLayout()); await page.keyboard.press("Escape"); await settle();
+  assert.equal(await option("RP").getAttribute("aria-checked"), "true");
+  await page.evaluate(() => window.__denyLayout()); await settle();
   pass("an editor's unsaved-change guard can cancel a layout switch");
 
   await role("输入回应").click(); await page.locator("#send_textarea").fill("WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
   await choose("Noval");
   assert.equal(await page.locator(".wb-reading-bar").count(), 1);
   assert.equal(await page.locator('.wb-reading-bar .lucide-theater').count(), 0);
-  assert.equal(await page.locator('.wb-layout-trigger').innerText(), "");
+  assert.deepEqual(await switcher().locator('[role="radio"]').allInnerTexts(), ["Noval", "", ""]);
   assert.equal(await page.locator("#send_textarea").inputValue(), "WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
-  for (const [direction, expected] of [["上一个", "native"], ["上一个", "rp"], ["上一个", "novel"], ["下一个", "rp"], ["下一个", "native"], ["下一个", "novel"]]) {
-    await page.getByRole("button", {name:new RegExp(`^${direction}工作台`)}).click();
-    await page.waitForFunction(() => document.querySelector('.wb-layout-trigger:not(:disabled)')); await settle();
+  await option("Noval").focus();
+  for (const [key, expected] of [["ArrowLeft", "native"], ["ArrowLeft", "rp"], ["ArrowLeft", "novel"], ["ArrowRight", "rp"], ["ArrowRight", "native"], ["ArrowRight", "novel"]]) {
+    await page.keyboard.press(key);
+    await page.waitForFunction(() => !document.querySelector('.wb-layout-controls[aria-busy="true"]')); await settle();
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-checked")), "true");
     assert.equal(await page.evaluate(() => workbench.mounted ? workbench.host.prefs().layout : "native"), expected);
     assert.equal(await page.locator("#send_textarea").inputValue(), "WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
   }
-  pass("icon-only center opens the menu; both quick arrows cycle modes and preserve drafts");
+  pass("only the current mode is labelled; arrow keys cycle modes, keep focus on the choice and preserve drafts");
   await ready(page, urls.validation, { probe:true }); await settle();
   assert.equal(await page.evaluate(() => workbench.host.prefs().layout), "novel");
   await page.screenshot({ path:directory + "/noval.png" });
@@ -92,7 +93,7 @@ try {
   await page.evaluate(() => { window.__layoutNative = { chat:document.getElementById("chat"), input:document.getElementById("send_textarea"), form:document.getElementById("send_form") }; });
   await page.locator("#send_textarea").fill("WB_LAYOUT_NATIVE_DRAFT"); await choose("RP"); await choose("原生");
   assert.equal(await page.evaluate(() => workbench.mounted), false);
-  assert.equal(await role("切换工作台").count(), 1);
+  assert.equal(await switcher().count(), 1);
   assert.equal(await page.locator("#send_textarea").inputValue(), "WB_LAYOUT_NATIVE_DRAFT");
   assert.equal(await page.evaluate(() => __layoutNative.chat === document.getElementById("chat") && __layoutNative.input === document.getElementById("send_textarea") && __layoutNative.form === document.getElementById("send_form") && !document.querySelector(".wb-rp-stage,.wb-rp-part")), true);
   await ready(page, urls.validation); await settle();
@@ -109,7 +110,7 @@ try {
       await page.setViewportSize({ width, height }); await settle();
       const rects = await page.evaluate(() => {
         const rect = selector => { const { left,right,top,bottom } = document.querySelector(selector).getBoundingClientRect(); return { left,right,top,bottom }; };
-        return { width:innerWidth, contexts:rect(".wb-contexts"), actions:rect(".wb-top-right"), pin:rect(".wb-top-right button:last-of-type"), trigger:rect(".wb-layout-controls"), eye:document.querySelector(".wb-rp-visibility") ? rect(".wb-rp-visibility") : null, overflow:document.documentElement.scrollWidth > innerWidth };
+        return { width:innerWidth, contexts:rect(".wb-top-pills"), actions:rect(".wb-top-tools"), pin:rect(".wb-top-tools button:last-of-type"), trigger:rect(".wb-layout-controls"), eye:document.querySelector(".wb-rp-visibility") ? rect(".wb-rp-visibility") : null, overflow:document.documentElement.scrollWidth > innerWidth };
       });
       assert.equal(rects.overflow, false); assert.ok(rects.contexts.right <= rects.actions.left + 1, JSON.stringify(rects));
       assert.ok(rects.pin.right < rects.trigger.left, JSON.stringify(rects)); assert.ok(rects.trigger.right <= width, JSON.stringify(rects));
@@ -217,7 +218,7 @@ try {
   await page.screenshot({path:directory+'/rp-edges-floating.png'});
   await page.mouse.move(740,4); await settle(); assert.equal(await role("固定顶栏").getAttribute("aria-pressed"), "false");
   await role("固定顶栏").click(); await page.mouse.move(750,400); await settle();
-  await role("隐藏界面").click(); await settle(); assert.equal(await role("切换工作台").isVisible(), true);
+  await role("隐藏界面").click(); await settle(); assert.equal(await switcher().isVisible(), true);
   await role("显示界面").click(); await settle();
   pass("appearance checkbox agrees with pin state and the mode entry remains usable when chrome is hidden");
   assert.deepEqual(errors, []);

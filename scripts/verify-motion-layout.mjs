@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { launch, session, ready, urls, createCharacter, withReducedMotion } from './browser.mjs';
+import { launch, session, ready, urls, createCharacter, withReducedMotion, openSettings } from './browser.mjs';
 
 const dir='artifacts/motion-layout';fs.mkdirSync(dir,{recursive:true});
 const checks=[],pass=(name,details)=>{checks.push({name,passed:true,details});console.log('PASS',name,JSON.stringify(details??{}));};
@@ -8,7 +8,7 @@ const browser=await launch();let page,errors=[],passed=false;
 try {
  ({page,errors}=await session(browser));await page.setViewportSize({width:1496,height:817});await ready(page,urls.validation,{probe:true});await createCharacter(page);
  const settle=()=>page.waitForTimeout(330),ws=()=>page.getByRole('dialog',{name:'独立设置工作区',exact:true});
- const open=async name=>{await page.locator('.wb-left-bottom').getByRole('button',{name,exact:true}).click();await ws().waitFor();await settle();};
+ const open=async name=>{await openSettings(page,name);await ws().waitFor();await settle();};
  const close=async()=>{await page.getByRole('button',{name:'返回工作台',exact:true}).click();await page.locator('.wb-settings-workspace').waitFor({state:'detached'});};
  const preference=()=>page.evaluate(()=>({setting:SillyTavern.getContext().powerUserSettings.reduced_motion,body:document.body.classList.contains('reduced-motion')}));
  assert.deepEqual(await preference(),{setting:false,body:false},'normal-motion verification requires the native preference enabled');
@@ -37,9 +37,9 @@ try {
  await assert.rejects(withReducedMotion(page,async()=>{throw new Error('test restoration');}),/test restoration/);assert.deepEqual(await preference(),{setting:false,body:false});
  await user.evaluate(()=>__motionFrame.remove());await user.hover();await settle();await page.screenshot({path:dir+'/reading-expanded-1496.png'});pass('reduced-motion checks restore the native preference, including failed checks');
  await button.click();await settle();assert.equal(await user.locator('.wb-user-heading small').evaluate(n=>getComputedStyle(n).opacity),'0');await button.click();await settle();pass('collapsed preview yields to hover metadata without overlapping text');
- const outline=page.locator('.wb-outline-placeholder');
- const folding=await outline.evaluate(async n=>{const b=n.querySelector('button'),body=n.querySelector('.wb-fold-body');const start=body.getBoundingClientRect().height;b.click();await new Promise(r=>setTimeout(r,60));const mid=body.getBoundingClientRect().height,animations=body.getAnimations().length;await new Promise(r=>setTimeout(r,250));const end=body.getBoundingClientRect().height,s=getComputedStyle(b);return {start,mid,end,animations,border:s.borderTopColor,borderWidth:s.borderTopWidth};});
- assert(folding.mid>folding.start&&folding.mid<folding.end);assert(folding.animations>0);assert.equal(folding.borderWidth,'1px');assert(!folding.border.endsWith('0)'));await page.screenshot({path:dir+'/home-selection-1496.png'});await outline.locator('.wb-fold-toggle').click();pass('fold animation and visible clay selection boundary',folding);
+ const outline=page.locator('#wb-nav-floors');await outline.locator('.wb-nav-toggle').click();await settle();
+ const folding=await outline.evaluate(async n=>{const b=n.querySelector('button'),body=n.querySelector('.wb-fold-body');const start=body.getBoundingClientRect().height;b.click();await new Promise(r=>setTimeout(r,60));const mid=body.getBoundingClientRect().height,animations=body.getAnimations().length;await new Promise(r=>setTimeout(r,250));const end=body.getBoundingClientRect().height,s=getComputedStyle(b);return {start,mid,end,animations,caret:getComputedStyle(b.querySelector('.wb-nav-caret')).transform};});
+ assert(folding.mid>folding.start&&folding.mid<folding.end);assert(folding.animations>0);assert.equal(folding.caret,'none');await page.screenshot({path:dir+'/home-selection-1496.png'});pass('nav sections fold with animation and an upright caret when open',folding);
  await open('回复格式');
  const chrome=await ws().evaluate(n=>({header:n.querySelector('.wb-settings-header').getBoundingClientRect().height,tabs:n.querySelector('.wb-settings-subnav').getBoundingClientRect().height,repeatedHeading:n.querySelectorAll('.wb-component-settings>.wb-designed-page-head').length,firstControl:n.querySelector('#ContextSettings .wb-select-trigger').getBoundingClientRect().y}));
  assert.equal(chrome.header,58);assert.equal(chrome.tabs,40);assert.equal(chrome.repeatedHeading,0);assert(chrome.firstControl<180);await page.screenshot({path:dir+'/formatting-1496.png'});

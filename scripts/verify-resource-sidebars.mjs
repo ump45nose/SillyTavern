@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue,mockApi,exitFocus,sameColor} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue,mockApi,exitFocus,sameColor,openResource} from './browser.mjs';
 const dir='artifacts/resource-sidebars';fs.mkdirSync(dir,{recursive:true});const b=await launch(),checks=[];const pass=name=>{checks.push(name);console.log('PASS',name)};
 try {
  const {page,errors}=await session(b);await ready(page,urls.validation,{probe:true});await createCharacter(page);await connect(page);
  const settle=()=>page.waitForTimeout(300);
- const open=async label=>{await page.getByRole('button',{name:label+'详情',exact:true}).click();await settle();};
- const order=await page.locator('.wb-top-right button').evaluateAll(es=>es.map(e=>({label:e.getAttribute('aria-label'),text:e.textContent,size:e.querySelector('svg')?.getAttribute('width')})));
- assert.deepEqual(order.map(x=>x.label),['Trace','专注模式']);assert(order.every(x=>x.text===''&&x.size==='24'));
- await page.getByRole('button',{name:'专注模式',exact:true}).click();await settle();assert.equal(await page.getByRole('button',{name:'退出专注'}).getAttribute('aria-pressed'),'true');await exitFocus(page);pass('large icon-only actions, swapped positions and active focus color');
+ const open=async label=>{await openResource(page,label);await settle();};
+ const order=await page.locator('.wb-top-tools button').evaluateAll(es=>es.map(e=>({label:e.getAttribute('aria-label'),text:e.textContent,size:e.querySelector('svg')?.getAttribute('width')})));
+ assert.deepEqual(order.map(x=>x.label),['Trace','专注模式']);assert(order.every(x=>x.text===''&&x.size==='18'));
+ await page.getByRole('button',{name:'专注模式',exact:true}).click();await settle();assert.equal(await page.getByRole('button',{name:'退出专注'}).getAttribute('aria-pressed'),'true');await exitFocus(page);pass('icon-only header tools in order; focus mode exits from its pill');
  await page.evaluate(async()=>{const h=workbench.host,c=SillyTavern.getContext();const base=h.presetData(c.getPresetManager().getSelectedPresetName());await c.getPresetManager().savePreset('WorkbenchSidebarPreset', {...base,vendor_sidebar_keep:{yes:true}});h.refresh();await h.select('preset','WorkbenchSidebarPreset');});
  await open('预设');
  assert.equal(await page.locator('.wb-resources .wb-resource-list').count(),0);
@@ -16,7 +16,7 @@ try {
  await page.getByRole('textbox',{name:'搜索预设',exact:true}).fill('WorkbenchSidebarPreset');
  const presetChoice=page.locator('.wb-resource-menu .wb-resource-choice').first();await presetChoice.locator('.wb-picker-copy').hover();await settle();
  assert.equal(await presetChoice.locator('.wb-picker-copy').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
- {const bg=await presetChoice.evaluate(e=>getComputedStyle(e).backgroundColor);/* 0.4 mixes the selection tint into the surface. */assert(sameColor(bg,'rgb(242, 233, 222)'),bg);}
+ {const bg=await presetChoice.evaluate(e=>getComputedStyle(e).backgroundColor);/* E1: the selection tint is the token itself. */assert(sameColor(bg,'rgb(240, 230, 218)'),bg);}
  await presetChoice.locator('.wb-picker-copy').click();
  await page.getByLabel('流式传输',{exact:true}).waitFor();
  const first=page.locator('.wb-prompt-row input').first(), was=await first.isChecked();await first.setChecked(!was);
@@ -71,7 +71,7 @@ try {
  assert.equal(await page.locator('#rm_api_block .wb-connection-bridged,#rm_api_block .wb-connection-profile-original').count(),0);
  assert.equal(await page.getByRole('button',{name:'编辑条目',exact:true}).count(),0);assert.equal(await page.getByLabel('世界书正文',{exact:true}).getAttribute('readonly'),null);await page.screenshot({path:dir+'/world-1440.png'});pass('complete native connection form is reachable and same nodes restore on panel switch');
  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();await connect(page);await page.evaluate(()=>workbench.clear());await page.locator('#send_textarea').fill('wb_lore WB 右栏 Trace');await page.locator('#send_but').click();await page.waitForFunction(()=>workbench.records.at(-1)?.status===200&&!SillyTavern.getContext().streamingProcessor);
- await page.locator('.wb-top-right').getByRole('button',{name:'Trace',exact:true}).click();await settle();assert.equal(await page.locator('.wb-top-right [aria-label=Trace]').getAttribute('aria-pressed'),'true');
+ await page.locator('.wb-top-tools').getByRole('button',{name:'Trace',exact:true}).click();await settle();assert.equal(await page.locator('.wb-top-tools [aria-label=Trace]').getAttribute('aria-pressed'),'true');
  const r=await page.evaluate(()=>({composition:workbench.records.at(-1).composition,timestamp:workbench.records.at(-1).timestamp}));assert(r.composition?.counts);assert(r.timestamp>0);assert.equal(await page.locator('.wb-context-legend > div').count(),6);await page.screenshot({path:dir+'/trace-1440.png'});
  await page.getByRole('button',{name:'查看完整 Prompt'}).click();await page.getByRole('dialog').waitFor();assert(await page.getByRole('dialog').getByText('完整请求与参数',{exact:true}).isVisible());await page.getByRole('button',{name:'返回工作台',exact:true}).click();pass('real trace composition, request time and full prompt; active Trace indicator');
  for(const [width,height] of [[1366,768],[1440,900],[1920,1080]]){await page.setViewportSize({width,height});for(const kind of ['预设','用户设定','连接','世界书']){await open(kind);const overflow=await page.locator('.wb-right').evaluate(e=>[e,...e.querySelectorAll('.wb-resource-detail,.wb-native-slot')].some(n=>n.scrollWidth>n.clientWidth+1));assert.equal(overflow,false,kind+' '+width);if(kind==='预设'){const balance=await page.locator('.wb-preset-editor').evaluate(e=>e.querySelector('.wb-prompt-list').getBoundingClientRect().height-e.querySelector('.wb-preset-scroll').getBoundingClientRect().height);assert(balance>0,'prompt list remains dominant '+width);}await page.screenshot({path:`${dir}/${kind}-${width}.png`});}}

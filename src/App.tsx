@@ -376,6 +376,22 @@ export default function App({
   useLayoutEffect(() => {
     for (const [name, on] of Object.entries(classes)) document.body.classList.toggle(name, on);
   }, [Object.values(classes).join()]);
+  useLayoutEffect(() => {
+    const root = document.documentElement,
+      query = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = prefs.theme === "dark" || (prefs.theme === "system" && query.matches);
+      if (dark) root.dataset.wbTheme = "dark";
+      else delete root.dataset.wbTheme;
+    };
+    apply();
+    if (prefs.theme !== "system") return () => delete root.dataset.wbTheme;
+    query.addEventListener("change", apply);
+    return () => {
+      query.removeEventListener("change", apply);
+      delete root.dataset.wbTheme;
+    };
+  }, [prefs.theme]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const { s } = live.current;
@@ -561,9 +577,7 @@ export default function App({
               onClick={() => {
                 setTopHot(true);
                 setTopFocus(true);
-                requestAnimationFrame(() =>
-                  document.querySelector<HTMLButtonElement>(".wb-selector-value")?.focus(),
-                );
+                requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".wb-pill")?.focus());
               }}
             >
               <span />
@@ -573,22 +587,27 @@ export default function App({
       )}
       {!mobile && !rp && (
         <div className="wb-reading-bar">
-          <span className="wb-chat-name" title={snap.chatName}>
-            {snap.chatName || "开始一段新的故事"}
-          </span>
+          <nav className="wb-reading-crumbs" aria-label="当前位置">
+            <span>{snap.groupName || snap.character?.name || "Noval"}</span>
+            <ChevronRight size={12} aria-hidden="true" />
+            <span className="wb-chat-name" title={snap.chatName}>
+              {snap.chatName || "开始一段新的故事"}
+            </span>
+          </nav>
           <span className="wb-grow" />
-          <ReadingSettings host={host} />
           {focus && (
             <button
-              className="wb-exit-focus wb-top-action is-active"
+              className="wb-exit-focus"
               title="退出专注"
               aria-label="退出专注"
               aria-pressed="true"
               onClick={toggleFocus}
             >
-              <ScanLine size={24} />
+              <ScanLine size={14} />
+              退出专注
             </button>
           )}
+          <ReadingSettings host={host} />
         </div>
       )}
       {!mobile && (
@@ -631,7 +650,6 @@ export default function App({
         settings={openSettings}
         open={openPopup}
         help={() => dispatch({ type: "help", open: true })}
-        exit={onExit}
         run={(fn) =>
           task.run(async () => {
             await fn();

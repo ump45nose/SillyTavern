@@ -663,24 +663,6 @@
     min-width: 44px;
     min-height: 44px;
   }
-  @media (max-width: 1023px) {
-    body:not(.wb-active) .wb-layout-switcher {
-      top: max(8px, env(safe-area-inset-top));
-      right: 8px;
-    }
-    body:not(.wb-active) .wb-layout-controls {
-      height: 48px;
-      width: 136px;
-    }
-    body:not(.wb-active) .wb-layout-controls > button {
-      min-height: 44px !important;
-      height: 44px !important;
-    }
-    body:not(.wb-active) .wb-layout-controls > .wb-layout-step,
-    body:not(.wb-active) .wb-layout-controls > .wb-layout-trigger {
-      width: 44px;
-    }
-  }
   body.wb-mobile .wb-image-input-actions > button,
   body.wb-mobile .wb-image-references.is-compact > button {
     height: 44px;

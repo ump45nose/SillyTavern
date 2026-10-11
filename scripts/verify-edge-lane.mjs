@@ -46,7 +46,7 @@ try {
  pass('a brief pass through the lane does not reveal');
  await page.evaluate(()=>workbench.host.preference({edgeHover:false}));await settle();
  const off=await page.evaluate(()=>({edge:document.body.classList.contains('wb-edge-hover'),right:document.getElementById('chat').getBoundingClientRect().right,width:innerWidth}));
- assert.equal(off.edge,false);assert(off.right>off.width-2,'with edge reveal off #chat reaches the window edge again');
+ assert.equal(off.edge,false);assert(Math.abs(off.right-(off.width-12))<2,'with edge reveal off #chat reaches the sheet edge, one 12px desk gutter from the window');
  await page.mouse.move(geometry.width-6,400);await page.mouse.move(geometry.width-8,404);await page.waitForTimeout(500);assert.equal(await hot(),false,'edge reveal off');
  await page.evaluate(()=>workbench.host.preference({edgeHover:true}));await settle();
  const arrow=page.getByRole('button',{name:'角色与资源侧栏',exact:true});await arrow.click();await page.waitForFunction(()=>document.body.classList.contains('wb-right-open'));await settle();

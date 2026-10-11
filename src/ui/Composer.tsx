@@ -9,6 +9,8 @@ import type { ComposerPopup } from "./ComposerPopovers";
 import type { HostAdapter } from "../host/adapter";
 import { bus } from "../host/bus";
 /** Decorate native controls in-place: event handlers, selection and plugin nodes stay owned by ST. */
+/** The composer card's smallest height: grip, two lines of text and the tool row (board "Main"). */
+const COMPOSER_MIN = 124;
 export function Composer({
   host,
   toolbar,
@@ -123,7 +125,7 @@ export function Composer({
     const apply = () =>
       document.body.style.setProperty(
         "--wb-composer-height",
-        `${Math.max(152, area.clientHeight * ratioRef.current)}px`,
+        `${Math.max(COMPOSER_MIN, area.clientHeight * ratioRef.current)}px`,
       );
     const observer = new ResizeObserver(apply);
     observer.observe(area);
@@ -137,7 +139,7 @@ export function Composer({
   useEffect(() => {
     document.body.style.setProperty(
       "--wb-composer-height",
-      `${Math.max(152, document.getElementById("sheld")!.clientHeight * ratio)}px`,
+      `${Math.max(COMPOSER_MIN, document.getElementById("sheld")!.clientHeight * ratio)}px`,
     );
   }, [ratio]);
   const finish = () => {

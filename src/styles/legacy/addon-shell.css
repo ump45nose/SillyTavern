@@ -84,12 +84,6 @@
   .wb-rp .wb-addon-editor {
     inset: 0;
   }
-  .wb-outline-placeholder .wb-fold-body > div {
-    overflow: hidden;
-  }
-  .wb-outline-placeholder .wb-addon-message {
-    font-size: 12px;
-  }
   @keyframes wb-addon-appear {
     from {
       opacity: 0;

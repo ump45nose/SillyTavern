@@ -3,39 +3,50 @@
  *
  * Theming contract: SillyTavern themes override the public --wb-theme-* hooks (see themes/noval-paper.css);
  * every color token below reads its hook first. Dark values are reserved for the redesign and activate
- * with :root[data-wb-theme="dark"] (nothing sets it yet).
+ * with :root[data-wb-theme="dark"], set from the theme preference.
  *
  * Legacy names (--wb-paper, --wb-ink, …) at the end alias the new tokens so 0.4 rules keep their values.
  */
 @layer wb.tokens {
   :root {
-    /* ── Color: surfaces from app background (0) up to raised controls (3) ── */
-    --wb-surface-0: var(--wb-theme-paper, #faf9f5);
+    /* ── Color: the desk (0) under paper sheets (1), wells and quiet blocks (2), warm tint (3) ── */
+    --wb-surface-0: var(--wb-theme-paper, #eeebe3);
     --wb-surface-1: var(--wb-theme-surface, #fffefa);
-    --wb-surface-2: var(--wb-theme-soft, #f0eee6);
-    --wb-surface-3: color-mix(in srgb, var(--wb-selected-bg) 38%, var(--wb-surface-1));
+    --wb-surface-2: var(--wb-theme-soft, #f3f1ea);
+    --wb-surface-3: color-mix(in srgb, var(--wb-selected-bg) 60%, var(--wb-surface-1));
+    /* Recessed track behind segmented controls, and the faint hover wash on rows */
+    --wb-well: color-mix(in srgb, var(--wb-ink-1) 6%, transparent);
+    --wb-hover: color-mix(in srgb, var(--wb-ink-1) 3.5%, transparent);
 
     /* Ink: primary text, control text, secondary text */
-    --wb-ink-1: var(--wb-theme-ink, #302e29);
-    --wb-ink-2: var(--wb-theme-control-ink, #6c6254);
-    --wb-ink-3: var(--wb-theme-muted, #817a6c);
+    --wb-ink-1: var(--wb-theme-ink, #2f2c27);
+    --wb-ink-2: var(--wb-theme-control-ink, #5f574b);
+    --wb-ink-3: var(--wb-theme-muted, #7a7266);
 
     /* Lines: hairline separators and stronger control borders */
-    --wb-line-1: var(--wb-theme-line, #dfdcd2);
+    --wb-line-1: var(--wb-theme-line, #e4e0d6);
     --wb-line-2: color-mix(in srgb, var(--wb-ink-3) 35%, var(--wb-line-1));
 
     /* Accent and selection */
     --wb-accent: var(--wb-theme-accent, #b76449);
     --wb-accent-strong: color-mix(in srgb, var(--wb-accent) 88%, #000);
+    /* Accent used as text on paper (links, selected tab labels): darker for contrast */
+    --wb-accent-text: color-mix(in srgb, var(--wb-accent) 82%, #000);
     --wb-accent-ink: #fffefa;
     --wb-selected-bg: var(--wb-theme-selected, #f0e6da);
     --wb-ring: color-mix(in srgb, var(--wb-accent) 55%, var(--wb-line-1));
 
     /* Semantic */
-    --wb-success: #719783;
-    --wb-warning: #c99a3e;
-    --wb-danger: #c4553a;
-    --wb-info: #6f8fb0;
+    --wb-success: #5f8a73;
+    --wb-warning: #b7862c;
+    --wb-danger: #b94a30;
+    --wb-info: #4c7aa8;
+    --wb-violet: #7d68b0;
+    /* Tinted backgrounds for status badges and the P bar */
+    --wb-success-bg: color-mix(in srgb, var(--wb-success) 13%, var(--wb-surface-1));
+    --wb-warning-bg: color-mix(in srgb, var(--wb-warning) 10%, var(--wb-surface-1));
+    --wb-warning-line: color-mix(in srgb, var(--wb-warning) 34%, var(--wb-surface-1));
+    --wb-danger-bg: color-mix(in srgb, var(--wb-danger) 9%, var(--wb-surface-1));
 
     /* ── Type ── */
     --wb-font-ui: -apple-system, "system-ui", "Segoe UI", "Noto Sans CJK SC", sans-serif;
@@ -87,9 +98,9 @@
     --wb-control-touch: 44px;
 
     /* ── Elevation: hierarchy comes from surfaces and shadow, not outlines ── */
-    --wb-shadow-1: 0 1px 2px #34291e0d, 0 1px 3px #34291e0a;
-    --wb-shadow-2: 0 4px 18px #34291e14;
-    --wb-shadow-3: 0 12px 40px #34291e24;
+    --wb-shadow-1: 0 1px 2px #34291e12, 0 1px 3px #34291e0d;
+    --wb-shadow-2: 0 2px 6px #34291e0d, 0 10px 28px #34291e14;
+    --wb-shadow-3: 0 4px 12px #34291e0f, 0 18px 44px #34291e24;
     --wb-shadow-ring: 0 0 0 2px color-mix(in srgb, var(--wb-accent) 18%, transparent);
 
     /* ── Motion ── */
@@ -110,7 +121,8 @@
     --wb-z-toast: 12100;
 
     /* ── Layout geometry ── */
-    --wb-header-size: 74px;
+    --wb-header-size: 64px;
+    --wb-gutter: 12px; /* desk margin around raised sheets */
     --wb-header-size-mobile: 58px;
     --wb-left-size: 260px;
     --wb-right-size: 460px;
@@ -138,21 +150,29 @@
     }
   }
 
-  /* Reserved dark palette (warm, matches the paper light theme); finalized in the design drafts. */
+  /* Dark: the same desk-and-paper structure at night (design drafts v2). */
   :root[data-wb-theme="dark"] {
     color-scheme: dark;
-    --wb-surface-0: var(--wb-theme-paper, #1b1a17);
-    --wb-surface-1: var(--wb-theme-surface, #23221e);
-    --wb-surface-2: var(--wb-theme-soft, #2c2a26);
-    --wb-ink-1: var(--wb-theme-ink, #ece8df);
-    --wb-ink-2: var(--wb-theme-control-ink, #c8c0b2);
-    --wb-ink-3: var(--wb-theme-muted, #9b9384);
-    --wb-line-1: var(--wb-theme-line, #3a3732);
-    --wb-accent: var(--wb-theme-accent, #d98a6c);
-    --wb-accent-ink: #1b1a17;
-    --wb-selected-bg: var(--wb-theme-selected, #3b2f28);
-    --wb-shadow-1: 0 1px 2px #0006;
-    --wb-shadow-2: 0 6px 20px #0008;
-    --wb-shadow-3: 0 16px 48px #000a;
+    --wb-surface-0: var(--wb-theme-dark-paper, #161411);
+    --wb-surface-1: var(--wb-theme-dark-surface, #221f1b);
+    --wb-surface-2: var(--wb-theme-dark-soft, #2b2823);
+    --wb-well: color-mix(in srgb, #fff 5%, transparent);
+    --wb-hover: color-mix(in srgb, #fff 4%, transparent);
+    --wb-ink-1: var(--wb-theme-dark-ink, #ece7dd);
+    --wb-ink-2: #c9bfae;
+    --wb-ink-3: var(--wb-theme-dark-muted, #9f9586);
+    --wb-line-1: var(--wb-theme-dark-line, #38342e);
+    --wb-accent: var(--wb-theme-dark-accent, #d9876a);
+    --wb-accent-text: color-mix(in srgb, var(--wb-accent) 80%, #fff);
+    --wb-accent-ink: #1b1916;
+    --wb-selected-bg: var(--wb-theme-dark-selected, #3a2d25);
+    --wb-success: #8db7a0;
+    --wb-warning: #d9b060;
+    --wb-danger: #e07a60;
+    --wb-info: #8fb0d6;
+    --wb-violet: #b4a2d9;
+    --wb-shadow-1: inset 0 1px 0 #ffffff0a, 0 1px 3px #00000073;
+    --wb-shadow-2: inset 0 1px 0 #ffffff0d, 0 10px 32px #0000006b;
+    --wb-shadow-3: inset 0 1px 0 #ffffff0d, 0 16px 44px #00000080;
   }
 }

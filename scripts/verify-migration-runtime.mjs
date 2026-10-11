@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter,selectPaper,withReducedMotion,withMotionPreference,openPanel} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,selectPaper,withReducedMotion,withMotionPreference,openPanel,openResource,openSettings} from './browser.mjs';
 const dir='artifacts/migration-runtime';fs.mkdirSync(dir,{recursive:true});
 const checks=[],pass=(name,details={})=>{checks.push({name,passed:true,details});console.log('PASS',name);};
 const b=await launch();let page,errors=[];
@@ -8,7 +8,7 @@ try{
  ({page,errors}=await session(b));await page.setViewportSize({width:1496,height:817});await ready(page,urls.validation,{probe:true});await createCharacter(page);
  const settle=()=>page.waitForTimeout(330),ws=()=>page.getByRole('dialog',{name:'独立设置工作区',exact:true});
  await page.evaluate(()=>{workbench.host.preference({left:true,userCollapsed:true});window.__migrationHelper=document.getElementById('tavern_helper');window.__migrationVue=__migrationHelper?.__vue_app__;window.__migrationQr=document.getElementById('qr--settings');window.__migrationNative=['AdvancedFormatting','user-settings-block','left-nav-panel','Backgrounds','rm_extensions_block','tavern_helper','qr--settings'].map(id=>({id,node:document.getElementById(id),parent:document.getElementById(id).parentNode}));});
- const open=async name=>{await page.locator('.wb-left-bottom').getByRole('button',{name,exact:true}).click();await ws().waitFor();await settle();};
+ const open=async name=>{await openSettings(page,name);await ws().waitFor();await settle();};
  const close=async()=>{await page.getByRole('button',{name:'返回工作台',exact:true}).click();await page.locator('.wb-settings-workspace').waitFor({state:'detached'});assert(await page.evaluate(()=>__migrationNative.every(x=>x.node===document.getElementById(x.id)&&x.node.parentNode===x.parent)));};
  const shot=async name=>{await settle();await page.screenshot({path:`${dir}/${name}.png`});};
  // The actual message node and embedded browsing context must survive repeated reversals.
@@ -25,8 +25,8 @@ try{
  await user.locator('.mes_text').evaluate(()=>__migrationIframe.remove());pass('aligned user input, rapid animation reversal, original text/iframe/window, reduced motion',origins);
  // Every primary resource column opens by default outside an unchanged editor.
  for(const name of ['世界书','连接','预设','用户设定']){
-  await page.getByRole('button',{name:name+'详情',exact:true}).click();await settle();const rail=page.locator('#wb-resource-rail');await rail.locator('.wb-search').waitFor({state:'visible'});assert(await rail.locator('.wb-search').isVisible());
-  const g=await page.evaluate(()=>{const r=s=>document.querySelector(s).getBoundingClientRect();return {rail:r('#wb-resource-rail').width,editor:r('.wb-right').width,reader:r('#sheld').width,adjacent:r('#wb-resource-rail').right===r('.wb-right').left};});assert.deepEqual(g,{rail:180,editor:460,reader:596,adjacent:true});
+  await openResource(page,name);await settle();const rail=page.locator('#wb-resource-rail');await rail.locator('.wb-search').waitFor({state:'visible'});assert(await rail.locator('.wb-search').isVisible());
+  const g=await page.evaluate(()=>{const r=s=>document.querySelector(s).getBoundingClientRect();return {rail:r('#wb-resource-rail').width,editor:r('.wb-right').width,reader:r('#sheld').width,adjacent:r('#wb-resource-rail').right===r('.wb-right').left};});assert.deepEqual(g,{rail:180,editor:460,reader:584,adjacent:true});/* the sheet keeps a 12px desk gutter to the panel */
   if(name==='预设'){
    const y=await page.locator('.wb-preset-common .wb-fold-toolbar').evaluate(n=>[...n.querySelectorAll('input[type=checkbox],button')].map(x=>{const r=x.getBoundingClientRect();return r.y+r.height/2;}));assert(Math.max(...y)-Math.min(...y)<2);assert(!await page.locator('.wb-right .wb-prompt-editor').isVisible());
    await page.locator('.wb-right .wb-prompt-row button:not(.wb-icon)').first().dblclick();await page.getByLabel('提示词名称',{exact:true}).waitFor({state:'visible'});assert(await page.getByLabel('提示词名称',{exact:true}).isVisible());await page.getByRole('button',{name:'收起提示词编辑',exact:true}).click();
@@ -36,7 +36,7 @@ try{
    await page.getByRole('button',{name:'当前角色卡启用',exact:true}).click();const checkbox=rail.getByRole('checkbox').first(),original=await checkbox.isChecked(),label=await checkbox.getAttribute('aria-label');await checkbox.setChecked(!original);await settle();assert.equal(await page.evaluate(label=>workbench.host.characterBooks().includes(label.replace('启用世界书 ','')),label),!original);await checkbox.setChecked(original);await page.getByRole('button',{name:'全局启用',exact:true}).click();
   }
   await shot('sidebar-'+name+'-1496');await rail.locator('.wb-rail-heading button').click();await settle();assert.equal(await page.locator('#sheld').evaluate(n=>n.clientWidth),776);assert.equal(await page.locator('.wb-right').evaluate(n=>n.clientWidth),459);
-  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await page.getByRole('button',{name:name+'详情',exact:true}).click();await settle();assert(await rail.locator('.wb-search').isVisible());await page.getByRole('button',{name:'关闭右栏',exact:true}).click();pass('external rail/default reopen and editor layout '+name,g);
+  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await openResource(page,name);await settle();assert(await rail.locator('.wb-search').isVisible());await page.getByRole('button',{name:'关闭右栏',exact:true}).click();pass('external rail/default reopen and editor layout '+name,g);
  }
  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();await openPanel(page,'角色');await settle();const active=await page.evaluate(()=>workbench.host.snapshot().character.id),card=page.locator('.wb-right .wb-character-list .wb-character-card').last();await card.locator('.wb-character-main').hover();await settle();const name=await card.locator('strong').textContent();assert.equal(await page.locator('#wb-resource-rail .wb-character-info h3').textContent(),name);await page.locator('#wb-resource-rail .wb-character-info').hover();assert.equal(await page.evaluate(()=>workbench.host.snapshot().character.id),active);await card.locator('.wb-character-main').focus();assert.equal(await page.locator('#wb-resource-rail .wb-character-info h3').textContent(),name);await shot('character-sidebar-1496');await page.getByRole('button',{name:'关闭右栏',exact:true}).click();pass('hover and keyboard character information without activation or rail flicker');
  await open('角色管理');
@@ -72,8 +72,8 @@ assert.equal(await local.locator('.qr--set-itemMessage').evaluate(n=>n.getBoundi
  await shot('background-1496');await close();pass('native background media/captions, directory rail, local menus and working thumbnail zoom');
  // The primary and secondary viewports use the same CSS-pixel widths, not screenshot scale.
  for(const [w,h] of [[1366,768],[1440,900],[1496,817],[1920,1080]]){
-  await page.setViewportSize({width:w,height:h});await settle();await page.getByRole('button',{name:'预设详情',exact:true}).click();await settle();const g=await page.evaluate(()=>({w:innerWidth,scroll:document.documentElement.scrollWidth,editor:document.querySelector('.wb-right').clientWidth+1,rail:document.querySelector('#wb-resource-rail').clientWidth+2,reader:document.querySelector('#sheld').clientWidth}));assert.equal(g.scroll,w);assert.equal(g.editor,w<=1400?440:460);assert.equal(g.rail,180);assert.equal(g.reader,w-(w<=1400?240:260)-(w<=1400?440:460)-180);await shot('home-'+w);await page.getByRole('button',{name:'关闭右栏',exact:true}).click();pass('actual desktop layout '+w,g);
+  await page.setViewportSize({width:w,height:h});await settle();await openResource(page,'预设详情');await settle();const g=await page.evaluate(()=>({w:innerWidth,scroll:document.documentElement.scrollWidth,editor:document.querySelector('.wb-right').clientWidth+1,rail:document.querySelector('#wb-resource-rail').clientWidth+2,reader:document.querySelector('#sheld').clientWidth}));assert.equal(g.scroll,w);assert.equal(g.editor,w<=1400?440:460);assert.equal(g.rail,180);assert.equal(g.reader,w-(w<=1400?240:260)-(w<=1400?440:460)-180);await shot('home-'+w);await page.getByRole('button',{name:'关闭右栏',exact:true}).click();pass('actual desktop layout '+w,g);
  }
  assert.deepEqual(errors,[]);pass('browser page errors',errors);
- await page.setViewportSize({width:1496,height:817});await page.getByRole('button',{name:'预设详情',exact:true}).click();await settle();const cdp=await page.context().newCDPSession(page),capture=await cdp.send('Page.captureScreenshot',{format:'png',clip:{x:0,y:0,width:1496,height:817,scale:2}});fs.writeFileSync(dir+'/home-1496-2x.png',Buffer.from(capture.data,'base64'));
+ await page.setViewportSize({width:1496,height:817});await openResource(page,'预设详情');await settle();const cdp=await page.context().newCDPSession(page),capture=await cdp.send('Page.captureScreenshot',{format:'png',clip:{x:0,y:0,width:1496,height:817,scale:2}});fs.writeFileSync(dir+'/home-1496-2x.png',Buffer.from(capture.data,'base64'));
 }catch(error){if(page)await page.screenshot({path:dir+'/failure.png'});throw error;}finally{fs.writeFileSync(dir+'/verification.json',JSON.stringify({checkedAt:new Date().toISOString(),checks,errors},null,2));await b.close();}

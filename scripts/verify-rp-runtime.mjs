@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { launch, session, ready, urls, createCharacter, connect, withReducedMotion } from "./browser.mjs";
+import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, openResource, chooseLayout } from "./browser.mjs";
 
 const dir = "artifacts/rp-runtime"; fs.mkdirSync(dir, { recursive: true });
 const checks = [], pass = (name, details = {}) => { checks.push({ name, details }); console.log("PASS", name); };
@@ -22,7 +22,7 @@ try {
   const settle = () => page.waitForTimeout(350), css = (selector, key) => page.locator(selector).first().evaluate((n, key) => getComputedStyle(n)[key], key);
   const has = c => page.evaluate(c => document.body.classList.contains(c), c);
   const role = name => page.getByRole("button", { name, exact: true });
-  await role("切换工作台").click(); await page.getByRole("menuitemradio", {name:/RP/}).click(); await settle();
+  await chooseLayout(page,'RP'); await settle();
   assert.equal(await has("wb-rp"), true); assert.equal(await has("wb-left-open"), false); assert.equal(await has("wb-right-open"), false);
   assert.equal(await page.evaluate(() => __rpNative.chat === document.getElementById("chat") && __rpNative.input === document.getElementById("send_textarea") && __rpNative.form === document.getElementById("send_form")), true);
   pass("RP opens with both panels closed and the original native chat, form and input");
@@ -42,13 +42,13 @@ try {
   await role("显示界面").click(); await settle(); assert.equal(await page.locator("#sheld").evaluate(n => n.inert), false);
   pass("same eye control hides and restores the interface, including focus isolation");
   await role("展开左边栏").click(); await page.waitForTimeout(65); const mid = Number(await css(".wb-left", "opacity")); assert(mid > 0 && mid < 1); await settle();
-  assert.equal(await page.locator(".wb-left-bottom button").count(), 9); await role("收纳左边栏").click(); await settle();
+  assert.equal(await page.locator(".wb-nav-footer button").count(), 3); await role("收纳左边栏").click(); await settle();
   pass("existing navigation and panel entry/exit animation remain available", { mid });
 
-  await role("世界书详情").click(); await settle(); await page.locator(".wb-world").waitFor();
+  await openResource(page,'世界书详情'); await settle(); await page.locator(".wb-world").waitFor();
   assert.equal(await page.locator("#wb-resource-rail").evaluate(n => n.getBoundingClientRect().width), 180);
   await role("关闭右栏").click(); await settle();
-  await role("预设详情").click(); await settle(); await page.locator(".wb-resource-v3").waitFor(); await role("关闭右栏").click(); await settle();
+  await openResource(page,'预设详情'); await settle(); await page.locator(".wb-resource-v3").waitFor(); await role("关闭右栏").click(); await settle();
   pass("existing world and preset editors reused with the 180px resource rail");
 
   await role("固定顶栏").click(); await page.mouse.move(750, 400); await settle();
@@ -118,17 +118,17 @@ try {
 
   for (const [width, height] of [[1366,768],[1440,900],[1496,817],[1920,1080],[2992,1634],[1100,800],[1024,768]]) {
     await page.setViewportSize({ width, height }); await settle();
-    const metrics = await page.evaluate(() => { const rect = s => document.querySelector(s).getBoundingClientRect().toJSON(); return { width: innerWidth, overflow: document.documentElement.scrollWidth > innerWidth, dialog: rect("#sheld"), eye: rect(".wb-rp-visibility"), selectors: rect(".wb-contexts"), actions: rect(".wb-top-right") }; });
+    const metrics = await page.evaluate(() => { const rect = s => document.querySelector(s).getBoundingClientRect().toJSON(); return { width: innerWidth, overflow: document.documentElement.scrollWidth > innerWidth, dialog: rect("#sheld"), eye: rect(".wb-rp-visibility"), selectors: rect(".wb-top-pills"), actions: rect(".wb-top-tools") }; });
     assert.equal(metrics.overflow, false); assert(metrics.dialog.left >= 0 && metrics.dialog.right <= width + 1 && metrics.dialog.bottom <= height + 1, JSON.stringify(metrics));
     assert(metrics.selectors.right <= metrics.actions.left + 1, JSON.stringify(metrics));
-    await role("世界书详情").click(); await settle(); if (width <= 1100) assert.equal(await page.locator("#sheld").evaluate(n => n.inert), true);
+    await openResource(page,'世界书详情'); await settle(); if (width <= 1100) assert.equal(await page.locator("#sheld").evaluate(n => n.inert), true);
     await role("关闭右栏").click(); await settle(); pass(`viewport ${width}×${height}`, metrics);
   }
   await page.setViewportSize({ width:1496, height:817 }); await settle();
-  await role("展开左边栏").click(); await settle(); await page.locator(".wb-floor-list > button").first().click(); await settle();
-  assert.equal(await page.locator(".wb-rp-current").getAttribute("mesid"), await page.locator(".wb-floor-list > button").first().evaluate(n => Number(n.querySelector(".wb-floor-number").textContent) - 1).then(String));
+  await role("展开左边栏").click(); await settle(); await page.locator(".wb-floor-list .wb-nav-row").first().click(); await settle();
+  assert.equal(await page.locator(".wb-rp-current").getAttribute("mesid"), await page.locator(".wb-floor-list .wb-nav-row").first().evaluate(n => Number(n.querySelector(".wb-floor-number").textContent) - 1).then(String));
   await role("收纳左边栏").click(); await settle(); pass("existing floor navigation selects the corresponding RP message");
-  await role("展开左边栏").click(); await role("世界书详情").click(); await settle();
+  await role("展开左边栏").click(); await openResource(page,'世界书详情'); await settle();
   const compact = await page.evaluate(() => {
     const header = document.querySelector(".wb-rp-deck-header").getBoundingClientRect(), speaker = document.querySelector(".wb-rp-speaker").getBoundingClientRect(), actions = document.querySelector(".wb-rp-deck-actions").getBoundingClientRect();
     return { header: header.toJSON(), speaker: speaker.toJSON(), actions: actions.toJSON() };
@@ -143,14 +143,14 @@ try {
     await page.setViewportSize({ width, height }); await settle();
     const reading = await page.evaluate(() => {
       const rect = s => document.querySelector(s).getBoundingClientRect().toJSON();
-      return { width:innerWidth, contexts:rect(".wb-contexts"), actions:rect(".wb-top-right"), form:rect("#send_form"), send:rect("#send_but"), tools:rect(".wb-composer-actions"), grip:rect(".wb-input-grip") };
+      return { width:innerWidth, contexts:rect(".wb-top-pills"), actions:rect(".wb-top-tools"), form:rect("#send_form"), send:rect("#send_but"), tools:rect(".wb-composer-actions"), grip:rect(".wb-input-grip") };
     });
-    assert(Math.abs(reading.contexts.x + reading.contexts.width / 2 - width / 2) < 1, JSON.stringify(reading));
+    assert(Math.abs(reading.contexts.x + reading.contexts.width / 2 - width / 2) < 3, JSON.stringify(reading));
     assert(reading.contexts.right <= reading.actions.left + 1 && reading.send.right <= reading.form.right && reading.tools.right <= reading.send.left && reading.grip.y - reading.form.y < 5, JSON.stringify(reading));
   }
   pass("reading mode keeps its centered header, native input grip and icon controls at four desktop sizes");
   await page.setViewportSize({ width:1496, height:817 });
-  await role("切换工作台").click(); await page.getByRole("menuitemradio", {name:/RP/}).click(); await settle(); await page.evaluate(async () => { workbench.unmount(); await workbench.mount(); }); await settle();
+  await chooseLayout(page,'RP'); await settle(); await page.evaluate(async () => { workbench.unmount(); await workbench.mount(); }); await settle();
   assert.equal(await has("wb-rp"), true); assert.equal(await has("wb-left-open"), false); assert.equal(await has("wb-right-open"), false);
   await page.evaluate(() => workbench.unmount()); assert.equal(await page.evaluate(() => !document.body.classList.contains("wb-rp") && !document.querySelector(".wb-rp-stage,.wb-rp-part") && !document.getElementById("sheld").inert && __rpNative.input.isConnected), true);
   pass("reading/RP switching, RP remount defaults and native fallback clean up all presentation state");

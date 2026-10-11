@@ -177,13 +177,9 @@ export async function paperValue(page, label) {
 
 export const save = (name, value) => fs.writeFileSync(path.join(artifacts, name), JSON.stringify(value, null, 2) + '\n');
 
-/**
- * KNOWN (0.4): in focus mode the floating layout switcher sits on top of 退出专注, so a real
- * pointer click lands on the switcher. Dispatch the click to the button until phase E moves it.
- */
+/** Leaves focus mode through the reading bar's 退出专注 pill (the layout switcher hides in focus since E2). */
 export async function exitFocus(page) {
-    console.log('KNOWN layout switcher covers 退出专注 in focus mode');
-    await page.getByRole('button', { name: '退出专注', exact: true }).dispatchEvent('click');
+    await page.getByRole('button', { name: '退出专注', exact: true }).click();
 }
 
 /** Parses a computed color (rgb()/rgba() or color(srgb …)) into 0–255 channels plus alpha. */
@@ -208,4 +204,35 @@ export async function openPanel(page, name) {
     const toggle = page.getByRole('button', { name: '展开资源分类', exact: true });
     if (await toggle.isVisible()) await toggle.click();
     await tab.click();
+}
+
+const resourceKinds = { 连接: 'connection', 预设: 'preset', 世界书: 'world', 用户设定: 'persona' };
+/** Opens a resource panel the desktop way: its header pill, then the popover's footer link. Accepts "世界书" or "世界书详情". */
+export async function openResource(page, label) {
+    const kind = resourceKinds[label.replace(/详情$/, '')];
+    if (!kind) throw new Error(`Unknown resource ${label}`);
+    // An auto-hiding RP top bar is revealed the way a pointer does: from the window's top edge.
+    if (await page.evaluate(() => document.body.classList.contains('wb-rp-top-collapsed'))) {
+        await page.mouse.move(740, 4);
+        await page.waitForFunction(() => !document.body.classList.contains('wb-rp-top-collapsed'));
+        await page.mouse.move(740, 35);
+        await page.waitForTimeout(250);
+    }
+    const pill = page.locator(`.wb-pill[aria-controls="wb-choices-${kind}"]`);
+    if (await pill.getAttribute('aria-expanded') !== 'true') await pill.click();
+    await page.locator(`#wb-choices-${kind} .wb-pill-pop-foot button`).click();
+}
+
+/** Opens a settings page: 设置 in the left column, then the page's entry in the workspace nav. */
+export async function openSettings(page, name) {
+    const workspace = page.getByRole('dialog', { name: '独立设置工作区', exact: true });
+    if (!(await workspace.isVisible())) await page.locator('.wb-nav-footer').getByRole('button', { name: '设置', exact: true }).click();
+    await workspace.waitFor();
+    await workspace.locator('.wb-settings-nav').getByRole('button', { name, exact: true }).click();
+}
+
+/** Switches Noval / RP / 原生 through the segmented control and waits until it settles. */
+export async function chooseLayout(page, name) {
+    await page.getByRole('radiogroup', { name: '切换工作台', exact: true }).getByRole('radio', { name, exact: true }).click();
+    await page.waitForFunction(() => !document.querySelector('.wb-layout-controls[aria-busy="true"]'));
 }

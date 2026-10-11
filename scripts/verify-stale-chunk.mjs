@@ -14,7 +14,7 @@ try {
  const missing=[];
  await page.route(/workbench-probe\/dist\/[A-Z][^/]*\.js$/,route=>{missing.push(route.request().url().split('/').pop());return route.fulfill({status:404,body:''});});
  await ready(page,urls.validation,{probe:true});
- await page.locator('.wb-left-bottom').getByRole('button',{name:'连接',exact:true}).click();
+ await page.locator('.wb-nav-footer').getByRole('button',{name:'设置',exact:true}).click();
  const alert=page.getByRole('alert').filter({hasText:'工作台已更新'});await alert.waitFor();
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-active')),true,'the workbench stays mounted');
  assert(missing.some(name=>name.startsWith('SettingsWorkspace-')),JSON.stringify(missing));

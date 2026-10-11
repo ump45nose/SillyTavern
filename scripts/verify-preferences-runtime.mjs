@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,openResource,openSettings} from './browser.mjs';
 const dir='artifacts/preferences';fs.mkdirSync(dir,{recursive:true});
 const checks=[],pass=(name,details={})=>{checks.push({name,passed:true,details});console.log('PASS',name,JSON.stringify(details));};
 const browser=await launch();let page,errors=[],original,passed=false;
@@ -26,20 +26,20 @@ try{
  await page.locator('#chat .mes_text').first().evaluate(n=>{window.__preferencesText=n;const f=document.createElement('iframe');f.srcdoc='<p>Original content</p>';f.height='70';n.append(f);window.__preferencesFrame=f;window.__preferencesWindow=f.contentWindow;});
  await preferences({readingInset:128});
  for(const [width,height] of [[1366,768],[1440,900],[1496,817],[1920,1080]]){
-  await page.setViewportSize({width,height});await page.getByRole('button',{name:'预设详情',exact:true}).click();await settle();
+  await page.setViewportSize({width,height});await openResource(page,'预设详情');await settle();
   const p=await padding();assert(p.left>=20&&p.left<=128);assert.equal(p.left,p.right);assert(p.width-p.left-p.right>=318);assert(p.scroll<=p.width+1);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
   assert(await page.evaluate(()=>document.querySelector('#chat .mes_text')===__preferencesText&&__preferencesText.contains(__preferencesFrame)&&__preferencesFrame.contentWindow===__preferencesWindow));
   await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
  }
  await page.evaluate(()=>__preferencesFrame.remove());await page.setViewportSize({width:1496,height:817});await preferences({readingInset:64});pass('four real desktop sizes preserve usable text width, native message and iframe ownership');
  // The two persona surfaces, resource rows, native solid circles and other selected states share one boundary.
- await page.locator('.wb-selector').nth(3).locator('.wb-selector-value').click();await settle();
+ await page.locator('.wb-pill[aria-controls="wb-choices-persona"]').click();await settle();
  const style=n=>{const s=getComputedStyle(n);return {border:s.borderTopColor,width:s.borderTopWidth,fill:s.backgroundColor,shadow:s.boxShadow,radius:s.borderTopLeftRadius};};
- const quick=await page.locator('#wb-choices-persona .wb-quick-row.is-active').evaluate(style);assert.equal(quick.width,'1px');assert.equal(quick.shadow,'none');
- const circle=await page.locator('#wb-choices-persona input:checked').evaluate(n=>({after:getComputedStyle(n,'::after').display,fill:getComputedStyle(n).backgroundColor,border:getComputedStyle(n).borderColor,radius:getComputedStyle(n).borderRadius}));assert.equal(circle.after,'none');assert.equal(circle.fill,circle.border);assert.equal(circle.radius,'50%');
+ const quick=await page.locator('#wb-choices-persona li.is-on').evaluate(style);assert.equal(quick.fill,'rgb(240, 230, 218)');assert.equal(quick.shadow,'none');
+ const circle=await page.locator('#wb-choices-persona li.is-on .wb-pill-mark').evaluate(n=>({after:getComputedStyle(n,'::after').content,fill:getComputedStyle(n).backgroundColor,radius:getComputedStyle(n).borderRadius}));assert.equal(circle.after,'none');assert.equal(circle.fill,'rgb(183, 100, 73)');assert.equal(circle.radius,'50%');
  await page.screenshot({path:dir+'/selection-header-persona-1496.png'});await page.keyboard.press('Escape');await settle();
- await page.getByRole('button',{name:'用户设定详情',exact:true}).click();await settle();
- const rail=await page.locator('.wb-resource-choice.is-active').evaluate(style);assert.equal(rail.border,quick.border);assert.equal(rail.fill,quick.fill);assert.equal(rail.shadow,'none');await page.screenshot({path:dir+'/selection-sidebar-persona-1496.png'});await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
+ await openResource(page,'用户设定详情');await settle();
+ const rail=await page.locator('.wb-resource-choice.is-active').evaluate(style);assert.equal(rail.fill,quick.fill);assert.equal(rail.shadow,'none');await page.screenshot({path:dir+'/selection-sidebar-persona-1496.png'});await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
  pass('header and sidebar selections share a fine warm outline, paper fill and original solid circle',{quick,rail,circle});
  const help=()=>page.getByRole('dialog',{name:'快捷键',exact:true});
  const openHelp=async()=>{await page.locator('.wb-nav-footer').getByRole('button',{name:'快捷键',exact:true}).click();await help().waitFor();await settle();};
@@ -65,7 +65,7 @@ try{
  await page.keyboard.press('Alt+Shift+3');await settle();assert(await page.getByRole('region',{name:'世界书选择',exact:true}).isVisible());await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
  pass('clear, disable and restore defaults; repeated/IME keys and normal composer typing stay intact; resource shortcut works');
  await openHelp();await page.setViewportSize({width:1366,height:768});await settle();const small=await help().boundingBox();assert(small.y>=0&&small.y+small.height<=768);assert(await help().locator('.wb-shortcut-row').last().isVisible());await page.screenshot({path:dir+'/shortcuts-1366.png'});await closeHelp();await page.setViewportSize({width:1496,height:817});pass('shortcut editor remains bounded at the smaller desktop size and animates on return',closeAnimation);
- await page.locator('.wb-left-bottom').getByRole('button',{name:'用户设置',exact:true}).click();const ws=page.getByRole('dialog',{name:'独立设置工作区',exact:true});await ws.waitFor();await settle();
+ await openSettings(page,'用户设置');const ws=page.getByRole('dialog',{name:'独立设置工作区',exact:true});await ws.waitFor();await settle();
  const reading=ws.getByRole('slider',{name:'正文左右留白',exact:true});await reading.scrollIntoViewIfNeeded();await reading.fill('80');await settle();assert.equal((await padding()).left,80);assert.equal(await page.evaluate(()=>workbench.host.prefs().readingInset),80);await reading.fill('64');await settle();await page.screenshot({path:dir+'/reading-form-1496.png'});await ws.getByRole('button',{name:'返回工作台',exact:true}).click();await ws.waitFor({state:'detached'});pass('independent reading settings and the T popover share the same saved inset');
  assert.deepEqual(errors,[]);passed=true;
 }catch(error){if(page)await page.screenshot({path:dir+'/failure.png'}).catch(()=>{});throw error;}

@@ -24,15 +24,11 @@ try{
  assert.equal(requests.some(url=>/addons\/(outline|image-gen)\//.test(url)),false);assert.equal(await page.locator('[data-wb-tool="wb:outline"],[data-wb-tool="wb:image-gen"]').count(),0);pass('startup fetches no new manifests, modules or CSS; no outline/image entries in bottom toolbar');
  const button=name=>page.getByRole('button',{name,exact:true});const settle=()=>page.waitForTimeout(300);
  if(await page.locator('.wb-edge-left').getAttribute('aria-expanded')==='false'){await page.locator('.wb-edge-left').click();await settle();}
- await button('大纲').click();await page.getByRole('tree',{name:'当前聊天大纲'}).waitFor();
- await settle();assert.equal(await page.locator('#wb-nav-settings').evaluate(el=>el.inert),true);assert.equal(await page.locator('.wb-settings-actions button').count(),2);
- const outlineHeight=await page.locator('.wb-outline-sidebar .wb-ot-tree').evaluate(el=>el.getBoundingClientRect().height);
- await button('展开设置').click();await page.waitForTimeout(100);const midSettingsHeight=await page.locator('#wb-nav-settings').evaluate(el=>el.getBoundingClientRect().height);await settle();
- assert.ok(midSettingsHeight>1&&midSettingsHeight<await page.locator('#wb-nav-settings').evaluate(el=>el.getBoundingClientRect().height));assert.equal(await page.locator('#wb-nav-settings').evaluate(el=>el.inert),false);
- assert.ok(await page.locator('.wb-outline-sidebar .wb-ot-tree').evaluate(el=>el.getBoundingClientRect().height)<outlineHeight-100);await button('收纳设置').click();await settle();
- await button('进入设置页').click();await page.getByRole('dialog',{name:'独立设置工作区'}).waitFor();assert.equal(await page.locator('.wb-settings-nav button[aria-pressed=true]').textContent(),'用户设置');await button('返回工作台').click();await settle();
- await button('大纲').click();await settle();assert.equal(await page.locator('#wb-nav-settings').evaluate(el=>el.inert),false);assert.equal(await page.locator('.wb-settings-actions').count(),0);await button('大纲').click();await page.getByRole('tree',{name:'当前聊天大纲'}).waitFor();await settle();
- await page.screenshot({path:directory+'/outline-settings-collapsed-1496.png'});pass('outline collects the lower settings group, restores it on close and opens the existing settings page');
+ const outlineToggle=page.locator('#wb-nav-outline .wb-nav-toggle');if(await outlineToggle.getAttribute('aria-expanded')!=='true')await outlineToggle.click();
+ await page.getByRole('tree',{name:'当前聊天大纲'}).waitFor();await settle();assert.equal(await page.locator('.wb-nav-footer').isVisible(),true);
+ await page.locator('.wb-nav-footer').getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('dialog',{name:'独立设置工作区'}).waitFor();assert.equal(await page.locator('.wb-settings-nav button[aria-pressed=true]').textContent(),'用户设置');await button('返回工作台').click();await settle();
+ await outlineToggle.click();await settle();assert.equal(await outlineToggle.getAttribute('aria-expanded'),'false');await outlineToggle.click();await page.getByRole('tree',{name:'当前聊天大纲'}).waitFor();await settle();
+ await page.screenshot({path:directory+'/outline-settings-collapsed-1496.png'});pass('outline opens in the left column beside a fixed settings footer that opens the existing settings page');
  await button('完整大纲编辑').click();await page.getByRole('region',{name:'完整大纲编辑'}).waitFor();
  await page.locator('.wb-addon-editor input[type="file"]').setInputFiles({name:'outline.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({version:1,nodes,selected:'a',settings:{mode:'caret',send:false}}))});
  await page.locator('.wb-ot-import').getByRole('button',{name:'替换',exact:true}).click();await page.getByRole('textbox',{name:'节点标题'}).waitFor();await page.getByRole('textbox',{name:'节点标题'}).fill('01 · 花园见面');assert.equal(await button('返回工作台').count(),1);await button('保存节点').click();await page.waitForFunction(()=>SillyTavern.getContext().chatMetadata.workbench_addons?.outline?.nodes[1].title==='01 · 花园见面');

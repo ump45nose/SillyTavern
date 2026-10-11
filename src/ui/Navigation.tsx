@@ -1,23 +1,15 @@
 import React, { useEffect, useState } from "react";
 import {
-  ArrowLeft,
-  BookOpen,
   ChevronDown,
   Ellipsis,
   FolderOpen,
-  Image,
+  History,
   Keyboard,
-  List,
+  Layers,
   ListTree,
   MessageSquarePlus,
-  MessagesSquare,
   PencilLine,
-  Plug,
-  Puzzle,
   Settings,
-  SlidersHorizontal,
-  TextCursorInput,
-  UserRound,
   UsersRound,
 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
@@ -28,6 +20,12 @@ import { settingsLabels } from "../host/labels";
 import { addonEnabled } from "../addons/catalog";
 import type { ComposerPopup } from "./ComposerPopovers";
 type Section = "history" | "outline" | "floors";
+const RECENT_FLOORS = 5;
+
+/**
+ * The left column of the desk: the open conversation on its own card, then three sections that
+ * fold independently, and a short footer into settings. Everything else lives in the settings page.
+ */
 export function Navigation({
   host,
   snap,
@@ -35,7 +33,6 @@ export function Navigation({
   settings,
   open,
   help,
-  exit,
   run,
 }: {
   host: HostAdapter;
@@ -44,29 +41,23 @@ export function Navigation({
   settings: (page: SettingsPage, group?: string) => void;
   open: (popup: ComposerPopup) => void;
   help: () => void;
-  exit: () => void;
   run: (fn: () => unknown) => unknown;
 }) {
   const messages = useHostSlice(host, "chat");
-  const [expanded, setExpanded] = useState<Section | null>(null),
-    [settingsExpanded, setSettingsExpanded] = useState(false),
-    [recent, setRecent] = useState<Data[]>([]);
-  const recentOpen = expanded === "history",
-    outline = expanded === "outline" && addonEnabled(host.prefs(), "outline"),
-    all = expanded === "floors",
-    outlineExpanded = outline,
-    sectionExpanded = recentOpen || outline || all,
-    settingsVisible = !sectionExpanded || settingsExpanded;
-  const floorsVisible = !sectionExpanded || all;
-  const toggleSection = (section: Section) => {
-    setExpanded((current) => (current === section ? null : section));
-    setSettingsExpanded(false);
-  };
+  const outlineEnabled = addonEnabled(host.prefs(), "outline");
+  const [expanded, setExpanded] = useState<Record<Section, boolean>>({
+      history: false,
+      // Closed at start so the outline add-on (and its stylesheet) loads only when asked for.
+      outline: false,
+      floors: true,
+    }),
+    [allFloors, setAllFloors] = useState(false),
+    [recent, setRecent] = useState<Data[] | null>(null);
+  const toggle = (section: Section) =>
+    setExpanded((current) => ({ ...current, [section]: !current[section] }));
+  const hasChat = !!snap.character || !!snap.groupId;
   useEffect(() => {
-    if (expanded === "outline" && !addonEnabled(host.prefs(), "outline")) setExpanded(null);
-  }, [expanded, host.revision()]);
-  useEffect(() => {
-    if (!recentOpen) return;
+    if (!visible || !hasChat) return;
     let active = true;
     host
       .recentChats()
@@ -79,232 +70,199 @@ export function Navigation({
     return () => {
       active = false;
     };
-  }, [host, recentOpen, snap.chatName, snap.character?.id, snap.groupId, host.chatsVersion]);
-  const entries = (
-    [
-      ["generation", SlidersHorizontal],
-      ["connection", Plug],
-      ["formatting", TextCursorInput],
-      ["world", BookOpen],
-      ["settings", Settings],
-      ["background", Image],
-      ["extensions", Puzzle],
-      ["persona", UserRound],
-      ["character", UsersRound],
-    ] as const
-  ).map(([id, Icon]) => [id, settingsLabels[id], Icon] as const);
+  }, [host, visible, hasChat, snap.chatName, snap.character?.id, snap.groupId, host.chatsVersion]);
+  const others = (recent || []).filter((c) => String(c.file_name).replace(/\.jsonl$/, "") !== snap.chatName);
+  const floors = allFloors ? messages : messages.slice(-RECENT_FLOORS);
   return (
     <aside
-      className={`wb-left wb-navigation-v4 ${visible ? "is-open" : ""} ${outlineExpanded ? "is-outline-expanded" : ""} ${sectionExpanded ? "is-section-expanded" : ""}`}
+      className={`wb-left wb-nav ${visible ? "is-open" : ""}`}
       aria-label="创作导航"
       inert={!visible}
       aria-hidden={!visible}
     >
-      <div className="wb-information" aria-label="信息区">
-        <div
-          className={`wb-fold-body wb-nav-chat ${!sectionExpanded ? "is-open" : ""}`}
-          inert={sectionExpanded}
-          aria-hidden={sectionExpanded}
-        >
-          <div>
-            <div className="wb-section-title">
-              <MessagesSquare size={16} />
-              <span>聊天管理</span>
-              <span className="wb-grow" />
-              <button
-                className="wb-icon"
-                aria-label="聊天管理操作"
-                aria-expanded="false"
-                onClick={(e) => open({ kind: "chat", anchor: e.currentTarget })}
-              >
-                <Ellipsis size={17} />
-              </button>
-            </div>
-            <div className="wb-chat-shortcuts">
-              <button
-                disabled={snap.busy || (!snap.character && !snap.groupId)}
-                aria-label="开始新对话"
-                onClick={() => run(() => host.newChat())}
-              >
-                <MessageSquarePlus size={15} />
-                新对话
-              </button>
-              <button
-                aria-label="管理聊天文件"
-                disabled={!snap.character && !snap.groupId}
-                onClick={(e) => open({ kind: "files", anchor: e.currentTarget })}
-              >
-                <FolderOpen size={15} />
-                聊天文件
-              </button>
-            </div>
-            <div className="wb-current-chat">
-              <div className="wb-current-status">
-                <span className="wb-dot online" />
-                正在进行
-              </div>
-              <strong title={snap.chatName}>{snap.chatName || "还没有打开的对话"}</strong>
-              <small>
-                {snap.groupName || snap.character?.name || "请选择角色"} · {messages.length} 层
-              </small>
-              <button
-                disabled={!snap.chatName || snap.busy}
-                onClick={(e) => open({ kind: "rename", anchor: e.currentTarget })}
-              >
-                <PencilLine size={14} />
-                重命名
-              </button>
-            </div>
-          </div>
-        </div>
-        <div
-          id="wb-nav-history"
-          className={`wb-fold-body wb-nav-section is-open ${expanded === "history" ? "is-focused" : ""}`}
-        >
-          <div>
-            <section className="wb-recent-section">
-              <button
-                className="wb-fold-toggle"
-                aria-expanded={recentOpen}
-                onClick={() => toggleSection("history")}
-              >
-                <span>历史对话</span>
-                <ChevronDown size={14} className={recentOpen ? "is-rotated" : ""} />
-              </button>
-              <div className={`wb-fold-body ${recentOpen ? "is-open" : ""}`} inert={!recentOpen}>
-                <div>
-                  {recent
-                    .filter((c) => String(c.file_name).replace(/\.jsonl$/, "") !== snap.chatName)
-                    .slice(0, 15)
-                    .map((c) => (
-                      <button
-                        className="wb-recent"
-                        key={c.file_name}
-                        disabled={snap.busy}
-                        onClick={() => run(() => host.openChat(c.file_name))}
-                      >
-                        {String(c.file_name).replace(/\.jsonl$/, "")}
-                      </button>
-                    ))}
-                  {!recent.length && <p className="wb-nav-empty">暂无历史对话</p>}
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-        {addonEnabled(host.prefs(), "outline") && (
-          <div
-            id="wb-nav-outline"
-            className={`wb-fold-body wb-nav-section is-open ${expanded === "outline" ? "is-focused" : ""}`}
-          >
-            <div>
-              <section className="wb-outline-placeholder">
-                <button
-                  className="wb-fold-toggle"
-                  aria-expanded={outline}
-                  onClick={() => toggleSection("outline")}
-                >
-                  <span>
-                    <ListTree size={15} />
-                    大纲
-                  </span>
-                  <ChevronDown size={14} className={outline ? "is-rotated" : ""} />
-                </button>
-                <div className={`wb-fold-body ${outline ? "is-open" : ""}`} inert={!outline}>
-                  <div>
-                    <AddonWorkspace host={host} id="outline" active={outline && visible} view="sidebar" />
-                  </div>
-                </div>
-              </section>
-            </div>
-          </div>
-        )}
-        <div
-          id="wb-nav-floors"
-          className={`wb-fold-body wb-nav-section is-open ${expanded === "floors" ? "is-focused" : ""}`}
-        >
-          <div>
-            <section className="wb-floors">
-              <button className="wb-fold-toggle" aria-expanded={all} onClick={() => toggleSection("floors")}>
-                <span>
-                  <List size={15} />
-                  对话楼层 <small>{all ? `${messages.length} 层` : "最近 5 条"}</small>
-                </span>
-                <ChevronDown size={14} className={all ? "is-rotated" : ""} />
-              </button>
-              <div
-                id="wb-nav-floor-content"
-                className={`wb-fold-body wb-nav-floor-body ${floorsVisible ? "is-open" : ""}`}
-                inert={!floorsVisible}
-                aria-hidden={!floorsVisible}
-              >
-                <div>
-                  <div className={`wb-floor-list ${all ? "is-expanded" : ""}`}>
-                    {(all ? messages : messages.slice(-5)).map((m) => (
-                      <button
-                        key={m.id}
-                        className={m.id === messages.length - 1 ? "is-current" : ""}
-                        onClick={() => run(() => host.jump(m.id))}
-                      >
-                        <span className="wb-floor-number">{String(m.id + 1).padStart(2, "0")}</span>
-                        <span className="wb-floor-copy">
-                          <span>{m.preview.replace(/[#*_]/g, "").slice(0, 80)}</span>
-                        </span>
-                      </button>
-                    ))}
-                    {!messages.length && <p className="wb-nav-empty">开始聊天后，楼层会显示在这里。</p>}
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-      </div>
-      <div className="wb-settings-zone">
-        {sectionExpanded && (
-          <div className="wb-settings-actions">
+      <section className="wb-nav-card" aria-label="当前对话">
+        <div className="wb-nav-card-head">
+          <span className="wb-nav-card-status">
+            <i className={snap.chatName ? "is-live" : ""} />
+            当前对话
+          </span>
+          <div className="wb-nav-card-tools">
             <button
-              aria-expanded={settingsVisible}
-              aria-controls="wb-nav-settings"
-              onClick={() => setSettingsExpanded(!settingsExpanded)}
+              className="wb-nav-icon"
+              disabled={snap.busy || !hasChat}
+              aria-label="开始新对话"
+              title="开始新对话"
+              onClick={() => run(() => host.newChat())}
             >
-              <ChevronDown size={15} className={settingsVisible ? "is-rotated" : ""} />
-              {settingsVisible ? "收纳设置" : "展开设置"}
+              <MessageSquarePlus size={16} />
             </button>
-            <button onClick={() => settings("settings")}>
-              <Settings size={15} />
-              进入设置页
+            <button
+              className="wb-nav-icon"
+              aria-label="管理聊天文件"
+              title="管理聊天文件"
+              disabled={!hasChat}
+              onClick={(e) => open({ kind: "files", anchor: e.currentTarget })}
+            >
+              <FolderOpen size={16} />
             </button>
-          </div>
-        )}
-        <div
-          id="wb-nav-settings"
-          className={`wb-fold-body wb-nav-settings-body ${settingsVisible ? "is-open" : ""}`}
-          inert={!settingsVisible}
-          aria-hidden={!settingsVisible}
-        >
-          <div>
-            <nav className="wb-left-bottom" aria-label="设置与管理">
-              {entries.map(([id, label, Icon]) => (
-                <button key={id} onClick={() => settings(id)}>
-                  <Icon size={16} />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </nav>
-            <footer className="wb-nav-footer">
-              <button onClick={help}>
-                <Keyboard size={15} />
-                快捷键
-              </button>
-              <button onClick={exit}>
-                <ArrowLeft size={15} />
-                原生界面
-              </button>
-            </footer>
+            <button
+              className="wb-nav-icon"
+              aria-label="聊天管理操作"
+              title="更多对话操作"
+              aria-expanded="false"
+              onClick={(e) => open({ kind: "chat", anchor: e.currentTarget })}
+            >
+              <Ellipsis size={16} />
+            </button>
           </div>
         </div>
+        <div className="wb-nav-card-title">
+          <strong title={snap.chatName}>{snap.chatName || "还没有打开的对话"}</strong>
+          {snap.chatName && (
+            <button
+              className="wb-nav-icon is-small"
+              aria-label="重命名对话"
+              title="重命名对话"
+              disabled={snap.busy}
+              onClick={(e) => open({ kind: "rename", anchor: e.currentTarget })}
+            >
+              <PencilLine size={13} />
+            </button>
+          )}
+        </div>
+        <small className="wb-nav-card-meta">
+          {snap.groupName || snap.character?.name || "请选择角色"} · {messages.length} 层
+        </small>
+      </section>
+
+      <div className="wb-nav-sections">
+        <NavSection
+          id="history"
+          icon={<History size={16} />}
+          label="历史对话"
+          count={recent ? String(others.length) : ""}
+          expanded={expanded.history}
+          toggle={() => toggle("history")}
+        >
+          <ul className="wb-nav-list" aria-label="历史对话">
+            {others.slice(0, 15).map((c) => {
+              const name = String(c.file_name).replace(/\.jsonl$/, "");
+              return (
+                <li key={c.file_name}>
+                  <button
+                    className="wb-nav-row"
+                    title={name}
+                    disabled={snap.busy}
+                    onClick={() => run(() => host.openChat(c.file_name))}
+                  >
+                    <span className="wb-nav-row-text">{name}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {recent && !others.length && <p className="wb-nav-empty">暂无历史对话</p>}
+        </NavSection>
+
+        {outlineEnabled && (
+          <NavSection
+            id="outline"
+            icon={<ListTree size={16} />}
+            label="大纲"
+            expanded={expanded.outline}
+            toggle={() => toggle("outline")}
+          >
+            <AddonWorkspace host={host} id="outline" active={expanded.outline && visible} view="sidebar" />
+          </NavSection>
+        )}
+
+        <NavSection
+          id="floors"
+          icon={<Layers size={16} />}
+          label="对话楼层"
+          count={allFloors ? `全部 ${messages.length} 层` : `最近 ${RECENT_FLOORS} 层`}
+          expanded={expanded.floors}
+          toggle={() => toggle("floors")}
+        >
+          <ol className={`wb-nav-list wb-floor-list ${allFloors ? "is-expanded" : ""}`} aria-label="对话楼层">
+            {floors.map((m) => (
+              <li key={m.id}>
+                <button
+                  className={`wb-nav-row ${m.id === messages.length - 1 ? "is-current" : ""}`}
+                  aria-current={m.id === messages.length - 1 ? "true" : undefined}
+                  onClick={() => run(() => host.jump(m.id))}
+                >
+                  <span className="wb-floor-number">{m.id + 1}</span>
+                  <span className="wb-nav-row-text">{m.preview.replace(/[#*_]/g, "").slice(0, 80)}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          {!messages.length && <p className="wb-nav-empty">开始聊天后，楼层会显示在这里。</p>}
+          {messages.length > RECENT_FLOORS && (
+            <button className="wb-nav-more" onClick={() => setAllFloors(!allFloors)}>
+              {allFloors ? `只看最近 ${RECENT_FLOORS} 层` : `显示全部 ${messages.length} 层`}
+            </button>
+          )}
+        </NavSection>
       </div>
+
+      <nav className="wb-nav-footer" aria-label="设置与管理">
+        <button className="wb-nav-foot" onClick={() => settings("settings")}>
+          <Settings size={16} />
+          设置
+        </button>
+        <button className="wb-nav-foot" onClick={() => settings("character")}>
+          <UsersRound size={16} />
+          {settingsLabels.character}
+        </button>
+        <button className="wb-nav-icon wb-nav-keys" aria-label="快捷键" title="快捷键" onClick={help}>
+          <Keyboard size={16} />
+        </button>
+      </nav>
     </aside>
+  );
+}
+
+function NavSection({
+  id,
+  icon,
+  label,
+  count,
+  expanded,
+  toggle,
+  children,
+}: {
+  id: Section;
+  icon: React.ReactNode;
+  label: string;
+  count?: string;
+  expanded: boolean;
+  toggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`wb-nav-section ${expanded ? "is-open" : ""}`} id={`wb-nav-${id}`}>
+      <button
+        className="wb-nav-toggle"
+        aria-label={label}
+        aria-expanded={expanded}
+        aria-controls={`wb-nav-${id}-body`}
+        onClick={toggle}
+      >
+        {icon}
+        <span>{label}</span>
+        {count && <small>{count}</small>}
+        <ChevronDown size={14} className="wb-nav-caret" />
+      </button>
+      <div
+        id={`wb-nav-${id}-body`}
+        className={`wb-fold-body ${expanded ? "is-open" : ""}`}
+        inert={!expanded}
+        aria-hidden={!expanded}
+      >
+        <div>{children}</div>
+      </div>
+    </section>
   );
 }

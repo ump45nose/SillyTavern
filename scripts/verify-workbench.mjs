@@ -223,11 +223,15 @@ try {
     "real preset save, profile application with binding and Persona editing",
     resources,
   );
-  await page.getByRole("button", { name: "下一个连接", exact: true }).click();
+  const nextConnection = await page.evaluate(
+    () => workbench.host.snapshot().resources.connection.find((x) => x.id === "wb-test-1").name,
+  );
+  await page.locator('.wb-pill[aria-controls="wb-choices-connection"]').click();
+  await page.locator("#wb-choices-connection label").filter({ hasText: nextConnection }).first().click();
   await page.waitForFunction(
     () => workbench.host.snapshot().current.connection === "wb-test-1",
   );
-  check("next-connection button uses official connection manager");
+  check("connection pill popover switches through the official connection manager");
   await page.keyboard.press("Alt+Shift+Digit2");
   await page.locator(".wb-resources").waitFor();
   await page.getByRole("button", { name: "独立深度编辑", exact: true }).click();

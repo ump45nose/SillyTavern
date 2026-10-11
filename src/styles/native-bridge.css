@@ -392,7 +392,8 @@ body.wb-active.wb-right-open {
   --wb-right: var(--wb-right-size);
 }
 body.wb-active #sheld {
-  inset: calc(var(--wb-header) + 52px) calc(var(--wb-right) + var(--wb-lane-right)) 0 calc(var(--wb-left) + var(--wb-lane-left)) !important;
+  inset: calc(var(--wb-header) + 52px) calc(var(--wb-right) + var(--wb-lane-right)) 0
+    calc(var(--wb-left) + var(--wb-lane-left)) !important;
   transition: inset var(--wb-motion) ease;
 }
 body.wb-active #chat {
@@ -522,9 +523,15 @@ body.wb-active .wb-ui svg,
 body.wb-active .wb-ui svg *,
 body.wb-active .wb-native-icon,
 body.wb-active .wb-native-icon * {
-  color: var(--wb-control-ink) !important;
   stroke: currentColor !important;
   fill: none !important;
+}
+/* Redesigned components (phase E) colour icons through their own text colour. */
+body.wb-active .wb-ui svg:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar) *),
+body.wb-active .wb-ui svg *:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar) *),
+body.wb-active .wb-native-icon,
+body.wb-active .wb-native-icon * {
+  color: var(--wb-control-ink) !important;
 }
 body.wb-active #send_but .wb-native-icon,
 body.wb-active #send_but .wb-native-icon * {
@@ -2979,7 +2986,8 @@ body.wb-rp:not(.wb-rp-history) .edit_textarea {
   resize: vertical;
 }
 body.wb-active.wb-rp.wb-rp-history #sheld {
-  inset: calc(var(--wb-rp-chrome) + 52px) calc(var(--wb-right) + var(--wb-lane-right)) 0 calc(var(--wb-left) + var(--wb-lane-left)) !important;
+  inset: calc(var(--wb-rp-chrome) + 52px) calc(var(--wb-right) + var(--wb-lane-right)) 0
+    calc(var(--wb-left) + var(--wb-lane-left)) !important;
   width: auto !important;
   height: auto !important;
   border: 0 !important;
@@ -3537,6 +3545,60 @@ body.wb-active.wb-mobile.wb-image-input-mode .wb-image-input-anchor {
   height: auto;
   min-height: 44px;
   gap: 3px;
+}
+
+/* ── phase E · the Noval desk (board "Main") ──
+   #sheld is the lower part of the paper sheet whose top edge is .wb-reading-bar; geometry comes
+   from --wb-sheet-* in layouts/desk.css. RP and PWA keep their own #sheld rules above. */
+body.wb-active:not(.wb-rp):not(.wb-mobile) #sheld {
+  inset: calc(var(--wb-sheet-top) + var(--wb-reading-bar)) var(--wb-sheet-right) var(--wb-sheet-bottom)
+    var(--wb-sheet-left) !important;
+  background: var(--wb-surface-1) !important;
+  border-radius: 0 0 var(--wb-radius-xl) var(--wb-radius-xl) !important;
+  box-shadow: var(--wb-shadow-2) !important;
+  /* The reading bar carries the upper half of the shadow. */
+  clip-path: inset(0 -100vw -100vh -100vw);
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #form_sheld {
+  position: relative;
+  max-width: none;
+  padding: 10px 28px 18px !important;
+}
+/* Text scrolls under a short fade instead of meeting the composer's edge. */
+body.wb-active:not(.wb-rp):not(.wb-mobile) #form_sheld::before {
+  content: "";
+  position: absolute;
+  inset: -36px 0 auto;
+  height: 46px;
+  background: linear-gradient(to bottom, transparent, var(--wb-surface-1));
+  pointer-events: none;
+}
+/* The composer floats on the sheet as its own card. */
+body.wb-active:not(.wb-rp):not(.wb-mobile) #send_form {
+  width: 100%;
+  max-width: 780px;
+  height: var(--wb-composer-height, 132px);
+  min-height: 124px;
+  margin: 0 auto !important;
+  padding: 16px 10px 10px 18px !important;
+  border: 0 !important;
+  border-radius: var(--wb-radius-xl) !important;
+  background: var(--wb-surface-1) !important;
+  box-shadow:
+    var(--wb-shadow-2),
+    0 0 0 1px var(--wb-line-1) !important;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #send_form:focus-within {
+  box-shadow:
+    var(--wb-shadow-2),
+    0 0 0 1px color-mix(in srgb, var(--wb-accent) 38%, var(--wb-line-1)) !important;
+}
+body.wb-active.wb-focus:not(.wb-rp):not(.wb-mobile) #send_form {
+  max-width: 800px;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #send_textarea {
+  font-size: 15px !important;
+  line-height: 1.65 !important;
 }
 
 /*

@@ -40,6 +40,8 @@ export interface Preferences {
   pinnedTools?: { id: string; label: string }[];
   userCollapsed?: boolean;
   messageMeta?: "hover" | "always" | "never";
+  /** Workbench color scheme; "system" follows prefers-color-scheme (default light). */
+  theme?: "light" | "dark" | "system";
   /** Reveal a sidebar while the pointer rests at the window edge (default on). */
   edgeHover?: boolean;
   bindings: Record<string, string>;

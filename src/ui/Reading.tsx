@@ -38,7 +38,7 @@ export function ReadingSettings({ host }: { host: HostAdapter }) {
         aria-expanded={!!anchor}
         onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}
       >
-        <Type size={21} />
+        <Type size={17} />
       </button>
       {presence.value && (
         <Popover

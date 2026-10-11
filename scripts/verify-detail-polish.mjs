@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,connect,selectPaper,paperValue,openResource} from './browser.mjs';
 const dir='artifacts/detail-polish';fs.mkdirSync(dir,{recursive:true});
 const browser=await launch(), checks=[];
 const pass=name=>{checks.push(name);console.log('PASS',name);};
@@ -33,10 +33,10 @@ try {
   await fixture.evaluate(e=>e.classList.toggle('is-active'));const after=await ring.boundingBox();assert.deepEqual(after,before);await fixture.evaluate(e=>e.classList.toggle('is-active'));
   const tab=page.getByRole('button',{name:'当前角色',exact:true});await tab.hover();assert.equal(await tab.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
   await page.screenshot({path:dir+'/character-selection.png'});pass('avatar ring keeps dimensions and alignment; tabs hover without rectangular fill');
-  const detail=page.getByRole('button',{name:'连接详情',exact:true});await detail.hover();assert.equal(await detail.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+  const detail=page.locator('.wb-pill[aria-controls="wb-choices-connection"]');await detail.hover();assert.equal(await detail.locator('.wb-pill-dot').evaluate(e=>getComputedStyle(e).borderRadius),'50%');assert.equal(await detail.evaluate(e=>getComputedStyle(e).borderRadius),'10px');
   await page.screenshot({path:dir+'/header-hover.png'});pass('connection dot hover has no rectangular block');
   await page.getByRole('button',{name:'关闭右栏',exact:true}).click();
-  await page.getByRole('button',{name:'连接详情',exact:true}).click();
+  await openResource(page,'连接详情');
   await page.getByRole('button',{name:'连接配置与绑定',exact:true}).click();await page.getByRole('combobox',{name:'绑定预设',exact:true}).click();await page.getByRole('listbox').waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('listbox').count(),0);
   await page.getByRole('button',{name:'关闭右栏',exact:true}).click();
   for(const width of [1024,1366,1440]){await page.setViewportSize({width,height:900});await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await page.waitForTimeout(250);

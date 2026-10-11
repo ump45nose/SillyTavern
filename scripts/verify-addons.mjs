@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { gunzipSync } from 'node:zlib';
-import { launch, session, ready, urls, artifacts } from './browser.mjs';
+import { launch, session, ready, urls, artifacts, openSettings } from './browser.mjs';
 const directory = artifacts + '/addons'; fs.mkdirSync(directory, { recursive: true });
 const browser = await launch(), checks = [], report = { checkedAt: new Date().toISOString(), checks };
 const pass = name => { checks.push(name); console.log('PASS', name); };
@@ -52,7 +52,7 @@ try {
   pass('startup loads no add-on manifest, export module, stylesheet or worker');
 
   if (await page.locator('.wb-edge-left').getAttribute('aria-expanded') === 'false') { await page.locator('.wb-edge-left').click(); await settle(); }
-  await button('扩展').click();
+  await openSettings(page, '扩展');
   await page.getByRole('navigation', { name: '设置分组' }).getByRole('button', { name: '工作台附加功能', exact: true }).click();
   await page.getByRole('region', { name: '工作台附加功能' }).waitFor();
   assert.equal(hasExportRequests(requests), false);

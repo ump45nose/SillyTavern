@@ -17,6 +17,11 @@ const label = (name) => async (page) => {
 const text = (name) => async (page) => {
   await page.getByRole("button", { name, exact: true }).first().click();
 };
+/** The left column leads to 设置; every page is then one entry in the workspace's own nav. */
+const settings = (name) => async (page) => {
+  await page.locator(".wb-nav-footer").getByRole("button", { name: "设置", exact: true }).click();
+  await page.locator(".wb-settings-nav").getByRole("button", { name, exact: true }).click();
+};
 const layout = (mode) => async (page) => {
   await page.evaluate((mode) => workbench.host.preference({ layout: mode }), mode);
 };
@@ -42,10 +47,10 @@ export const states = [
   { name: "reading-settings", viewport: desktop, steps: [label("阅读设置")] },
   { name: "focus", viewport: desktop, steps: [key("Alt+Shift+KeyF")] },
   { name: "popover-chat-files", viewport: desktop, steps: [label("管理聊天文件")] },
-  { name: "settings-user", viewport: desktop, steps: [text("用户设置")] },
-  { name: "settings-preset", viewport: desktop, steps: [text("预设")] },
-  { name: "settings-world", viewport: desktop, steps: [text("世界书")] },
-  { name: "settings-character", viewport: desktop, steps: [text("角色管理")] },
+  { name: "settings-user", viewport: desktop, steps: [settings("用户设置")] },
+  { name: "settings-preset", viewport: desktop, steps: [settings("预设")] },
+  { name: "settings-world", viewport: desktop, steps: [settings("世界书")] },
+  { name: "settings-character", viewport: desktop, steps: [settings("角色管理")] },
   { name: "shortcuts", viewport: desktop, steps: [text("快捷键")] },
   { name: "rp-stage", viewport: desktop, steps: [layout("rp")] },
   { name: "rp-compose", viewport: desktop, steps: [layout("rp"), label("输入回应")] },

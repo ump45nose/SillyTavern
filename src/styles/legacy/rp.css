@@ -13,17 +13,6 @@
   body.wb-rp .wb-contexts {
     transform: translateX(24px);
   }
-  body.wb-rp .wb-identity img {
-    border-radius: 50%;
-    object-fit: cover;
-    object-position: 50% 24%;
-  }
-  body.wb-rp .wb-top-right .wb-top-action {
-    width: 36px;
-    height: 36px;
-    min-height: 36px;
-    padding: 7px;
-  }
   body.wb-rp.wb-rp-top-collapsed .wb-top {
     transform: translateY(-100%);
     opacity: 0;

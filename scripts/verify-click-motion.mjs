@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter,withReducedMotion} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,withReducedMotion,openResource,openSettings} from './browser.mjs';
 
 const dir='artifacts/click-motion';fs.mkdirSync(dir,{recursive:true});
 const checks=[],pass=(name,details)=>{checks.push({name,passed:true,details});console.log('PASS',name);};
@@ -29,7 +29,7 @@ try{
  const user=page.locator('#chat .mes[is_user=true]').last();await user.evaluate(n=>n.dataset.wbClickInput='true');const inputToggle=user.locator('.wb-user-heading button');
  const opening=await verify('user input expands without moving its heading',inputToggle,'[data-wb-click-input] .mes_text','height');assert(opening.frames.every(x=>Math.abs(x.labelX-opening.before.labelX)<1&&Math.abs(x.labelY-opening.before.labelY)<1));
  await verify('user input folds',inputToggle,'[data-wb-click-input] .mes_text','height');await user.evaluate(n=>delete n.dataset.wbClickInput);
- const chooser=page.locator('.wb-selector').first().locator('.wb-selector-value');await verify('header chooser opens',chooser,'#wb-choices-connection','opacity');await verify('header chooser closes',chooser,'#wb-choices-connection','opacity');
+ const chooser=page.locator('.wb-pill[aria-controls="wb-choices-connection"]');await verify('header chooser opens',chooser,'#wb-choices-connection','opacity');await verify('header chooser closes',chooser,'#wb-choices-connection','opacity');
  // Use genuine menu controls and check opening AND removal, not only hover color.
  await verify('chat menu opens',page.getByRole('button',{name:'聊天菜单',exact:true}),'.wb-popover[role=dialog]','opacity');
  const close=await verify('chat menu closes',page.getByRole('button',{name:'关闭弹出框',exact:true}),'.wb-popover[role=dialog]','opacity');assert(close.frames.some(x=>x.exiting==='true'&&x.present));assert(!close.after.present);
@@ -37,13 +37,13 @@ try{
   await verify(name+' opens',page.getByRole('button',{name,exact:true}),'.wb-popover[role=dialog]','opacity');
   await verify(name+' closes',page.getByRole('button',{name:'关闭弹出框',exact:true}),'.wb-popover[role=dialog]','opacity');
  }
- await page.getByRole('button',{name:'世界书详情',exact:true}).click();await settle();await page.locator('#wb-resource-rail .wb-picker-copy').first().click();await settle();
+ await openResource(page,'世界书详情');await settle();await page.locator('#wb-resource-rail .wb-picker-copy').first().click();await settle();
  const entry=page.locator('.wb-right .wb-entry-row .wb-icon').first();await entry.waitFor();
  const world=await verify('world entry editor expands',entry,'.wb-right .wb-entry-editor','height');
  const original=await page.locator('.wb-right .wb-entry-editor').evaluate(n=>{window.__clickWorldEditor=n;return true;});assert(original);
  await page.screenshot({path:dir+'/world-editor.png'});
  await verify('world entry editor folds',page.getByRole('button',{name:'收起条目编辑',exact:true}),'.wb-right .wb-entry-editor','height');assert(await page.locator('.wb-right .wb-entry-editor').evaluate(n=>n===__clickWorldEditor));assert.equal(world.before.height,0);
- await page.getByRole('button',{name:'预设详情',exact:true}).click();await settle();
+ await openResource(page,'预设详情');await settle();
  await verify('prompt editor expands',page.locator('.wb-right .wb-prompt-row .wb-icon').first(),'.wb-right .wb-prompt-collapse','height');
  await page.locator('.wb-right .wb-prompt-editor textarea').evaluate(n=>window.__clickPrompt=n);await page.screenshot({path:dir+'/prompt-editor.png'});
  await verify('prompt editor folds',page.getByRole('button',{name:'收起提示词编辑',exact:true}),'.wb-right .wb-prompt-collapse','height');assert(await page.locator('.wb-right .wb-prompt-editor textarea').evaluate(n=>n===__clickPrompt));
@@ -54,11 +54,12 @@ try{
  const checkbox=page.locator('.wb-right .wb-check-pair input').first(),was=await checkbox.isChecked();
  const pressing=await sample(checkbox,'.wb-right .wb-check-pair input');assert(pressing.frames.some(x=>x.scale!==1&&x.scale!=='1'&&x.scale!=='none'));await checkbox.setChecked(was);await settle();pass('short clicks visibly press and release; native check state restored',pressing);
  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
- const nav=page.locator('.wb-left-bottom').getByRole('button',{name:'回复格式',exact:true});await verify('settings workspace opens',nav,'.wb-settings-workspace','opacity');
+ const nav=page.locator('.wb-nav-footer').getByRole('button',{name:'设置',exact:true});await verify('settings workspace opens',nav,'.wb-settings-workspace','opacity');
+ await page.locator('.wb-settings-nav').getByRole('button',{name:'回复格式',exact:true}).click();await settle();
  const header=page.locator('.wb-settings-workspace .wb-settings-subnav').getByRole('button',{name:'指令模板',exact:true});const changing=await sample(header,'.wb-settings-body');assert(changing.frames.some(x=>x.present&&x.opacity>.35&&x.opacity<.95),'settings group must visibly fade into place');pass('settings group changes',changing);
 
  await verify('settings workspace returns',page.getByRole('button',{name:'返回工作台',exact:true}),'.wb-settings-workspace','opacity');
- const background=page.locator('.wb-left-bottom').getByRole('button',{name:'背景',exact:true});await background.click();await page.locator('#bg_thumb_zoom_in').waitFor();await settle();
+ await openSettings(page,'背景');await page.locator('#bg_thumb_zoom_in').waitFor();await settle();
  const nativePress=await sample(page.locator('#bg_thumb_zoom_in'),'#bg_thumb_zoom_in');assert(nativePress.frames.some(x=>x.scale!=='none'&&x.scale!=='1'),'native icon actions must visibly press');await page.locator('#bg_thumb_zoom_out').click();await settle();pass('native icon action keeps thumbnail zoom and visibly presses',nativePress);
  await page.getByRole('button',{name:'返回工作台',exact:true}).click();await page.locator('.wb-settings-workspace').waitFor({state:'detached'});
 

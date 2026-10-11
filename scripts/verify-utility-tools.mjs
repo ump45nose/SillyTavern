@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { gunzipSync } from 'node:zlib';
-import { launch, session, ready, urls, artifacts } from './browser.mjs';
+import { launch, session, ready, urls, artifacts, chooseLayout, openSettings } from './browser.mjs';
 const directory = artifacts + '/utility-tools'; fs.mkdirSync(directory, { recursive: true });
 const browser = await launch(), checks = [], report = { checkedAt: new Date().toISOString(), checks };
 const pass = name => { checks.push(name); console.log('PASS', name); };
@@ -20,7 +20,7 @@ try {
   const role = name => page.getByRole('button', { name, exact: true }), settle = () => page.waitForTimeout(350);
   await page.evaluate(() => { workbench.host.preference({ layout: 'novel', pinnedTools: [{ id: 'wb:export', label: '记录导出' }], addons: { 'record-export': true } }); window.__utilityNative = { input: document.getElementById('send_textarea'), chat: document.getElementById('chat') }; }); await settle();
   const ensureLeft = async () => { if (await page.locator('.wb-edge-left').getAttribute('aria-expanded') === 'false') { await page.locator('.wb-edge-left').click(); await settle(); } };
-  const settingsGroup = async group => { await ensureLeft(); await role('用户设置').click(); await page.getByRole('navigation', { name: '设置分组' }).getByRole('button', { name: group, exact: true }).click(); };
+  const settingsGroup = async group => { await ensureLeft(); await openSettings(page, '用户设置'); await page.getByRole('navigation', { name: '设置分组' }).getByRole('button', { name: group, exact: true }).click(); };
   const tool = id => page.locator(`.wb-composer-actions [data-wb-tool="${id}"]`);
   const exportPanel = page.getByRole('region', { name: '聊天记录分析与导出' });
   const openExport = async () => { if (await tool('wb:export').count()) await tool('wb:export').click(); else { await role('更多工具').click(); await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '记录导出', exact: true }).click(); } await page.waitForSelector('.wb-export-workspace'); };
@@ -136,7 +136,7 @@ try {
     await page.screenshot({ path: directory + `/export-noval-${width}.png` }); await page.locator('.wb-edge-right').click(); await settle();
   }
   await page.setViewportSize({ width: 1496, height: 817 });
-  await role('切换工作台').click(); await page.getByRole('menuitemradio', { name: 'RP', exact: false }).click(); await settle();
+  await chooseLayout(page,'RP'); await settle();
   await page.evaluate(() => workbench.host.preference({ rpTopAuto: false })); await settle();
   assert.equal(await page.locator('.wb-left.is-open,.wb-right.is-open').count(), 0);
   await role('输入回应').click(); await settle(); await openExport(); await waitResult(1);
@@ -144,7 +144,7 @@ try {
   assert.deepEqual(await page.evaluate(() => workbench.host.prefs().pinnedTools), pins);
   file = await downloadText(); assert.ok(file.text.length > 0);
   await page.screenshot({ path: directory + '/export-rp-1496.png' }); await page.locator('.wb-edge-right').click(); await settle();
-  await role('切换工作台').click(); await page.getByRole('menuitemradio', { name: 'Noval', exact: false }).click(); await settle();
+  await chooseLayout(page,'Noval'); await settle();
   pass('1024 and 2992 widths keep the export footer and scrolling area usable; RP shares tools, download and original native nodes');
 
   await settingsGroup('加载诊断'); await page.getByRole('region', { name: '加载诊断' }).waitFor();

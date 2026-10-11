@@ -201,9 +201,6 @@
   .wb-ui {
     --wb-selection-line: color-mix(in srgb, var(--wb-accent) 65%, var(--wb-line));
   }
-  .wb-current-chat {
-    border-color: var(--wb-selection-line);
-  }
   body.wb-active .wb-ui .wb-fold-toggle {
     border: 1px solid transparent !important;
     border-radius: 7px;
@@ -221,42 +218,11 @@
   }
   .wb-ui
     :is(
-      .wb-resource-choice.is-active,
-      .wb-manager-row.is-editing,
-      .wb-manager-row.is-selected,
-      .wb-quick-row.is-active,
-      .wb-prompt-row.is-active,
-      .wb-entry-row.is-active,
-      .wb-floor-list > button.is-current,
-      .wb-group-choice[aria-pressed="true"],
-      .wb-persona-manager > aside > button[aria-pressed="true"]
-    ) {
-    box-shadow: inset 0 0 0 1px var(--wb-selection-line);
-  }
-  .wb-ui
-    :is(
       .wb-selector.is-active,
       .wb-card-grid .wb-character-card.is-active,
       .wb-settings-nav > button[aria-pressed="true"]
     ) {
     border-color: var(--wb-selection-line);
-  }
-  .wb-ui
-    :is(
-      .wb-resource-choice,
-      .wb-manager-row,
-      .wb-quick-row,
-      .wb-prompt-row,
-      .wb-entry-row,
-      .wb-persona-manager > aside > button,
-      .wb-group-choice,
-      .wb-floor-list > button
-    ) {
-    transition:
-      background-color 180ms,
-      border-color 180ms,
-      box-shadow 180ms,
-      color 180ms;
   }
   .wb-ui .wb-option-state,
   .wb-ui .wb-choice-state {
