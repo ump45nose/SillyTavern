@@ -252,10 +252,6 @@
     border-color: var(--wb-accent);
     background: var(--wb-accent);
   }
-  .wb-list-tools > .wb-select {
-    flex: none;
-    max-width: 120px;
-  }
   .wb-entry-copy .wb-mode-label {
     padding: 0;
     min-height: 22px;

@@ -897,7 +897,7 @@
     overflow: hidden;
     background: var(--wb-surface);
   }
-  .wb-manager-editor > :is(.wb-resource-v2, .wb-world) {
+  .wb-manager-editor > :is(.wb-world) {
     height: 100%;
   }
   .wb-manager-editor .wb-world.is-managed .wb-world-grid {
@@ -942,12 +942,8 @@
     max-width: 1180px;
     margin: 0 auto;
   }
-  .wb-settings-body > .wb-characters.is-management,
-  .wb-settings-body > .wb-resource-v2 {
+  .wb-settings-body > .wb-characters.is-management {
     height: 100%;
-  }
-  .wb-settings-body > .wb-resource-v2.is-deep .wb-resource-detail {
-    max-width: 900px;
   }
   @media (max-width: 1400px) {
     .wb-manager-grid {
@@ -1770,9 +1766,6 @@
     height: 100%;
     padding: 24px 29px;
   }
-  .wb-characters.is-management .wb-library-filters {
-    display: none;
-  }
   .wb-characters.is-management .wb-library-content {
     padding: 0;
   }
@@ -1941,18 +1934,6 @@
     background: var(--wb-accent) !important;
     margin-top: -4.5px !important;
     box-shadow: 0 0 0 1px #bdac94 !important;
-  }
-  .wb-character-filter-bar {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin: 4px 0 14px;
-  }
-  .wb-character-filter-bar .wb-select {
-    width: 150px;
-  }
-  .wb-character-filter-bar small {
-    font-size: 11px;
   }
   .wb-host-widget {
     padding: 7px 10px;

@@ -534,17 +534,7 @@
     gap: 16px;
   }
   body.wb-mobile
-    :is(
-      .wb-manager-grid,
-      .wb-persona-manager,
-      .wb-world-grid,
-      .wb-manager-editor .wb-world-grid,
-      .wb-outline-editor-grid,
-      .wb-params-grid,
-      .wb-settings-grid,
-      .wb-image-settings-grid,
-      .wb-background-config
-    ) {
+    :is(.wb-manager-grid, .wb-persona-manager, .wb-world-grid, .wb-manager-editor .wb-world-grid) {
     grid-template-columns: minmax(0, 1fr) !important;
   }
   body.wb-mobile :is(.wb-manager-grid, .wb-persona-manager) {
@@ -552,21 +542,14 @@
     flex-direction: column;
     overflow: auto;
   }
-  body.wb-mobile :is(.wb-manager-list, .wb-persona-list) {
-    max-height: 230px;
-    flex: none;
-  }
   body.wb-mobile :is(.wb-manager-editor, .wb-persona-editor) {
     min-height: 350px;
     overflow: visible;
   }
-  body.wb-mobile :is(.wb-control-grid, .wb-parameters) {
+  body.wb-mobile :is(.wb-parameters) {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
-  body.wb-mobile :is(.wb-character-grid, .wb-background-grid) {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-  body.wb-mobile :is(.wb-resource-v2, .wb-resource-detail, .wb-resources) {
+  body.wb-mobile :is(.wb-resource-detail, .wb-resources) {
     min-width: 0;
   }
   body.wb-mobile .wb-addon-editor {
@@ -589,9 +572,6 @@
     max-width: calc(100vw - 16px);
     max-height: calc(var(--wb-mobile-height, 100dvh) - 16px);
     min-width: 0;
-  }
-  body.wb-mobile .wb-dialog-body {
-    padding: 12px;
   }
   body.wb-mobile .wb-toast {
     left: 12px;

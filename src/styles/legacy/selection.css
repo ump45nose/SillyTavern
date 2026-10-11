@@ -116,7 +116,7 @@
     background: var(--wb-selection-fill);
     border-color: var(--wb-selection-line);
   }
-  .wb-ui :is(.wb-panel-tabs > button.is-active, .wb-library-filters > button.is-active) {
+  .wb-ui :is(.wb-panel-tabs > button.is-active) {
     background: var(--wb-selection-fill) !important;
     box-shadow: inset 0 0 0 1px var(--wb-selection-line);
   }

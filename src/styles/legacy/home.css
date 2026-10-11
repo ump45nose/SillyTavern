@@ -384,21 +384,6 @@
     padding: 0 3px 16px;
     color: var(--wb-control-ink);
   }
-  .wb-outline-empty {
-    padding: 20px 4px 25px;
-    color: #a49b8c;
-  }
-  .wb-outline-empty p {
-    font:
-      15px/2 Georgia,
-      "Noto Serif CJK SC",
-      serif;
-    margin-top: 10px;
-  }
-  .wb-outline-empty small {
-    font-size: 11px;
-    color: #a49b8c;
-  }
   .wb-floors,
   .wb-recent-section {
     border-top: 1px solid var(--wb-line);
@@ -461,10 +446,6 @@
     text-overflow: ellipsis;
     color: var(--wb-control-ink);
     font-size: 11px;
-  }
-  .wb-all-floors {
-    margin: 2px 0 0 34px;
-    font-size: 10px !important;
   }
   .wb-nav-empty {
     font-size: 11px;
@@ -711,13 +692,6 @@
   body.wb-active .wb-composer-tools {
     position: static;
   }
-  .wb-outline-empty {
-    padding: 7px 4px 14px;
-  }
-  .wb-outline-empty p {
-    font-size: 14px;
-    margin-top: 7px;
-  }
   .wb-outline-placeholder {
     min-height: 138px;
   }
@@ -756,10 +730,6 @@
   body.wb-active .wb-ui .wb-top-action.is-active svg * {
     color: var(--wb-accent) !important;
   }
-  .wb-resource-v2 {
-    padding: 0;
-    overflow: hidden;
-  }
   .wb-resource-heading {
     display: flex;
     align-items: center;
@@ -777,18 +747,6 @@
   }
   .wb-resource-heading small {
     font-size: 11px;
-  }
-  .wb-resource-v2 > .wb-resource-list {
-    padding: 12px 18px;
-    max-height: 210px;
-    overflow: auto;
-    border-bottom: 1px solid var(--wb-line);
-  }
-  .wb-resource-v2 .wb-resource-detail {
-    padding: 12px 20px 0;
-    min-height: 0;
-    flex: 1;
-    overflow: auto;
   }
   .wb-resource-choice {
     display: flex;
@@ -827,11 +785,6 @@
     height: 38px;
     border-radius: 50%;
   }
-  .wb-current-mark {
-    color: var(--wb-accent);
-    font-size: 10px;
-    white-space: nowrap;
-  }
   .wb-form-pair {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -839,20 +792,6 @@
   }
   .wb-form-pair .wb-field {
     margin: 10px 0;
-  }
-  .wb-resource-v2 .wb-field {
-    gap: 6px;
-    margin: 12px 0;
-  }
-  .wb-resource-v2 .wb-field input,
-  .wb-resource-v2 .wb-field select {
-    min-height: 37px;
-  }
-  .wb-resource-v2 h4 {
-    font-size: 12px;
-    font-weight: 550;
-    color: var(--wb-muted);
-    margin: 22px 0 12px;
   }
   .wb-check {
     display: flex;
@@ -922,28 +861,6 @@
     border: 0 !important;
     margin-bottom: 8px;
   }
-  .wb-persona-avatar {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 15px 0 5px;
-  }
-  .wb-persona-avatar > img {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-  }
-  .wb-persona-avatar > div {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 7px;
-  }
-  .wb-persona-avatar button {
-    font-size: 11px;
-    padding: 5px 8px;
-    min-height: 29px;
-  }
   .wb-native-slot {
     border-top: 1px solid var(--wb-line);
     padding-top: 12px;
@@ -968,11 +885,6 @@
     border-top: 1px solid var(--wb-line);
     border-bottom: 1px solid var(--wb-line);
   }
-  .wb-preset-columns > .wb-resource-list {
-    padding: 12px 9px;
-    overflow: auto;
-    border-right: 1px solid var(--wb-line);
-  }
   .wb-preset-columns .wb-resource-choice {
     flex-wrap: wrap;
     gap: 0;
@@ -985,9 +897,6 @@
     width: 25px;
     height: 28px;
     min-height: 28px;
-  }
-  .wb-preset-columns .wb-current-mark {
-    display: none;
   }
   .wb-prompt-list {
     padding: 10px;
@@ -1031,20 +940,6 @@
   }
   .wb-preset-editor > .wb-save-footer {
     padding: 12px 20px;
-  }
-  .wb-resource-v2.is-deep {
-    display: flex;
-  }
-  .wb-resource-v2.is-deep .wb-resource-detail {
-    max-width: none;
-    width: auto;
-  }
-  .wb-resource-v2.is-deep .wb-preset-columns {
-    grid-template-columns: 260px 1fr;
-  }
-  .wb-resource-v2.is-deep .wb-preset-scroll {
-    max-width: 1100px;
-    margin: 0 auto;
   }
   .wb-trace-v2 {
     padding: 0;
@@ -1225,8 +1120,5 @@
   }
   .wb-trace-v2 .wb-resource-heading small {
     display: none;
-  }
-  .wb-resource-v2 .wb-form-pair .wb-field {
-    margin: 7px 0;
   }
 }
