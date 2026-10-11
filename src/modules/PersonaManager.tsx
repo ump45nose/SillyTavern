@@ -1,7 +1,7 @@
 import { Download, Upload } from "lucide-react";
 import React, { useState } from "react";
 import type { HostAdapter } from "../host/adapter";
-import { Notice, SearchBox, useHost, useTask } from "../ui/common";
+import { Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";
 import { Check } from "../ui/ResourceControls";
 export default function PersonaManager({
@@ -15,7 +15,7 @@ export default function PersonaManager({
   initial?: string;
   onPosition: (id: string) => void;
 }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     [id, setId] = useState(initial || snap.current.persona || snap.resources.persona[0]?.id || ""),
     [query, setQuery] = useState("");

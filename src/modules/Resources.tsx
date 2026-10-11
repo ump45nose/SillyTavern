@@ -21,7 +21,7 @@ import {
 import type { HostAdapter } from "../host/adapter";
 import type { Resource, Data } from "../host/types";
 import { clone, validatePreset } from "../host/model";
-import { useHost, useTask, Notice, Empty, Field, IconButton } from "../ui/common";
+import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat } from "../ui/common";
 import { Check, Fold, useDraft } from "../ui/ResourceControls";
 import { ResourcePicker } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
@@ -49,7 +49,7 @@ export default function Resources({
   onSelection?: (id: string) => void;
   view?: "prompts";
 }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask();
   const [id, setId] = useState(initial || snap.current[kind] || snap.resources[kind][0]?.id || "");
   const pendingCreation = useRef<Set<string> | null>(null);
@@ -333,7 +333,7 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
   );
 }
 function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep?: boolean }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     edit = useDraft(() => host.personaData(id), host.resourceVersions.persona, {
       host,

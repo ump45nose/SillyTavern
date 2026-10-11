@@ -40,7 +40,7 @@ import { useMobileViewport } from "./ui/useMobileViewport";
 import type { LayoutMode } from "./ui/LayoutSwitcher";
 import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
-import { useHost, useTask, IconButton, Empty, Dialog, Loading } from "./ui/common";
+import { useTask, IconButton, Empty, Dialog, Loading, useHostSlices, withoutChat } from "./ui/common";
 const World = lazy(() => import("./modules/World"));
 const Characters = lazy(() => import("./modules/Characters"));
 const Resources = lazy(() => import("./modules/Resources"));
@@ -69,7 +69,7 @@ export default function App({
   onLayout: (layout: LayoutMode) => void;
 }) {
   const [operations] = useState(() => new Operations());
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     [left, setLeft] = useState(innerWidth < 1024 || host.prefs().layout === "rp" ? false : host.prefs().left),
     [panel, setPanel] = useState<Panel>(null),

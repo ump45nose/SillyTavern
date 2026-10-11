@@ -23,6 +23,7 @@ import {
 import type { HostAdapter } from "../host/adapter";
 import type { Data, HostSnapshot, SettingsPage } from "../host/types";
 import AddonWorkspace from "./AddonWorkspace";
+import { useHostSlice } from "./common";
 import { addonEnabled } from "../addons/catalog";
 import type { ComposerPopup } from "./ComposerPopovers";
 type Section = "history" | "outline" | "floors";
@@ -45,6 +46,7 @@ export function Navigation({
   exit: () => void;
   run: (fn: () => unknown) => unknown;
 }) {
+  const messages = useHostSlice(host, "chat");
   const [expanded, setExpanded] = useState<Section | null>(null),
     [settingsExpanded, setSettingsExpanded] = useState(false),
     [recent, setRecent] = useState<Data[]>([]);
@@ -140,7 +142,7 @@ export function Navigation({
               </div>
               <strong title={snap.chatName}>{snap.chatName || "还没有打开的对话"}</strong>
               <small>
-                {snap.groupName || snap.character?.name || "请选择角色"} · {snap.messages.length} 层
+                {snap.groupName || snap.character?.name || "请选择角色"} · {messages.length} 层
               </small>
               <button
                 disabled={!snap.chatName || snap.busy}
@@ -223,7 +225,7 @@ export function Navigation({
               <button className="wb-fold-toggle" aria-expanded={all} onClick={() => toggleSection("floors")}>
                 <span>
                   <List size={15} />
-                  对话楼层 <small>{all ? `${snap.messages.length} 层` : "最近 5 条"}</small>
+                  对话楼层 <small>{all ? `${messages.length} 层` : "最近 5 条"}</small>
                 </span>
                 <ChevronDown size={14} className={all ? "is-rotated" : ""} />
               </button>
@@ -235,24 +237,19 @@ export function Navigation({
               >
                 <div>
                   <div className={`wb-floor-list ${all ? "is-expanded" : ""}`}>
-                    {(all ? snap.messages : snap.messages.slice(-5)).map((m) => (
+                    {(all ? messages : messages.slice(-5)).map((m) => (
                       <button
                         key={m.id}
-                        className={m.id === snap.messages.length - 1 ? "is-current" : ""}
+                        className={m.id === messages.length - 1 ? "is-current" : ""}
                         onClick={() => run(() => host.jump(m.id))}
                       >
                         <span className="wb-floor-number">{String(m.id + 1).padStart(2, "0")}</span>
                         <span className="wb-floor-copy">
-                          <span>
-                            {String(m.text)
-                              .replace(/<[^>]*>/g, "")
-                              .replace(/[#*_]/g, "")
-                              .slice(0, 80)}
-                          </span>
+                          <span>{m.preview.replace(/[#*_]/g, "").slice(0, 80)}</span>
                         </span>
                       </button>
                     ))}
-                    {!snap.messages.length && <p className="wb-nav-empty">开始聊天后，楼层会显示在这里。</p>}
+                    {!messages.length && <p className="wb-nav-empty">开始聊天后，楼层会显示在这里。</p>}
                   </div>
                 </div>
               </div>

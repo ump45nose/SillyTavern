@@ -8,11 +8,11 @@ import {
   shortcutActions,
   shortcutFor,
 } from "../host/operations";
-import { useHost } from "./common";
+import { useHostSlices } from "./common";
 import { Check } from "./ResourceControls";
 
 export function Shortcuts({ host }: { host: HostAdapter }) {
-  useHost(host);
+  useHostSlices(host, ["prefs"]);
   const prefs = host.prefs(),
     [recording, setRecording] = useState<string | null>(null),
     [error, setError] = useState("");

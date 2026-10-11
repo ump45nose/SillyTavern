@@ -85,7 +85,7 @@ async function mount() {
   try {
     host = new HostAdapter();
     await host.init();
-    unsubscribeLayout = host.subscribe(updateLayoutSwitcher);
+    unsubscribeLayout = host.subscribeSlice("prefs", updateLayoutSwitcher);
     if (disposed) {
       host.destroy();
       return;

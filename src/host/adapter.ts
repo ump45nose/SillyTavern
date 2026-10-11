@@ -1,6 +1,7 @@
 import { clone } from "./model";
 import { assertContext, ctx, internal } from "./internals";
-import { HostCore, defaults } from "./core";
+import { HostCore, defaults, sliceNames } from "./core";
+import type { Slice } from "./types";
 import { draftsMethods } from "./domains/drafts";
 import { chatMethods } from "./domains/chat";
 import { presetMethods } from "./domains/preset";
@@ -31,56 +32,78 @@ export class HostAdapter extends HostCore {
     ]);
     assertContext();
     const c = ctx();
-    const events = [
+    // Which slices each SillyTavern event can change. Native selects all emit one of these, so
+    // nothing listens for raw DOM change events.
+    const resource: Slice[] = ["resources", "session"];
+    const events: Record<string, Slice[]> = {
+      // A chat switch can also move persona locks and bound connections.
+      CHAT_CHANGED: ["characters", "chat", "resources"],
+      CHAT_CREATED: ["session"],
+      CHAT_RENAMED: ["session"],
+      CHAT_DELETED: ["session"],
+      GROUP_CHAT_CREATED: ["session"],
+      GROUP_CHAT_DELETED: ["session"],
+      GROUP_UPDATED: ["session"],
+      MESSAGE_DELETED: ["chat"],
+      CHARACTER_EDITED: ["characters"],
+      CHARACTER_RENAMED: ["characters"],
+      CHARACTER_DELETED: ["characters"],
+      CHARACTER_SELECTED: ["characters"],
+      SETTINGS_UPDATED: sliceNames,
+      MAIN_API_CHANGED: resource,
+      OAI_PRESET_CHANGED_AFTER: resource,
+      PRESET_CHANGED: resource,
+      WORLDINFO_UPDATED: resource,
+      WORLDINFO_SETTINGS_UPDATED: resource,
+      PERSONA_CHANGED: resource,
+      PERSONA_CREATED: resource,
+      PERSONA_DELETED: resource,
+      PERSONA_UPDATED: resource,
+      CONNECTION_PROFILE_LOADED: resource,
+      CONNECTION_PROFILE_CREATED: resource,
+      CONNECTION_PROFILE_UPDATED: resource,
+      CONNECTION_PROFILE_DELETED: resource,
+      CHATCOMPLETION_MODEL_CHANGED: resource,
+      CHATCOMPLETION_SOURCE_CHANGED: resource,
+      ONLINE_STATUS_CHANGED: ["session"],
+    };
+    const chatList = [
       "CHAT_CHANGED",
+      "CHAT_CREATED",
       "CHAT_RENAMED",
       "CHAT_DELETED",
+      "GROUP_CHAT_CREATED",
       "GROUP_CHAT_DELETED",
-      "MESSAGE_RECEIVED",
-      "MESSAGE_SENT",
-      "MESSAGE_UPDATED",
-      "MESSAGE_DELETED",
-      "CHARACTER_EDITED",
-      "CHARACTER_DELETED",
-      "CHARACTER_SELECTED",
-      "SETTINGS_UPDATED",
-      "OAI_PRESET_CHANGED_AFTER",
-      "PRESET_CHANGED",
-      "WORLDINFO_UPDATED",
-      "WORLDINFO_SETTINGS_UPDATED",
-      "PERSONA_CHANGED",
-      "PERSONA_CREATED",
-      "PERSONA_DELETED",
-      "PERSONA_UPDATED",
-      "CONNECTION_PROFILE_LOADED",
-      "CONNECTION_PROFILE_CREATED",
-      "CONNECTION_PROFILE_UPDATED",
-      "CONNECTION_PROFILE_DELETED",
-      "ONLINE_STATUS_CHANGED",
-      "CHATCOMPLETION_MODEL_CHANGED",
-      "CHATCOMPLETION_SOURCE_CHANGED",
     ];
-    for (const name of events)
+    for (const [name, slices] of Object.entries(events))
       this.listen(name, () => {
-        if (["CHAT_CHANGED", "CHAT_RENAMED", "CHAT_DELETED", "GROUP_CHAT_DELETED"].includes(name))
-          this.chatsVersion++;
+        if (chatList.includes(name)) this.chatsVersion++;
         if (name === "WORLDINFO_UPDATED") this.resourceVersions.world++;
         if (name === "CHARACTER_EDITED") this.resourceVersions.character++;
         if (name === "PRESET_CHANGED" || name === "OAI_PRESET_CHANGED_AFTER") this.resourceVersions.preset++;
         if (name === "PERSONA_UPDATED") this.resourceVersions.persona++;
         if (name === "CONNECTION_PROFILE_UPDATED") this.resourceVersions.connection++;
-        this.refresh();
+        this.invalidate(...slices);
       });
+    // These carry the floor id, so only that entry of the chat index is rebuilt.
+    for (const name of [
+      "MESSAGE_SENT",
+      "MESSAGE_RECEIVED",
+      "MESSAGE_UPDATED",
+      "MESSAGE_EDITED",
+      "MESSAGE_SWIPED",
+    ])
+      this.listen(name, (id: unknown) => this.updateMessage(Number(id)));
     this.listen("GENERATION_STARTED", (_type: any, _options: any, dry: boolean) => {
       if (!dry) {
         this.generating = true;
-        this.refresh();
+        this.invalidate("session");
       }
     });
     for (const name of ["GENERATION_ENDED", "GENERATION_STOPPED"])
       this.listen(name, () => {
         this.generating = false;
-        this.refresh();
+        this.invalidate("session");
       });
 
     for (const name of ["CONNECTION_PROFILE_LOADED", "CHATCOMPLETION_MODEL_CHANGED"])
@@ -88,11 +111,6 @@ export class HostAdapter extends HostCore {
         if (!this.busy && !this.resourceAction && !this.bindingRun)
           void this.applyBinding().catch((e) => this.report(e));
       });
-    const handler = (e: Event) => {
-      if (!(e.target as Element)?.closest?.("#wb-root")) this.refresh();
-    };
-    document.addEventListener("change", handler);
-    this.cleanup.push(() => document.removeEventListener("change", handler));
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
     const guard = (e: Event) => {
@@ -140,6 +158,7 @@ export interface HostAdapter
     Mixin<typeof connectionMethods>,
     Mixin<typeof nativeMethods> {}
 
+// Non-enumerable, like methods declared in the class body.
 for (const methods of [
   draftsMethods,
   chatMethods,
@@ -153,6 +172,5 @@ for (const methods of [
   connectionMethods,
   nativeMethods,
 ])
-  // Non-enumerable, like methods declared in the class body.
   for (const [name, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(methods)))
     Object.defineProperty(HostAdapter.prototype, name, { ...descriptor, enumerable: false });

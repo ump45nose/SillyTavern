@@ -2,12 +2,12 @@ import React, { useLayoutEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Image, MessageSquare, Plus, Save, Trash2, UsersRound } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
-import { Field, IconButton, Notice, SearchBox, useHost, useTask } from "../ui/common";
+import { Field, IconButton, Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";
 import { Check, Fold, useDraft } from "../ui/ResourceControls";
 import { BoundControl } from "../ui/HostControl";
 import { Select } from "../ui/Select";
 export default function Groups({ host }: { host: HostAdapter }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     groups = host.groups(),
     [id, setId] = useState(groups[0]?.id || ""),
@@ -74,7 +74,7 @@ export default function Groups({ host }: { host: HostAdapter }) {
   );
 }
 function GroupEditor({ host, id, done }: { host: HostAdapter; id: string; done: (id: string) => void }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     edit = useDraft(
       () =>
@@ -322,7 +322,7 @@ function GroupEditor({ host, id, done }: { host: HostAdapter; id: string; done: 
 }
 
 function GroupOverrides({ host, id }: { host: HostAdapter; id: string }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     chatId = host.groupChatId(),
     key = "group-overrides:" + id + ":" + chatId,
     task = useTask(),

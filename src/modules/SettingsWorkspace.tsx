@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import type { SettingsPage } from "../host/types";
-import { Dialog, Loading, Notice, useHost, useTask } from "../ui/common";
+import { Dialog, Loading, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import { ReadingSettings } from "../ui/Reading";
 import { nativePages } from "./NativeSettings";
 const ComponentSettings = lazy(() => import("./ComponentSettings")),
@@ -54,7 +54,7 @@ export default function SettingsWorkspace({
   onClose: () => void;
   exiting?: boolean;
 }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     [closing, setClosing] = useState(false),
     [extensionId, setExtensionId] = useState("");
   const close = () => {

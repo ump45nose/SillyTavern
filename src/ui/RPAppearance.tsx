@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { Type } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
-import { useHost } from "./common";
+import { useHostSlices } from "./common";
 import { Popover } from "./Popover";
 import { usePresence } from "./Motion";
 import { boundedPreference } from "../host/rp";
 
 export function RPAppearance({ host }: { host: HostAdapter }) {
-  useHost(host);
+  useHostSlices(host, ["prefs"]);
   const prefs = host.prefs(),
     [anchor, setAnchor] = useState<HTMLElement | null>(null),
     presence = usePresence(anchor);

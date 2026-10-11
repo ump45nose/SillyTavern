@@ -13,7 +13,7 @@ import type { HostAdapter } from "../host/adapter";
 import type { MessageTarget } from "../addons/types";
 import { addonEnabled } from "../addons/catalog";
 import { addonManager } from "../addons/runtime";
-import { useHost } from "./common";
+import { useHostSlices, withoutChat } from "./common";
 const References = lazy(() => import("../addons/image-gen/References"));
 /** Persistent task controls live above the content, independently of either sidebar. */
 export function AddonTasks({ host }: { host: HostAdapter }) {
@@ -67,7 +67,7 @@ export function beginImage(host: HostAdapter, id: number) {
 }
 /** Decorate native pencil rows; never recreate native messages, controls or media. */
 export function MessageImageControls({ host }: { host: HostAdapter }) {
-  useHost(host);
+  useHostSlices(host, withoutChat);
   const enabled = addonEnabled(host.prefs(), "image-gen"),
     [slots, setSlots] = useState<
       {
@@ -174,7 +174,7 @@ export function MessageImageControls({ host }: { host: HostAdapter }) {
 }
 export function ImageInputMode({ host }: { host: HostAdapter }) {
   const manager = addonManager(host);
-  useHost(host);
+  useHostSlices(host, withoutChat);
   const [mode, setMode] = useState<{
       target: MessageTarget;
       draft: string;

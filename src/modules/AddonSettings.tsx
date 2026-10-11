@@ -3,9 +3,9 @@ import { FileOutput, Puzzle, ListTree, ImagePlus } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import { addons, addonEnabled } from "../addons/catalog";
 import { Check } from "../ui/ResourceControls";
-import { useHost } from "../ui/common";
+import { useHostSlices } from "../ui/common";
 export default function AddonSettings({ host }: { host: HostAdapter }) {
-  useHost(host);
+  useHostSlices(host, ["prefs"]);
   const prefs = host.prefs();
   return (
     <section className="wb-addon-settings" aria-label="工作台附加功能">

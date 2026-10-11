@@ -107,7 +107,7 @@ export function Composer({
             ? connected
             : disconnected,
       );
-    const unsubscribe = host.subscribe(sync);
+    const unsubscribe = host.subscribeSlice("session", sync);
     sync();
     return () => {
       unsubscribe();

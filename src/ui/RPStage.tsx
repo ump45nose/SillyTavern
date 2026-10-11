@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import { boundedPreference, dialoguePages } from "../host/rp";
-import { IconButton, useHost } from "./common";
+import { IconButton, useHostSlices } from "./common";
 import { ReadingPresentation } from "./Reading";
 import { beginImage } from "./AddonControls";
 import { addonEnabled } from "../addons/catalog";
@@ -112,7 +112,7 @@ export function RPStage({
   readingLayout: () => void;
   run: (fn: () => unknown) => unknown;
 }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     prefs = host.prefs();
   const textSize = boundedPreference(prefs.rpTextSize, 19, 14, 26),
     dialogWidth = boundedPreference(prefs.rpDialogWidth, 88, 65, 94);

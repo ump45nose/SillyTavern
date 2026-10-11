@@ -43,17 +43,38 @@ export interface Preferences {
   bindings: Record<string, string>;
   groups: Record<string, string>;
 }
-export interface HostSnapshot {
+/** One chat floor as the workbench lists it; the message body stays in SillyTavern's chat array. */
+export interface MessageIndex {
+  id: number;
+  name: string;
+  is_user: boolean;
+  send_date?: string | number;
+  /** Plain text start of the message (tags stripped, whitespace collapsed), at most 120 characters. */
+  preview: string;
+}
+export interface SessionState {
   chatName: string;
   groupId?: string;
   groupName?: string;
   character: Item | null;
-  characters: Item[];
-  resources: Record<Resource, Item[]>;
   current: Record<Resource, string>;
   online: boolean;
   busy: boolean;
-  messages: Data[];
+}
+/** Host state split by how often it changes; each slice has its own version and subscribers. */
+export interface Slices {
+  session: SessionState;
+  characters: Item[];
+  resources: Record<Resource, Item[]>;
+  chat: MessageIndex[];
+  prefs: Preferences;
+}
+export type Slice = keyof Slices;
+/** All slices at once, for callers that have not moved to useHostSlice. */
+export interface HostSnapshot extends SessionState {
+  characters: Item[];
+  resources: Record<Resource, Item[]>;
+  messages: MessageIndex[];
 }
 declare global {
   interface Window {

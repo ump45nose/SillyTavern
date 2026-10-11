@@ -6,9 +6,9 @@ import { ctx } from "../internals";
 /** Cross-resource actions: switching, batch copy/delete/export and creation. */
 export const resourcesMethods = {
   async select(this: HostAdapter, kind: Resource, id: string) {
-    if (this.snapshot().busy) throw new Error("请等待当前生成或切换完成。");
+    if (this.isBusy()) throw new Error("请等待当前生成或切换完成。");
     this.busy = true;
-    this.refresh();
+    this.invalidate("session");
     try {
       if (kind === "connection") {
         const select = document.querySelector<HTMLSelectElement>("#connection_profiles");
@@ -51,7 +51,7 @@ export const resourcesMethods = {
     ids: string[],
     action: "copy" | "delete" | "export",
   ) {
-    if (this.snapshot().busy) throw new Error("请等待生成或切换完成。");
+    if (this.isBusy()) throw new Error("请等待生成或切换完成。");
     const connection = this.connectionControls();
     const done: string[] = [],
       created: string[] = [],

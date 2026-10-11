@@ -1,7 +1,8 @@
-import React, { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { X, Search, LoaderCircle, ArrowUpRight, ChevronRight } from "lucide-react";
 export { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
+import type { HostSnapshot, Slice, Slices } from "../host/types";
 export function useHost<S>(host: {
   subscribe: (listener: () => void) => () => void;
   revision: () => number;
@@ -9,6 +10,25 @@ export function useHost<S>(host: {
 }) {
   useSyncExternalStore(host.subscribe, host.revision);
   return host.snapshot();
+}
+/** Every slice but the chat index: UI that does not list messages stays still while chat updates. */
+export const withoutChat: readonly Slice[] = ["session", "characters", "resources", "prefs"];
+/** The full snapshot, re-rendering only when one of `slices` changes. */
+export function useHostSlices(host: HostAdapter, slices: readonly Slice[]): HostSnapshot {
+  const key = slices.join();
+  const subscribe = useCallback(
+    (fn: () => void) => {
+      const off = slices.map((name) => host.subscribeSlice(name, fn));
+      return () => off.forEach((f) => f());
+    },
+    [host, key],
+  );
+  useSyncExternalStore(subscribe, () => slices.map((name) => host.sliceRevision(name)).join());
+  return host.snapshot();
+}
+export function useHostSlice<K extends Slice>(host: HostAdapter, name: K): Slices[K] {
+  const subscribe = useCallback((fn: () => void) => host.subscribeSlice(name, fn), [host, name]);
+  return useSyncExternalStore(subscribe, () => host.slice(name));
 }
 export function IconButton({
   title,

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Copy, Download, Plus, Search, Upload, SquareArrowOutUpRight, Trash2, X } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
-import { Dialog, Empty, Notice, useHost, useTask } from "../ui/common";
+import { Dialog, Empty, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";
 import World from "./World";
 type Kind = "preset" | "connection" | "world";
@@ -22,7 +22,7 @@ export default function ResourceManager({
   onSelection: (ids: string[]) => void;
   view?: "prompts";
 }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     items = snap.resources[kind],
     label = { preset: "预设", connection: "连接", world: "世界书" }[kind];

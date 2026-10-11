@@ -1,8 +1,39 @@
-import type { Data, HostSnapshot, Item, Preferences, Resource } from "./types";
+import type {
+  Data,
+  HostSnapshot,
+  Item,
+  MessageIndex,
+  Preferences,
+  Resource,
+  SessionState,
+  Slice,
+  Slices,
+} from "./types";
 import { clone } from "./model";
 import { ctx, internal } from "./internals";
 
 export const defaults: Preferences = { left: true, bindings: {}, groups: {} };
+
+export const sliceNames: Slice[] = ["session", "characters", "resources", "chat", "prefs"];
+/** Slices built from another slice go stale with it. */
+const dependents: Partial<Record<Slice, Slice[]>> = {
+  characters: ["session"],
+  prefs: ["resources"],
+};
+
+export const messagePreview = (text: unknown) =>
+  String(text ?? "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+const indexMessage = (m: Data, id: number): MessageIndex => ({
+  id,
+  name: m.name,
+  is_user: m.is_user,
+  send_date: m.send_date,
+  preview: messagePreview(m.mes),
+});
 
 /**
  * Shared host state and infrastructure. Domain behaviour lives in ./domains and is mixed into
@@ -19,6 +50,9 @@ export class HostCore {
     persona: 0,
     connection: 0,
   };
+  sliceListeners = new Map(sliceNames.map((name) => [name, new Set<() => void>()]));
+  sliceVersions = Object.fromEntries(sliceNames.map((name) => [name, 0])) as Record<Slice, number>;
+  sliceCache: Partial<Slices> = {};
   version = 0;
   cache: HostSnapshot | null = null;
   world: any;
@@ -38,18 +72,76 @@ export class HostCore {
       this.cleanup.push(() => c.eventSource.removeListener(event, fn));
     }
   }
+  /** Notified on every change; prefer subscribeSlice for anything rendered often. */
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
     return () => {
       this.listeners.delete(fn);
     };
   };
+  subscribeSlice = (name: Slice, fn: () => void) => {
+    const set = this.sliceListeners.get(name)!;
+    set.add(fn);
+    return () => {
+      set.delete(fn);
+    };
+  };
   revision = () => this.version;
-  refresh = () => {
+  sliceRevision = (name: Slice) => this.sliceVersions[name];
+  /** Everything may have changed. */
+  refresh = () => this.invalidate(...sliceNames);
+  /** Marks slices (and the slices built from them) stale; they rebuild on next read. */
+  invalidate(...names: Slice[]) {
+    const stale = new Set<Slice>();
+    const add = (name: Slice) => {
+      if (stale.has(name)) return;
+      stale.add(name);
+      dependents[name]?.forEach(add);
+    };
+    names.forEach(add);
+    for (const name of stale) {
+      delete this.sliceCache[name];
+      this.sliceVersions[name]++;
+    }
+    this.notify(stale);
+  }
+  /** Re-indexes one floor after send, receive, edit or swipe without rebuilding the others. */
+  updateMessage(id: number) {
+    const chat = this.sliceCache.chat,
+      source: Data[] = ctx().chat;
+    if (!chat || !Number.isInteger(id) || id < 0 || id >= source.length || source.length < chat.length)
+      return this.invalidate("chat");
+    const next = chat.slice();
+    for (let i = chat.length; i < source.length; i++) next[i] = indexMessage(source[i], i);
+    next[id] = indexMessage(source[id], id);
+    this.sliceCache.chat = next;
+    this.sliceVersions.chat++;
+    this.notify(new Set(["chat"]));
+  }
+  private notify(stale: Set<Slice>) {
     this.cache = null;
     this.version++;
+    for (const name of stale) this.sliceListeners.get(name)!.forEach((fn) => fn());
     this.listeners.forEach((fn) => fn());
-  };
+  }
+  slice<K extends Slice>(name: K): Slices[K] {
+    const cache = this.sliceCache as Slices;
+    if (!(name in this.sliceCache)) cache[name] = this.build(name);
+    return cache[name];
+  }
+  private build<K extends Slice>(name: K): Slices[K] {
+    const builders: { [S in Slice]: () => Slices[S] } = {
+      session: () => this.buildSession(),
+      characters: () => this.buildCharacters(),
+      resources: () => this.buildResources(),
+      chat: () => ctx().chat.map(indexMessage),
+      prefs: () => this.prefs(),
+    };
+    return builders[name]();
+  }
+  isBusy() {
+    return this.busy || this.resourceAction || this.generating;
+  }
   report(error: unknown) {
     window.dispatchEvent(
       new CustomEvent("wb-error", {
@@ -69,7 +161,7 @@ export class HostCore {
       return;
     Object.assign(ctx().extensionSettings.workbench, patch);
     ctx().saveSettingsDebounced();
-    this.refresh();
+    this.invalidate("prefs");
   }
   async persistSettings() {
     const c = ctx(),
@@ -97,11 +189,16 @@ export class HostCore {
     return response;
   }
   snapshot(): HostSnapshot {
-    if (this.cache) return this.cache;
-    const c = ctx(),
-      manager = c.getPresetManager(),
-      profiles = c.extensionSettings.connectionManager?.profiles ?? [];
-    const characters: Item[] = c.characters.map((x: Data, i: number) => ({
+    return (this.cache ??= {
+      ...this.slice("session"),
+      characters: this.slice("characters"),
+      resources: this.slice("resources"),
+      messages: this.slice("chat"),
+    });
+  }
+  private buildCharacters(): Item[] {
+    const c = ctx();
+    return c.characters.map((x: Data, i: number) => ({
       id: x.avatar,
       name: x.name,
       detail: (x.data?.tags ?? []).join(" · "),
@@ -113,13 +210,19 @@ export class HostCore {
         i === Number(c.characterId),
       data: x,
     }));
-    const personas = c.powerUserSettings.personas ?? {};
-    const resources: Record<Resource, Item[]> = {
+  }
+  private buildResources(): Record<Resource, Item[]> {
+    const c = ctx(),
+      manager = c.getPresetManager(),
+      profiles = c.extensionSettings.connectionManager?.profiles ?? [],
+      groups = this.slice("prefs").groups,
+      personas = c.powerUserSettings.personas ?? {};
+    return {
       connection: profiles
         .map((p: Data) => ({
           id: p.id,
           name: p.name,
-          detail: this.prefs().groups[p.id] || p.model || p.api || "其他模型",
+          detail: groups[p.id] || p.model || p.api || "其他模型",
           data: p,
         }))
         .sort(
@@ -143,13 +246,15 @@ export class HostCore {
         detail: c.powerUserSettings.persona_descriptions?.[id]?.title ?? "",
       })),
     };
-    return (this.cache = {
+  }
+  private buildSession(): SessionState {
+    const c = ctx(),
+      manager = c.getPresetManager();
+    return {
       chatName: String(c.chatId ?? "").replace(/\.jsonl$/, ""),
       groupId: c.groupId || undefined,
       groupName: c.groups?.find((g: Data) => g.id === c.groupId)?.name,
-      character: characters.find((x) => x.active) ?? null,
-      characters,
-      resources,
+      character: this.slice("characters").find((x) => x.active) ?? null,
       current: {
         connection: c.extensionSettings.connectionManager?.selectedProfile ?? "",
         preset: manager?.getSelectedPresetName() ?? "",
@@ -157,15 +262,8 @@ export class HostCore {
         persona: this.personas?.user_avatar ?? "",
       },
       online: c.onlineStatus !== "no_connection",
-      busy: this.busy || this.resourceAction || this.generating,
-      messages: c.chat.map((m: Data, i: number) => ({
-        id: i,
-        name: m.name,
-        text: m.mes,
-        is_user: m.is_user,
-        send_date: m.send_date,
-      })),
-    });
+      busy: this.isBusy(),
+    };
   }
   isGenerating() {
     return this.generating;

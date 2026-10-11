@@ -3,11 +3,11 @@ import { ArrowDown, ArrowUp, RotateCcw, Settings2, X } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import { addonEnabled } from "../addons/catalog";
 import { exportTool, pinnedTools, type PinnedTool } from "../host/tools";
-import { Empty, SearchBox, useHost } from "../ui/common";
+import { Empty, SearchBox, useHostSlices } from "../ui/common";
 import { toolIcon } from "../ui/ToolIcon";
 import { useTools } from "../ui/useTools";
 export default function ToolSettings({ host }: { host: HostAdapter }) {
-  useHost(host);
+  useHostSlices(host, ["prefs"]);
   useTools();
   const [query, setQuery] = useState("");
   const selected = pinnedTools(host.prefs().pinnedTools);

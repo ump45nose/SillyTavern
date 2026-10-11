@@ -21,11 +21,11 @@ import {
   X,
 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
-import { useHost } from "./common";
+import { useHostSlices } from "./common";
 import { Popover } from "./Popover";
 import { usePresence } from "./Motion";
 export function ReadingSettings({ host }: { host: HostAdapter }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     prefs = host.prefs(),
     [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const presence = usePresence(anchor);
@@ -160,7 +160,7 @@ export function ReadingPresentation({ host, chatStyle = false }: { host: HostAda
   const controls = useRef(
     new Map<HTMLElement, { role: string | null; tab: string | null; label: string | null }>(),
   );
-  const snap = useHost(host),
+  const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     prefs = host.prefs(),
     [nodes, setNodes] = useState<HTMLElement[]>([]),
     [expanded, setExpanded] = useState<Map<HTMLElement, boolean>>(new Map());
@@ -338,10 +338,7 @@ export function ReadingPresentation({ host, chatStyle = false }: { host: HostAda
         heading.className = "wb-user-heading";
         block.prepend(heading);
       }
-      const summary = String(m?.text || "")
-        .replace(/<[^>]*>/g, "")
-        .replace(/\s+/g, " ")
-        .slice(0, 110);
+      const summary = m?.preview.slice(0, 110) ?? "";
       output.push(
         createPortal(
           <button

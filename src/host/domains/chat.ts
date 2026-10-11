@@ -82,7 +82,7 @@ export const chatMethods = {
     return chats.sort((a, b) => date(b.last_mes) - date(a.last_mes));
   },
   async openChat(this: HostAdapter, name: string) {
-    if (this.snapshot().busy) throw new Error("请先停止生成，再切换对话。");
+    if (this.isBusy()) throw new Error("请先停止生成，再切换对话。");
     const script = await internal("script");
     await script.saveChatConditional();
     if (ctx().groupId)
@@ -114,19 +114,19 @@ export const chatMethods = {
     });
   },
   async renameChat(this: HostAdapter, name: string, next: string) {
-    if (this.snapshot().busy) throw new Error("生成中不能重命名聊天。");
+    if (this.isBusy()) throw new Error("生成中不能重命名聊天。");
     await ctx().renameChat(name.replace(/\.jsonl$/, ""), next.trim().replace(/\.jsonl$/, ""));
     this.refresh();
   },
   async newChat(this: HostAdapter) {
-    if (this.snapshot().busy) throw new Error("请先停止生成。");
+    if (this.isBusy()) throw new Error("请先停止生成。");
     const script = await internal("script");
     await script.saveChatConditional();
     await script.doNewChat();
     this.refresh();
   },
   async deleteChat(this: HostAdapter, name: string) {
-    if (this.snapshot().busy) throw new Error("请先停止生成。");
+    if (this.isBusy()) throw new Error("请先停止生成。");
     const file = name.replace(/\.jsonl$/, ""),
       c = ctx(),
       script = await internal("script");
@@ -153,7 +153,7 @@ export const chatMethods = {
     this.refresh();
   },
   async importChat(this: HostAdapter, file: File) {
-    if (this.snapshot().busy) throw new Error("请先停止生成。");
+    if (this.isBusy()) throw new Error("请先停止生成。");
     const c = ctx(),
       format = file.name.split(".").pop()?.toLowerCase();
     if (!["json", "jsonl"].includes(format || "")) throw new Error("请选择 JSON 或 JSONL 聊天文件。");

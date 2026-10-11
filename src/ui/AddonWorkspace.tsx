@@ -5,7 +5,7 @@ import { addonEnabled, type AddonId } from "../addons/catalog";
 import { addonHost, addonStyles, loadAddon } from "../addons/loader";
 import { addonManager } from "../addons/runtime";
 import type { AddonModule, AddonRuntime } from "../addons/types";
-import { Loading, Notice, useHost } from "./common";
+import { Loading, Notice, useHostSlices } from "./common";
 class AddonBoundary extends React.Component<
   {
     children: React.ReactNode;
@@ -44,7 +44,7 @@ export default function AddonWorkspace({
   active: boolean;
   view?: "workspace" | "sidebar" | "editor";
 }) {
-  useHost(host);
+  useHostSlices(host, ["prefs"]);
   const enabled = addonEnabled(host.prefs(), id),
     api = useMemo(() => addonHost(host), [host]);
   const [module, setModule] = useState<AddonModule | null>(null),

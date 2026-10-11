@@ -1,12 +1,12 @@
 import React, { useEffect, useReducer } from "react";
 import { FlaskConical, PlugZap, RefreshCw } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
-import { useHost, useTask, Field, Notice } from "../ui/common";
+import { useTask, Field, Notice, useHostSlices, withoutChat } from "../ui/common";
 import DesignedSettings from "./DesignedSettings";
 import { Select } from "../ui/Select";
 
 export function ConnectionRuntime({ host }: { host: HostAdapter }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     [, redraw] = useReducer((n) => n + 1, 0);
   const state = host.connectionControls();

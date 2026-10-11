@@ -6,7 +6,7 @@ import { ctx } from "../internals";
 /** Characters: selection, creation/import, card data and bulk actions. */
 export const characterMethods = {
   async selectCharacter(this: HostAdapter, id: string) {
-    if (this.snapshot().busy) throw new Error("生成完成后再切换角色。");
+    if (this.isBusy()) throw new Error("生成完成后再切换角色。");
     const index = ctx().characters.findIndex((x: Data) => x.avatar === id);
     if (index < 0) throw new Error("角色已不存在。");
     await ctx().selectCharacterById(index);

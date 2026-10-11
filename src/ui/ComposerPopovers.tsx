@@ -13,7 +13,7 @@ import {
 import type { HostAdapter } from "../host/adapter";
 import type { Data, SettingsPage } from "../host/types";
 import { Popover } from "./Popover";
-import { Empty, Loading, Notice, useHost, useTask } from "./common";
+import { Empty, Loading, Notice, useTask, useHostSlices } from "./common";
 import { addonEnabled } from "../addons/catalog";
 import { pinnedTools, resolveTool } from "../host/tools";
 import { composerTools, toolIcon } from "./ToolIcon";
@@ -44,7 +44,7 @@ export function ComposerPopovers({
   const [nativeEditor, setNativeEditor] = useState<"note" | "cfg" | null>(
     popup.kind === "tool" ? (popup.toolId?.endsWith(":option_toggle_AN") ? "note" : "cfg") : null,
   );
-  const snap = useHost(host),
+  const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     task = useTask(),
     [query, setQuery] = useState(""),
     [group, setGroup] = useState(""),

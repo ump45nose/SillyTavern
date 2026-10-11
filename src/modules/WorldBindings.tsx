@@ -1,11 +1,11 @@
 import React from "react";
 import { BookOpen } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
-import { Field, Notice, useHost, useTask } from "../ui/common";
+import { Field, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import { BoundControl } from "../ui/HostControl";
 import { Select } from "../ui/Select";
 export default function WorldBindings({ host }: { host: HostAdapter }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     bindings = host.worldBindings();
   return (

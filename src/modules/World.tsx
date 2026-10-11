@@ -4,7 +4,16 @@ import { Plus, Save, Maximize2, Trash2, BookOpen, PencilLine, X } from "lucide-r
 import { clone, activation, setActivation, validateBook } from "../host/model";
 import type { Data } from "../host/types";
 import type { HostAdapter } from "../host/adapter";
-import { useHost, useTask, SearchBox, Notice, Empty, Field, IconButton } from "../ui/common";
+import {
+  useTask,
+  SearchBox,
+  Notice,
+  Empty,
+  Field,
+  IconButton,
+  useHostSlices,
+  withoutChat,
+} from "../ui/common";
 import { ResourcePicker } from "../ui/ResourcePicker";
 export default function World({
   host,
@@ -19,7 +28,7 @@ export default function World({
   initial?: string;
   managed?: boolean;
 }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask();
   const [name, setName] = useState(initial || snap.current.world || snap.resources.world[0]?.id || "");
   const cached = host.drafts.get("world:" + name);

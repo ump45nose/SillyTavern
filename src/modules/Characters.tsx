@@ -19,7 +19,16 @@ import {
 import type { HostAdapter } from "../host/adapter";
 import type { Data, Item } from "../host/types";
 import { clone } from "../host/model";
-import { useHost, useTask, SearchBox, Notice, Empty, Field, IconButton } from "../ui/common";
+import {
+  useTask,
+  SearchBox,
+  Notice,
+  Empty,
+  Field,
+  IconButton,
+  useHostSlices,
+  withoutChat,
+} from "../ui/common";
 import { ResourceRailContext } from "../ui/ResourcePicker";
 
 function CharacterInfo({ item, onEdit }: { item?: Item; onEdit: (id: string) => void }) {
@@ -54,7 +63,7 @@ export default function Characters({
   management?: boolean;
   onManage?: (group?: string) => void;
 }) {
-  const snap = useHost(host),
+  const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     rail = useContext(ResourceRailContext);
   const [query, setQuery] = useState(""),
