@@ -74,7 +74,7 @@ const titles: Record<string, string> = {
   stscript_autocomplete_style: "补全样式",
   stscript_autocomplete_select: "键盘选择",
   stscript_autocomplete_font_scale: "补全字号缩放",
-  auto_swipe: "自动重生成",
+  auto_swipe: "自动重新生成",
   auto_continue_enabled: "自动续写",
   extensions_url: "Extras 服务地址",
   extensions_autoconnect: "自动连接",
@@ -159,7 +159,7 @@ const labels: Record<string, string> = {
   Miscellaneous: "其他行为",
   "Character Handling": "角色与群聊",
   "STscript Settings": "STscript 与宏",
-  "Automatic Re-Generation": "自动重生成",
+  "Automatic Re-Generation": "自动重新生成",
   "Auto-Continue": "自动续写",
 };
 function clean(s: string | null | undefined) {
@@ -488,15 +488,13 @@ export default function DesignedSettings({
       <header className="wb-designed-page-head">
         <div>
           <h2>{page === "settings" && group === "外观与阅读" ? "纸张，留给故事" : group}</h2>
-          <small>
-            {page === "extensions"
-              ? "内置与第三方扩展"
-              : page === "formatting"
-                ? "模板与提示词格式"
-                : page === "generation"
-                  ? "当前后端适用参数"
-                  : "设置即时生效"}
-          </small>
+          {page === "extensions" ? (
+            <small>内置与第三方扩展</small>
+          ) : page === "formatting" ? (
+            <small>模板与提示词格式</small>
+          ) : page === "generation" ? (
+            <small>当前后端适用参数</small>
+          ) : null}
         </div>
       </header>
       {page === "extensions" && group === "扩展设置" && (

@@ -134,7 +134,7 @@ try {
   await s.locator('.ss-nav button').first().waitFor();assert.equal(await s.locator('.ss-nav button').count(),9);
   await sr.locator('svg').first().waitFor();
   await capture(sr,'settings-resources');
-  for(const [module,label,navName,fieldName] of [['generation','预设','生成配置','最大回复 Token'],['connection','连接','连接','连接名称'],['world','世界书','世界书','条目正文']]){
+  for(const [module,label,navName,fieldName] of [['generation','预设','预设','最大回复 Token'],['connection','连接','连接','连接名称'],['world','世界书','世界书','条目正文']]){
     await s.locator('.ss-nav').getByRole('button',{name:navName,exact:true}).click();
     const rail=s.locator('.ss-manager-list');
     assert.equal(await rail.locator('[data-resource-select]').count(),3);
@@ -179,7 +179,7 @@ try {
     assert.equal(await rail.locator('[data-resource-select]').count(),1);
   }
   pass('preset/connection/world multi-select, draft-preserving copies, confirmed deletion, empty state and editor placeholder');
-  await s.locator('.ss-nav').getByRole('button',{name:'生成配置',exact:true}).click();
+  await s.locator('.ss-nav').getByRole('button',{name:'预设',exact:true}).click();
   const checkbox=s.locator('[data-resource-select]').first();
   assert((await checkbox.evaluate(e=>getComputedStyle(e).transitionDuration)).includes('0.18s'));
   await checkbox.check();
@@ -189,7 +189,7 @@ try {
   assert(await s.locator('.ss-manager-list').evaluate(e=>e===window.__originalResourceRail),'resource rail retains nodes for actual transitions');
   assert(await checkbox.isChecked());
   await s.locator('.ss-nav').getByRole('button',{name:'连接',exact:true}).click();
-  await s.locator('.ss-nav').getByRole('button',{name:'生成配置',exact:true}).click();
+  await s.locator('.ss-nav').getByRole('button',{name:'预设',exact:true}).click();
   assert(await checkbox.isChecked(),'selection persists across modules');
   await s.locator('.ss-subnav').getByRole('button',{name:'高级参数',exact:true}).click();
   await s.getByRole('combobox',{name:'推理力度',exact:true}).click();

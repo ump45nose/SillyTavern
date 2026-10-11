@@ -1,6 +1,6 @@
 import { Select } from "../ui/Select";
 import React, { useEffect, useState } from "react";
-import { ArrowUpRight, Download, Trash2 } from "lucide-react";
+import { ArrowUpRight, Download, Info, Trash2 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Empty, IconButton } from "../ui/common";
 const groups = [
@@ -137,6 +137,13 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
           <section className="wb-trace-section">
             <div className="wb-section-title">
               <strong>上下文构成</strong>
+              <Evidence
+                text={
+                  hasCounts
+                    ? "组装阶段 · 原生分词计数；输入已计入历史，未单独拆分。"
+                    : "本次请求未取得原生分词构成。"
+                }
+              />
               <span>
                 {hasCounts ? total.toLocaleString() : "—"} / {compact(record.composition?.limit)}
               </span>
@@ -159,19 +166,14 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
                 </div>
               ))}
             </div>
-            <p className="wb-trace-evidence">
-              {hasCounts
-                ? "组装阶段 · 原生分词计数；输入已计入历史，未单独拆分。"
-                : "本次请求未取得原生分词构成。"}
-            </p>
           </section>
           <section className="wb-trace-section">
             <div className="wb-section-title">
               <strong>世界书触发 · {hits.length}</strong>
+              {record.worldInfoEvidence !== "WORLD_INFO_ACTIVATED" && (
+                <Evidence text="未观察到命中事件，不等同于没有命中。" />
+              )}
             </div>
-            {record.worldInfoEvidence !== "WORLD_INFO_ACTIVATED" && (
-              <p className="wb-trace-evidence">未观察到命中事件，不等同于没有命中。</p>
-            )}
             {hits.map((entry: any, i: number) => (
               <details className="wb-hit" key={i}>
                 <summary>
@@ -180,7 +182,8 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
                   <code>{entry.position === 4 ? `@D${entry.depth ?? "—"}` : ""}</code>
                 </summary>
                 <p className="wb-trace-evidence">
-                  配置关键词：{(entry.key || []).join(" · ") || "无"}（事件未提供实际命中词）
+                  配置关键词：{(entry.key || []).join(" · ") || "无"}
+                  <Evidence text="事件未提供实际命中词，这里列出的是条目配置的关键词。" />
                 </p>
                 <pre>{entry.content}</pre>
               </details>
@@ -189,6 +192,7 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
           <section className="wb-trace-section">
             <div className="wb-section-title">
               <strong>本次请求</strong>
+              <Evidence text="未采集首字时间与流式速率；浏览器请求记录不代表服务端最终出站内容。" />
             </div>
             <div className="wb-request-event">
               <time>{time()}</time>
@@ -201,9 +205,6 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
                 {record.elapsedMs == null ? "—" : `${Math.round(record.elapsedMs)} ms 到响应头`}
               </span>
             </div>
-            <p className="wb-trace-evidence">
-              未采集首字时间与流式速率；浏览器请求记录不代表服务端最终出站内容。
-            </p>
             <button
               className="wb-prompt-link"
               onClick={() => {
@@ -214,19 +215,21 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
               查看完整 Prompt <ArrowUpRight size={17} />
             </button>
           </section>
-          <button
-            className="wb-link"
-            onClick={() =>
-              host.download(
-                new Blob([JSON.stringify(record, null, 2)], { type: "application/json" }),
-                `trace-${record.id}.json`,
-              )
-            }
-          >
-            <Download size={15} />
-            导出此条记录
-          </button>
-          <p className="wb-trace-evidence">仅本次会话内存 · 最多 20 条 · 敏感字段脱敏</p>
+          <div className="wb-trace-export">
+            <button
+              className="wb-link"
+              onClick={() =>
+                host.download(
+                  new Blob([JSON.stringify(record, null, 2)], { type: "application/json" }),
+                  `trace-${record.id}.json`,
+                )
+              }
+            >
+              <Download size={15} />
+              导出此条记录
+            </button>
+            <Evidence text="仅本次会话内存 · 最多 20 条 · 敏感字段脱敏" />
+          </div>
         </div>
       )}
       {full && record && (
@@ -235,5 +238,14 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
         </Dialog>
       )}
     </div>
+  );
+}
+
+/** How a Trace figure was collected: required by the trace design, shown on demand. */
+function Evidence({ text }: { text: string }) {
+  return (
+    <span className="wb-evidence" role="note" tabIndex={0} aria-label={text} title={text}>
+      <Info size={14} />
+    </span>
   );
 }

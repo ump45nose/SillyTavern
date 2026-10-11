@@ -41,7 +41,7 @@ try {
   assert.deepEqual(pins.map(t => t.label), ['记录导出', '变量管理器', '作者注释', 'Token 计数', '数据银行']);
   assert.ok(pins.find(t => t.label === '变量管理器').id.startsWith('label:tools:'));
   await page.screenshot({ path: directory + '/tool-settings-1496.png' });
-  await role('保存设置').click(); await role('返回工作台').click(); await settle();
+  await page.evaluate(() => workbench.host.persistSettings()); await role('返回工作台').click(); await settle();
   await tool('native:menu:option_toggle_AN').click(); await page.getByRole('dialog', { name: '作者注释', exact: true }).waitFor();
   await page.locator('.wb-popover #floatingPrompt').waitFor(); await page.locator('.wb-popover').getByRole('button', { name: '关闭弹出框' }).click(); await settle();
   pass('settings select/reorder/save common tools; pinned author note uses the existing native editor');

@@ -77,6 +77,87 @@ export const presetMethods = {
     if (wasActive && manager.getAllPresets().length) await manager.selectPreset(manager.getSelectedPreset());
     this.refresh();
   },
+  /**
+   * The running chat-completion settings in the shape of preset `name`, or null when `name` is not
+   * the running preset (the editor then works on the file alone). Parameters, toggles and order
+   * apply to these settings at once, as in SillyTavern; "更新预设" writes them into the file.
+   */
+  livePreset(this: HostAdapter, name: string): Data | null {
+    const o = this.openai,
+      map: Record<string, [string, string, boolean, boolean]> | undefined = o?.settingsToUpdate;
+    if (ctx().mainApi !== "openai" || !map || !o.oai_settings || !o.getChatCompletionPreset) return null;
+    if (ctx().getPresetManager().getSelectedPresetName() !== name) return null;
+    const file = this.presetData(name),
+      live = o.oai_settings;
+    for (const key of Object.keys(file)) {
+      const setting = map[key]?.[1];
+      if (setting && live[setting] !== undefined) file[key] = clone(live[setting]);
+    }
+    return file;
+  },
+  /** Keys where the running settings differ from the saved preset file. */
+  presetChanges(this: HostAdapter, name: string) {
+    const live = this.livePreset(name);
+    if (!live) return [];
+    const file = this.presetData(name);
+    return Object.keys(file).filter((k) => JSON.stringify(live[k]) !== JSON.stringify(file[k]));
+  },
+  /** Applies preset fields to the running settings through SillyTavern's own controls. */
+  applyPreset(this: HostAdapter, patch: Data) {
+    const o = this.openai,
+      map: Record<string, [string, string, boolean, boolean]> = o.settingsToUpdate,
+      $ = window.jQuery;
+    let prompts = false;
+    for (const [key, value] of Object.entries(patch)) {
+      const entry = map[key];
+      if (!entry) continue;
+      const [selector, setting, checkbox] = entry;
+      o.oai_settings[setting] = clone(value);
+      if (key === "prompts" || key === "prompt_order") prompts = true;
+      else if (selector && selector !== "#NULL_SELECTOR")
+        // The input handlers keep SillyTavern's own copies (counters, derived limits) in step.
+        checkbox
+          ? $(selector).prop("checked", value).trigger("input")
+          : $(selector).val(value).trigger("input");
+    }
+    if (prompts) void o.promptManager?.saveServiceSettings().then(() => o.promptManager.renderDebounced());
+    ctx().saveSettingsDebounced();
+    this.resourceVersions.preset++;
+    this.invalidate("resources");
+  },
+  /** Applies saved prompt-text drafts of the running preset to the running settings. */
+  applyPresetDraft(this: HostAdapter, name: string, base: Data, draft: Data) {
+    validatePreset(draft);
+    const live = this.livePreset(name);
+    if (!live) throw new Error("预设已切换，草稿已保留。");
+    const merged = mergeEdits(base, draft, live),
+      changed = Object.keys(merged).filter((k) => JSON.stringify(merged[k]) !== JSON.stringify(live[k]));
+    if (changed.length) this.applyPreset(Object.fromEntries(changed.map((k) => [k, merged[k]])));
+    return this.livePreset(name)!;
+  },
+  /** Writes the running settings into the preset file (SillyTavern's "Update current preset"). */
+  async updatePreset(this: HostAdapter, name: string) {
+    const o = this.openai;
+    // Keys SillyTavern does not map (vendor or extension data) stay as the file has them.
+    const preset = { ...this.presetData(name), ...clone(o.getChatCompletionPreset(o.oai_settings)) };
+    await ctx().getPresetManager().savePreset(name, preset);
+    this.resourceVersions.preset++;
+    this.refresh();
+  },
+  /** Reapplies the preset file to the running settings, dropping changes not written to it. */
+  async revertPreset(this: HostAdapter) {
+    const { eventSource, eventTypes } = ctx();
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 3000);
+      eventSource.once(eventTypes.OAI_PRESET_CHANGED_AFTER, () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      window.jQuery("#settings_preset_openai").trigger("change");
+    });
+    this.resourceVersions.preset++;
+    this.refresh();
+  },
   async savePreset(this: HostAdapter, name: string, base: Data, draft: Data) {
     validatePreset(draft);
     const merged = mergeEdits(base, draft, this.presetData(name));

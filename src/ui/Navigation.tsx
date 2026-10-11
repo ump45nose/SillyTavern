@@ -24,6 +24,7 @@ import type { HostAdapter } from "../host/adapter";
 import type { Data, HostSnapshot, SettingsPage } from "../host/types";
 import AddonWorkspace from "./AddonWorkspace";
 import { useHostSlice } from "./common";
+import { settingsLabels } from "../host/labels";
 import { addonEnabled } from "../addons/catalog";
 import type { ComposerPopup } from "./ComposerPopovers";
 type Section = "history" | "outline" | "floors";
@@ -79,17 +80,19 @@ export function Navigation({
       active = false;
     };
   }, [host, recentOpen, snap.chatName, snap.character?.id, snap.groupId, host.chatsVersion]);
-  const entries = [
-    ["generation", "生成配置", SlidersHorizontal],
-    ["connection", "连接", Plug],
-    ["formatting", "回复格式", TextCursorInput],
-    ["world", "世界书", BookOpen],
-    ["settings", "用户设置", Settings],
-    ["background", "背景", Image],
-    ["extensions", "扩展", Puzzle],
-    ["persona", "用户设定", UserRound],
-    ["character", "角色管理", UsersRound],
-  ] as const;
+  const entries = (
+    [
+      ["generation", SlidersHorizontal],
+      ["connection", Plug],
+      ["formatting", TextCursorInput],
+      ["world", BookOpen],
+      ["settings", Settings],
+      ["background", Image],
+      ["extensions", Puzzle],
+      ["persona", UserRound],
+      ["character", UsersRound],
+    ] as const
+  ).map(([id, Icon]) => [id, settingsLabels[id], Icon] as const);
   return (
     <aside
       className={`wb-left wb-navigation-v4 ${visible ? "is-open" : ""} ${outlineExpanded ? "is-outline-expanded" : ""} ${sectionExpanded ? "is-section-expanded" : ""}`}

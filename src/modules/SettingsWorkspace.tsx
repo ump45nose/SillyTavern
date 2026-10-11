@@ -19,6 +19,7 @@ import { Dialog, Loading, Notice, useTask, useHostSlices, withoutChat } from "..
 import { ReadingSettings } from "../ui/Reading";
 import { nativePages } from "./NativeSettings";
 import { bus, guards } from "../host/bus";
+import { settingsLabels } from "../host/labels";
 const ComponentSettings = lazy(() => import("./ComponentSettings")),
   WorldBindings = lazy(() => import("./WorldBindings")),
   Groups = lazy(() => import("./Groups")),
@@ -29,17 +30,19 @@ const ComponentSettings = lazy(() => import("./ComponentSettings")),
 const AddonSettings = lazy(() => import("./AddonSettings"));
 const ToolSettings = lazy(() => import("./ToolSettings")),
   StartupDiagnostics = lazy(() => import("./StartupDiagnostics"));
-export const settingsPages = [
-  ["generation", "生成配置", SlidersHorizontal],
-  ["connection", "连接", Plug],
-  ["formatting", "回复格式", TextCursorInput],
-  ["world", "世界书", BookOpen],
-  ["settings", "用户设置", Settings],
-  ["background", "背景", Image],
-  ["extensions", "扩展", Puzzle],
-  ["persona", "用户设定", UserRound],
-  ["character", "角色管理", UsersRound],
-] as const;
+export const settingsPages = (
+  [
+    ["generation", SlidersHorizontal],
+    ["connection", Plug],
+    ["formatting", TextCursorInput],
+    ["world", BookOpen],
+    ["settings", Settings],
+    ["background", Image],
+    ["extensions", Puzzle],
+    ["persona", UserRound],
+    ["character", UsersRound],
+  ] as const
+).map(([id, Icon]) => [id, settingsLabels[id], Icon] as const);
 export default function SettingsWorkspace({
   host,
   page: initial,
@@ -140,15 +143,7 @@ export default function SettingsWorkspace({
           {def[1]}
         </strong>
         <span className="wb-grow" />
-        <small>设置即时生效 · 资源草稿单独保存</small>
-        <button
-          className="wb-primary"
-          disabled={task.busy || host.resourceAction}
-          onClick={() => task.run(() => host.persistSettings())}
-        >
-          <Save size={16} />
-          保存设置
-        </button>
+        <SaveState host={host} />
         <button className="wb-icon" aria-label="返回工作台" disabled={host.resourceAction} onClick={close}>
           <X size={19} />
         </button>
@@ -228,7 +223,6 @@ export default function SettingsWorkspace({
         </main>
       </div>
       <footer className="wb-settings-footer">
-        常规设置即时生效 · 资源修改请保存
         <span className="wb-grow" />
         SillyTavern 1.19.0
       </footer>
@@ -273,5 +267,63 @@ export default function SettingsWorkspace({
         </Dialog>
       )}
     </dialog>
+  );
+}
+
+/** Instant settings are written by SillyTavern's debounced save; ST confirms a write with SETTINGS_UPDATED. */
+const instantSettings = ".wb-designed-settings,.wb-native-slot,.wb-native-settings-slot";
+/**
+ * Save state of the instant (native) settings in place of a save button: 已保存, 保存中, or
+ * 保存失败 with a retry that writes the settings directly.
+ */
+function SaveState({ host }: { host: HostAdapter }) {
+  const [state, setState] = useState<"saved" | "saving" | "failed">("saved"),
+    ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const dialog = ref.current?.closest("dialog");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const saved = () => {
+      clearTimeout(timer);
+      setState("saved");
+    };
+    const edit = (e: Event) => {
+      const target = e.target as Element;
+      // Resource editors (fieldsets) in the same workspace keep drafts and their own save bar.
+      if (!target.closest?.(instantSettings) || target.closest("fieldset")) return;
+      setState("saving");
+      clearTimeout(timer);
+      // SillyTavern debounces saves by a second; no confirmation after a few more means it failed.
+      timer = setTimeout(() => setState("failed"), 6000);
+    };
+    const off = host.onSettingsSaved(saved);
+    dialog?.addEventListener("input", edit, true);
+    dialog?.addEventListener("change", edit, true);
+    return () => {
+      clearTimeout(timer);
+      off();
+      dialog?.removeEventListener("input", edit, true);
+      dialog?.removeEventListener("change", edit, true);
+    };
+  }, [host]);
+  return (
+    <span ref={ref} className={`wb-save-state is-${state}`} role="status">
+      {state === "failed" ? (
+        <button
+          onClick={() => {
+            setState("saving");
+            host.persistSettings().then(
+              () => setState("saved"),
+              () => setState("failed"),
+            );
+          }}
+        >
+          设置保存失败 · 重试
+        </button>
+      ) : state === "saving" ? (
+        "设置保存中"
+      ) : (
+        "设置已保存"
+      )}
+    </span>
   );
 }

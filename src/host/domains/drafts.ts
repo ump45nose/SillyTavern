@@ -25,7 +25,9 @@ export const draftsMethods = {
         saved = await this.saveBook(id, d.base, d.extra?.tab === "json" ? JSON.parse(d.extra.json) : d.draft);
       else if (kind === "preset") {
         if (d.extra?.advanced) throw new Error("预设 JSON 无法解析，请先修正。");
-        saved = await this.savePreset(id, d.base, d.draft);
+        saved = this.livePreset(id)
+          ? this.applyPresetDraft(id, d.base, d.draft)
+          : await this.savePreset(id, d.base, d.draft);
       } else if (kind === "connection") {
         await this.saveProfile(id, d.base, d.draft);
         saved = clone(this.snapshot().resources.connection.find((r) => r.id === id)!.data!);

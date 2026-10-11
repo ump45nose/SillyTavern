@@ -58,7 +58,7 @@ try {
   assert.equal(hasExportRequests(requests), false);
   await page.screenshot({ path: directory + '/addon-settings-1496.png' });
   await page.getByRole('checkbox', { name: '启用记录导出', exact: true }).uncheck();
-  await button('保存设置').click(); await button('返回工作台').click(); await settle();
+  await page.evaluate(() => workbench.host.persistSettings()); await button('返回工作台').click(); await settle();
   assert.equal(await page.locator('[data-wb-tool="wb:export"]').count(), 0);
   await page.locator('.wb-edge-right').click(); await settle(); await button('展开资源分类').click();
   assert.equal(await page.locator('.wb-panel-tabs').getByRole('button', { name: '记录导出', exact: true }).count(), 0);

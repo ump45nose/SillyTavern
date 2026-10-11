@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Image, MessageSquare, Plus, Save, Trash2, UsersRoun
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
 import { Field, IconButton, Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";
-import { Check, Fold, useDraft } from "../ui/ResourceControls";
+import { Check, Fold, SaveBar, useDraft } from "../ui/ResourceControls";
 import { BoundControl } from "../ui/HostControl";
 import { Select } from "../ui/Select";
 export default function Groups({ host }: { host: HostAdapter }) {
@@ -274,10 +274,25 @@ function GroupEditor({ host, id, done }: { host: HostAdapter; id: string; done: 
           )}
         </Fold>
       )}
-      <footer className="wb-editor-footer">
-        <small>{edit.dirty ? "未保存修改" : "已同步"}</small>
-        <span className="wb-grow" />
-        {id && (
+      <SaveBar
+        {...edit}
+        busy={task.busy}
+        label="保存群组"
+        save={() =>
+          task.run(async () => {
+            const groups = await host.saveGroup(id ? edit.base : null, draft);
+            const g = groups.find((g: Data) => (id ? g.id === id : g.name === draft.name));
+            if (g) {
+              edit.saved(g);
+              if (!id) host.drafts.delete("group:new");
+              done(g.id);
+            }
+          })
+        }
+      />
+      {id && (
+        <footer className="wb-editor-footer">
+          <span className="wb-grow" />
           <>
             <button disabled={edit.dirty} onClick={() => task.run(() => host.openGroup(id))}>
               <MessageSquare size={15} />
@@ -297,26 +312,8 @@ function GroupEditor({ host, id, done }: { host: HostAdapter; id: string; done: 
               删除群组
             </button>
           </>
-        )}
-        <button
-          className="wb-primary"
-          disabled={!!id && !edit.dirty}
-          onClick={() =>
-            task.run(async () => {
-              const groups = await host.saveGroup(id ? edit.base : null, draft);
-              const g = groups.find((g: Data) => (id ? g.id === id : g.name === draft.name));
-              if (g) {
-                edit.saved(g);
-                if (!id) host.drafts.delete("group:new");
-                done(g.id);
-              }
-            })
-          }
-        >
-          <Save size={15} />
-          保存群组
-        </button>
-      </footer>
+        </footer>
+      )}
     </fieldset>
   );
 }
@@ -346,17 +343,15 @@ function GroupOverrides({ host, id }: { host: HostAdapter; id: string }) {
           </Field>
         ))}
       </div>
+      <SaveBar
+        {...edit}
+        busy={task.busy || snap.busy}
+        label="保存对话覆盖"
+        save={() =>
+          task.run(async () => edit.saved(await host.saveGroupOverrides(id, chatId, edit.base, edit.draft)))
+        }
+      />
       <div className="wb-designed-actions">
-        <small>{edit.dirty ? "未保存覆盖" : "已同步"}</small>
-        <button
-          disabled={!edit.dirty || task.busy || snap.busy}
-          onClick={() =>
-            task.run(async () => edit.saved(await host.saveGroupOverrides(id, chatId, edit.base, edit.draft)))
-          }
-        >
-          <Save size={15} />
-          保存对话覆盖
-        </button>
         <button
           onClick={() => {
             for (const key of ["scenario", "mes_example", "system_prompt"]) edit.change(key, "");

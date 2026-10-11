@@ -20,11 +20,15 @@ try {
  await presetChoice.locator('.wb-picker-copy').click();
  await page.getByLabel('流式传输',{exact:true}).waitFor();
  const first=page.locator('.wb-prompt-row input').first(), was=await first.isChecked();await first.setChecked(!was);
- await page.getByRole('button',{name:'新增提示词',exact:true}).click();await page.getByLabel('提示词名称',{exact:true}).fill('WB 右栏提示词');await page.getByLabel('提示词正文',{exact:true}).fill('**保留** <xml>{{user}}</xml>');
+ await page.getByRole('button',{name:'新增提示词',exact:true}).click();const promptName='WB 右栏提示词 '+Date.now();await page.getByLabel('提示词名称',{exact:true}).fill(promptName);await page.getByLabel('提示词正文',{exact:true}).fill('**保留** <xml>{{user}}</xml>');
  await page.getByRole('button',{name:'保存',exact:true}).click();await page.getByText('已保存',{exact:true}).waitFor();
- const preset=await page.evaluate(()=>workbench.host.presetData('WorkbenchSidebarPreset'));assert(preset.prompts.some(p=>p.name==='WB 右栏提示词'&&p.content.includes('<xml>')));assert.deepEqual(preset.vendor_sidebar_keep,{yes:true});assert.equal(preset.prompt_order[0].order[0].enabled,!was);
+ // The running preset takes edits at once (P model); "更新预设" writes them into the file.
+ const pending=page.getByText('预设有未写入的修改',{exact:true});
+ assert.equal(await page.evaluate(name=>workbench.host.presetData('WorkbenchSidebarPreset').prompts.some(p=>p.name===name),promptName),false);
+ await pending.waitFor();await page.getByRole('button',{name:'更新预设',exact:true}).click();await pending.waitFor({state:'detached'});
+ const preset=await page.evaluate(()=>workbench.host.presetData('WorkbenchSidebarPreset'));assert(preset.prompts.some(p=>p.name===promptName&&p.content.includes('<xml>')));assert.deepEqual(preset.vendor_sidebar_keep,{yes:true});assert.equal(preset.prompt_order[0].order[0].enabled,!was);
  // Keep mock generation normal by restoring the initial enabled bit.
- await first.setChecked(was);await page.getByRole('button',{name:'保存',exact:true}).click();await page.getByText('已保存',{exact:true}).waitFor();
+ await first.setChecked(was);await pending.waitFor();await page.getByRole('button',{name:'更新预设',exact:true}).click();await pending.waitFor({state:'detached'});
  await page.getByRole('button',{name:'自定义常用项',exact:true}).click();const pin=page.getByRole('checkbox',{name:'Top P',exact:true});await pin.setChecked(true);await page.getByRole('button',{name:'自定义常用项',exact:true}).click();assert(await page.getByRole('spinbutton',{name:'Top P',exact:true}).isVisible());
  await settle();await page.locator('.wb-preset-editor').evaluate(e=>e.scrollTop=0);await page.screenshot({path:dir+'/preset-1440.png'});pass('preset prompt flags, new raw content and unknown fields persist; pinned parameters update');
  await page.evaluate(async()=>{const h=workbench.host;await h.createPreset('WorkbenchSidebarDelete',h.presetData('WorkbenchSidebarPreset'));});

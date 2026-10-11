@@ -1,6 +1,7 @@
 import { Select } from "../ui/Select";
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { Plus, Save, Maximize2, Trash2, BookOpen, PencilLine, X } from "lucide-react";
+import { Plus, Maximize2, Trash2, BookOpen, PencilLine, X } from "lucide-react";
+import { SaveBar } from "../ui/ResourceControls";
 import { clone, activation, setActivation, validateBook } from "../host/model";
 import type { Data } from "../host/types";
 import type { HostAdapter } from "../host/adapter";
@@ -154,11 +155,6 @@ export default function World({
           />
         )}
         <span className="wb-grow" />
-        {dirty && <small>未保存</small>}
-        <button onClick={save} disabled={!dirty || task.busy}>
-          <Save size={15} />
-          保存
-        </button>
         {onDeep && (
           <IconButton title="独立深度编辑" onClick={() => onDeep(name)}>
             <Maximize2 size={17} />
@@ -183,11 +179,6 @@ export default function World({
         </div>
       )}
       <Notice error={task.error} />
-      {saved && (
-        <div className="wb-success" role="status">
-          {saved}
-        </div>
-      )}
       <div className="wb-world-grid">
         <section className="wb-book-column">
           <SearchBox value={bookQuery} onChange={setBookQuery} placeholder="搜索世界书" />
@@ -315,7 +306,7 @@ export default function World({
                     title="删除条目"
                     disabled={tab === "json"}
                     onClick={() => {
-                      if (confirm("删除此条目？保存后生效。")) {
+                      if (confirm("删除此条目？")) {
                         const next = clone(draft!);
                         delete next.entries[entry];
                         setDraft(next);
@@ -496,6 +487,18 @@ export default function World({
           </aside>
         )}
       </div>
+      <SaveBar
+        dirty={dirty}
+        busy={task.busy}
+        message={saved}
+        reset={() => {
+          if (!base) return;
+          setDraft(clone(base));
+          setJson(JSON.stringify(base, null, 2));
+          setSaved("");
+        }}
+        save={save}
+      />
       <footer className="wb-legend">
         <span className="green">● 关键词</span>
         <span className="blue">● 常驻</span>

@@ -37,7 +37,7 @@ try {
   await page.screenshot({path:dir+'/header-hover.png'});pass('connection dot hover has no rectangular block');
   await page.getByRole('button',{name:'关闭右栏',exact:true}).click();
   await page.getByRole('button',{name:'连接详情',exact:true}).click();
-  await page.getByRole('button',{name:'连接记录与绑定',exact:true}).click();await page.getByRole('combobox',{name:'绑定预设',exact:true}).click();await page.getByRole('listbox').waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('listbox').count(),0);
+  await page.getByRole('button',{name:'连接配置与绑定',exact:true}).click();await page.getByRole('combobox',{name:'绑定预设',exact:true}).click();await page.getByRole('listbox').waitFor();await page.keyboard.press('Escape');assert.equal(await page.getByRole('listbox').count(),0);
   await page.getByRole('button',{name:'关闭右栏',exact:true}).click();
   for(const width of [1024,1366,1440]){await page.setViewportSize({width,height:900});await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await page.waitForTimeout(250);
     const layout=await page.evaluate(()=>{const r=s=>document.querySelector(s).getBoundingClientRect();return {tools:r('.wb-composer-actions').right,right:r('#rightSendForm').x,bottom:r('#send_but').bottom,viewport:innerHeight};});

@@ -20,11 +20,12 @@ import {
   UserRoundPen,
   Volume2,
 } from "lucide-react";
+import { actionLabels } from "../host/labels";
 export const composerTools = [
-  { id: "builtin:continue", label: "续写" },
-  { id: "builtin:regenerate", label: "重生成" },
+  { id: "builtin:continue", label: actionLabels.continue },
+  { id: "builtin:regenerate", label: actionLabels.regenerate },
   { id: "builtin:quick", label: "快速回复" },
-  { id: "builtin:impersonate", label: "AI 帮答" },
+  { id: "builtin:impersonate", label: actionLabels.impersonate },
   { id: "builtin:attachment", label: "附件" },
 ];
 export function toolIcon(id: string, label = "") {

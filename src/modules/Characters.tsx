@@ -10,7 +10,6 @@ import {
   Download,
   Trash2,
   Tag,
-  Save,
   Copy,
   PencilLine,
   PanelLeftClose,
@@ -30,6 +29,7 @@ import {
   withoutChat,
 } from "../ui/common";
 import { ResourceRailContext } from "../ui/ResourcePicker";
+import { SaveBar } from "../ui/ResourceControls";
 import { guards, type Guard } from "../host/bus";
 
 function CharacterInfo({ item, onEdit }: { item?: Item; onEdit: (id: string) => void }) {
@@ -606,25 +606,23 @@ function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
           </Field>
         </div>
       </details>
-      <div className="wb-editor-footer">
-        <small>{dirty ? "未保存修改" : message}</small>
-        <span className="wb-grow" />
-        <button
-          disabled={!dirty || task.busy}
-          className="wb-primary"
-          onClick={() =>
-            task.run(async () => {
-              const data = await host.saveCharacter(id, base, draft);
-              setBase(clone(data.data));
-              setDraft(clone(data.data));
-              setMessage("已保存");
-            })
-          }
-        >
-          <Save size={15} />
-          保存
-        </button>
-      </div>
+      <SaveBar
+        dirty={dirty}
+        busy={task.busy}
+        message={message}
+        reset={() => {
+          setDraft(clone(base));
+          setMessage("");
+        }}
+        save={() =>
+          task.run(async () => {
+            const data = await host.saveCharacter(id, base, draft);
+            setBase(clone(data.data));
+            setDraft(clone(data.data));
+            setMessage("已保存");
+          })
+        }
+      />
     </fieldset>
   );
 }

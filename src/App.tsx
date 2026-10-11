@@ -52,7 +52,9 @@ import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
 import { useTask, IconButton, Empty, Dialog, Loading, useHostSlices, withoutChat } from "./ui/common";
 import { bus, guards } from "./host/bus";
+import { panelLabels, resourceLabels } from "./host/labels";
 import {
+  available,
   bodyClasses,
   initial,
   lastAvailablePanel,
@@ -74,12 +76,6 @@ const Characters = lazy(() => import("./modules/Characters"));
 const Resources = lazy(() => import("./modules/Resources"));
 const Trace = lazy(() => import("./modules/Trace"));
 const SettingsWorkspace = lazy(() => import("./modules/SettingsWorkspace"));
-const labels = {
-  connection: "连接",
-  preset: "预设",
-  world: "世界书",
-  persona: "用户设定",
-};
 export function beforeClose() {
   return guards.check();
 }
@@ -652,21 +648,7 @@ export default function App({
             aria-expanded={tabsOpen}
             onClick={() => dispatch({ type: "tabs", open: !tabsOpen })}
           >
-            <span>
-              {shown === "character"
-                ? "角色"
-                : shown === "trace"
-                  ? "Trace"
-                  : shown === "export"
-                    ? "记录导出"
-                    : shown === "outline"
-                      ? "大纲"
-                      : shown === "image-gen"
-                        ? "生图"
-                        : shown
-                          ? labels[shown]
-                          : "角色与资源"}
-            </span>
+            <span>{shown ? panelLabels[shown] : "角色与资源"}</span>
             <ChevronDown size={14} />
           </button>
         </div>
@@ -674,25 +656,19 @@ export default function App({
           <div className="wb-panel-tabs">
             {(
               [
-                ["character", "角色", UsersRound],
-                ["world", "世界书", BookOpen],
-                ["preset", "预设", SlidersHorizontal],
-                ["connection", "连接", Plug],
-                ["persona", "用户设定", UserRound],
-                ["trace", "Trace", Activity],
-                ["export", "记录导出", FileOutput],
-                ["outline", "大纲", ListTree],
-                ["image-gen", "生图", ImagePlus],
+                ["character", UsersRound],
+                ["world", BookOpen],
+                ["preset", SlidersHorizontal],
+                ["connection", Plug],
+                ["persona", UserRound],
+                ["trace", Activity],
+                ["export", FileOutput],
+                ["outline", ListTree],
+                ["image-gen", ImagePlus],
               ] as const
             )
-              .filter(([kind]) =>
-                kind === "export"
-                  ? env.addons.export
-                  : kind === "outline" || kind === "image-gen"
-                    ? addonEnabled(host.prefs(), kind)
-                    : true,
-              )
-              .map(([kind, label, Icon]) => (
+              .filter(([kind]) => available(env, kind))
+              .map(([kind, Icon]) => (
                 <button
                   key={kind}
                   className={shown === kind ? "is-active" : ""}
@@ -703,7 +679,7 @@ export default function App({
                   }}
                 >
                   <Icon size={15} />
-                  {label}
+                  {panelLabels[kind]}
                 </button>
               ))}
           </div>
@@ -796,7 +772,7 @@ export default function App({
           title={
             deep === "library"
               ? "角色管理"
-              : `${deep in labels ? labels[deep as Resource] : "资源"} · 深度编辑`
+              : `${deep in resourceLabels ? resourceLabels[deep as Resource] : "资源"} · 深度编辑`
           }
           onClose={closeDeep}
         >

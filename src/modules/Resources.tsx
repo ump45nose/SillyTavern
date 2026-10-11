@@ -22,7 +22,8 @@ import type { HostAdapter } from "../host/adapter";
 import type { Resource, Data } from "../host/types";
 import { clone, validatePreset } from "../host/model";
 import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat } from "../ui/common";
-import { Check, Fold, useDraft } from "../ui/ResourceControls";
+import { Check, Fold, SaveBar, useDraft } from "../ui/ResourceControls";
+import { actionLabels } from "../host/labels";
 import { ResourcePicker } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
 import { guards } from "../host/bus";
@@ -211,33 +212,6 @@ export default function Resources({
     </div>
   );
 }
-function Footer({
-  dirty,
-  message,
-  busy,
-  reset,
-  save,
-}: {
-  dirty: boolean;
-  message: string;
-  busy: boolean;
-  reset: () => void;
-  save: () => void;
-}) {
-  return (
-    <footer className="wb-save-footer">
-      <small role="status">{dirty ? "未保存修改" : message || "已同步"}</small>
-      <span className="wb-grow" />
-      <button disabled={!dirty || busy} onClick={reset}>
-        还原
-      </button>
-      <button className="wb-primary" disabled={!dirty || busy} onClick={save}>
-        <Save size={15} />
-        保存
-      </button>
-    </footer>
-  );
-}
 function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
   const task = useTask(),
     edit = useDraft(
@@ -249,7 +223,7 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
   return (
     <fieldset disabled={task.busy} className="wb-profile-editor">
       <Notice error={task.error} />
-      <Fold title="连接记录与绑定">
+      <Fold title={`${actionLabels.connectionProfile}与绑定`}>
         <div className="wb-form-pair">
           <Field label="连接名称">
             <input value={draft.name || ""} onChange={(e) => change("name", e.target.value)} />
@@ -259,7 +233,7 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
           </Field>
         </div>
         <button disabled={edit.dirty} onClick={() => task.run(() => host.select("connection", id))}>
-          应用此连接记录
+          应用此{actionLabels.connectionProfile}
         </button>
         <Field label="模型分组">
           <input
@@ -314,9 +288,10 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
           </Field>
         </Fold>
       </Fold>
-      <Footer
+      <SaveBar
         {...edit}
         busy={task.busy}
+        label={actionLabels.updateConnectionProfile}
         save={() =>
           task.run(async () => {
             await host.saveProfile(id, edit.base, draft);
@@ -541,7 +516,7 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
           </Fold>
         )}
       </div>
-      <Footer
+      <SaveBar
         {...edit}
         busy={task.busy}
         save={() => task.run(async () => edit.saved(await host.savePersona(id, edit.base, draft)))}
@@ -578,7 +553,16 @@ function PresetEditor({
   view?: "prompts";
 }) {
   const task = useTask(),
-    edit = useDraft(() => host.presetData(id), host.resourceVersions.preset, { host, key: "preset:" + id });
+    edit = useDraft(
+      () => host.livePreset(id) ?? host.presetData(id),
+      host.resourceVersions.preset,
+      { host, key: "preset:" + id },
+      true,
+    );
+  // The running preset follows SillyTavern: parameters, toggles and order apply at once; prompt
+  // text stays a draft until saved. "更新预设" then writes the running state into the file.
+  const running = !!host.livePreset(id),
+    pending = running ? host.presetChanges(id).length > 0 : false;
   const { draft, change } = edit,
     [entry, setEntry] = useState(""),
     [editorOpen, setEditorOpen] = useState(!!deep),
@@ -595,11 +579,17 @@ function PresetEditor({
     prompts.find((p) => p.identifier === entry) ||
     prompts.find((p) => p.identifier === order[0]?.identifier) ||
     prompts[0];
+  /** Applies a field to the running preset, or to the draft when editing a preset file. */
+  const apply = (key: string, base: any, value = base) => {
+    if (!running) return change(key, value);
+    host.applyPreset({ [key]: base });
+    edit.patch(key, base, value);
+  };
   const setOrder = (value: Data[]) => {
     const next = clone(scopes);
     if (!next[scope]) next[scope] = { character_id: 100000, order: [] };
     next[scope].order = value;
-    change("prompt_order", next);
+    apply("prompt_order", next);
   };
   const updatePrompt = (patch: Data) =>
     change(
@@ -614,7 +604,7 @@ function PresetEditor({
         key={key}
         label={parameterNames[key] || key}
         checked={!!draft[key]}
-        onChange={(v) => change(key, v)}
+        onChange={(v) => apply(key, v)}
       />
     ) : (
       <Field key={key} label={parameterNames[key] || key}>
@@ -623,7 +613,7 @@ function PresetEditor({
           step="any"
           value={draft[key] ?? ""}
           onChange={(e) =>
-            change(key, typeof draft[key] === "number" ? Number(e.target.value) : e.target.value)
+            apply(key, typeof draft[key] === "number" ? Number(e.target.value) : e.target.value)
           }
         />
       </Field>
@@ -685,7 +675,7 @@ function PresetEditor({
                           max={k === "top_p" ? 1 : 2}
                           step={0.01}
                           value={draft[k]}
-                          onChange={(e) => change(k, Number(e.target.value))}
+                          onChange={(e) => apply(k, Number(e.target.value))}
                         />
                         <output>{draft[k]}</output>
                       </Field>
@@ -725,11 +715,9 @@ function PresetEditor({
             <IconButton
               title="新增提示词"
               onClick={() => {
-                const identifier = crypto.randomUUID?.() || `wb-${Date.now()}`;
-                change("prompts", [
-                  ...prompts,
-                  { identifier, name: "新提示词", role: "system", content: "" },
-                ]);
+                const identifier = crypto.randomUUID?.() || `wb-${Date.now()}`,
+                  prompt = { identifier, name: "新提示词", role: "system", content: "" };
+                apply("prompts", [...(edit.base.prompts || []), prompt], [...prompts, prompt]);
                 setOrder([...order, { identifier, enabled: true }]);
                 setEntry(identifier);
                 setEditorOpen(true);
@@ -913,11 +901,9 @@ function PresetEditor({
             <button
               className="wb-link"
               onClick={() => {
-                if (confirm("删除这个提示词？保存后生效。")) {
-                  change(
-                    "prompts",
-                    prompts.filter((p) => p.identifier !== selected.identifier),
-                  );
+                if (confirm("删除这个提示词？")) {
+                  const keep = (p: Data) => p.identifier !== selected.identifier;
+                  apply("prompts", (edit.base.prompts || []).filter(keep), prompts.filter(keep));
                   setOrder(order.filter((p) => p.identifier !== selected.identifier));
                   setEntry("");
                 }
@@ -1049,10 +1035,11 @@ function PresetEditor({
           </Fold>
         </Fold>
       </div>
-      <Footer
-        {...edit}
+      <SaveBar
         dirty={edit.dirty || !!advanced}
         busy={task.busy}
+        message={edit.message}
+        label={running ? "保存" : actionLabels.updatePreset}
         reset={() => {
           setAdvanced("");
           edit.reset();
@@ -1060,10 +1047,35 @@ function PresetEditor({
         save={() =>
           task.run(async () => {
             if (advanced) throw new Error("JSON 无法解析，请先修正。");
-            edit.saved(await host.savePreset(id, edit.base, draft));
+            edit.saved(
+              running
+                ? host.applyPresetDraft(id, edit.base, draft)
+                : await host.savePreset(id, edit.base, draft),
+            );
           })
         }
       />
+      {pending && (
+        <footer className="wb-save-footer wb-preset-pending">
+          <small role="status">预设有未写入的修改</small>
+          <span className="wb-grow" />
+          <button
+            aria-label="还原为预设文件"
+            disabled={task.busy}
+            onClick={() => task.run(() => host.revertPreset())}
+          >
+            还原
+          </button>
+          <button
+            className="wb-primary"
+            disabled={task.busy}
+            onClick={() => task.run(() => host.updatePreset(id))}
+          >
+            <Save size={15} />
+            {actionLabels.updatePreset}
+          </button>
+        </footer>
+      )}
     </fieldset>
   );
 }

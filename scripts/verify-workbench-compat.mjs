@@ -175,7 +175,7 @@ try {
       () => SillyTavern.getContext().chat.length,
     ),
     traceBefore = await page.evaluate(() => workbench.records.length);
-  await page.getByRole("button", { name: "重生成", exact: true }).click();
+  await page.getByRole("button", { name: "重新生成", exact: true }).click();
   await page.waitForFunction((n) => workbench.records.length > n, traceBefore);
   await page.waitForFunction(
     () =>

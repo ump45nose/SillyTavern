@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 const dir = 'artifacts/design-fidelity';
-const pages = ['角色管理','用户设定','生成配置','连接','世界书','用户设置','回复格式','背景','扩展'];
+const pages = ['角色管理','用户设定','预设','连接','世界书','用户设置','回复格式','背景','扩展'];
 const sizes = [[1496,817],[1366,768],[1440,900],[1920,1080]];
 const extras = [
  ['顶栏资源选中样式','../preferences/selection-header-persona-1496.png'],

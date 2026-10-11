@@ -27,6 +27,7 @@ import { addonEnabled } from "../addons/catalog";
 import { RPAppearance } from "./RPAppearance";
 import { motionAllowed } from "./Motion";
 import { bus } from "../host/bus";
+import { actionLabels } from "../host/labels";
 
 type Message = {
   node: HTMLElement;
@@ -464,7 +465,7 @@ export function RPStage({
             ) : (
               <>
                 <IconButton
-                  title="重生成当前回复"
+                  title={`${actionLabels.regenerate}当前回复`}
                   disabled={snap.busy || !current || current.user || current.id !== snap.messages.length - 1}
                   onClick={() => run(() => host.click("#option_regenerate"))}
                 >

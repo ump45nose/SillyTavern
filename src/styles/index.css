@@ -17,4 +17,5 @@
 @import "./legacy/utility.css";
 @import "./legacy/addon-shell.css";
 @import "./legacy/mobile.css";
+@import "./components/feedback.css";
 @import "./native-bridge.css";

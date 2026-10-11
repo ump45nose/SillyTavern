@@ -164,6 +164,13 @@ export class HostCore {
     ctx().saveSettingsDebounced();
     this.invalidate("prefs");
   }
+  /** Calls `fn` whenever SillyTavern confirms a settings write. */
+  onSettingsSaved(fn: () => void) {
+    const c = ctx(),
+      event = c.eventTypes.SETTINGS_UPDATED;
+    c.eventSource.on(event, fn);
+    return () => c.eventSource.removeListener(event, fn);
+  }
   async persistSettings() {
     const c = ctx(),
       event = c.eventTypes.SETTINGS_UPDATED;

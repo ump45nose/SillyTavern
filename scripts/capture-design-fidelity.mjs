@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import {launch,session,ready,urls,createCharacter} from './browser.mjs';
 const dir='artifacts/design-fidelity';fs.mkdirSync(dir,{recursive:true});
 const b=await launch();try {const {page,errors}=await session(b);await ready(page,urls.validation,{probe:true});await createCharacter(page);await page.evaluate(()=>workbench.host.preference({left:true}));
-for (const [name,key] of [['用户设置','settings'],['回复格式','formatting'],['扩展','extensions'],['背景','background'],['用户设定','persona'],['角色管理','character'],['世界书','world'],['生成配置','generation'],['连接','connection']]){
+for (const [name,key] of [['用户设置','settings'],['回复格式','formatting'],['扩展','extensions'],['背景','background'],['用户设定','persona'],['角色管理','character'],['世界书','world'],['预设','generation'],['连接','connection']]){
  await page.locator('.wb-left-bottom').getByRole('button',{name,exact:true}).click();const ws=page.getByRole('dialog',{name:'独立设置工作区',exact:true});await ws.waitFor();await page.waitForTimeout(600);await page.screenshot({path:`${dir}/actual-${key}.png`});
  if(key==='extensions'){await ws.locator('.wb-settings-subnav').getByRole('button',{name:'扩展设置',exact:true}).click();await page.waitForTimeout(600);await page.screenshot({path:`${dir}/actual-extension-fields.png`});}
  if(key==='world'){await ws.getByRole('button',{name:'绑定与全局设置',exact:true}).click();await page.waitForTimeout(300);await page.screenshot({path:`${dir}/actual-world-bindings.png`});}

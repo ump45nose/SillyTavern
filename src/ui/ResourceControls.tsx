@@ -1,8 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Save } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
-import { clone } from "../host/model";
+import { clone, mergeEdits } from "../host/model";
 import { guards } from "../host/bus";
 export function Fold({
   title,
@@ -85,13 +85,80 @@ export function NativeConnection({ host }: { host: HostAdapter }) {
   }, [host]);
   return (
     <>
-      <p className="wb-native-caption">当前运行连接 · 设置由酒馆即时保存</p>
+      <p className="wb-native-caption">当前运行连接</p>
       {error && <p role="alert">{error}</p>}
       <div ref={ref} className="wb-native-slot" />
     </>
   );
 }
-export function useDraft(read: () => Data, version: number, cache?: { host: HostAdapter; key: string }) {
+const saveHint = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘S" : "Ctrl+S";
+/**
+ * The one save bar for content drafts: on screen only while there is something to save (and
+ * briefly after saving), with Revert, Save and ⌘S / Ctrl+S inside the editor it belongs to.
+ */
+export function SaveBar({
+  dirty,
+  busy,
+  message = "",
+  reset,
+  save,
+  label = "保存",
+}: {
+  dirty: boolean;
+  busy: boolean;
+  message?: string;
+  reset: () => void;
+  save: () => void;
+  label?: string;
+}) {
+  const ref = useRef<HTMLElement>(null),
+    [flash, setFlash] = useState("");
+  useEffect(() => {
+    if (dirty || !message) return;
+    setFlash(message);
+    const timer = setTimeout(() => setFlash(""), 2000);
+    return () => clearTimeout(timer);
+  }, [dirty]);
+  const live = useRef({ busy, save });
+  live.current = { busy, save };
+  useEffect(() => {
+    const scope = ref.current?.parentElement;
+    if (!dirty || !scope) return;
+    const key = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "s") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!live.current.busy) live.current.save();
+    };
+    scope.addEventListener("keydown", key);
+    return () => scope.removeEventListener("keydown", key);
+  }, [dirty]);
+  if (!dirty && !flash) return null;
+  return (
+    <footer ref={ref} className="wb-save-footer">
+      <small role="status">{dirty ? "未保存的修改" : flash}</small>
+      <span className="wb-grow" />
+      {dirty && (
+        <>
+          <button disabled={busy} onClick={reset}>
+            还原
+          </button>
+          <button className="wb-primary" disabled={busy} title={`${label} · ${saveHint}`} onClick={save}>
+            <Save size={15} />
+            {label}
+          </button>
+        </>
+      )}
+    </footer>
+  );
+}
+export function useDraft(
+  read: () => Data,
+  version: number,
+  cache?: { host: HostAdapter; key: string },
+  /** Fold outside changes into a dirty draft instead of waiting for it to be saved or reverted. */
+  rebase = false,
+) {
   const previous = cache?.host.drafts.get(cache.key),
     retain = previous && JSON.stringify(previous.base) !== JSON.stringify(previous.draft);
   const [base, setBase] = useState(() => (retain ? clone(previous.base) : read())),
@@ -111,7 +178,15 @@ export function useDraft(read: () => Data, version: number, cache?: { host: Host
       const value = read();
       setBase(value);
       setDraft(clone(value));
-    }
+    } else if (rebase)
+      try {
+        const value = read();
+        if (JSON.stringify(value) === JSON.stringify(base)) return;
+        setDraft(mergeEdits(base, draft, value));
+        setBase(value);
+      } catch {
+        // Both sides changed the same field: keep the draft; saving reports the conflict.
+      }
   }, [version]);
   useEffect(() => {
     const guard = () => !!cache || !dirty || confirm("有未保存修改，放弃这些修改？");
@@ -146,6 +221,11 @@ export function useDraft(read: () => Data, version: number, cache?: { host: Host
     reset: () => {
       setDraft(clone(base));
       setMessage("");
+    },
+    /** Records a change already applied outside the draft (a live setting) on both sides. */
+    patch: (key: string, base: any, draft = base) => {
+      setBase((b) => ({ ...b, [key]: clone(base) }));
+      setDraft((d) => ({ ...d, [key]: clone(draft) }));
     },
   };
 }

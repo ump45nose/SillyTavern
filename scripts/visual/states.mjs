@@ -43,7 +43,7 @@ export const states = [
   { name: "focus", viewport: desktop, steps: [key("Alt+Shift+KeyF")] },
   { name: "popover-chat-files", viewport: desktop, steps: [label("管理聊天文件")] },
   { name: "settings-user", viewport: desktop, steps: [text("用户设置")] },
-  { name: "settings-preset", viewport: desktop, steps: [text("生成配置")] },
+  { name: "settings-preset", viewport: desktop, steps: [text("预设")] },
   { name: "settings-world", viewport: desktop, steps: [text("世界书")] },
   { name: "settings-character", viewport: desktop, steps: [text("角色管理")] },
   { name: "shortcuts", viewport: desktop, steps: [text("快捷键")] },
