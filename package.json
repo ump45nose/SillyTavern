@@ -15,6 +15,7 @@
     "benchmark": "node scripts/benchmark.mjs",
     "check": "npm run typecheck && node --check extension/trace.js && node --check extension/startup.js && node --check fixtures/mock-model.mjs",
     "build": "node scripts/build.mjs",
+    "release": "node scripts/release.mjs",
     "typecheck": "tsc --noEmit",
     "verify:workbench": "node scripts/verify-workbench.mjs",
     "verify:compat": "node scripts/verify-workbench-compat.mjs",

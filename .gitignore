@@ -4,3 +4,5 @@ runtime/
 artifacts/
 .env
 *.log
+extension/dist/
+.DS_Store
