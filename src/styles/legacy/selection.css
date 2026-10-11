@@ -24,10 +24,6 @@
   .wb-ui .wb-favorites .is-active .wb-portrait {
     border-color: var(--wb-selection-line);
   }
-  body.wb-active .wb-ui .wb-fold-toggle[aria-expanded="true"] {
-    background: var(--wb-selection-fill) !important;
-    border-color: var(--wb-selection-line) !important;
-  }
   .wb-ui :is(.wb-font-choices, .wb-meta-choices, .wb-pop-tabs, .wb-world-scope) button[aria-pressed="true"] {
     background: var(--wb-selection-fill);
     box-shadow: inset 0 0 0 1px var(--wb-selection-line);

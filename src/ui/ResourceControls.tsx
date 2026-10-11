@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown, Save } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
 import { clone, mergeEdits } from "../host/model";
@@ -10,17 +10,20 @@ export function Fold({
   initial = false,
   toolbar,
   icon,
+  hint,
 }: {
   title: string;
   children: React.ReactNode;
   initial?: boolean;
   toolbar?: React.ReactNode;
   icon?: React.ReactNode;
+  /** A quiet summary at the row's end, e.g. what the fold currently holds. */
+  hint?: string;
 }) {
   const [open, setOpen] = useState(initial);
   const toggle = (
     <button
-      className={`wb-fold-toggle ${icon ? "wb-icon" : ""}`}
+      className={`wb-fold-head ${icon ? "is-icon" : ""}`}
       title={title}
       aria-label={title}
       aria-expanded={open}
@@ -28,16 +31,17 @@ export function Fold({
     >
       {icon || (
         <>
-          {title}
-          <ChevronDown size={15} className={open ? "is-rotated" : ""} />
+          <span className="wb-fold-title">{title}</span>
+          {hint && <small className="wb-fold-hint">{hint}</small>}
+          <ChevronDown size={16} className="wb-fold-caret" />
         </>
       )}
     </button>
   );
   return (
-    <section className="wb-resource-fold">
+    <section className="wb-fold">
       {toolbar ? (
-        <div className="wb-fold-toolbar">
+        <div className="wb-fold-tools">
           {toolbar}
           {toggle}
         </div>
@@ -91,7 +95,33 @@ export function NativeConnection({ host }: { host: HostAdapter }) {
     </>
   );
 }
-const saveHint = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘S" : "Ctrl+S";
+export const saveHint = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘S" : "Ctrl+S";
+/** An on/off control that applies at once (boards "Panel*"); the label names it for assistive tech. */
+export function Switch({
+  label,
+  checked,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      className="wb-switch"
+      aria-label={label}
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+    >
+      <span aria-hidden="true" />
+    </button>
+  );
+}
 /**
  * The one save bar for content drafts: on screen only while there is something to save (and
  * briefly after saving), with Revert, Save and ⌘S / Ctrl+S inside the editor it belongs to.
@@ -103,6 +133,9 @@ export function SaveBar({
   reset,
   save,
   label = "保存",
+  title = "未保存的修改",
+  detail,
+  pending = false,
 }: {
   dirty: boolean;
   busy: boolean;
@@ -110,6 +143,10 @@ export function SaveBar({
   reset: () => void;
   save: () => void;
   label?: string;
+  title?: string;
+  detail?: string;
+  /** A stored file differs from the runtime (presets, connection profiles): the warm warning tone. */
+  pending?: boolean;
 }) {
   const ref = useRef<HTMLElement>(null),
     [flash, setFlash] = useState("");
@@ -135,17 +172,30 @@ export function SaveBar({
   }, [dirty]);
   if (!dirty && !flash) return null;
   return (
-    <footer ref={ref} className="wb-save-footer">
-      <small role="status">{dirty ? "未保存的修改" : flash}</small>
-      <span className="wb-grow" />
+    <footer
+      ref={ref}
+      className={`wb-savebar ${dirty ? (pending ? "is-pending" : "") : "is-saved"}`}
+      aria-label={dirty ? title : flash}
+    >
+      <span className="wb-savebar-dot" aria-hidden="true" />
+      <span className="wb-savebar-copy">
+        <span role="status">{dirty ? title : flash}</span>
+        {dirty && detail && <small>{detail}</small>}
+      </span>
       {dirty && (
         <>
-          <button disabled={busy} onClick={reset}>
+          <button className="wb-savebar-revert" disabled={busy} onClick={reset}>
             还原
           </button>
-          <button className="wb-primary" disabled={busy} title={`${label} · ${saveHint}`} onClick={save}>
-            <Save size={15} />
+          <button
+            className="wb-savebar-save"
+            aria-label={label}
+            title={`${label} · ${saveHint}`}
+            disabled={busy}
+            onClick={save}
+          >
             {label}
+            <kbd aria-hidden="true">{saveHint}</kbd>
           </button>
         </>
       )}

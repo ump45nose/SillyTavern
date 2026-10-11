@@ -3,28 +3,28 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  GripVertical,
   Copy,
   Download,
-  Image,
-  Maximize2,
   Plus,
-  Save,
   Trash2,
   BookmarkPlus,
-  SlidersHorizontal,
-  PencilLine,
   X,
   RefreshCw,
   ChartNoAxesColumn,
   Upload,
+  Lock,
+  MessageSquare,
+  Star,
+  UserRound,
 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import type { Resource, Data } from "../host/types";
 import { clone, validatePreset } from "../host/model";
 import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat } from "../ui/common";
-import { Check, Fold, SaveBar, useDraft } from "../ui/ResourceControls";
+import { Check, Fold, SaveBar, Switch, useDraft } from "../ui/ResourceControls";
 import { actionLabels } from "../host/labels";
-import { ResourcePicker } from "../ui/ResourcePicker";
+import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
 import { guards } from "../host/bus";
 export const labels: Record<Resource, string> = {
@@ -39,7 +39,6 @@ export default function Resources({
   kind,
   initial,
   deep,
-  onDeep,
   onSelection,
   view,
 }: {
@@ -47,7 +46,6 @@ export default function Resources({
   kind: Exclude<Resource, "world">;
   initial?: string;
   deep?: boolean;
-  onDeep?: (id: string) => void;
   onSelection?: (id: string) => void;
   view?: "prompts";
 }) {
@@ -96,15 +94,42 @@ export default function Resources({
         host.click(selector);
       });
   };
+  const rail: Record<typeof kind, RailExtras> = {
+    preset: {
+      plain: true,
+      create: {
+        label: "新建预设",
+        run: () => {
+          const name = prompt("新预设名称");
+          if (name) task.run(async () => setId(await host.createPreset(name)));
+        },
+      },
+    },
+    connection: {
+      grouped: true,
+      create: { label: "新建连接配置", run: () => nativeAction("#create_connection_profile") },
+    },
+    persona: {
+      avatars: true,
+      create: { label: "新建用户设定", run: () => nativeAction("#create_dummy_persona") },
+    },
+  };
   return (
     <div className={`wb-resources wb-resource-v3 kind-${kind} ${deep ? "is-deep" : ""}`}>
-      <header className="wb-resource-heading">
-        <div className="wb-resource-title-line">
-          {kind === "persona" && current?.image && (
-            <img className="wb-heading-avatar" src={current.image} alt="" />
-          )}
-          <div className="wb-resource-title-copy">
-            <small>{labels[kind]}</small>
+      <header className="wb-panel-heading">
+        {kind === "persona" && current && (
+          <button
+            className="wb-panel-avatar"
+            aria-label="更换头像"
+            title="更换头像"
+            disabled={snap.busy || task.busy}
+            onClick={() => nativeAction("#persona_set_image_button")}
+          >
+            {current.image ? <img src={current.image} alt="" /> : current.name.slice(0, 1)}
+          </button>
+        )}
+        <div className="wb-panel-heading-copy">
+          <div className="wb-panel-heading-line">
             <ResourcePicker
               label={labels[kind]}
               items={snap.resources[kind]}
@@ -114,11 +139,26 @@ export default function Resources({
               use={apply}
               sortable={kind === "persona"}
               disabled={snap.busy || task.busy}
+              extras={rail[kind]}
             />
+            {current && snap.current[kind] === id && (
+              <span className={`wb-status-chip ${kind === "connection" && !snap.online ? "is-off" : ""}`}>
+                {kind === "connection"
+                  ? snap.online
+                    ? "已连接"
+                    : "未连接"
+                  : kind === "preset"
+                    ? "运行中"
+                    : "使用中"}
+              </span>
+            )}
           </div>
+          {current?.detail && kind !== "preset" && <p className="wb-panel-sub">{current.detail}</p>}
+        </div>
+        <div className="wb-panel-heading-actions">
           {current && snap.current[kind] !== id && (
             <button
-              className="wb-use-resource"
+              className="wb-panel-action"
               aria-label={`使用此${labels[kind]}`}
               title={`使用此${labels[kind]}`}
               disabled={snap.busy || task.busy}
@@ -127,57 +167,36 @@ export default function Resources({
               使用
             </button>
           )}
-          {onDeep && (
-            <IconButton title="独立深度编辑" onClick={() => onDeep(id)}>
-              <Maximize2 size={18} />
-            </IconButton>
+          {kind === "connection" &&
+            (
+              [
+                ["update_connection_profile", "记录", "把当前连接设置记录到此配置", BookmarkPlus],
+                ["delete_connection_profile", "删除", "删除此连接配置", Trash2],
+              ] as const
+            ).map(([selector, text, title, Icon]) => (
+              <button
+                key={selector}
+                className="wb-panel-icon"
+                aria-label={text}
+                title={snap.current.connection !== id ? "使用此连接后可操作" : title}
+                disabled={snap.busy || task.busy || !current || snap.current.connection !== id}
+                onClick={() => nativeAction(`#${selector}`)}
+              >
+                <Icon size={15} />
+              </button>
+            ))}
+          {kind === "persona" && current && (
+            <button
+              className="wb-panel-icon"
+              aria-label="复制"
+              title="复制此用户设定"
+              disabled={snap.busy || task.busy}
+              onClick={() => nativeAction("#persona_duplicate_button")}
+            >
+              <Copy size={15} />
+            </button>
           )}
         </div>
-        {kind === "connection" && (
-          <div className="wb-native-profile-actions">
-            {[
-              ["create_connection_profile", "新建", Plus],
-              ["update_connection_profile", "记录", BookmarkPlus],
-              ["delete_connection_profile", "删除", Trash2],
-            ].map(([selector, text, Icon]: any) => (
-              <button
-                key={selector}
-                title={
-                  selector !== "create_connection_profile" && snap.current.connection !== id
-                    ? "使用此连接后可操作"
-                    : undefined
-                }
-                disabled={
-                  snap.busy ||
-                  task.busy ||
-                  (selector !== "create_connection_profile" && (!current || snap.current.connection !== id))
-                }
-                onClick={() => nativeAction(`#${selector}`)}
-              >
-                <Icon size={15} />
-                {text}
-              </button>
-            ))}
-          </div>
-        )}
-        {kind === "persona" && (
-          <div className="wb-persona-header-actions">
-            {[
-              ["persona_set_image_button", "更换头像", Image],
-              ["create_dummy_persona", "新建", Plus],
-              ["persona_duplicate_button", "复制", Copy],
-            ].map(([selector, text, Icon]: any) => (
-              <button
-                key={selector}
-                disabled={snap.busy || task.busy || (!current && selector !== "create_dummy_persona")}
-                onClick={() => nativeAction(`#${selector}`)}
-              >
-                <Icon size={15} />
-                {text}
-              </button>
-            ))}
-          </div>
-        )}
       </header>
       <Notice error={task.error} />
       {kind === "preset" ? (
@@ -223,7 +242,7 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
   return (
     <fieldset disabled={task.busy} className="wb-profile-editor">
       <Notice error={task.error} />
-      <Fold title={`${actionLabels.connectionProfile}与绑定`}>
+      <Fold title={`${actionLabels.connectionProfile}与绑定`} hint={draft.preset || "未绑定预设"}>
         <div className="wb-form-pair">
           <Field label="连接名称">
             <input value={draft.name || ""} onChange={(e) => change("name", e.target.value)} />
@@ -292,6 +311,9 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
         {...edit}
         busy={task.busy}
         label={actionLabels.updateConnectionProfile}
+        title={`${actionLabels.connectionProfile}有未写入的修改`}
+        detail={profileChanges(edit.base, draft)}
+        pending
         save={() =>
           task.run(async () => {
             await host.saveProfile(id, edit.base, draft);
@@ -301,6 +323,18 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
       />
     </fieldset>
   );
+}
+/** "模型 a → b", or a count when several recorded fields changed. */
+function profileChanges(base: Record<string, any>, draft: Record<string, any>) {
+  const keys = [...new Set([...Object.keys(base), ...Object.keys(draft)])].filter(
+    (k) => JSON.stringify(base[k] ?? "") !== JSON.stringify(draft[k] ?? ""),
+  );
+  if (!keys.length) return undefined;
+  const names: Record<string, string> = { name: "名称", model: "模型", preset: "绑定预设", api: "服务类型" };
+  const first = keys.find((k) => names[k]);
+  if (!first) return `${keys.length} 项记录字段`;
+  const head = `${names[first]} ${base[first] || "空"} → ${draft[first] || "空"}`;
+  return keys.length > 1 ? `${head} 等 ${keys.length} 项` : head;
 }
 function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep?: boolean }) {
   const snap = useHostSlices(host, withoutChat),
@@ -316,53 +350,234 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
       if (id !== snap.current.persona) await host.select("persona", id);
       host.click(selector);
     });
-  const positionField = (
-    <Field label="注入位置">
-      <Select value={draft.position ?? 0} onChange={(e) => change("position", Number(e.target.value))}>
-        {[
-          [0, "提示词 / 故事模板"],
-          [2, "作者注释之前"],
-          [3, "作者注释之后"],
-          [4, "指定深度"],
-          [9, "停用"],
-        ].map(([v, n]) => (
-          <option key={v} value={v}>
-            {n}
-          </option>
-        ))}
-      </Select>
-    </Field>
+  const exportPersona = () =>
+    host.download(
+      new Blob(
+        [
+          JSON.stringify(
+            {
+              name: draft.name,
+              description: draft.description,
+              position: draft.position,
+              depth: draft.depth,
+              role: draft.role,
+              lorebook: draft.lorebook,
+              title: draft.title,
+            },
+            null,
+            2,
+          ),
+        ],
+        { type: "application/json" },
+      ),
+      `${draft.name || "persona"}.json`,
+    );
+  const roleSelect = (
+    <Select
+      aria-label="注入角色"
+      value={draft.role ?? 0}
+      onChange={(e) => change("role", Number(e.target.value))}
+    >
+      <option value={0}>System</option>
+      <option value={1}>User</option>
+      <option value={2}>Assistant</option>
+    </Select>
   );
+  const save = (
+    <SaveBar
+      {...edit}
+      busy={task.busy}
+      save={() => task.run(async () => edit.saved(await host.savePersona(id, edit.base, draft)))}
+    />
+  );
+  const positionSelect = (
+    <Select value={draft.position ?? 0} onChange={(e) => change("position", Number(e.target.value))}>
+      {[
+        [0, "提示词 / 故事模板"],
+        [2, "作者注释之前"],
+        [3, "作者注释之后"],
+        [4, "指定深度"],
+        [9, "停用"],
+      ].map(([v, n]) => (
+        <option key={v} value={v}>
+          {n}
+        </option>
+      ))}
+    </Select>
+  );
+  const positionField = <Field label="注入位置">{positionSelect}</Field>;
+  if (!deep) {
+    // Board "PanelPersona": who uses this persona first (applies at once), then what it says, then the rest.
+    const locks = [
+      ["chat", "锁定当前对话", "此对话始终使用这个身份", MessageSquare],
+      ["character", "锁定当前角色", "与当前角色的所有对话", UserRound],
+      ["default", "默认身份", "新对话未锁定时使用", Star],
+    ] as const;
+    const scopeRow = (
+      key: string,
+      label: string,
+      hint: string,
+      Icon: typeof Star,
+      checked: boolean,
+      onChange: (v: boolean) => void,
+      disabled = false,
+    ) => (
+      <div key={key} className={`wb-card-row wb-scope-row ${checked ? "is-on" : ""}`}>
+        <Icon size={16} aria-hidden="true" />
+        <span className="wb-scope-copy">
+          <span>{label}</span>
+          <small>{hint}</small>
+        </span>
+        <Switch label={label} checked={checked} disabled={disabled} onChange={onChange} />
+      </div>
+    );
+    return (
+      <fieldset className="wb-persona-editor wb-persona-panel" disabled={task.busy}>
+        <Notice error={task.error} />
+        <div className="wb-resource-detail wb-persona-body">
+          <section className="wb-card wb-persona-scope" aria-label="使用范围">
+            <p className="wb-card-caption">
+              {options.current ? "使用范围 · 立即生效" : "使用范围 · 切换到此身份后可调整"}
+            </p>
+            {locks.map(([key, label, hint, Icon]) =>
+              scopeRow(
+                key,
+                label,
+                hint,
+                Icon,
+                !!options.locks[key],
+                (v) => task.run(() => host.personaLock(key, v)),
+                !options.current || edit.dirty,
+              ),
+            )}
+            {scopeRow(
+              "auto",
+              "自动锁定到当前对话",
+              "发送消息时把正在用的身份锁到对话",
+              Lock,
+              !!options.preferences.persona_auto_lock,
+              (v) => task.run(() => host.personaPreference("persona_auto_lock", v)),
+            )}
+          </section>
+          <section className="wb-persona-content" aria-label="设定内容">
+            <div className="wb-persona-content-head">
+              <span>用户描述</span>
+              <small>{(draft.description ?? "").length} 字</small>
+            </div>
+            <textarea
+              className="wb-persona-text"
+              aria-label="用户描述"
+              rows={6}
+              value={draft.description ?? ""}
+              onChange={(e) => change("description", e.target.value)}
+            />
+          </section>
+          <section className="wb-card wb-persona-fields-card" aria-label="名称与注入">
+            <div className="wb-card-row">
+              <span className="wb-card-label">用户名称</span>
+              <input
+                aria-label="用户名称"
+                value={draft.name ?? ""}
+                onChange={(e) => change("name", e.target.value)}
+              />
+            </div>
+            <div className="wb-card-row">
+              <span className="wb-card-label">说明标题</span>
+              <input
+                aria-label="说明标题"
+                placeholder="列表中名称下方的一行"
+                value={draft.title ?? ""}
+                onChange={(e) => change("title", e.target.value)}
+              />
+            </div>
+            <div className="wb-card-row">
+              <span className="wb-card-label">注入位置</span>
+              {React.cloneElement(positionSelect, { "aria-label": "注入位置" })}
+            </div>
+            {draft.position === 4 && (
+              <div className="wb-card-row wb-card-pair">
+                <span className="wb-card-label">深度</span>
+                <input
+                  aria-label="深度"
+                  type="number"
+                  min={0}
+                  max={9999}
+                  value={draft.depth ?? 2}
+                  onChange={(e) => change("depth", Number(e.target.value))}
+                />
+                <span className="wb-card-label is-inline">角色</span>
+                {roleSelect}
+              </div>
+            )}
+            <div className="wb-card-row">
+              <span className="wb-card-label">绑定世界书</span>
+              <Select
+                aria-label="绑定世界书"
+                value={draft.lorebook || ""}
+                onChange={(e) => change("lorebook", e.target.value)}
+              >
+                <option value="">不绑定</option>
+                {snap.resources.world.map((w) => (
+                  <option key={w.id}>{w.name}</option>
+                ))}
+              </Select>
+            </div>
+          </section>
+          <Fold title="管理与偏好" hint="导出 · 统计 · 删除">
+            <div className="wb-persona-manage">
+              <button disabled={edit.dirty} onClick={exportPersona}>
+                <Download size={14} />
+                导出
+              </button>
+              <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
+                <RefreshCw size={14} />
+                同步名称
+              </button>
+              <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
+                <ChartNoAxesColumn size={14} />
+                统计
+              </button>
+              <button onClick={() => action("#personas_backup")}>
+                <Download size={14} />
+                备份全部身份
+              </button>
+              <button onClick={() => action("#personas_restore")}>
+                <Upload size={14} />
+                恢复备份
+              </button>
+              <button
+                className="is-danger"
+                disabled={edit.dirty}
+                onClick={() => action("#persona_delete_button")}
+              >
+                <Trash2 size={14} />
+                删除
+              </button>
+            </div>
+            {[
+              ["persona_show_notifications", "切换身份时显示通知"],
+              ["persona_allow_multi_connections", "允许角色关联多个身份"],
+            ].map(([key, label]) => (
+              <div key={key} className="wb-card-row wb-fold-switch">
+                <span>{label}</span>
+                <Switch
+                  label={label}
+                  checked={!!options.preferences[key]}
+                  onChange={(v) => task.run(() => host.personaPreference(key, v))}
+                />
+              </div>
+            ))}
+          </Fold>
+        </div>
+        {save}
+      </fieldset>
+    );
+  }
   return (
     <fieldset className="wb-persona-editor" disabled={task.busy}>
       <Notice error={task.error} />
       <div className="wb-persona-actions wb-persona-top-actions">
-        <button
-          disabled={edit.dirty}
-          onClick={() =>
-            host.download(
-              new Blob(
-                [
-                  JSON.stringify(
-                    {
-                      name: draft.name,
-                      description: draft.description,
-                      position: draft.position,
-                      depth: draft.depth,
-                      role: draft.role,
-                      lorebook: draft.lorebook,
-                      title: draft.title,
-                    },
-                    null,
-                    2,
-                  ),
-                ],
-                { type: "application/json" },
-              ),
-              `${draft.name || "persona"}.json`,
-            )
-          }
-        >
+        <button disabled={edit.dirty} onClick={exportPersona}>
           <Download size={15} />
           导出
         </button>
@@ -397,33 +612,17 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
           <Field label="用户名称">
             <input value={draft.name ?? ""} onChange={(e) => change("name", e.target.value)} />
           </Field>
-          {deep ? (
-            positionField
-          ) : (
-            <Field label="说明标题">
-              <input value={draft.title ?? ""} onChange={(e) => change("title", e.target.value)} />
-            </Field>
-          )}
-          {deep && (
-            <>
-              <Field label="深度">
-                <input
-                  type="number"
-                  min={0}
-                  max={9999}
-                  value={draft.depth ?? 2}
-                  onChange={(e) => change("depth", Number(e.target.value))}
-                />
-              </Field>
-              <Field label="注入角色">
-                <Select value={draft.role ?? 0} onChange={(e) => change("role", Number(e.target.value))}>
-                  <option value={0}>System</option>
-                  <option value={1}>User</option>
-                  <option value={2}>Assistant</option>
-                </Select>
-              </Field>
-            </>
-          )}
+          {positionField}
+          <Field label="深度">
+            <input
+              type="number"
+              min={0}
+              max={9999}
+              value={draft.depth ?? 2}
+              onChange={(e) => change("depth", Number(e.target.value))}
+            />
+          </Field>
+          <Field label="注入角色">{roleSelect}</Field>
         </div>
         <Field label="用户描述">
           <textarea
@@ -432,32 +631,6 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
             onChange={(e) => change("description", e.target.value)}
           />
         </Field>
-        {!deep && (
-          <>
-            <h4>注入设置</h4>
-            {positionField}
-          </>
-        )}
-        {!deep && (
-          <div className="wb-form-pair">
-            <Field label="深度">
-              <input
-                type="number"
-                min={0}
-                max={9999}
-                value={draft.depth ?? 2}
-                onChange={(e) => change("depth", Number(e.target.value))}
-              />
-            </Field>
-            <Field label="注入角色">
-              <Select value={draft.role ?? 0} onChange={(e) => change("role", Number(e.target.value))}>
-                <option value={0}>System</option>
-                <option value={1}>User</option>
-                <option value={2}>Assistant</option>
-              </Select>
-            </Field>
-          </div>
-        )}
         <Field label="绑定世界书">
           <Select value={draft.lorebook || ""} onChange={(e) => change("lorebook", e.target.value)}>
             <option value="">不绑定</option>
@@ -484,43 +657,14 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
               onChange={(v) => task.run(() => host.personaLock(key, v))}
             />
           ))}
-          {!deep && (
-            <Check
-              label="自动锁定到当前对话"
-              checked={options.preferences.persona_auto_lock}
-              onChange={(v) => task.run(() => host.personaPreference("persona_auto_lock", v))}
-            />
-          )}
         </div>
-        {!deep && (
-          <>
-            <h4>全局偏好</h4>
-            {[
-              ["persona_show_notifications", "切换身份时显示通知"],
-              ["persona_allow_multi_connections", "允许角色关联多个身份"],
-            ].map(([key, label]) => (
-              <Check
-                key={key}
-                label={label}
-                checked={options.preferences[key]}
-                onChange={(v) => task.run(() => host.personaPreference(key, v))}
-              />
-            ))}
-          </>
-        )}
-        {deep && (
-          <Fold title="说明标题">
-            <Field label="说明标题">
-              <input value={draft.title ?? ""} onChange={(e) => change("title", e.target.value)} />
-            </Field>
-          </Fold>
-        )}
+        <Fold title="说明标题">
+          <Field label="说明标题">
+            <input value={draft.title ?? ""} onChange={(e) => change("title", e.target.value)} />
+          </Field>
+        </Fold>
       </div>
-      <SaveBar
-        {...edit}
-        busy={task.busy}
-        save={() => task.run(async () => edit.saved(await host.savePersona(id, edit.base, draft)))}
-      />
+      {save}
     </fieldset>
   );
 }
@@ -539,6 +683,17 @@ const parameterNames: Record<string, string> = {
   seed: "随机种子",
   n: "回复数量",
 };
+/** Parameters that read best as a slider beside their number: [min, max, step]. */
+const sliders: Record<string, [number, number, number]> = {
+  temperature: [0, 2, 0.01],
+  top_p: [0, 1, 0.01],
+  frequency_penalty: [-2, 2, 0.01],
+  presence_penalty: [-2, 2, 0.01],
+  repetition_penalty: [1, 2, 0.01],
+};
+const roleNames: Record<string, string> = { system: "系统", user: "用户", assistant: "助手" };
+const shown = (value: unknown) =>
+  typeof value === "number" ? String(value) : typeof value === "boolean" ? (value ? "开" : "关") : "已改";
 function PresetEditor({
   host,
   id,
@@ -567,6 +722,8 @@ function PresetEditor({
     [entry, setEntry] = useState(""),
     [editorOpen, setEditorOpen] = useState(!!deep),
     [scope, setScope] = useState(0),
+    [pinsOpen, setPinsOpen] = useState(false),
+    [dragging, setDragging] = useState<number | null>(null),
     [advanced, setAdvanced] = useState(host.drafts.get("preset:" + id)?.extra?.advanced ?? "");
   useLayoutEffect(() => {
     const cached = host.drafts.get("preset:" + id);
@@ -575,6 +732,9 @@ function PresetEditor({
   const prompts: Data[] = draft.prompts || [],
     scopes: Data[] = draft.prompt_order || [],
     order: Data[] = scopes[scope]?.order || [];
+  const rows: Data[] = order.length
+    ? order
+    : prompts.map((p) => ({ identifier: p.identifier, enabled: true }));
   const selected =
     prompts.find((p) => p.identifier === entry) ||
     prompts.find((p) => p.identifier === order[0]?.identifier) ||
@@ -598,26 +758,64 @@ function PresetEditor({
     );
   const pins = host.prefs().presetPins ?? ["temperature", "openai_max_tokens"];
   const always = ["stream_openai", "show_thoughts"];
-  const field = (key: string) =>
-    typeof draft[key] === "boolean" || always.includes(key) ? (
-      <Check
-        key={key}
-        label={parameterNames[key] || key}
-        checked={!!draft[key]}
-        onChange={(v) => apply(key, v)}
-      />
-    ) : (
-      <Field key={key} label={parameterNames[key] || key}>
+  const changed = running ? host.presetChanges(id) : [];
+  const fileData = changed.length ? host.presetData(id) : null;
+  const pendingDetail = fileData
+    ? `${parameterNames[changed[0]] || changed[0]} ${shown(fileData[changed[0]])} → ${shown(draft[changed[0]])}` +
+      (changed.length > 1 ? ` 等 ${changed.length} 项` : "")
+    : "";
+  /** One row of the common-parameter card: a switch, or a number with a slider where it helps. */
+  const field = (key: string) => {
+    const label = parameterNames[key] || key,
+      differs = changed.includes(key) && <span className="wb-diff-dot" title="与预设文件不同" />;
+    if (typeof draft[key] === "boolean" || always.includes(key))
+      return (
+        <div className="wb-preset-row" key={key}>
+          <span className="wb-preset-label">
+            {label}
+            {differs}
+          </span>
+          <Switch label={label} checked={!!draft[key]} onChange={(v) => apply(key, v)} />
+        </div>
+      );
+    const numeric = typeof draft[key] === "number",
+      range = numeric ? sliders[key] : undefined,
+      value = (v: string) => apply(key, numeric ? Number(v) : v);
+    return (
+      <div className={`wb-preset-row ${range ? "has-slider" : ""}`} key={key}>
+        <span className="wb-preset-label">
+          {label}
+          {differs}
+        </span>
+        {range && (
+          <input
+            type="range"
+            className="wb-slider"
+            aria-label={`${label}滑块`}
+            tabIndex={-1}
+            min={range[0]}
+            max={range[1]}
+            step={range[2]}
+            value={draft[key]}
+            style={
+              {
+                "--wb-fill": `${((draft[key] - range[0]) / (range[1] - range[0])) * 100}%`,
+              } as React.CSSProperties
+            }
+            onChange={(e) => value(e.target.value)}
+          />
+        )}
         <input
-          type={typeof draft[key] === "number" ? "number" : "text"}
+          className="wb-preset-value"
+          aria-label={label}
+          type={numeric ? "number" : "text"}
           step="any"
           value={draft[key] ?? ""}
-          onChange={(e) =>
-            apply(key, typeof draft[key] === "number" ? Number(e.target.value) : e.target.value)
-          }
+          onChange={(e) => value(e.target.value)}
         />
-      </Field>
+      </div>
     );
+  };
   const parameters = Object.keys(draft).filter(
     (k) => ["number", "boolean"].includes(typeof draft[k]) || k === "reasoning_effort",
   );
@@ -627,13 +825,20 @@ function PresetEditor({
       className={`wb-preset-editor ${deep && view !== "prompts" ? "is-parameter-view" : ""}`}
     >
       <Notice error={task.error} />
-      <section className="wb-preset-common">
-        <Fold
-          title="自定义常用项"
-          icon={<SlidersHorizontal size={15} />}
-          toolbar={<div className="wb-check-pair">{always.map(field)}</div>}
-        >
-          <div className="wb-parameter-options">
+      <section className="wb-preset-card" aria-label="常用参数">
+        {always.map(field)}
+        {pins.filter((k) => k in draft && !always.includes(k)).map(field)}
+      </section>
+      <button
+        className="wb-preset-pins-toggle"
+        aria-expanded={pinsOpen}
+        onClick={() => setPinsOpen(!pinsOpen)}
+      >
+        自定义常用项
+      </button>
+      <div className={`wb-fold-body ${pinsOpen ? "is-open" : ""}`} aria-hidden={!pinsOpen} inert={!pinsOpen}>
+        <div>
+          <div className="wb-preset-pins">
             {parameters
               .filter((k) => !always.includes(k))
               .map((k) => (
@@ -647,13 +852,8 @@ function PresetEditor({
                 />
               ))}
           </div>
-        </Fold>
-        {pins.some((k) => k in draft && !always.includes(k)) && (
-          <div className="wb-parameter-strip">
-            {pins.filter((k) => k in draft && !always.includes(k)).map(field)}
-          </div>
-        )}
-      </section>
+        </div>
+      </div>
       {deep && view !== "prompts" && (
         <section className="wb-deep-parameters">
           {[
@@ -708,88 +908,101 @@ function PresetEditor({
           </Fold>
         </section>
       )}
-      <div className="wb-preset-columns">
-        <section className="wb-prompt-list">
-          <div className="wb-section-title">
-            提示词 · {order.length || prompts.length}
-            <IconButton
-              title="新增提示词"
-              onClick={() => {
-                const identifier = crypto.randomUUID?.() || `wb-${Date.now()}`,
-                  prompt = { identifier, name: "新提示词", role: "system", content: "" };
-                apply("prompts", [...(edit.base.prompts || []), prompt], [...prompts, prompt]);
-                setOrder([...order, { identifier, enabled: true }]);
-                setEntry(identifier);
-                setEditorOpen(true);
-              }}
-            >
-              <Plus size={16} />
-            </IconButton>
-            {scopes.length > 1 && (
-              <Select
-                aria-label="提示词作用范围"
-                value={scope}
-                onChange={(e) => setScope(Number(e.target.value))}
-              >
-                {scopes.map((s, i) => (
-                  <option key={i} value={i}>
-                    {s.character_id === 100000 ? "全局" : `角色 ${s.character_id}`}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </div>
-          {(order.length ? order : prompts.map((p) => ({ identifier: p.identifier, enabled: true }))).map(
-            (item, i) => {
-              const p = prompts.find((p) => p.identifier === item.identifier);
-              return (
-                <div
-                  className={`wb-prompt-row ${selected?.identifier === item.identifier ? "is-active" : ""}`}
-                  key={`${item.identifier}-${i}`}
-                >
-                  <input
-                    type="checkbox"
-                    aria-label={`启用提示词 ${p?.name || item.identifier}`}
-                    checked={item.enabled !== false}
-                    onChange={(e) =>
-                      setOrder(
-                        (order.length
-                          ? order
-                          : prompts.map((p) => ({ identifier: p.identifier, enabled: true }))
-                        ).map((v, j) => (j === i ? { ...v, enabled: e.target.checked } : v)),
-                      )
-                    }
-                  />
-                  <button
-                    onClick={() => setEntry(item.identifier)}
-                    onDoubleClick={() => {
-                      setEntry(item.identifier);
-                      setEditorOpen(true);
-                    }}
-                  >
-                    <span>{p?.name || item.identifier}</span>
-                    <small>{p?.marker ? "动态内容" : p?.role || "system"}</small>
-                  </button>
-                  <IconButton
-                    title={`编辑提示词 ${p?.name || item.identifier}`}
-                    onClick={() => {
-                      setEntry(item.identifier);
-                      setEditorOpen(true);
-                    }}
-                  >
-                    <PencilLine size={14} />
-                  </IconButton>
-                </div>
-              );
-            },
-          )}
-        </section>
+      <div className="wb-prompts-head">
+        <span>
+          提示词
+          <small>
+            {rows.filter((r) => r.enabled !== false).length} / {rows.length} 启用
+          </small>
+        </span>
+        {scopes.length > 1 && (
+          <Select
+            aria-label="提示词作用范围"
+            value={scope}
+            onChange={(e) => setScope(Number(e.target.value))}
+          >
+            {scopes.map((s, i) => (
+              <option key={i} value={i}>
+                {s.character_id === 100000 ? "全局" : `角色 ${s.character_id}`}
+              </option>
+            ))}
+          </Select>
+        )}
+        <button
+          className="wb-panel-icon"
+          aria-label="新增提示词"
+          title="新增提示词"
+          onClick={() => {
+            const identifier = crypto.randomUUID?.() || `wb-${Date.now()}`,
+              prompt = { identifier, name: "新提示词", role: "system", content: "" };
+            apply("prompts", [...(edit.base.prompts || []), prompt], [...prompts, prompt]);
+            setOrder([...order, { identifier, enabled: true }]);
+            setEntry(identifier);
+            setEditorOpen(true);
+          }}
+        >
+          <Plus size={16} />
+        </button>
       </div>
-      <div className={`wb-preset-scroll ${editorOpen ? "is-editor-open" : ""}`}>
+      <ul className="wb-prompts" aria-label="提示词顺序">
+        {rows.map((item, i) => {
+          const p = prompts.find((p) => p.identifier === item.identifier),
+            name = p?.name || item.identifier,
+            active = editorOpen && selected?.identifier === item.identifier;
+          return (
+            <li
+              className={`wb-prompt ${active ? "is-active" : ""} ${item.enabled === false ? "is-off" : ""} ${p?.marker ? "is-marker" : ""} ${dragging === i ? "is-dragging" : ""}`}
+              key={`${item.identifier}-${i}`}
+              draggable={!!order.length}
+              onDragStart={(e) => {
+                setDragging(i);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => {
+                if (dragging === null || dragging === i) return;
+                e.preventDefault();
+                const next = [...rows];
+                next.splice(i, 0, next.splice(dragging, 1)[0]);
+                setDragging(i);
+                setOrder(next);
+              }}
+              onDragEnd={() => setDragging(null)}
+            >
+              <GripVertical className="wb-prompt-grip" size={14} aria-hidden="true" />
+              <input
+                type="checkbox"
+                aria-label={`启用提示词 ${name}`}
+                checked={item.enabled !== false}
+                onChange={(e) =>
+                  setOrder(rows.map((v, j) => (j === i ? { ...v, enabled: e.target.checked } : v)))
+                }
+              />
+              <button
+                className="wb-prompt-open"
+                aria-label={`编辑提示词 ${name}`}
+                aria-expanded={active}
+                onClick={() => {
+                  if (active) setEditorOpen(false);
+                  else {
+                    setEntry(item.identifier);
+                    setEditorOpen(true);
+                  }
+                }}
+              >
+                <span>{name}</span>
+              </button>
+              <span className="wb-prompt-role">
+                {p?.marker ? "标记" : roleNames[p?.role || "system"] || p?.role}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className={`wb-preset-more ${editorOpen ? "is-editor-open" : ""}`}>
         {selected ? (
-          <div className={`wb-prompt-collapse ${editorOpen ? "is-open" : ""}`} inert={!editorOpen}>
-            <div className="wb-prompt-collapse-body">
-              <section className="wb-prompt-editor">
+          <div className={`wb-fold-body wb-prompt-sheet ${editorOpen ? "is-open" : ""}`} inert={!editorOpen}>
+            <div>
+              <section className="wb-prompt-card" aria-label="编辑提示词">
                 <IconButton title="收起提示词编辑" onClick={() => setEditorOpen(false)}>
                   <X size={15} />
                 </IconButton>
@@ -1056,10 +1269,14 @@ function PresetEditor({
         }
       />
       {pending && (
-        <footer className="wb-save-footer wb-preset-pending">
-          <small role="status">预设有未写入的修改</small>
-          <span className="wb-grow" />
+        <footer className="wb-savebar is-pending" aria-label="预设有未写入的修改">
+          <span className="wb-savebar-dot" aria-hidden="true" />
+          <span className="wb-savebar-copy">
+            <span role="status">预设有未写入的修改</span>
+            {pendingDetail && <small>{pendingDetail}</small>}
+          </span>
           <button
+            className="wb-savebar-revert"
             aria-label="还原为预设文件"
             disabled={task.busy}
             onClick={() => task.run(() => host.revertPreset())}
@@ -1067,11 +1284,11 @@ function PresetEditor({
             还原
           </button>
           <button
-            className="wb-primary"
+            className="wb-savebar-save"
+            aria-label={actionLabels.updatePreset}
             disabled={task.busy}
             onClick={() => task.run(() => host.updatePreset(id))}
           >
-            <Save size={15} />
             {actionLabels.updatePreset}
           </button>
         </footer>

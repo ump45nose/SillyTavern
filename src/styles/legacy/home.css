@@ -366,26 +366,6 @@
     opacity: 1;
     visibility: visible;
   }
-  .wb-fold-toggle {
-    display: flex !important;
-    width: 100%;
-    justify-content: space-between !important;
-    border: 0 !important;
-    background: transparent !important;
-    padding: 6px 2px !important;
-    font-size: 12px !important;
-    color: var(--wb-control-ink) !important;
-  }
-  .wb-fold-toggle small {
-    margin-left: 5px;
-    font-size: 10px;
-  }
-  .wb-fold-toggle svg {
-    transition: transform 160ms;
-  }
-  .wb-fold-toggle .is-rotated {
-    transform: rotate(180deg);
-  }
   .wb-fold-body {
     display: grid;
     grid-template-rows: 0fr;
@@ -703,18 +683,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
-  .wb-resource-fold {
-    border-top: 1px solid var(--wb-line);
-    padding: 9px 0;
-    margin-top: 8px;
-  }
-  .wb-resource-fold .wb-fold-body.is-open > div {
-    max-height: none;
-    overflow: hidden;
-  }
-  .wb-resource-fold .wb-fold-body > div > .wb-field:first-child {
-    margin-top: 8px;
-  }
   .wb-save-footer {
     display: flex;
     align-items: center;
@@ -769,9 +737,6 @@
   }
   .wb-preset-common {
     padding: 12px 20px;
-  }
-  .wb-preset-common .wb-resource-fold {
-    margin-top: 4px;
   }
   .wb-preset-columns {
     display: grid;
@@ -971,9 +936,6 @@
   body.wb-active .wb-native-slot {
     font-size: 12px;
     line-height: 1.7;
-  }
-  .wb-resource-fold .wb-check {
-    min-height: 34px;
   }
   .wb-characters:not(.is-management) .wb-character-main > em {
     margin-left: auto;

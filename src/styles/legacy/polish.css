@@ -201,21 +201,6 @@
   .wb-ui {
     --wb-selection-line: color-mix(in srgb, var(--wb-accent) 65%, var(--wb-line));
   }
-  body.wb-active .wb-ui .wb-fold-toggle {
-    border: 1px solid transparent !important;
-    border-radius: 7px;
-    padding-left: 7px !important;
-    padding-right: 7px !important;
-    transition:
-      background-color 180ms,
-      border-color 180ms,
-      color 180ms;
-  }
-  body.wb-active .wb-ui .wb-fold-toggle[aria-expanded="true"] {
-    border-color: var(--wb-selection-line) !important;
-    background: var(--wb-selected) !important;
-    color: var(--wb-accent) !important;
-  }
   .wb-ui
     :is(
       .wb-selector.is-active,

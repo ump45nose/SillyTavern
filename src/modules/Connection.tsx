@@ -1,7 +1,7 @@
 import React, { useEffect, useReducer } from "react";
 import { FlaskConical, PlugZap, RefreshCw } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
-import { useTask, Field, Notice, useHostSlices, withoutChat } from "../ui/common";
+import { useTask, Notice, useHostSlices, withoutChat } from "../ui/common";
 import DesignedSettings from "./DesignedSettings";
 import { Select } from "../ui/Select";
 
@@ -38,61 +38,61 @@ export function ConnectionRuntime({ host }: { host: HostAdapter }) {
         onChange={(e) => host.setConnectionControl(control.id, e.target.value)}
       />
     );
+  const row = (label: string, control: React.ReactNode) => (
+    <div className="wb-card-row">
+      <span className="wb-card-label">{label}</span>
+      {control}
+    </div>
+  );
   return (
     <>
-      <section className="wb-connection-quick">
-        <div className="wb-section-title">
-          API 连接配置
-          <span className="wb-grow" />
-          <span className={`wb-dot ${snap.online ? "online" : ""}`} />
-          <small>{snap.online ? "已连接" : "未连接"}</small>
-        </div>
-        <Field label="模型">
-          <div className="wb-connection-model">
+      {/* The live connection, not the profile on screen: profiles record it (board "PanelConnection"). */}
+      <section className="wb-card wb-connection-card" aria-label="当前 API 连接">
+        {row("接口类型", field(state.main, "接口类型"))}
+        {state.provider && row("服务商", field(state.provider, "服务商"))}
+        {row(
+          "模型",
+          <div className="wb-connection-pick">
             {state.model ? (
               field(state.model, "运行模型")
             ) : (
               <input aria-label="运行模型" value="由后端选择，可在下方配置" readOnly />
             )}
             <button
-              className="wb-icon"
+              className="wb-panel-icon"
               title="刷新模型"
               aria-label="刷新模型"
               disabled={snap.busy || task.busy || state.connecting}
               onClick={() => task.run(() => host.click(`#${state.connect}`))}
             >
-              <RefreshCw size={17} />
+              <RefreshCw size={15} />
             </button>
-          </div>
-        </Field>
-        <div className="wb-connection-actions">
+          </div>,
+        )}
+        <div className="wb-connection-bar">
           <button
-            className="wb-primary"
+            className="wb-connection-go"
             disabled={snap.busy || task.busy || state.connecting}
             onClick={() => task.run(() => host.click(`#${state.connect}`))}
           >
-            <PlugZap size={15} />
+            <PlugZap size={14} />
             {state.connecting ? "连接中…" : "连接"}
           </button>
           {state.test && (
             <button
+              className="wb-connection-test"
               disabled={snap.busy || task.busy || state.connecting}
               title="发送测试消息，使用当前 API"
               onClick={() => task.run(() => host.click(`#${state.test}`))}
             >
-              <FlaskConical size={15} />
+              <FlaskConical size={14} />
               测试
             </button>
           )}
-          <span className="wb-grow" />
-          <small>使用当前 API 配置</small>
-        </div>
-        <Notice error={task.error} />
-        <div className="wb-form-pair">
-          <Field label="接口类型">{field(state.main, "接口类型")}</Field>
-          {state.provider && <Field label="服务商">{field(state.provider, "服务商")}</Field>}
+          <small className={snap.online ? "is-online" : ""}>{snap.online ? "已连接" : "未连接"}</small>
         </div>
       </section>
+      <Notice error={task.error} />
       <DesignedSettings host={host} page="connection" group="服务与凭据" />
     </>
   );

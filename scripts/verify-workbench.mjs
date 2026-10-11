@@ -54,13 +54,13 @@ try {
   await page.keyboard.press("Alt+Shift+Digit3");
   // The sidebar picks books from the resource rail; the book column only shows in the full editor.
   await page
-    .locator(".wb-resource-menu .wb-picker-copy")
+    .locator("#wb-resource-rail .wb-rail-open")
     .filter({ hasText: /^WorkbenchFixtureWorld$/ })
     .click();
   await page.getByLabel("灯塔 激活方式").waitFor();
   await selectPaper(page, "灯塔 激活方式", "constant");
   assert.equal(await page.getByLabel("启用条目 灯塔").isChecked(), true);
-  // The sidebar keeps the entry editor collapsed until an entry is opened for editing.
+  // The panel edits the chosen entry in the card below the list.
   await page.getByRole("button", { name: "编辑条目 灯塔", exact: true }).click();
   await page.getByLabel("世界书正文").fill("WB_LORE_CONTENT：新版灯塔。");
   await page.getByRole("button", { name: "保存", exact: true }).click();

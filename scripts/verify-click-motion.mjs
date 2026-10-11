@@ -37,22 +37,21 @@ try{
   await verify(name+' opens',page.getByRole('button',{name,exact:true}),'.wb-popover[role=dialog]','opacity');
   await verify(name+' closes',page.getByRole('button',{name:'关闭弹出框',exact:true}),'.wb-popover[role=dialog]','opacity');
  }
- await openResource(page,'世界书详情');await settle();await page.locator('#wb-resource-rail .wb-picker-copy').first().click();await settle();
- const entry=page.locator('.wb-right .wb-entry-row .wb-icon').first();await entry.waitFor();
- const world=await verify('world entry editor expands',entry,'.wb-right .wb-entry-editor','height');
- const original=await page.locator('.wb-right .wb-entry-editor').evaluate(n=>{window.__clickWorldEditor=n;return true;});assert(original);
+ await openResource(page,'世界书详情');await settle();await page.locator('#wb-resource-rail .wb-rail-open').first().click();await settle();
+ // The panel keeps one entry card open below the list (board PanelWorld); choosing a row swaps its contents in place.
+ const card=page.locator('.wb-right .wb-entry-card');await card.waitFor();const firstText=await card.locator('textarea').inputValue();
+ await page.locator('.wb-right .wb-entry-open').nth(1).click();await settle();assert.notEqual(await card.locator('textarea').inputValue(),firstText);
  await page.screenshot({path:dir+'/world-editor.png'});
- await verify('world entry editor folds',page.getByRole('button',{name:'收起条目编辑',exact:true}),'.wb-right .wb-entry-editor','height');assert(await page.locator('.wb-right .wb-entry-editor').evaluate(n=>n===__clickWorldEditor));assert.equal(world.before.height,0);
  await openResource(page,'预设详情');await settle();
- await verify('prompt editor expands',page.locator('.wb-right .wb-prompt-row .wb-icon').first(),'.wb-right .wb-prompt-collapse','height');
- await page.locator('.wb-right .wb-prompt-editor textarea').evaluate(n=>window.__clickPrompt=n);await page.screenshot({path:dir+'/prompt-editor.png'});
- await verify('prompt editor folds',page.getByRole('button',{name:'收起提示词编辑',exact:true}),'.wb-right .wb-prompt-collapse','height');assert(await page.locator('.wb-right .wb-prompt-editor textarea').evaluate(n=>n===__clickPrompt));
- await verify('resource rail folds',page.locator('#wb-resource-rail .wb-rail-heading .wb-icon'),'#wb-resource-rail','opacity');
+ await verify('prompt editor expands',page.locator('.wb-right .wb-prompt-open').first(),'.wb-right .wb-prompt-sheet','height');
+ await page.locator('.wb-right .wb-prompt-card textarea').evaluate(n=>window.__clickPrompt=n);await page.screenshot({path:dir+'/prompt-editor.png'});
+ await verify('prompt editor folds',page.getByRole('button',{name:'收起提示词编辑',exact:true}),'.wb-right .wb-prompt-sheet','height');assert(await page.locator('.wb-right .wb-prompt-card textarea').evaluate(n=>n===__clickPrompt));
+ await verify('resource rail folds',page.getByRole('button',{name:'收起预设资源列表',exact:true}),'#wb-resource-rail','opacity');
  await verify('resource rail expands',page.getByRole('button',{name:'展开预设资源列表',exact:true}),'#wb-resource-rail','opacity');
  const trigger=page.locator('.wb-right .wb-select-trigger').first();await verify('select opens',trigger,'.wb-select-menu','opacity');
  await verify('select closes',trigger,'.wb-select-menu','opacity');
- const checkbox=page.locator('.wb-right .wb-check-pair input').first(),was=await checkbox.isChecked();
- const pressing=await sample(checkbox,'.wb-right .wb-check-pair input');assert(pressing.frames.some(x=>x.scale!==1&&x.scale!=='1'&&x.scale!=='none'));await checkbox.setChecked(was);await settle();pass('short clicks visibly press and release; native check state restored',pressing);
+ const checkbox=page.locator('.wb-right .wb-prompt input[type=checkbox]').first(),was=await checkbox.isChecked();
+ const pressing=await sample(checkbox,'.wb-right .wb-prompt input[type=checkbox]');assert(pressing.frames.some(x=>x.scale!==1&&x.scale!=='1'&&x.scale!=='none'));await checkbox.setChecked(was);await settle();pass('short clicks visibly press and release; native check state restored',pressing);
  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
  const nav=page.locator('.wb-nav-footer').getByRole('button',{name:'设置',exact:true});await verify('settings workspace opens',nav,'.wb-settings-workspace','opacity');
  await page.locator('.wb-settings-nav').getByRole('button',{name:'回复格式',exact:true}).click();await settle();

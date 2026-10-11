@@ -20,4 +20,5 @@
 @import "./components/feedback.css";
 @import "./layouts/desk.css";
 @import "./layouts/panel.css";
+@import "./components/resource-panel.css";
 @import "./native-bridge.css";

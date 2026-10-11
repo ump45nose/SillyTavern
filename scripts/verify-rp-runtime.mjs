@@ -45,7 +45,7 @@ try {
   assert.equal(await page.locator(".wb-nav-footer button").count(), 3); await role("收纳左边栏").click(); await settle();
   pass("existing navigation and panel entry/exit animation remain available", { mid });
 
-  await openResource(page,'世界书详情'); await settle(); await page.locator(".wb-world").waitFor();
+  await openResource(page,'世界书详情'); await settle(); await page.locator(".wb-world-panel").waitFor();
   assert.equal(await page.locator("#wb-resource-rail").evaluate(n => n.getBoundingClientRect().width), 180);
   await role("关闭右栏").click(); await settle();
   await openResource(page,'预设详情'); await settle(); await page.locator(".wb-resource-v3").waitFor(); await role("关闭右栏").click(); await settle();

@@ -28,6 +28,7 @@ import {
   PinOff,
   ListTree,
   ImagePlus,
+  Maximize2,
 } from "lucide-react";
 import { resolveTool } from "./host/tools";
 import { addonEnabled } from "./addons/catalog";
@@ -80,6 +81,11 @@ export function beforeClose() {
   return guards.check();
 }
 /** Sidebar widths come from the --wb-*-size tokens, so CSS breakpoints stay the only source. */
+/** Where the panel header's "独立深度编辑" leads for each panel; Trace and export have no larger view. */
+function deepTarget(kind: NonNullable<Panel>): Deep | null {
+  if (kind === "character") return "library";
+  return kind === "trace" || kind === "export" ? null : kind;
+}
 function readSizes(): Sizes {
   const style = getComputedStyle(document.documentElement);
   const px = (name: string, fallback: number) => parseFloat(style.getPropertyValue(name)) || fallback;
@@ -441,7 +447,9 @@ export default function App({
         host={host}
         initial={focusId}
         deep={independent}
-        onDeep={independent ? undefined : (name) => goDeep("world", name)}
+        onSelection={(name) => {
+          selectedIds.current.world = name;
+        }}
       />
     ) : kind === "character" ? (
       <Characters
@@ -469,7 +477,6 @@ export default function App({
         }}
         initial={focusId}
         deep={independent}
-        onDeep={independent ? undefined : (id) => goDeep(kind, id)}
       />
     ) : null;
   return (
@@ -699,6 +706,19 @@ export default function App({
                 </React.Fragment>
               ))}
           </div>
+          {shown && deepTarget(shown) && (
+            <button
+              className="wb-panel-tool wb-panel-expand"
+              aria-label="独立深度编辑"
+              title="独立深度编辑"
+              onClick={() => {
+                const target = deepTarget(shown)!;
+                goDeep(target, target === "library" ? "" : (selectedIds.current[shown] ?? ""));
+              }}
+            >
+              <Maximize2 size={15} />
+            </button>
+          )}
           <button
             className="wb-panel-close"
             aria-label="关闭右栏"

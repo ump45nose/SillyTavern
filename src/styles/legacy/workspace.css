@@ -1532,9 +1532,6 @@
   .wb-preset-editor.is-parameter-view > .wb-preset-columns {
     display: none;
   }
-  .wb-preset-editor.is-parameter-view > .wb-preset-common .wb-fold-toolbar {
-    display: none;
-  }
   .wb-preset-editor.is-parameter-view > .wb-preset-scroll > .wb-prompt-editor {
     display: none;
   }
@@ -1630,9 +1627,6 @@
   }
   .wb-persona-manager .wb-persona-fields > .wb-field {
     margin: 0;
-  }
-  .wb-persona-manager .wb-persona-fields > .wb-resource-fold {
-    grid-column: 1/-1;
   }
   .wb-group-layout > aside {
     position: sticky;

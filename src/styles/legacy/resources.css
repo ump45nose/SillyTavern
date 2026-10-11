@@ -174,14 +174,6 @@
     font-size: 11px;
     min-height: 29px;
   }
-  .wb-resource-v3 .wb-resource-fold {
-    margin: 0;
-    padding: 7px 0;
-  }
-  .wb-resource-v3 .wb-resource-fold .wb-fold-toggle {
-    padding: 6px 0 !important;
-    min-height: 25px;
-  }
   .wb-resource-v3 .wb-fold-body.is-open > div {
     max-height: none;
     overflow: visible;
@@ -250,51 +242,6 @@
     margin: 8px 7px;
     font-size: 11px;
   }
-  .wb-resource-v3 .wb-connection-quick {
-    padding-bottom: 6px;
-  }
-  .wb-connection-quick .wb-section-title {
-    font-size: 12px;
-    color: var(--wb-muted);
-    margin-bottom: 12px;
-  }
-  .wb-connection-quick .wb-section-title small {
-    font-size: 11px;
-  }
-  .wb-connection-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 0 16px;
-  }
-  .wb-connection-actions button {
-    font-size: 12px;
-    padding: 6px 11px;
-    min-height: 33px;
-  }
-  .wb-connection-actions small {
-    color: var(--wb-muted);
-    font-size: 11px;
-  }
-  .wb-connection-model {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    gap: 7px;
-  }
-  .wb-connection-model > :is(input, .wb-select) {
-    flex: 1;
-    min-width: 0;
-  }
-  .wb-connection-model > .wb-icon {
-    flex: none;
-    width: 30px;
-    height: 32px;
-    min-height: 32px;
-    padding: 5px;
-    border: 0;
-    background: transparent;
-  }
   .wb-connection-detail .wb-native-caption {
     display: none;
   }
@@ -333,33 +280,6 @@
   }
   .wb-resource-v3 .wb-parameter-strip .wb-field > span {
     white-space: nowrap;
-  }
-  .wb-resource-v3 .wb-preset-common .wb-resource-fold {
-    padding: 0;
-    border: 0;
-  }
-  .wb-resource-v3 .wb-fold-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .wb-resource-v3 .wb-fold-toolbar .wb-parameter-strip {
-    flex: 1;
-  }
-  .wb-resource-v3 .wb-fold-toolbar > .wb-icon {
-    flex: none;
-    width: 28px;
-    height: 28px;
-    min-height: 28px;
-    padding: 5px !important;
-  }
-  .wb-resource-v3 .wb-fold-toolbar > .wb-icon[aria-expanded="true"] {
-    color: var(--wb-accent);
-  }
-  .wb-resource-v3 .wb-preset-common .wb-fold-toggle {
-    min-height: 23px;
-    padding: 2px 0 !important;
-    font-size: 11px !important;
   }
   .wb-resource-v3 .wb-preset-common .wb-fold-body.is-open > div {
     display: grid;
@@ -478,9 +398,6 @@
       "Noto Serif CJK SC",
       serif;
     resize: vertical;
-  }
-  .wb-resource-v3 .wb-preset-scroll > .wb-resource-fold {
-    border-top: 0;
   }
   .wb-resource-v3.is-deep .wb-preset-editor {
     display: grid;

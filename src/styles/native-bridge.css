@@ -1495,7 +1495,7 @@ body.wb-active .wb-ui input[type="range"] {
 }
 body.wb-active .wb-ui input[type="range"]::-webkit-slider-runnable-track {
   background: #e4dacc !important;
-  height: 3px !important;
+  height: 4px !important;
   border: 0 !important;
   border-radius: 3px;
   box-shadow: none !important;
@@ -1503,13 +1503,15 @@ body.wb-active .wb-ui input[type="range"]::-webkit-slider-runnable-track {
 body.wb-active .wb-ui input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none !important;
   appearance: none !important;
-  width: 12px !important;
-  height: 12px !important;
-  border: 2px solid var(--wb-surface) !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 0 !important;
   border-radius: 50% !important;
-  background: var(--wb-accent) !important;
-  margin-top: -4.5px !important;
-  box-shadow: 0 0 0 1px #bdac94 !important;
+  background: #fffefa !important;
+  margin-top: -6px !important;
+  box-shadow:
+    0 0 0 1px var(--wb-line-1),
+    0 1px 3px rgb(0 0 0 / 18%) !important;
 }
 
 /* ── from rework.css ── */
@@ -2415,15 +2417,18 @@ body.wb-active .wb-ui input[type="range"] {
   margin: 0 !important;
   filter: none !important;
 }
+/* Board "PanelPreset": an accent fill up to the value (pages set --wb-fill), a white thumb on a hairline ring. */
 body.wb-active .wb-ui input[type="range"]::-webkit-slider-runnable-track {
-  background: var(--wb-line) !important;
-}
-body.wb-active .wb-ui input[type="range"]::-webkit-slider-thumb {
-  background: var(--wb-accent) !important;
-  box-shadow: 0 0 0 1px var(--wb-accent) !important;
+  background: linear-gradient(
+    to right,
+    var(--wb-accent) var(--wb-fill, 0%),
+    color-mix(in srgb, var(--wb-ink-3) 28%, var(--wb-surface-2)) var(--wb-fill, 0%)
+  ) !important;
 }
 body.wb-active .wb-ui input[type="range"]:hover::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wb-accent) 18%, transparent) !important;
+  box-shadow:
+    0 0 0 1px var(--wb-ring),
+    0 0 0 4px color-mix(in srgb, var(--wb-accent) 14%, transparent) !important;
 }
 body.wb-active .wb-ui input[type="range"]:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--wb-accent) 45%, transparent);
