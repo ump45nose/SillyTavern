@@ -163,9 +163,9 @@ export default function SettingsWorkspace({
             </button>
           ))}
           <footer>
-            Noval 工作台
+            Noval 工作台 · 独立设置工作区
             <br />
-            独立设置工作区
+            SillyTavern 1.19.0
           </footer>
         </nav>
         <main>
@@ -223,10 +223,6 @@ export default function SettingsWorkspace({
           </div>
         </main>
       </div>
-      <footer className="wb-settings-footer">
-        <span className="wb-grow" />
-        SillyTavern 1.19.0
-      </footer>
       {closing && (
         <Dialog
           title="离开设置工作区"

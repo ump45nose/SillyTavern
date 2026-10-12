@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Copy, Download, Plus, Search, Upload, SquareArrowOutUpRight, Trash2, X } from "../ui/icons";
+import { Plus, Search, Upload, SquareArrowOutUpRight, X } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Empty, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";
@@ -75,78 +75,6 @@ export default function ResourceManager({
   };
   return (
     <div className={`wb-resource-manager manage-${kind}`}>
-      <div className="wb-batch-toolbar">
-        <label className="wb-check">
-          <input
-            ref={all}
-            type="checkbox"
-            aria-label={`全选${label}`}
-            checked={!!items.length && valid.length === items.length}
-            disabled={task.busy || !items.length}
-            onChange={(e) => onSelection(e.target.checked ? items.map((i) => i.id) : [])}
-          />
-          全选
-        </label>
-        <small className={valid.length ? "is-selected" : ""} role="status">
-          已选 {valid.length} / {items.length}
-        </small>
-        <div className="wb-batch-actions">
-          <button disabled={!valid.length || task.busy || snap.busy} onClick={() => batch("copy")}>
-            <Copy size={15} />
-            复制
-          </button>
-          <button disabled={!valid.length || task.busy} onClick={() => batch("export")}>
-            <Download size={15} />
-            导出
-          </button>
-          <button disabled={!valid.length || task.busy || snap.busy} onClick={() => setConfirmDelete(true)}>
-            <Trash2 size={15} />
-            删除
-          </button>
-          <button
-            aria-label="取消资源选择"
-            disabled={!valid.length || task.busy}
-            onClick={() => onSelection([])}
-          >
-            <X size={15} />
-            取消
-          </button>
-        </div>
-        <span className="wb-grow" />
-        <button disabled={task.busy || snap.busy} onClick={create}>
-          <Plus size={15} />
-          新建
-        </button>
-        {kind !== "connection" && (
-          <label className="wb-upload-button">
-            <Upload size={15} />
-            导入
-            <input
-              type="file"
-              accept=".json"
-              aria-label={`导入${label}`}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file)
-                  task.run(async () =>
-                    setId(
-                      await host.createResource(
-                        kind,
-                        file.name.replace(/\.json$/i, ""),
-                        JSON.parse(await file.text()),
-                      ),
-                    ),
-                  );
-                e.target.value = "";
-              }}
-            />
-          </label>
-        )}
-        <button className="wb-editor-slot" disabled>
-          <SquareArrowOutUpRight size={15} />
-          外部编辑器 · 预留
-        </button>
-      </div>
       <Notice error={task.error} />
       {message && (
         <p className="wb-batch-status" role="status">
@@ -155,6 +83,83 @@ export default function ResourceManager({
       )}
       <div className="wb-manager-grid">
         <aside className="wb-manager-resources">
+          <header className="wb-manager-head">
+            <h3>{label}</h3>
+            <span className="wb-grow" />
+            {kind !== "connection" && (
+              <label className="wb-upload-button wb-manager-icon" title={`导入${label}`}>
+                <Upload size={15} />
+                <input
+                  type="file"
+                  accept=".json"
+                  aria-label={`导入${label}`}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file)
+                      task.run(async () =>
+                        setId(
+                          await host.createResource(
+                            kind,
+                            file.name.replace(/\.json$/i, ""),
+                            JSON.parse(await file.text()),
+                          ),
+                        ),
+                      );
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+            <button
+              className="wb-manager-icon is-raised"
+              aria-label={`新建${label}`}
+              title={`新建${label}`}
+              disabled={task.busy || snap.busy}
+              onClick={create}
+            >
+              <Plus size={15} />
+            </button>
+          </header>
+          <div className={`wb-batch-toolbar ${valid.length ? "is-active" : ""}`}>
+            <label className="wb-check">
+              <input
+                ref={all}
+                type="checkbox"
+                aria-label={`全选${label}`}
+                checked={!!items.length && valid.length === items.length}
+                disabled={task.busy || !items.length}
+                onChange={(e) => onSelection(e.target.checked ? items.map((i) => i.id) : [])}
+              />
+              {valid.length ? `已选 ${valid.length}` : "全选"}
+            </label>
+            <small className={valid.length ? "is-selected" : ""} role="status">
+              已选 {valid.length} / {items.length}
+            </small>
+            <div className="wb-batch-actions">
+              <button disabled={!valid.length || task.busy || snap.busy} onClick={() => batch("copy")}>
+                复制
+              </button>
+              <button disabled={!valid.length || task.busy} onClick={() => batch("export")}>
+                导出
+              </button>
+              <button
+                className="is-danger"
+                disabled={!valid.length || task.busy || snap.busy}
+                onClick={() => setConfirmDelete(true)}
+              >
+                删除
+              </button>
+              <button
+                className="wb-manager-icon"
+                aria-label="取消资源选择"
+                title="取消选择"
+                disabled={!valid.length || task.busy}
+                onClick={() => onSelection([])}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
           <label className="wb-search">
             <Search size={15} />
             <input
@@ -164,40 +169,44 @@ export default function ResourceManager({
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
-          <div className="wb-manager-caption">
-            全部{label}
-            <small>{items.length}</small>
-          </div>
-          {items
-            .filter((i) => i.name.toLowerCase().includes(query.toLowerCase()))
-            .map((item) => (
-              <div
-                key={item.id}
-                className={`wb-manager-row ${id === item.id ? "is-editing" : ""} ${valid.includes(item.id) ? "is-selected" : ""}`}
-              >
-                <label>
-                  <input
-                    type="checkbox"
-                    aria-label={`选择 ${item.name}`}
-                    checked={valid.includes(item.id)}
-                    disabled={task.busy}
-                    onChange={(e) =>
-                      onSelection(e.target.checked ? [...valid, item.id] : valid.filter((s) => s !== item.id))
-                    }
-                  />
-                </label>
-                <button
-                  aria-label={`编辑 ${item.name}`}
-                  aria-pressed={id === item.id}
-                  disabled={task.busy}
-                  onClick={() => browse(item.id)}
+          <div className="wb-manager-list">
+            {items
+              .filter((i) => i.name.toLowerCase().includes(query.toLowerCase()))
+              .map((item) => (
+                <div
+                  key={item.id}
+                  className={`wb-manager-row ${id === item.id ? "is-editing" : ""} ${valid.includes(item.id) ? "is-selected" : ""}`}
                 >
-                  <strong>{item.name}</strong>
-                  <small>{id === item.id ? "编辑中" : item.detail || "世界书"}</small>
-                </button>
-              </div>
-            ))}
-          {!items.length && <Empty>还没有{label}</Empty>}
+                  <label>
+                    <input
+                      type="checkbox"
+                      aria-label={`选择 ${item.name}`}
+                      checked={valid.includes(item.id)}
+                      disabled={task.busy}
+                      onChange={(e) =>
+                        onSelection(
+                          e.target.checked ? [...valid, item.id] : valid.filter((s) => s !== item.id),
+                        )
+                      }
+                    />
+                  </label>
+                  <button
+                    aria-label={`编辑 ${item.name}`}
+                    aria-pressed={id === item.id}
+                    disabled={task.busy}
+                    onClick={() => browse(item.id)}
+                  >
+                    <strong>{item.name}</strong>
+                    <small>{id === item.id ? "编辑中" : item.detail || "世界书"}</small>
+                  </button>
+                </div>
+              ))}
+            {!items.length && <Empty>还没有{label}</Empty>}
+          </div>
+          <button className="wb-editor-slot" disabled>
+            <SquareArrowOutUpRight size={14} />
+            外部编辑器 · 预留
+          </button>
         </aside>
         <div className="wb-manager-editor" inert={task.busy}>
           {kind === "world" ? (

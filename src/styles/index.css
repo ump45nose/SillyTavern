@@ -24,5 +24,7 @@
 @import "./components/resource-panel.css";
 @import "./components/trace.css";
 @import "./components/addon.css";
+@import "./components/reading-settings.css";
 @import "./layouts/rp.css";
+@import "./layouts/settings.css";
 @import "./native-bridge.css";

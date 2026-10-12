@@ -20,7 +20,7 @@ import {
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Field, Notice, SearchBox, useTask } from "../ui/common";
 import { HostControl, HostWidget, type FormControl } from "../ui/HostControl";
-import { Check, Fold } from "../ui/ResourceControls";
+import { Check, Fold, Switch } from "../ui/ResourceControls";
 import { Select } from "../ui/Select";
 import { nativePages } from "./NativeSettings";
 import { bus } from "../host/bus";
@@ -622,93 +622,204 @@ export default function DesignedSettings({
     </div>
   );
 }
-export function ReadingForm({ host }: { host: HostAdapter }) {
-  const p = host.prefs();
+/** A row of mutually exclusive choices, drawn as the board's segmented control. */
+function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly (readonly [T, string])[];
+  onChange: (value: T) => void;
+}) {
   return (
-    <section className="wb-designed-section">
-      <h3>阅读排版</h3>
-      <div className="wb-designed-fields">
-        <Field label="正文字体">
-          <Select
-            aria-label="正文字体"
-            value={p.readingFont || "serif"}
-            onChange={(e) => host.preference({ readingFont: e.target.value as any })}
-          >
-            <option value="serif">宋体 · 纸书</option>
-            <option value="sans">黑体 · 清晰</option>
-          </Select>
-        </Field>
-        <Field label="字号">
-          <input
-            aria-label="正文字号"
-            type="range"
-            min={14}
-            max={24}
-            value={p.readingSize ?? 17}
-            onChange={(e) => host.preference({ readingSize: Number(e.target.value) })}
-          />
-          <output>{p.readingSize ?? 17} px</output>
-        </Field>
-        <Field label="行距">
-          <input
-            aria-label="正文行距"
-            type="range"
-            min={1.5}
-            max={2.4}
-            step={0.1}
-            value={p.readingLeading ?? 2}
-            onChange={(e) => host.preference({ readingLeading: Number(e.target.value) })}
-          />
-          <output>{p.readingLeading ?? 2}</output>
-        </Field>
-        <Field label="左右留白">
-          <input
-            aria-label="正文左右留白"
-            type="range"
-            min={24}
-            max={128}
-            step={4}
-            value={p.readingInset ?? 64}
-            onChange={(e) => host.preference({ readingInset: Number(e.target.value) })}
-          />
-          <output>{p.readingInset ?? 64} px</output>
-        </Field>
-        <Field label="时间与楼层">
-          <Select
-            aria-label="时间与楼层"
-            value={p.messageMeta || "hover"}
-            onChange={(e) => host.preference({ messageMeta: e.target.value as any })}
-          >
-            <option value="hover">悬浮显示</option>
-            <option value="always">始终显示</option>
-            <option value="never">隐藏</option>
-          </Select>
-        </Field>
-        <Check
-          label="默认折叠用户输入"
-          checked={p.userCollapsed !== false}
-          onChange={(v) => host.preference({ userCollapsed: v })}
-        />
-        <Check
-          label="边缘悬停展开侧栏"
-          checked={p.edgeHover !== false}
-          onChange={(v) => host.preference({ edgeHover: v })}
-        />
+    <div className="wb-rail-segment wb-reading-segment" role="radiogroup" aria-label={label}>
+      {options.map(([key, text]) => (
+        <button
+          key={key}
+          role="radio"
+          aria-checked={value === key}
+          aria-pressed={value === key}
+          onClick={() => onChange(key)}
+        >
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+}
+function Range({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit = "",
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="wb-reading-range">
+      <input
+        aria-label={label}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        style={{ "--wb-fill": `${((value - min) / (max - min)) * 100}%` } as React.CSSProperties}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+      <output>
+        {value}
+        {unit && ` ${unit}`}
+      </output>
+    </div>
+  );
+}
+/** 用户设置 › 外观与阅读 (board "Settings"): the workbench's own reading controls beside a live page. */
+export function ReadingForm({ host }: { host: HostAdapter }) {
+  const p = host.prefs(),
+    size = p.readingSize ?? 17,
+    leading = p.readingLeading ?? 2,
+    inset = p.readingInset ?? 64;
+  return (
+    <div className="wb-reading-settings">
+      <div className="wb-reading-cards">
+        <section className="wb-reading-card" aria-label="阅读排版">
+          <div className="wb-reading-row">
+            <span>主题</span>
+            <Segmented
+              label="主题"
+              value={p.theme || "system"}
+              options={[
+                ["light", "亮色"],
+                ["dark", "暗色"],
+                ["system", "跟随系统"],
+              ]}
+              onChange={(theme) => host.preference({ theme })}
+            />
+          </div>
+          <div className="wb-reading-row">
+            <span>正文字体</span>
+            <Select
+              aria-label="正文字体"
+              value={p.readingFont || "serif"}
+              onChange={(e) => host.preference({ readingFont: e.target.value as any })}
+            >
+              <option value="serif">宋体 · 纸书</option>
+              <option value="sans">黑体 · 清晰</option>
+            </Select>
+          </div>
+          <div className="wb-reading-row">
+            <span>字号</span>
+            <Range
+              label="正文字号"
+              value={size}
+              min={14}
+              max={24}
+              unit="px"
+              onChange={(readingSize) => host.preference({ readingSize })}
+            />
+          </div>
+          <div className="wb-reading-row">
+            <span>行距</span>
+            <Range
+              label="正文行距"
+              value={leading}
+              min={1.5}
+              max={2.4}
+              step={0.1}
+              onChange={(readingLeading) => host.preference({ readingLeading })}
+            />
+          </div>
+          <div className="wb-reading-row">
+            <span>左右留白</span>
+            <Range
+              label="正文左右留白"
+              value={inset}
+              min={24}
+              max={128}
+              step={4}
+              unit="px"
+              onChange={(readingInset) => host.preference({ readingInset })}
+            />
+          </div>
+        </section>
+        <section className="wb-reading-card" aria-label="楼层与侧栏">
+          <div className="wb-reading-row">
+            <span>时间与楼层</span>
+            <Segmented
+              label="时间与楼层"
+              value={p.messageMeta || "hover"}
+              options={[
+                ["always", "始终显示"],
+                ["hover", "悬浮显示"],
+                ["never", "隐藏"],
+              ]}
+              onChange={(messageMeta) => host.preference({ messageMeta })}
+            />
+          </div>
+          <div className="wb-reading-row">
+            <span>
+              默认折叠用户输入
+              <small>你的输入默认收成一行，点击展开</small>
+            </span>
+            <Switch
+              label="默认折叠用户输入"
+              checked={p.userCollapsed !== false}
+              onChange={(v) => host.preference({ userCollapsed: v })}
+            />
+          </div>
+          <div className="wb-reading-row">
+            <span>
+              边缘悬停展开侧栏
+              <small>鼠标停在窗口左右边缘时临时展开收起的侧栏</small>
+            </span>
+            <Switch
+              label="边缘悬停展开侧栏"
+              checked={p.edgeHover !== false}
+              onChange={(v) => host.preference({ edgeHover: v })}
+            />
+          </div>
+        </section>
       </div>
-      <div
-        className="wb-reading-sample"
-        style={{
-          fontFamily: p.readingFont === "sans" ? "system-ui" : "serif",
-          fontSize: p.readingSize ?? 17,
-          lineHeight: p.readingLeading ?? 2,
-        }}
-      >
-        <small>阅读预览</small>
-        <p>
-          雾气沿着窗沿慢慢散开。<span>“明天见。”</span>她说。
-        </p>
-      </div>
-    </section>
+      <aside className="wb-reading-preview" aria-label="实时预览">
+        <header>
+          <span>实时预览</span>
+          <span>改动立即生效</span>
+        </header>
+        <div className="wb-reading-sample">
+          <div
+            className="wb-reading-page"
+            style={{
+              fontFamily: p.readingFont === "sans" ? "var(--wb-font-ui)" : "var(--wb-font-reading)",
+              fontSize: size,
+              lineHeight: leading,
+              paddingInline: Math.round(inset / 2),
+            }}
+          >
+            {(p.messageMeta || "hover") !== "never" && <small>12 层 · 林间 · 15:21</small>}
+            <p>
+              雾气沿着窗沿慢慢散开。<span>“明天见。”</span>她说。
+            </p>
+            <p>钟楼又敲了五下。雾已大到看不见对面的街。</p>
+            <div className={`wb-reading-user ${p.userCollapsed !== false ? "is-collapsed" : ""}`}>
+              {p.userCollapsed !== false ? "› 你的输入 · 已折叠" : "我把书拉过来，翻到夹信的那一页。"}
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
   );
 }
 function BackgroundGallery({ root, redraw }: { root: HTMLElement; redraw: () => void }) {

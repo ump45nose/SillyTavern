@@ -26,15 +26,20 @@ export default function ComponentSettings({
           </div>
         </header>
       )}
+      {page === "settings" && group === "外观与阅读" && <ReadingForm host={host} />}
       {installed ? (
         <InstalledExtensions
           host={host}
           open={(id) => bus.emit("settings-group", { group: "扩展设置", extension: id })}
         />
+      ) : page === "settings" && group === "外观与阅读" ? (
+        <section className="wb-reading-native" aria-label="SillyTavern 外观">
+          <h3>SillyTavern 外观</h3>
+          <NativeSettings host={host} page={page} group={group} extensionId={extensionId} />
+        </section>
       ) : (
         <NativeSettings host={host} page={page} group={group} extensionId={extensionId} />
       )}
-      {page === "settings" && group === "外观与阅读" && <ReadingForm host={host} />}
     </section>
   );
 }
