@@ -640,25 +640,6 @@
   .wb-manager-editor > :is(.wb-world) {
     height: 100%;
   }
-  .wb-manager-editor .wb-world.is-managed .wb-world-grid {
-    grid-template-columns: minmax(200px, 0.9fr) minmax(280px, 1.6fr) minmax(210px, 0.9fr);
-    grid-template-rows: minmax(0, 1fr);
-  }
-  .wb-manager-editor .wb-world.is-managed .wb-book-column {
-    display: none;
-  }
-  .wb-manager-editor .wb-world.is-managed .wb-entry-column {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .wb-manager-editor .wb-world.is-managed .wb-entry-editor {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .wb-manager-editor .wb-world.is-managed .wb-parameters {
-    grid-column: 3;
-    grid-row: 1;
-  }
   .wb-manager-editor .wb-resource-v3.is-deep .wb-preset-editor {
     grid-template-columns: minmax(230px, 1fr) minmax(320px, 1.65fr);
   }
@@ -691,9 +672,6 @@
     }
     .wb-settings-layout {
       grid-template-columns: 156px minmax(0, 1fr);
-    }
-    .wb-manager-editor .wb-world.is-managed .wb-world-grid {
-      grid-template-columns: minmax(180px, 0.9fr) minmax(240px, 1.6fr) minmax(190px, 0.9fr);
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -795,8 +773,7 @@
     padding-top: 8px;
     padding-bottom: 8px;
   }
-  .wb-right .wb-resource-heading,
-  .wb-right .wb-world-tools {
+  .wb-right .wb-resource-heading {
     padding: 12px 16px;
     min-height: 54px;
     border-bottom: 1px solid var(--wb-line);
@@ -852,42 +829,6 @@
     color: var(--wb-accent);
     background: var(--wb-selected);
   }
-  .wb-right .wb-world-grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-  }
-  .wb-right .wb-book-column {
-    display: none;
-  }
-  .wb-right .wb-entry-column {
-    grid-column: 1;
-    padding: 12px 16px;
-  }
-  .wb-right .wb-world .wb-entry-editor {
-    display: none;
-  }
-  .wb-right .wb-world.is-editor-open .wb-world-grid {
-    grid-template-rows: minmax(160px, 1fr) minmax(160px, 0.85fr);
-  }
-  .wb-right .wb-world.is-editor-open .wb-entry-editor {
-    display: flex;
-    grid-column: 1;
-    grid-row: 2;
-    min-height: 0;
-    padding: 12px 16px;
-    border-top: 1px solid var(--wb-line);
-  }
-  .wb-right .wb-world .wb-content-editor {
-    min-height: 90px;
-    resize: none;
-  }
-  .wb-entry-row > .wb-icon {
-    opacity: 0.3;
-    flex: none;
-  }
-  .wb-entry-row:is(:is(:hover, :focus-visible), :focus-within, .is-active) > .wb-icon {
-    opacity: 1;
-  }
   .wb-right .wb-world > .wb-editor-footer {
     display: none;
   }
@@ -924,12 +865,9 @@
   .wb-resource-v3 .wb-prompt-row:is(:is(:hover, :focus-visible), :focus-within, .is-active) > .wb-icon {
     opacity: 1;
   }
-  .wb-right .wb-resource-v3 .wb-preset-scroll:not(.is-editor-open) {
+  .wb-right .wb-resource-v3 .wb-preset-scroll {
     max-height: 42px;
     padding-top: 0;
-  }
-  .wb-right .wb-resource-v3 .wb-preset-scroll.is-editor-open {
-    max-height: 45%;
   }
   /* Independent pages follow settings-workspace.fragment.html: 162px navigation,
      compact two-column fields, 48px portraits and a single paper surface. */
@@ -1037,8 +975,7 @@
   .wb-designed-section {
     margin-bottom: 25px;
   }
-  .wb-designed-section > h3,
-  .wb-deep-parameters > h3 {
+  .wb-designed-section > h3 {
     display: flex;
     align-items: center;
     gap: 9px;
@@ -1047,8 +984,7 @@
     font-weight: 500;
     color: var(--wb-muted);
   }
-  .wb-designed-section > h3::after,
-  .wb-deep-parameters > h3::after {
+  .wb-designed-section > h3::after {
     content: "";
     height: 1px;
     background: var(--wb-line);
@@ -1415,128 +1351,7 @@
     height: 100%;
     padding: 24px 29px;
   }
-  .wb-characters.is-management .wb-library-content {
-    padding: 0;
-  }
-  .wb-card-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-    padding: 8px 0 20px;
-  }
-  .wb-card-grid .wb-character-card {
-    padding: 17px 14px;
-    border-radius: 9px;
-    min-height: 190px;
-  }
-  .wb-card-grid .wb-character-main {
-    align-items: flex-start;
-    text-align: left;
-    gap: 10px !important;
-  }
-  .wb-card-grid .wb-character-main .wb-portrait,
-  .wb-card-grid .wb-character-main img {
-    width: 48px !important;
-    height: 48px !important;
-    border-radius: 50% !important;
-    object-fit: cover;
-  }
-  .wb-card-grid .wb-character-main .wb-portrait {
-    margin: 3px 0 3px;
-    border: 0;
-    padding: 0;
-  }
-  .wb-card-grid .wb-character-card.is-active .wb-portrait {
-    box-shadow: 0 0 0 2px var(--wb-accent);
-  }
-  .wb-card-grid .wb-character-main > em {
-    position: absolute;
-    right: 14px;
-    bottom: 22px;
-  }
-  .wb-card-grid .wb-character-main > span:last-of-type {
-    width: 100%;
-  }
-  .wb-card-grid .wb-character-main strong {
-    font-size: 15px;
-    font-weight: 500;
-  }
-  .wb-card-grid .wb-character-main small {
-    font-size: 12px;
-    line-height: 1.8;
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .wb-card-grid .wb-character-card > input {
-    position: absolute;
-    top: 17px;
-    right: 15px;
-  }
-  .wb-card-grid .wb-character-card > .wb-icon {
-    position: absolute;
-    top: 47px;
-    right: 10px;
-  }
-  .wb-card-grid .wb-character-card > .wb-link {
-    width: auto;
-    margin: 0;
-    text-align: left;
-    font-size: 12px;
-    padding: 4px 0;
-    background: transparent;
-    border: 0;
-  }
-  .wb-import-character {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    position: relative;
-    cursor: pointer;
-    padding: 7px 10px;
-  }
-  .wb-import-character input {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-  }
-  .wb-manager-editor .wb-resource-v3.is-deep .wb-preset-editor.is-parameter-view {
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-  }
-  .wb-preset-editor.is-parameter-view > .wb-preset-columns {
-    display: none;
-  }
-  .wb-preset-editor.is-parameter-view > .wb-preset-scroll > .wb-prompt-editor {
-    display: none;
-  }
-  .wb-preset-editor.is-parameter-view > .wb-preset-scroll {
-    flex: none;
-    height: auto;
-    border: 0;
-  }
-  .wb-deep-parameters {
-    padding: 20px 26px;
-  }
-  .wb-settings-body .wb-character-detail-wrap {
-    padding: 0 24px 24px;
-  }
-  .wb-settings-body .wb-character-editor .wb-role-heading > img {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 50%;
-  }
   @media (max-width: 1100px) {
-    .wb-card-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
     .wb-designed-gallery {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }

@@ -9,18 +9,6 @@
   .wb-ui :is(.wb-resource-choice, .wb-quick-row) strong {
     font-weight: 500;
   }
-  .wb-ui .wb-character-card.is-active .wb-portrait {
-    box-shadow: none;
-    border-color: var(--wb-line);
-  }
-  .wb-ui .wb-character-list .wb-character-card {
-    border: 1px solid transparent;
-    border-radius: 7px;
-    padding: 9px 8px;
-  }
-  .wb-ui .wb-character-list .wb-character-card.is-active {
-    border-color: var(--wb-selection-line);
-  }
   .wb-ui .wb-favorites .is-active .wb-portrait {
     border-color: var(--wb-selection-line);
   }

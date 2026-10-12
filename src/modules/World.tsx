@@ -1,20 +1,12 @@
 import { Select } from "../ui/Select";
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { BookMarked, Plus, Trash2, BookOpen, Search, X } from "../ui/icons";
+import { Plus, Trash2, Search, X, Braces } from "../ui/icons";
 import { SaveBar } from "../ui/ResourceControls";
+import { useTokenCounts } from "../ui/tokens";
 import { clone, activation, setActivation, validateBook } from "../host/model";
 import type { Data } from "../host/types";
 import type { HostAdapter } from "../host/adapter";
-import {
-  useTask,
-  SearchBox,
-  Notice,
-  Empty,
-  Field,
-  IconButton,
-  useHostSlices,
-  withoutChat,
-} from "../ui/common";
+import { useTask, SearchBox, Notice, Empty, Field, useHostSlices, withoutChat } from "../ui/common";
 import { ResourcePicker } from "../ui/ResourcePicker";
 const positions = [
   "角色定义之前",
@@ -52,7 +44,8 @@ export default function World({
     [json, setJson] = useState(cached?.extra?.json ?? ""),
     [saved, setSaved] = useState(""),
     [scope, setScope] = useState("global"),
-    [newKey, setNewKey] = useState<string | null>(null);
+    [newKey, setNewKey] = useState<string | null>(null),
+    [filter, setFilter] = useState("all");
   useEffect(() => {
     onSelection?.(name);
   }, [name]);
@@ -135,6 +128,11 @@ export default function World({
   };
   const entries = draft ? (Object.entries(draft.entries) as [string, Data][]) : [];
   const selected = draft?.entries[entry];
+  const entryTokens = useTokenCounts(
+    host,
+    deep ? entries.map(([id, e]) => [id, String(e.content ?? "")] as [string, string]) : [],
+    500,
+  );
   const switchTab = (t: string) => {
     if (tab === "json") {
       try {
@@ -444,264 +442,342 @@ export default function World({
       </fieldset>
     );
   }
-  return (
-    <fieldset
-      disabled={task.busy}
-      className={`wb-world is-deep is-editor-open ${managed ? "is-managed" : ""}`}
-    >
-      <div className="wb-world-tools">
-        <BookMarked size={18} />
-        <strong>{name || "世界书"}</strong>
-        <span className="wb-grow" />
+  const modeName: Record<string, string> = { keyword: "关键词", constant: "常驻", vector: "向量化" };
+  const counts = entries.reduce<Record<string, number>>((n, [, e]) => {
+    n[activation(e)] = (n[activation(e)] ?? 0) + 1;
+    return n;
+  }, {});
+  const shown = entries.filter(
+    ([, e]) =>
+      (filter === "all" || activation(e) === filter) &&
+      `${e.comment} ${e.key?.join(" ")} ${e.content}`.toLowerCase().includes(query.toLowerCase()),
+  );
+  const book = snap.resources.world.find((x) => x.id === name),
+    bound = host.characterBooks().includes(name),
+    totalTokens = Object.values(entryTokens).reduce((n, x) => n + x, 0);
+  const params = selected && (
+    <aside className="wb-wt-params" aria-label="注入参数">
+      <h4>注入参数</h4>
+      <div className="wb-wt-param-grid">
+        <Field label="注入位置">
+          <Select
+            value={selected.position ?? 0}
+            onChange={(e) => update({ position: Number(e.target.value) })}
+          >
+            {positions.map((v, i) => (
+              <option key={v} value={i}>
+                {v}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {[
+          ["order", "顺序"],
+          ["depth", "深度"],
+          ["probability", "概率 %"],
+          ["scanDepth", "扫描深度"],
+          ["sticky", "粘性"],
+          ["cooldown", "冷却"],
+          ["delay", "延迟"],
+          ["recursionStep", "递归步数"],
+          ["groupWeight", "组权重"],
+        ].map(([key, label]) => (
+          <Field label={label} key={key}>
+            <input
+              type="number"
+              min={0}
+              max={key === "probability" ? 100 : undefined}
+              value={selected[key] ?? 0}
+              onChange={(e) => update({ [key]: Number(e.target.value) })}
+            />
+          </Field>
+        ))}
+        <Field label="包含组">
+          <input value={selected.group ?? ""} onChange={(e) => update({ group: e.target.value })} />
+        </Field>
       </div>
-      <Notice error={task.error} />
-      <div className="wb-world-grid">
-        <section className="wb-book-column">
-          <SearchBox value={bookQuery} onChange={setBookQuery} placeholder="搜索世界书" />
-          <p className="wb-caption">全局启用 · 可多选</p>
-          {snap.resources.world
-            .filter((x) => x.name.toLowerCase().includes(bookQuery.toLowerCase()))
-            .map((book) => (
-              <div key={book.id} className={`wb-book-row ${name === book.id ? "is-active" : ""}`}>
-                <input
-                  type="checkbox"
-                  aria-label={`启用世界书 ${book.name}`}
-                  checked={book.active}
-                  onChange={(e) => task.run(() => host.toggleBook(book.id, e.target.checked))}
-                />
-                <button onClick={() => choose(book.id)}>{book.name}</button>
-              </div>
+      <div className="wb-wt-flags">
+        {[
+          ["useProbability", "启用概率"],
+          ["excludeRecursion", "排除递归"],
+          ["preventRecursion", "阻止后续递归"],
+          ["delayUntilRecursion", "仅递归时触发"],
+          ["matchWholeWords", "匹配完整单词"],
+          ["caseSensitive", "区分大小写"],
+          ["useGroupScoring", "分组评分"],
+          ["groupOverride", "覆盖包含组"],
+        ].map(([key, label]) => (
+          <label className="wb-check" key={key}>
+            <input
+              type="checkbox"
+              checked={!!selected[key]}
+              onChange={(e) => update({ [key]: e.target.checked })}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+    </aside>
+  );
+  const editor = selected && (
+    <div className="wb-wt-editor">
+      <div className="wb-wt-editor-main">
+        <header>
+          <input
+            className="wb-wt-name"
+            aria-label="条目名称"
+            value={selected.comment ?? ""}
+            placeholder={`条目 ${entry}`}
+            onChange={(e) => update({ comment: e.target.value })}
+          />
+          <div className="wb-wt-tabs" role="group" aria-label="条目内容">
+            {[
+              ["content", "正文"],
+              ["trigger", "触发条件"],
+            ].map(([t, label]) => (
+              <button key={t} aria-pressed={tab === t} onClick={() => switchTab(t)}>
+                {label}
+              </button>
             ))}
-        </section>
-        <section className="wb-entry-column">
-          <div className="wb-flex">
-            <SearchBox value={query} onChange={setQuery} placeholder="搜索条目" />
-            <IconButton title="新增条目" disabled={tab === "json"} onClick={addEntry}>
-              <Plus size={17} />
-            </IconButton>
           </div>
-          {entries
-            .filter(([, e]) => `${e.comment} ${e.key?.join(" ")}`.toLowerCase().includes(query.toLowerCase()))
-            .map(([id, e]) => (
-              <div
-                key={id}
-                className={`wb-entry-row ${entry === id ? "is-active" : ""} ${e.disable ? "is-disabled" : ""}`}
-              >
-                <input
-                  type="checkbox"
-                  className="wb-entry-state"
-                  style={
-                    {
-                      "--wb-entry-tone":
-                        activation(e) === "constant"
-                          ? "#5883af"
-                          : activation(e) === "vector"
-                            ? "#856a9c"
-                            : "#628671",
-                    } as React.CSSProperties
-                  }
-                  aria-label={`启用条目 ${e.comment || id}`}
-                  disabled={tab === "json"}
-                  checked={!e.disable}
-                  onChange={(v) => toggleEntry(id, v.target.checked)}
-                />
-                <div className="wb-entry-copy">
-                  <button className="wb-row-main" onClick={() => setEntry(id)}>
-                    <strong>{e.comment || `条目 ${id}`}</strong>
-                  </button>
-                  <Select
-                    aria-label={`${e.comment || id} 激活方式`}
-                    title="关键词 / 常驻 / 向量化"
-                    className="wb-mode-label"
-                    disabled={tab === "json"}
-                    value={activation(e)}
-                    onChange={(v) => modeChange(id, v.target.value)}
-                  >
-                    <option value="keyword">关键词</option>
-                    <option value="constant">常驻</option>
-                    <option value="vector">向量化</option>
-                  </Select>
-                </div>
-              </div>
-            ))}
-          {!entries.length && <Empty>选择世界书，开始整理条目</Empty>}
-        </section>
-        <section className="wb-entry-editor">
-          {selected ? (
-            <>
-              <div className="wb-editor-heading">
-                <input
-                  aria-label="条目名称"
-                  disabled={tab === "json"}
-                  value={selected.comment ?? ""}
-                  onChange={(e) => update({ comment: e.target.value })}
-                />
-                <IconButton title="删除条目" disabled={tab === "json"} onClick={removeEntry}>
-                  <Trash2 size={16} />
-                </IconButton>
-              </div>
-              <div className="wb-tabs">
-                {["content", "trigger", "json"].map((t) => (
-                  <button key={t} className={tab === t ? "is-active" : ""} onClick={() => switchTab(t)}>
-                    {t === "content" ? "正文" : t === "trigger" ? "触发条件" : "完整 JSON"}
-                  </button>
-                ))}
-              </div>
-              {tab === "content" ? (
-                <textarea
-                  className="wb-content-editor"
-                  aria-label="世界书正文"
-                  value={selected.content ?? ""}
-                  onChange={(e) => update({ content: e.target.value })}
-                />
-              ) : tab === "json" ? (
-                <textarea
-                  className="wb-content-editor wb-code"
-                  aria-label="世界书 JSON"
-                  value={json}
-                  onChange={(e) => setJson(e.target.value)}
-                />
-              ) : (
-                <div className="wb-fields">
-                  <Field label="激活方式">
-                    <Select value={activation(selected)} onChange={(e) => modeChange(entry, e.target.value)}>
-                      <option value="keyword">关键词</option>
-                      <option value="constant">常驻</option>
-                      <option value="vector">向量化</option>
-                    </Select>
-                  </Field>
-                  <Field label="关键词（每行一个，支持正则）">
-                    <textarea
-                      value={(selected.key ?? []).join("\n")}
-                      onChange={(e) =>
-                        update({
-                          key: e.target.value.split("\n").filter(Boolean),
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field label="辅助关键词（每行一个）">
-                    <textarea
-                      value={(selected.keysecondary ?? []).join("\n")}
-                      onChange={(e) =>
-                        update({
-                          keysecondary: e.target.value.split("\n").filter(Boolean),
-                        })
-                      }
-                    />
-                  </Field>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={!!selected.selective}
-                      onChange={(e) => update({ selective: e.target.checked })}
-                    />
-                    使用辅助关键词
-                  </label>
-                </div>
-              )}
-            </>
-          ) : (
-            <Empty>选择一个条目</Empty>
-          )}
-        </section>
-        {selected && tab !== "json" && (
-          <aside className="wb-parameters">
-            <span className="wb-eyebrow">注入参数</span>
-            <Field label="注入位置">
-              <Select
-                value={selected.position ?? 0}
-                onChange={(e) => update({ position: Number(e.target.value) })}
-              >
-                {positions.map((v, i) => (
-                  <option key={v} value={i}>
-                    {v}
-                  </option>
-                ))}
+          <button className="wb-wt-icon" aria-label="删除条目" title="删除条目" onClick={removeEntry}>
+            <Trash2 size={15} />
+          </button>
+        </header>
+        {tab === "trigger" ? (
+          <div className="wb-wt-trigger">
+            <Field label="激活方式">
+              <Select value={activation(selected)} onChange={(e) => modeChange(entry, e.target.value)}>
+                <option value="keyword">关键词</option>
+                <option value="constant">常驻</option>
+                <option value="vector">向量化</option>
               </Select>
             </Field>
-            {[
-              ["order", "顺序"],
-              ["depth", "深度"],
-              ["probability", "概率 %"],
-            ].map(([key, label]) => (
-              <Field label={label} key={key}>
-                <input
-                  type="number"
-                  min={0}
-                  max={key === "probability" ? 100 : undefined}
-                  value={selected[key] ?? 0}
-                  onChange={(e) => update({ [key]: Number(e.target.value) })}
-                />
-              </Field>
-            ))}
-            <label>
+            <KeyChips label="关键词" keys={selected.key ?? []} onChange={(key) => update({ key })} />
+            <KeyChips
+              label="辅助关键词"
+              keys={selected.keysecondary ?? []}
+              onChange={(keysecondary) => update({ keysecondary })}
+            />
+            <label className="wb-check">
               <input
                 type="checkbox"
-                checked={!!selected.useProbability}
-                onChange={(e) => update({ useProbability: e.target.checked })}
+                checked={!!selected.selective}
+                onChange={(e) => update({ selective: e.target.checked })}
               />
-              启用概率
+              使用辅助关键词
             </label>
-            {[
-              ["scanDepth", "扫描深度"],
-              ["sticky", "粘性"],
-              ["cooldown", "冷却"],
-              ["delay", "延迟"],
-              ["recursionStep", "递归步数"],
-              ["groupWeight", "组权重"],
-            ].map(([key, label]) => (
-              <Field key={key} label={label}>
-                <input
-                  type="number"
-                  value={selected[key] ?? 0}
-                  onChange={(e) => update({ [key]: Number(e.target.value) })}
-                />
-              </Field>
-            ))}
-            <Field label="包含组">
-              <input value={selected.group ?? ""} onChange={(e) => update({ group: e.target.value })} />
-            </Field>
-            {[
-              ["excludeRecursion", "排除递归"],
-              ["preventRecursion", "阻止后续递归"],
-              ["delayUntilRecursion", "仅递归时触发"],
-              ["matchWholeWords", "匹配完整单词"],
-              ["caseSensitive", "区分大小写"],
-              ["useGroupScoring", "分组评分"],
-              ["groupOverride", "覆盖包含组"],
-            ].map(([key, label]) => (
-              <label className="wb-check" key={key}>
-                <input
-                  type="checkbox"
-                  checked={!!selected[key]}
-                  onChange={(e) => update({ [key]: e.target.checked })}
-                />
-                {label}
-              </label>
-            ))}
-          </aside>
+          </div>
+        ) : (
+          <textarea
+            className="wb-wt-content"
+            aria-label="世界书正文"
+            value={selected.content ?? ""}
+            onChange={(e) => update({ content: e.target.value })}
+          />
         )}
       </div>
-      <SaveBar
-        dirty={dirty}
-        busy={task.busy}
-        message={saved}
-        reset={() => {
-          if (!base) return;
-          setDraft(clone(base));
-          setJson(JSON.stringify(base, null, 2));
-          setSaved("");
-        }}
-        save={save}
-      />
-      <footer className="wb-legend">
-        <span className="green">● 关键词</span>
-        <span className="blue">● 常驻</span>
-        <span className="purple">↗ 向量化</span>
-        <span className="wb-grow" />
-        <small>世界书绑定可在独立管理页调整</small>
-      </footer>
+      {params}
+    </div>
+  );
+  return (
+    <fieldset disabled={task.busy} className={`wb-world is-deep ${managed ? "is-managed" : ""}`}>
+      {/* In the settings workspace its list column picks books, so this column stays hidden there. */}
+      <section className="wb-book-column">
+        <h3>世界书</h3>
+        <SearchBox value={bookQuery} onChange={setBookQuery} placeholder="搜索世界书" />
+        <p className="wb-caption">全局启用 · 可多选</p>
+        {snap.resources.world
+          .filter((x) => x.name.toLowerCase().includes(bookQuery.toLowerCase()))
+          .map((b) => (
+            <div key={b.id} className={`wb-book-row ${name === b.id ? "is-active" : ""}`}>
+              <input
+                type="checkbox"
+                aria-label={`启用世界书 ${b.name}`}
+                checked={b.active}
+                onChange={(e) => task.run(() => host.toggleBook(b.id, e.target.checked))}
+              />
+              <button onClick={() => choose(b.id)}>{b.name}</button>
+            </div>
+          ))}
+      </section>
+      <section className="wb-wt">
+        <header className="wb-wt-head">
+          <h2>{name || "世界书"}</h2>
+          {(book?.active || bound) && <span className="wb-wt-status">已启用</span>}
+          <small>
+            {[book?.active ? "全局" : bound ? "角色绑定" : "未启用", `${entries.length} 条`]
+              .concat(totalTokens ? [`${totalTokens.toLocaleString()} tokens`] : [])
+              .join(" · ")}
+          </small>
+          <span className="wb-grow" />
+          <button
+            className={`wb-wt-text ${tab === "json" ? "is-on" : ""}`}
+            aria-pressed={tab === "json"}
+            onClick={() => switchTab(tab === "json" ? "content" : "json")}
+          >
+            <Braces size={15} />
+            完整 JSON
+          </button>
+        </header>
+        <Notice error={task.error} />
+        {tab === "json" ? (
+          <textarea
+            className="wb-wt-json"
+            aria-label="世界书 JSON"
+            value={json}
+            onChange={(e) => setJson(e.target.value)}
+          />
+        ) : (
+          <>
+            <div className="wb-wt-tools">
+              <SearchBox value={query} onChange={setQuery} placeholder="搜索条目" />
+              <div className="wb-wt-chips" role="radiogroup" aria-label="条目筛选">
+                {(["all", "keyword", "constant", "vector"] as const).map((m) => (
+                  <button
+                    key={m}
+                    role="radio"
+                    aria-checked={filter === m}
+                    className={`is-${m}`}
+                    onClick={() => setFilter(m)}
+                  >
+                    {m === "all" ? "全部" : modeName[m]}
+                    <small>{m === "all" ? entries.length : (counts[m] ?? 0)}</small>
+                  </button>
+                ))}
+              </div>
+              <span className="wb-grow" />
+              <button className="wb-wt-add" onClick={addEntry}>
+                <Plus size={15} />
+                新增条目
+              </button>
+            </div>
+            <div className="wb-wt-table" role="table" aria-label="条目">
+              <div className="wb-wt-row is-head" role="row">
+                <span role="columnheader" aria-label="启用" />
+                <span role="columnheader">条目</span>
+                <span role="columnheader">触发关键词</span>
+                <span role="columnheader">位置</span>
+                <span role="columnheader">深度</span>
+                <span role="columnheader">顺序</span>
+                <span role="columnheader">Tokens</span>
+              </div>
+              {shown.map(([id, e]) => {
+                const mode = activation(e),
+                  open = entry === id;
+                return (
+                  <React.Fragment key={id}>
+                    <div
+                      role="row"
+                      className={`wb-wt-row is-${mode} ${open ? "is-open" : ""} ${e.disable ? "is-disabled" : ""}`}
+                      onClick={(v) => {
+                        if (!(v.target as HTMLElement).closest("input, button")) setEntry(open ? "" : id);
+                      }}
+                    >
+                      <span role="cell">
+                        <input
+                          type="checkbox"
+                          aria-label={`启用条目 ${e.comment || id}`}
+                          checked={!e.disable}
+                          onChange={(v) => toggleEntry(id, v.target.checked)}
+                        />
+                        <i title={modeName[mode]} />
+                      </span>
+                      <span role="cell">
+                        <button
+                          className="wb-wt-open"
+                          aria-expanded={open}
+                          onClick={() => setEntry(open ? "" : id)}
+                        >
+                          {e.comment || `条目 ${id}`}
+                        </button>
+                      </span>
+                      <span role="cell" className="wb-wt-keys">
+                        {mode === "constant"
+                          ? "—"
+                          : mode === "vector"
+                            ? "向量匹配"
+                            : (e.key ?? []).join(", ") || "—"}
+                      </span>
+                      <span role="cell">{positions[e.position ?? 0]}</span>
+                      <span role="cell" className="is-num">
+                        {(e.position ?? 0) === 4 ? (e.depth ?? 4) : "—"}
+                      </span>
+                      <span role="cell" className="is-num">
+                        {e.order ?? 0}
+                      </span>
+                      <span role="cell" className="is-num">
+                        {entryTokens[id] ?? ""}
+                      </span>
+                    </div>
+                    {open && editor}
+                  </React.Fragment>
+                );
+              })}
+              {!entries.length && <Empty>{name ? "这本世界书还没有条目" : "选择世界书，开始整理条目"}</Empty>}
+              {!!entries.length && !shown.length && <Empty>没有符合条件的条目</Empty>}
+            </div>
+          </>
+        )}
+        <SaveBar
+          dirty={dirty}
+          busy={task.busy}
+          message={saved}
+          reset={() => {
+            if (!base) return;
+            setDraft(clone(base));
+            setJson(JSON.stringify(base, null, 2));
+            setSaved("");
+          }}
+          save={save}
+        />
+      </section>
     </fieldset>
+  );
+}
+/** Keyword chips with an inline add field (Enter adds, Backspace on empty removes the last). */
+function KeyChips({
+  label,
+  keys,
+  onChange,
+}: {
+  label: string;
+  keys: string[];
+  onChange: (keys: string[]) => void;
+}) {
+  const [text, setText] = useState("");
+  const add = () => {
+    const value = text.trim();
+    if (value && !keys.includes(value)) onChange([...keys, value]);
+    setText("");
+  };
+  return (
+    <div className="wb-wt-keychips">
+      <span>{label}</span>
+      <div>
+        {keys.map((k, i) => (
+          <span className="wb-key" key={k + i}>
+            {k}
+            <button aria-label={`移除${label} ${k}`} onClick={() => onChange(keys.filter((_, j) => j !== i))}>
+              <X size={11} />
+            </button>
+          </span>
+        ))}
+        <input
+          aria-label={`添加${label}`}
+          placeholder="+ 添加"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={add}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return;
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            } else if (e.key === "Backspace" && !text && keys.length) onChange(keys.slice(0, -1));
+          }}
+        />
+      </div>
+    </div>
   );
 }

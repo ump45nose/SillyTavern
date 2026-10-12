@@ -65,6 +65,44 @@ function split(list) {
   return parts.filter(Boolean);
 }
 
+/**
+ * Narrows a matching selector by dropping only the matching alternatives inside :is()/:where()/:not().
+ * An emptied :is()/:where() means the selector can never apply (null); an emptied :not() is dropped.
+ */
+function narrow(selector) {
+  let out = selector;
+  for (let guard = 0; guard < 50; guard++) {
+    const flat = out.replace(/\s+/g, " ");
+    if (!match.test(flat)) return out;
+    const re = /:(is|where|not)\(/g;
+    let changed = false,
+      m;
+    while ((m = re.exec(out))) {
+      const open = m.index + m[0].length - 1;
+      let depth = 0,
+        close = -1;
+      for (let i = open; i < out.length; i++) {
+        if (out[i] === "(") depth++;
+        else if (out[i] === ")" && --depth === 0) {
+          close = i;
+          break;
+        }
+      }
+      if (close < 0) break;
+      const args = split(out.slice(open + 1, close));
+      const kept = args.filter((a) => !match.test(a.replace(/\s+/g, " ")));
+      if (kept.length === args.length) continue;
+      if (!kept.length && m[1] !== "not") return null;
+      const group = kept.length ? `:${m[1]}(${kept.join(", ")})` : "";
+      out = out.slice(0, m.index) + group + out.slice(close + 1);
+      changed = true;
+      break;
+    }
+    if (!changed) return null;
+  }
+  return null;
+}
+
 /** Returns [edits] as {from, to, text} over `text` between `lo` and `hi`. */
 function walk(text, lo, hi, edits, stats) {
   let i = lo,
@@ -87,8 +125,9 @@ function walk(text, lo, hi, edits, stats) {
         if (/^@(media|supports|layer|container)\b/.test(trimmed)) walk(text, i + 1, end, edits, stats);
       } else {
         const selectors = split(trimmed);
-        const keep = selectors.filter((s) => !match.test(s.replace(/\s+/g, " ")));
-        if (keep.length !== selectors.length) {
+        const narrowed = selectors.map(narrow);
+        const keep = narrowed.filter((s) => s !== null);
+        if (narrowed.some((s, k) => s !== selectors[k])) {
           const lead = prelude.length - prelude.trimStart().length;
           const indent = (prelude.slice(0, lead).match(/[^\n]*$/) || [""])[0];
           if (!keep.length) {

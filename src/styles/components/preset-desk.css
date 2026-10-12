@@ -1,0 +1,117 @@
+/* Preset settings page (board WsPreset): sampling parameters and prompt order as two cards side by side. */
+@layer wb.components {
+  .wb-preset-editor.is-desk {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 20px 16px;
+  }
+  .wb-preset-desk {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .wb-preset-desk > section {
+    min-width: 0;
+    padding: 12px 16px 14px;
+    border-radius: 14px;
+    background: var(--wb-surface-2);
+  }
+  .wb-preset-desk h3,
+  .wb-preset-order .wb-prompts-head > span {
+    margin: 0 0 6px;
+    color: var(--wb-ink-3);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* One row per parameter: name, slider (where it helps), value — the value column always lines up. */
+  .wb-preset-params .wb-preset-row {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr) 76px;
+    align-items: center;
+    gap: 14px;
+    min-height: 46px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid var(--wb-line-1);
+    background: transparent;
+  }
+  .wb-preset-params .wb-preset-row:last-of-type {
+    border-bottom: 0;
+  }
+  .wb-preset-params .wb-preset-row.has-slider .wb-preset-label {
+    margin: 0;
+  }
+  .wb-preset-params .wb-preset-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    width: auto;
+    color: var(--wb-ink-1);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .wb-preset-params .wb-preset-row > :last-child {
+    grid-column: 3;
+    justify-self: end;
+  }
+  .wb-preset-params .wb-preset-row > .wb-slider {
+    grid-column: 2;
+    width: 100%;
+    margin: 0;
+  }
+  .wb-ui .wb-preset-params .wb-preset-value {
+    width: 76px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--wb-line-1);
+    border-radius: 8px;
+    background: var(--wb-surface-1);
+    box-shadow: none;
+    color: var(--wb-ink-1);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .wb-ui .wb-preset-params .wb-preset-value:focus {
+    outline: none;
+    border-color: var(--wb-ring);
+  }
+  .wb-preset-params > .wb-fold {
+    margin-top: 6px;
+  }
+
+  /* The order card: a quiet head, the list, then the open prompt's sheet. */
+  .wb-preset-order .wb-prompts-head {
+    margin: 0 0 4px;
+    padding: 0;
+  }
+  .wb-preset-order .wb-prompts {
+    margin: 0;
+  }
+  .wb-preset-order .wb-prompt {
+    min-height: 40px;
+  }
+  .wb-prompt-tokens {
+    flex: none;
+    min-width: 40px;
+    color: var(--wb-ink-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .wb-preset-order > .wb-preset-more {
+    margin-top: 6px;
+  }
+
+  @media (max-width: 1240px) {
+    .wb-preset-desk {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

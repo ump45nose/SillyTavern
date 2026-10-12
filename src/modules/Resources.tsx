@@ -22,6 +22,7 @@ import type { HostAdapter } from "../host/adapter";
 import type { Resource, Data } from "../host/types";
 import { clone, validatePreset } from "../host/model";
 import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat } from "../ui/common";
+import { useTokenCounts } from "../ui/tokens";
 import { Check, Fold, SaveBar, Switch, useDraft } from "../ui/ResourceControls";
 import { actionLabels } from "../host/labels";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
@@ -672,6 +673,8 @@ const parameterNames: Record<string, string> = {
   temperature: "温度",
   top_p: "Top P",
   top_k: "Top K",
+  top_a: "Top A",
+  min_p: "Min P",
   frequency_penalty: "频率惩罚",
   presence_penalty: "存在惩罚",
   repetition_penalty: "重复惩罚",
@@ -690,7 +693,28 @@ const sliders: Record<string, [number, number, number]> = {
   frequency_penalty: [-2, 2, 0.01],
   presence_penalty: [-2, 2, 0.01],
   repetition_penalty: [1, 2, 0.01],
+  top_k: [0, 200, 1],
+  top_a: [0, 1, 0.01],
+  min_p: [0, 1, 0.01],
+  openai_max_tokens: [16, 8192, 16],
+  openai_max_context: [1024, 131072, 1024],
 };
+/** The deep page's sampling card, in reading order; everything else waits in a fold. */
+const sampling = [
+  "temperature",
+  "top_p",
+  "top_k",
+  "top_a",
+  "min_p",
+  "frequency_penalty",
+  "presence_penalty",
+  "repetition_penalty",
+  "openai_max_tokens",
+  "openai_max_context",
+  "seed",
+  "n",
+  "reasoning_effort",
+];
 const roleNames: Record<string, string> = { system: "系统", user: "用户", assistant: "助手" };
 const shown = (value: unknown) =>
   typeof value === "number" ? String(value) : typeof value === "boolean" ? (value ? "开" : "关") : "已改";
@@ -720,7 +744,7 @@ function PresetEditor({
     pending = running ? host.presetChanges(id).length > 0 : false;
   const { draft, change } = edit,
     [entry, setEntry] = useState(""),
-    [editorOpen, setEditorOpen] = useState(!!deep),
+    [editorOpen, setEditorOpen] = useState(!!deep && view === "prompts"),
     [scope, setScope] = useState(0),
     [pinsOpen, setPinsOpen] = useState(false),
     [dragging, setDragging] = useState<number | null>(null),
@@ -819,246 +843,235 @@ function PresetEditor({
   const parameters = Object.keys(draft).filter(
     (k) => ["number", "boolean"].includes(typeof draft[k]) || k === "reasoning_effort",
   );
-  return (
-    <fieldset
-      disabled={task.busy}
-      className={`wb-preset-editor ${deep && view !== "prompts" ? "is-parameter-view" : ""}`}
-    >
-      <Notice error={task.error} />
-      <section className="wb-preset-card" aria-label="常用参数">
-        {always.map(field)}
-        {pins.filter((k) => k in draft && !always.includes(k)).map(field)}
-      </section>
-      <button
-        className="wb-preset-pins-toggle"
-        aria-expanded={pinsOpen}
-        onClick={() => setPinsOpen(!pinsOpen)}
-      >
-        自定义常用项
-      </button>
-      <div className={`wb-fold-body ${pinsOpen ? "is-open" : ""}`} aria-hidden={!pinsOpen} inert={!pinsOpen}>
-        <div>
-          <div className="wb-preset-pins">
-            {parameters
-              .filter((k) => !always.includes(k))
-              .map((k) => (
-                <Check
-                  key={k}
-                  label={parameterNames[k] || k}
-                  checked={pins.includes(k)}
-                  onChange={(v) =>
-                    host.preference({ presetPins: v ? [...pins, k] : pins.filter((p) => p !== k) })
-                  }
-                />
-              ))}
-          </div>
-        </div>
-      </div>
-      {deep && view !== "prompts" && (
-        <section className="wb-deep-parameters">
-          {[
-            ["常用参数", ["temperature", "openai_max_tokens", "top_p", "openai_max_context"]],
-            ["采样与高级配置", ["frequency_penalty", "presence_penalty", "seed", "n"]],
-          ].map(([title, keys]) => (
-            <section className="wb-designed-section" key={String(title)}>
-              <h3>{title}</h3>
-              <div className="wb-designed-fields">
-                {(keys as string[])
-                  .filter((k) => k in draft)
-                  .map((k) =>
-                    ["temperature", "top_p", "frequency_penalty", "presence_penalty"].includes(k) ? (
-                      <Field key={k} label={parameterNames[k]}>
-                        <input
-                          aria-label={parameterNames[k]}
-                          type="range"
-                          min={k.includes("penalty") ? -2 : 0}
-                          max={k === "top_p" ? 1 : 2}
-                          step={0.01}
-                          value={draft[k]}
-                          onChange={(e) => apply(k, Number(e.target.value))}
-                        />
-                        <output>{draft[k]}</output>
-                      </Field>
-                    ) : (
-                      field(k)
-                    ),
-                  )}
-              </div>
-            </section>
+  // The settings page lays parameters and prompt order side by side (board WsPreset).
+  const desk = !!deep && view !== "prompts";
+  const promptTokens = useTokenCounts(
+    host,
+    desk
+      ? prompts
+          .filter((p) => !p.marker)
+          .map((p) => [p.identifier, String(p.content ?? "")] as [string, string])
+      : [],
+  );
+  const promptHead = (
+    <div className="wb-prompts-head">
+      <span>
+        提示词
+        <small>
+          {rows.filter((r) => r.enabled !== false).length} / {rows.length} 启用
+        </small>
+      </span>
+      {scopes.length > 1 && (
+        <Select aria-label="提示词作用范围" value={scope} onChange={(e) => setScope(Number(e.target.value))}>
+          {scopes.map((s, i) => (
+            <option key={i} value={i}>
+              {s.character_id === 100000 ? "全局" : `角色 ${s.character_id}`}
+            </option>
           ))}
-          <Fold title="当前后端的其他参数">
-            <div className="wb-designed-fields">
-              {parameters
-                .filter(
-                  (k) =>
-                    ![
-                      ...always,
-                      "temperature",
-                      "openai_max_tokens",
-                      "top_p",
-                      "openai_max_context",
-                      "frequency_penalty",
-                      "presence_penalty",
-                      "seed",
-                      "n",
-                    ].includes(k),
-                )
-                .map(field)}
-            </div>
-          </Fold>
-        </section>
+        </Select>
       )}
-      <div className="wb-prompts-head">
-        <span>
-          提示词
-          <small>
-            {rows.filter((r) => r.enabled !== false).length} / {rows.length} 启用
-          </small>
-        </span>
-        {scopes.length > 1 && (
-          <Select
-            aria-label="提示词作用范围"
-            value={scope}
-            onChange={(e) => setScope(Number(e.target.value))}
+      <button
+        className="wb-panel-icon"
+        aria-label="新增提示词"
+        title="新增提示词"
+        onClick={() => {
+          const identifier = crypto.randomUUID?.() || `wb-${Date.now()}`,
+            prompt = { identifier, name: "新提示词", role: "system", content: "" };
+          apply("prompts", [...(edit.base.prompts || []), prompt], [...prompts, prompt]);
+          setOrder([...order, { identifier, enabled: true }]);
+          setEntry(identifier);
+          setEditorOpen(true);
+        }}
+      >
+        <Plus size={16} />
+      </button>
+    </div>
+  );
+  const promptList = (
+    <ul className="wb-prompts" aria-label="提示词顺序">
+      {rows.map((item, i) => {
+        const p = prompts.find((p) => p.identifier === item.identifier),
+          name = p?.name || item.identifier,
+          active = editorOpen && selected?.identifier === item.identifier;
+        return (
+          <li
+            className={`wb-prompt ${active ? "is-active" : ""} ${item.enabled === false ? "is-off" : ""} ${p?.marker ? "is-marker" : ""} ${dragging === i ? "is-dragging" : ""}`}
+            key={`${item.identifier}-${i}`}
+            draggable={!!order.length}
+            onDragStart={(e) => {
+              setDragging(i);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            onDragOver={(e) => {
+              if (dragging === null || dragging === i) return;
+              e.preventDefault();
+              const next = [...rows];
+              next.splice(i, 0, next.splice(dragging, 1)[0]);
+              setDragging(i);
+              setOrder(next);
+            }}
+            onDragEnd={() => setDragging(null)}
           >
-            {scopes.map((s, i) => (
-              <option key={i} value={i}>
-                {s.character_id === 100000 ? "全局" : `角色 ${s.character_id}`}
-              </option>
-            ))}
-          </Select>
-        )}
-        <button
-          className="wb-panel-icon"
-          aria-label="新增提示词"
-          title="新增提示词"
-          onClick={() => {
-            const identifier = crypto.randomUUID?.() || `wb-${Date.now()}`,
-              prompt = { identifier, name: "新提示词", role: "system", content: "" };
-            apply("prompts", [...(edit.base.prompts || []), prompt], [...prompts, prompt]);
-            setOrder([...order, { identifier, enabled: true }]);
-            setEntry(identifier);
-            setEditorOpen(true);
-          }}
-        >
-          <Plus size={16} />
-        </button>
-      </div>
-      <ul className="wb-prompts" aria-label="提示词顺序">
-        {rows.map((item, i) => {
-          const p = prompts.find((p) => p.identifier === item.identifier),
-            name = p?.name || item.identifier,
-            active = editorOpen && selected?.identifier === item.identifier;
-          return (
-            <li
-              className={`wb-prompt ${active ? "is-active" : ""} ${item.enabled === false ? "is-off" : ""} ${p?.marker ? "is-marker" : ""} ${dragging === i ? "is-dragging" : ""}`}
-              key={`${item.identifier}-${i}`}
-              draggable={!!order.length}
-              onDragStart={(e) => {
-                setDragging(i);
-                e.dataTransfer.effectAllowed = "move";
-              }}
-              onDragOver={(e) => {
-                if (dragging === null || dragging === i) return;
-                e.preventDefault();
-                const next = [...rows];
-                next.splice(i, 0, next.splice(dragging, 1)[0]);
-                setDragging(i);
-                setOrder(next);
-              }}
-              onDragEnd={() => setDragging(null)}
-            >
-              <GripVertical className="wb-prompt-grip" size={14} aria-hidden="true" />
-              <input
-                type="checkbox"
-                aria-label={`启用提示词 ${name}`}
-                checked={item.enabled !== false}
-                onChange={(e) =>
-                  setOrder(rows.map((v, j) => (j === i ? { ...v, enabled: e.target.checked } : v)))
+            <GripVertical className="wb-prompt-grip" size={14} aria-hidden="true" />
+            <input
+              type="checkbox"
+              aria-label={`启用提示词 ${name}`}
+              checked={item.enabled !== false}
+              onChange={(e) =>
+                setOrder(rows.map((v, j) => (j === i ? { ...v, enabled: e.target.checked } : v)))
+              }
+            />
+            <button
+              className="wb-prompt-open"
+              aria-label={`编辑提示词 ${name}`}
+              aria-expanded={active}
+              onClick={() => {
+                if (active) setEditorOpen(false);
+                else {
+                  setEntry(item.identifier);
+                  setEditorOpen(true);
                 }
-              />
-              <button
-                className="wb-prompt-open"
-                aria-label={`编辑提示词 ${name}`}
-                aria-expanded={active}
+              }}
+            >
+              <span>{name}</span>
+            </button>
+            <span className="wb-prompt-role">
+              {p?.marker ? "标记" : roleNames[p?.role || "system"] || p?.role}
+            </span>
+            {desk && (
+              <span className="wb-prompt-tokens">
+                {p?.marker ? "—" : (promptTokens[item.identifier] ?? "")}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+  const promptSheet = selected ? (
+    <div className={`wb-fold-body wb-prompt-sheet ${editorOpen ? "is-open" : ""}`} inert={!editorOpen}>
+      <div>
+        <section className="wb-prompt-card" aria-label="编辑提示词">
+          <IconButton title="收起提示词编辑" onClick={() => setEditorOpen(false)}>
+            <X size={15} />
+          </IconButton>
+          <div className="wb-editor-heading">
+            <input
+              aria-label="提示词名称"
+              value={selected.name || ""}
+              onChange={(e) => updatePrompt({ name: e.target.value })}
+            />
+            <Select
+              aria-label="提示词角色"
+              value={selected.role || "system"}
+              onChange={(e) => updatePrompt({ role: e.target.value })}
+            >
+              <option>system</option>
+              <option>user</option>
+              <option>assistant</option>
+            </Select>
+            {[-1, 1].map((dir) => (
+              <IconButton
+                key={dir}
+                title={dir < 0 ? "上移提示词" : "下移提示词"}
+                disabled={
+                  !order.length ||
+                  order.findIndex((p) => p.identifier === selected.identifier) + dir < 0 ||
+                  order.findIndex((p) => p.identifier === selected.identifier) + dir >= order.length
+                }
                 onClick={() => {
-                  if (active) setEditorOpen(false);
-                  else {
-                    setEntry(item.identifier);
-                    setEditorOpen(true);
-                  }
+                  const next = clone(order),
+                    i = next.findIndex((p) => p.identifier === selected.identifier);
+                  [next[i], next[i + dir]] = [next[i + dir], next[i]];
+                  setOrder(next);
                 }}
               >
-                <span>{name}</span>
-              </button>
-              <span className="wb-prompt-role">
-                {p?.marker ? "标记" : roleNames[p?.role || "system"] || p?.role}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      <div className={`wb-preset-more ${editorOpen ? "is-editor-open" : ""}`}>
-        {selected ? (
-          <div className={`wb-fold-body wb-prompt-sheet ${editorOpen ? "is-open" : ""}`} inert={!editorOpen}>
-            <div>
-              <section className="wb-prompt-card" aria-label="编辑提示词">
-                <IconButton title="收起提示词编辑" onClick={() => setEditorOpen(false)}>
-                  <X size={15} />
-                </IconButton>
-                <div className="wb-editor-heading">
-                  <input
-                    aria-label="提示词名称"
-                    value={selected.name || ""}
-                    onChange={(e) => updatePrompt({ name: e.target.value })}
-                  />
-                  <Select
-                    aria-label="提示词角色"
-                    value={selected.role || "system"}
-                    onChange={(e) => updatePrompt({ role: e.target.value })}
-                  >
-                    <option>system</option>
-                    <option>user</option>
-                    <option>assistant</option>
-                  </Select>
-                  {[-1, 1].map((dir) => (
-                    <IconButton
-                      key={dir}
-                      title={dir < 0 ? "上移提示词" : "下移提示词"}
-                      disabled={
-                        !order.length ||
-                        order.findIndex((p) => p.identifier === selected.identifier) + dir < 0 ||
-                        order.findIndex((p) => p.identifier === selected.identifier) + dir >= order.length
-                      }
-                      onClick={() => {
-                        const next = clone(order),
-                          i = next.findIndex((p) => p.identifier === selected.identifier);
-                        [next[i], next[i + dir]] = [next[i + dir], next[i]];
-                        setOrder(next);
-                      }}
-                    >
-                      {dir < 0 ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
-                    </IconButton>
-                  ))}
-                </div>
+                {dir < 0 ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
+              </IconButton>
+            ))}
+          </div>
 
-                {selected.marker ? (
-                  <p className="wb-note">此项由酒馆动态组装，可在上方控制启用与顺序。</p>
-                ) : (
-                  <Field label="提示词正文">
-                    <textarea
-                      rows={4}
-                      value={selected.content || ""}
-                      onChange={(e) => updatePrompt({ content: e.target.value })}
+          {selected.marker ? (
+            <p className="wb-note">此项由酒馆动态组装，可在上方控制启用与顺序。</p>
+          ) : (
+            <Field label="提示词正文">
+              <textarea
+                rows={4}
+                value={selected.content || ""}
+                onChange={(e) => updatePrompt({ content: e.target.value })}
+              />
+            </Field>
+          )}
+        </section>
+      </div>
+    </div>
+  ) : (
+    <Empty>此类预设没有提示词子条目</Empty>
+  );
+  return (
+    <fieldset disabled={task.busy} className={`wb-preset-editor ${desk ? "is-desk" : ""}`}>
+      <Notice error={task.error} />
+      {!desk && (
+        <>
+          <section className="wb-preset-card" aria-label="常用参数">
+            {always.map(field)}
+            {pins.filter((k) => k in draft && !always.includes(k)).map(field)}
+          </section>
+          <button
+            className="wb-preset-pins-toggle"
+            aria-expanded={pinsOpen}
+            onClick={() => setPinsOpen(!pinsOpen)}
+          >
+            自定义常用项
+          </button>
+          <div
+            className={`wb-fold-body ${pinsOpen ? "is-open" : ""}`}
+            aria-hidden={!pinsOpen}
+            inert={!pinsOpen}
+          >
+            <div>
+              <div className="wb-preset-pins">
+                {parameters
+                  .filter((k) => !always.includes(k))
+                  .map((k) => (
+                    <Check
+                      key={k}
+                      label={parameterNames[k] || k}
+                      checked={pins.includes(k)}
+                      onChange={(v) =>
+                        host.preference({ presetPins: v ? [...pins, k] : pins.filter((p) => p !== k) })
+                      }
                     />
-                  </Field>
-                )}
-              </section>
+                  ))}
+              </div>
             </div>
           </div>
-        ) : (
-          <Empty>此类预设没有提示词子条目</Empty>
-        )}
+        </>
+      )}
+      {desk ? (
+        <div className="wb-preset-desk">
+          <section className="wb-preset-params" aria-label="采样参数">
+            <h3>采样参数</h3>
+            {sampling.filter((k) => k in draft).map(field)}
+            {always.filter((k) => k in draft).map(field)}
+            <Fold title="当前后端的其他参数">
+              {parameters.filter((k) => !sampling.includes(k) && !always.includes(k)).map(field)}
+            </Fold>
+          </section>
+          <section className="wb-preset-order">
+            {promptHead}
+            {promptList}
+            <div className={`wb-preset-more ${editorOpen ? "is-editor-open" : ""}`}>{promptSheet}</div>
+          </section>
+        </div>
+      ) : (
+        <>
+          {promptHead}
+          {promptList}
+        </>
+      )}
+      <div className={`wb-preset-more ${editorOpen ? "is-editor-open" : ""}`}>
+        {!desk && promptSheet}
         <Fold title="更多预设设置" initial={!!deep}>
           {" "}
           {selected && !selected.marker && (
@@ -1126,9 +1139,11 @@ function PresetEditor({
               删除提示词
             </button>
           )}
-          <Fold title="其他生成参数">
-            {parameters.filter((k) => !pins.includes(k) && !always.includes(k)).map(field)}
-          </Fold>
+          {!desk && (
+            <Fold title="其他生成参数">
+              {parameters.filter((k) => !pins.includes(k) && !always.includes(k)).map(field)}
+            </Fold>
+          )}
           <Fold title="提示格式">
             {[
               ["impersonation_prompt", "AI 帮答指令"],

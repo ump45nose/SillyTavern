@@ -23,6 +23,10 @@
 @import "./components/check.css";
 @import "./components/resource-panel.css";
 @import "./components/trace.css";
+@import "./components/character-library.css";
+@import "./components/character-editor.css";
+@import "./components/world-workspace.css";
+@import "./components/preset-desk.css";
 @import "./components/addon.css";
 @import "./components/reading-settings.css";
 @import "./layouts/rp.css";

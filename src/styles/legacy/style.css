@@ -519,9 +519,7 @@
     padding: 4px 8px;
     border-radius: 8px;
   }
-  .wb-row.is-active,
-  .wb-book-row.is-active,
-  .wb-entry-row.is-active {
+  .wb-row.is-active {
     background: var(--wb-selected);
   }
   .wb-row-main {
@@ -589,100 +587,6 @@
     flex: 1;
     overflow: hidden;
   }
-  .wb-world-tools {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--wb-line);
-  }
-  .wb-world-tools strong {
-    font-size: 13px;
-  }
-  .wb-world-tools button {
-    font-size: 12px;
-  }
-  .wb-world-grid {
-    display: grid;
-    grid-template-columns: 138px minmax(0, 1fr);
-    grid-template-rows: minmax(160px, 1fr) minmax(190px, 0.8fr);
-    min-height: 0;
-    flex: 1;
-  }
-  .wb-book-column {
-    grid-column: 1;
-    grid-row: 1;
-    padding: 12px 8px;
-    border-right: 1px solid var(--wb-line);
-    overflow: auto;
-  }
-  .wb-entry-column {
-    grid-column: 2;
-    grid-row: 1;
-    padding: 12px 8px;
-    overflow: auto;
-  }
-  .wb-entry-editor {
-    grid-column: 1/-1;
-    grid-row: 2;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-    border-top: 1px solid var(--wb-line);
-    padding: 14px 16px;
-  }
-  .wb-book-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    border-radius: 8px;
-    margin: 6px 0;
-    padding: 0 7px;
-  }
-  .wb-book-row button {
-    min-width: 0;
-    text-align: left;
-    justify-content: flex-start;
-    border: 0;
-    background: none;
-    overflow-wrap: anywhere;
-    font-size: 12px;
-    padding: 10px 2px;
-    flex: 1;
-  }
-  .wb-entry-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 6px;
-    border-radius: 8px;
-    margin-top: 6px;
-  }
-  .wb-entry-row.is-disabled {
-    opacity: 0.5;
-  }
-  .wb-entry-row .wb-mode {
-    width: 23px;
-    min-width: 23px;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    color: transparent;
-    appearance: none;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    outline-offset: 0;
-  }
-  .wb-entry-row .wb-mode.keyword {
-    background-image: radial-gradient(circle, #5d9970 0 4px, transparent 5px);
-  }
-  .wb-entry-row .wb-mode.constant {
-    background-image: radial-gradient(circle, #6286b5 0 4px, transparent 5px);
-  }
-  .wb-entry-row .wb-mode.vector {
-    background-image: radial-gradient(circle, #9472b4 0 4px, transparent 5px);
-  }
   .wb-mode option {
     color: var(--wb-ink);
     background: var(--wb-surface);
@@ -700,43 +604,6 @@
     background: none !important;
     padding: 0 !important;
   }
-  .wb-content-editor {
-    flex: 1;
-    resize: none !important;
-    min-height: 80px !important;
-    border: 0 !important;
-    background: transparent !important;
-    padding: 18px 0 !important;
-    font:
-      16px/2 Georgia,
-      "Noto Serif CJK SC",
-      serif !important;
-  }
-  .wb-parameters {
-    padding: 22px 18px;
-    overflow: auto;
-    border-left: 1px solid var(--wb-line);
-    background: var(--wb-paper);
-  }
-  .wb-parameters small {
-    display: block;
-    font-size: 11px;
-    line-height: 1.8;
-  }
-  .wb-parameters > label:not(.wb-field) {
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .wb-legend {
-    display: flex;
-    gap: 12px;
-    padding: 10px 16px;
-    border-top: 1px solid var(--wb-line);
-    font-size: 10px;
-    flex-shrink: 0;
-  }
   .green {
     color: #5d9970;
   }
@@ -745,34 +612,6 @@
   }
   .purple {
     color: #9472b4;
-  }
-  .wb-legend small {
-    font-size: 10px;
-  }
-  .wb-world.is-deep .wb-world-grid {
-    grid-template-columns: 190px 250px minmax(0, 1fr) 220px;
-    grid-template-rows: 1fr;
-  }
-  .wb-world.is-deep .wb-entry-editor {
-    grid-column: 3;
-    grid-row: 1;
-    border-top: 0;
-    border-left: 1px solid var(--wb-line);
-    padding: 24px;
-  }
-  .wb-world.is-deep .wb-parameters {
-    grid-column: 4;
-    grid-row: 1;
-  }
-  .wb-world.is-deep .wb-book-column,
-  .wb-world.is-deep .wb-entry-column {
-    padding: 20px 14px;
-  }
-  .wb-world.is-deep .wb-world-tools {
-    padding: 12px 26px;
-  }
-  .wb-world.is-deep .wb-content-editor {
-    font-size: 17px !important;
   }
   .wb-characters {
     min-height: 0;
@@ -815,64 +654,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .wb-library-content {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
   .wb-character-list {
     overflow: auto;
     flex: 1;
-  }
-  .wb-character-card {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--wb-line);
-  }
-  .wb-character-main {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    justify-content: flex-start !important;
-    text-align: left;
-    border: 0 !important;
-    background: none !important;
-    padding: 4px 0 !important;
-    gap: 14px !important;
-  }
-  .wb-character-main img {
-    width: 46px;
-    height: 58px;
-    border-radius: 8px;
-  }
-  .wb-character-main > span {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-  }
-  .wb-character-main strong {
-    font-size: 14px;
-  }
-  .wb-character-main small {
-    font-size: 11px;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .wb-character-main em {
-    font-size: 10px;
-    color: var(--wb-accent);
-    font-style: normal;
-  }
-  .wb-character-card.is-active .wb-character-main img {
-    outline: 2px solid var(--wb-accent);
-    outline-offset: 2px;
   }
   .wb-resource-footer {
     display: flex;
@@ -888,80 +672,10 @@
     border: 0;
     background: none;
   }
-  .wb-character-detail-wrap {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    padding-top: 20px;
-  }
-  .wb-character-editor .wb-role-heading {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .wb-role-heading > img {
-    width: 75px;
-    height: 94px;
-    border-radius: 10px;
-  }
-  .wb-role-heading .wb-field {
-    flex: 1;
-  }
-  .wb-character-editor details {
-    border-top: 1px solid var(--wb-line);
-    padding-top: 18px;
-  }
-  .wb-character-editor summary {
-    cursor: pointer;
-    color: var(--wb-muted);
-    font-size: 12px;
-  }
   .wb-characters.is-management {
     display: grid;
     grid-template-columns: 205px minmax(0, 1fr);
     padding: 0;
-  }
-  .is-management .wb-library-content {
-    padding: 8px 28px 0;
-  }
-  .wb-card-grid {
-    overflow: auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
-    gap: 18px;
-    align-content: start;
-    flex: 1;
-    padding: 8px 2px 20px;
-  }
-  .wb-card-grid .wb-character-card {
-    position: relative;
-    display: flex;
-    flex-wrap: wrap;
-    align-content: start;
-    align-items: flex-start;
-    padding: 16px;
-    border: 1px solid var(--wb-line);
-    background: var(--wb-surface);
-    border-radius: 12px;
-    gap: 10px;
-  }
-  .wb-card-grid .wb-character-main {
-    order: 1;
-    flex: 1 0 100%;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px !important;
-  }
-  .wb-card-grid .wb-character-main img {
-    width: 100%;
-    height: 175px;
-    border-radius: 8px;
-  }
-  .wb-card-grid .wb-character-card > .wb-icon {
-    margin-left: auto;
-  }
-  .wb-card-grid .wb-character-card > .wb-link {
-    order: 2;
   }
   .wb-batch {
     display: flex;
@@ -978,10 +692,6 @@
   }
   .wb-batch button {
     font-size: 12px;
-  }
-  .is-management .wb-character-detail-wrap {
-    padding: 28px;
-    max-width: 900px;
   }
   .wb-resources {
     display: flex;
@@ -1056,15 +766,6 @@
     }
     .wb-contexts {
       gap: 5px;
-    }
-    .wb-world.is-deep .wb-world-grid {
-      grid-template-columns: 155px 205px minmax(0, 1fr) 185px;
-    }
-    .wb-world.is-deep .wb-entry-editor {
-      padding: 16px;
-    }
-    .wb-world.is-deep .wb-parameters {
-      padding: 18px 12px;
     }
     body.wb-active .wb-composer-tools button {
       padding: 6px;

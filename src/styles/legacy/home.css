@@ -475,42 +475,18 @@
     background: var(--wb-surface);
     animation: wb-page 180ms ease;
   }
-  .wb-character-list .wb-character-card {
-    padding: 15px 0;
-  }
-  .wb-character-list .wb-character-main img {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-  }
-  .wb-character-list .wb-character-main em {
-    background: var(--wb-soft);
-    padding: 2px 6px;
-    border-radius: 4px;
-    align-self: flex-start;
-  }
-  .wb-character-card,
-  .wb-row,
-  .wb-book-row,
-  .wb-entry-row {
+  .wb-row {
     transition:
       background-color 160ms,
       box-shadow 160ms;
   }
-  .wb-character-card:is(:hover, :focus-visible),
-  .wb-row:is(:hover, :focus-visible),
-  .wb-book-row:is(:hover, :focus-visible),
-  .wb-entry-row:is(:hover, :focus-visible) {
+  .wb-row:is(:hover, :focus-visible) {
     background: color-mix(in srgb, var(--wb-selected) 30%, transparent);
   }
-  .wb-row.is-active,
-  .wb-book-row.is-active,
-  .wb-entry-row.is-active {
+  .wb-row.is-active {
     background: var(--wb-selected);
   }
-  .wb-row.is-active button,
-  .wb-book-row.is-active button,
-  .wb-entry-row.is-active button {
+  .wb-row.is-active button {
     background: transparent;
   }
   .wb-dialog[open] {
@@ -582,38 +558,6 @@
       animation: none !important;
       scroll-behavior: auto !important;
     }
-  }
-  .wb-entry-row .wb-entry-state {
-    border-color: var(--wb-entry-tone);
-    flex: none;
-  }
-  .wb-entry-row.is-disabled {
-    opacity: 1;
-  }
-  .wb-entry-row.is-disabled .wb-entry-copy {
-    opacity: 0.55;
-  }
-  .wb-entry-copy {
-    flex: 1;
-    min-width: 0;
-    padding: 5px 0;
-    transition: opacity 160ms;
-  }
-  .wb-entry-copy .wb-row-main {
-    width: 100%;
-    padding: 3px 4px 1px !important;
-    min-height: 24px;
-  }
-  .wb-entry-copy .wb-mode-label {
-    padding: 0 2px;
-    width: auto;
-    max-width: 100%;
-    min-height: 22px;
-    border: 0;
-    background: transparent;
-    color: var(--wb-muted);
-    font-size: 11px;
-    cursor: pointer;
   }
   /* Off-canvas panels must not expand the document's horizontal scroll area. */
   #wb-root {
@@ -862,16 +806,6 @@
   body.wb-active .wb-native-slot {
     font-size: 12px;
     line-height: 1.7;
-  }
-  .wb-characters:not(.is-management) .wb-character-main > em {
-    margin-left: auto;
-    align-self: center;
-    white-space: nowrap;
-    font-size: 10px;
-    color: var(--wb-muted);
-    background: var(--wb-soft);
-    border-radius: 5px;
-    padding: 4px 7px;
   }
   .wb-choice-state {
     display: block;

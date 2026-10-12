@@ -9,56 +9,23 @@ import {
   Users,
   Grid2X2,
   Download,
-  Trash2,
-  Tag,
-  Copy,
   PencilLine,
   PanelLeftClose,
   PanelLeftOpen,
-  BookOpen,
   MessageSquarePlus,
+  ImagePlus,
+  X,
   Search,
 } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data, Item } from "../host/types";
 import { clone } from "../host/model";
-import {
-  useTask,
-  SearchBox,
-  Notice,
-  Empty,
-  Field,
-  IconButton,
-  useHostSlices,
-  withoutChat,
-} from "../ui/common";
+import { useTask, SearchBox, Notice, Empty, Field, useHostSlices, withoutChat } from "../ui/common";
 import { ResourceRailContext } from "../ui/ResourcePicker";
 import { SaveBar } from "../ui/ResourceControls";
+import { useTokenCounts } from "../ui/tokens";
 import { guards, type Guard } from "../host/bus";
 
-function CharacterInfo({ item, onEdit }: { item?: Item; onEdit: (id: string) => void }) {
-  const data = item?.data?.data ?? item?.data;
-  return (
-    <div className="wb-character-info">
-      <p className="wb-caption">角色信息</p>
-      {item ? (
-        <>
-          <img src={item.image} alt="" />
-          <h3 title={item.name}>{item.name}</h3>
-          <small>{(data?.tags || []).join(" · ") || item.detail || "未分类角色"}</small>
-          <p>{String(data?.description || "暂无角色描述").replace(/<[^>]*>/g, "")}</p>
-          {data?.personality && <p>{data.personality}</p>}
-          <button onClick={() => onEdit(item.id)}>
-            <PencilLine size={14} />
-            编辑角色
-          </button>
-        </>
-      ) : (
-        <p>悬浮或聚焦角色，查看介绍。</p>
-      )}
-    </div>
-  );
-}
 export default function Characters(props: {
   host: HostAdapter;
   management?: boolean;
@@ -283,25 +250,58 @@ function CharacterPanel({ host, onManage }: { host: HostAdapter; onManage?: (gro
     </div>
   );
 }
-/** The independent character library (deep view; restyled with the settings workspace in E6). */
+/** "刚刚 / 5 天前 / 上周" for a last-chat timestamp. */
+function since(value: unknown) {
+  const at = Number(value);
+  if (!at) return "";
+  const minutes = Math.max(0, (Date.now() - at) / 60000),
+    days = Math.floor(minutes / 1440);
+  if (minutes < 60) return "刚刚";
+  if (minutes < 1440) return `${Math.floor(minutes / 60)} 小时前`;
+  if (days < 7) return `${days} 天前`;
+  if (days < 14) return "上周";
+  if (days < 56) return `${Math.floor(days / 7)} 周前`;
+  return new Date(at).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+}
+/** A portrait that falls back to the name's first character on a soft tint when the image is missing. */
+function Portrait({ item, children }: { item: Item; children?: React.ReactNode }) {
+  const [broken, setBroken] = useState(false),
+    hue = [...item.name].reduce((n, c) => n + c.charCodeAt(0), 0) % 6;
+  return (
+    <span className={`wb-portrait ${broken ? "is-initial" : ""}`} data-tint={hue}>
+      {broken ? (
+        <b aria-hidden="true">{[...item.name][0]}</b>
+      ) : (
+        // The thumbnail is a small flattened JPEG; a portrait this size needs the card image itself.
+        <img
+          src={`/characters/${encodeURIComponent(item.id)}`}
+          alt=""
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      )}
+      {children}
+    </span>
+  );
+}
+/** The independent character library (board "Characters"): a chip-filtered portrait gallery with a selection bar. */
 function CharacterLibrary({ host }: { host: HostAdapter }) {
   const snap = useHostSlices(host, withoutChat),
     task = useTask();
   const [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
-    [tag, setTag] = useState(""),
-    [sort, setSort] = useState("name"),
+    [sort, setSort] = useState("recent"),
     [selected, setSelected] = useState<string[]>([]),
-    [editing, setEditing] = useState<string | null>(null),
-    [preview, setPreview] = useState<string>("");
-  const tags = [...new Set(snap.characters.flatMap((x) => x.data?.data?.tags ?? []))] as string[];
+    [editing, setEditing] = useState<string | null>(null);
+  const tagsOf = (x: Item) => (x.data?.data?.tags ?? []) as string[];
+  const tags = [...new Set(snap.characters.flatMap(tagsOf))];
   const list = snap.characters
     .filter(
       (x) =>
         (filter !== "favorite" || favorite(x)) &&
         (filter !== "current" || x.active) &&
-        (!tag || x.data?.data?.tags?.includes(tag)) &&
-        `${x.name} ${x.detail} ${(x.data?.data?.tags || []).join(" ")}`
+        (!filter.startsWith("tag:") || tagsOf(x).includes(filter.slice(4))) &&
+        `${x.name} ${x.detail} ${plain(x.data?.data?.description ?? x.data?.description)}`
           .toLowerCase()
           .includes(query.toLowerCase()),
     )
@@ -310,94 +310,75 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
         ? Number(b.data?.date_last_chat ?? 0) - Number(a.data?.date_last_chat ?? 0)
         : a.name.localeCompare(b.name, "zh"),
     );
-  const open = (item: Item) => setEditing(item.id);
-  const edit = (id: string) => setEditing(id),
-    info = <CharacterInfo item={snap.characters.find((x) => x.id === preview)} onEdit={edit} />;
-  const importCard = (
-    <label className="wb-import-character">
-      <Upload size={15} />
-      导入
-      <input
-        aria-label="导入角色卡"
-        type="file"
-        accept=".png,.json,.yaml,.yml,.charx,.byaf"
-        multiple
-        onChange={(e) => {
-          const files = [...(e.target.files || [])];
-          task.run(async () => {
-            for (const file of files) await host.importCharacter(file);
-          });
-        }}
-      />
-    </label>
-  );
   const create = () => {
     const name = prompt("角色名称");
     if (name) task.run(async () => setEditing(await host.createCharacter(name)));
   };
+  const chips: [string, string][] = [
+    ["all", "全部"],
+    ["favorite", "收藏"],
+    ["current", "当前"],
+    ...tags.map((t) => ["tag:" + t, t] as [string, string]),
+  ];
+  const all = list.length > 0 && list.every((x) => selected.includes(x.id)),
+    count = selected.length;
   const batch = (
-    <div className="wb-character-bulk">
+    <div className={`wb-character-bulk ${count ? "is-active" : ""}`}>
       <label className="wb-check">
         <input
           aria-label="选择当前结果"
           type="checkbox"
-          checked={list.length > 0 && list.every((x) => selected.includes(x.id))}
+          checked={all}
+          ref={(n) => {
+            if (n) n.indeterminate = count > 0 && !all;
+          }}
           onChange={(e) => setSelected(e.target.checked ? list.map((x) => x.id) : [])}
         />
-        全选
+        {count ? `已选 ${count} 个角色` : "全选"}
       </label>
-      <small>{selected.length} 已选</small>
       <span className="wb-grow" />
       <button
-        disabled={!selected.length || task.busy}
+        disabled={!count || task.busy}
         onClick={() => {
           const value = prompt("添加标签");
           if (value) task.run(() => host.tagCharacters(selected, value));
         }}
       >
-        <Tag size={15} />
         标签
       </button>
       <button
-        disabled={!selected.length || task.busy}
-        onClick={() =>
-          task.run(async () => {
-            for (const id of selected) await host.exportCharacter(id);
-          })
-        }
-      >
-        <Download size={15} />
-        导出
-      </button>
-      <button
-        disabled={!selected.length || task.busy}
+        disabled={!count || task.busy}
         onClick={() =>
           task.run(async () => {
             for (const id of selected) await host.duplicateCharacter(id);
           })
         }
       >
-        <Copy size={15} />
         复制
       </button>
       <button
-        disabled={!selected.length || task.busy}
+        disabled={!count || task.busy}
+        onClick={() =>
+          task.run(async () => {
+            for (const id of selected) await host.exportCharacter(id);
+          })
+        }
+      >
+        导出
+      </button>
+      <button
+        className="is-danger"
+        disabled={!count || task.busy}
         onClick={() => {
-          if (confirm(`删除选中的 ${selected.length} 个角色卡？聊天文件保留。`))
+          if (confirm(`删除选中的 ${count} 个角色卡？聊天文件保留。`))
             task.run(async () => {
               await host.deleteCharacters(selected);
               setSelected([]);
             });
         }}
       >
-        <Trash2 size={15} />
         删除
       </button>
-      <button disabled={task.busy} onClick={create}>
-        <Plus size={15} />
-        新建
-      </button>
-      {importCard}
     </div>
   );
   return (
@@ -405,77 +386,111 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
       <Notice error={task.error} />
       {!editing ? (
         <section className="wb-library-content">
-          <header className="wb-designed-page-head">
-            <div>
-              <h2>角色管理</h2>
-              <small>{list.length} 个角色 · 悬浮查看介绍</small>
-            </div>
+          <header className="wb-library-head">
+            <h2>角色管理</h2>
+            <small>
+              {snap.characters.length} 个角色
+              {list.length !== snap.characters.length && ` · 显示 ${list.length} 个`}
+            </small>
+            <span className="wb-grow" />
+            <label className="wb-library-import">
+              <Download size={15} />
+              导入
+              <input
+                aria-label="导入角色卡"
+                type="file"
+                accept=".png,.json,.yaml,.yml,.charx,.byaf"
+                multiple
+                onChange={(e) => {
+                  const files = [...(e.target.files || [])];
+                  task.run(async () => {
+                    for (const file of files) await host.importCharacter(file);
+                  });
+                }}
+              />
+            </label>
+            <button className="wb-library-create" disabled={task.busy} onClick={create}>
+              <Plus size={15} />
+              新建
+            </button>
           </header>
-          {batch}
           <div className="wb-character-search-row is-management">
             <SearchBox value={query} onChange={setQuery} placeholder="搜索角色或标签" />
-            <>
-              <Select aria-label="角色筛选" value={filter} onChange={(e) => setFilter(e.target.value)}>
-                <option value="all">全部角色</option>
-                <option value="favorite">我的收藏</option>
-                <option value="current">当前角色</option>
-              </Select>
-              <Select aria-label="标签筛选" value={tag} onChange={(e) => setTag(e.target.value)}>
-                <option value="">所有标签</option>
-                {tags.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </Select>
-            </>
+            <div className="wb-library-chips" role="radiogroup" aria-label="角色筛选">
+              {chips.map(([value, label]) => (
+                <button
+                  key={value}
+                  role="radio"
+                  aria-checked={filter === value}
+                  aria-pressed={filter === value}
+                  onClick={() => setFilter(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <Select aria-label="角色排序" value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="name">名称排序</option>
               <option value="recent">最近对话</option>
+              <option value="name">名称排序</option>
             </Select>
           </div>
-          <div className="wb-character-browse has-info">
-            <aside>{info}</aside>
-            <div>
-              <div className="wb-card-grid">
-                {list.map((x) => (
-                  <article
-                    key={x.id}
-                    className={`wb-character-card ${x.active ? "is-active" : ""} ${selected.includes(x.id) ? "is-selected" : ""}`}
-                    onMouseEnter={() => setPreview(x.id)}
-                    onFocus={() => setPreview(x.id)}
+          {batch}
+          <div className={`wb-card-grid ${count ? "has-selection" : ""}`}>
+            {list.map((x) => {
+              const data = x.data?.data ?? x.data,
+                on = selected.includes(x.id);
+              return (
+                <article
+                  key={x.id}
+                  className={`wb-character-card ${x.active ? "is-active" : ""} ${on ? "is-selected" : ""}`}
+                >
+                  <button
+                    className="wb-character-main"
+                    title={`编辑 ${x.name}`}
+                    onClick={() => setEditing(x.id)}
                   >
-                    <input
-                      type="checkbox"
-                      aria-label={`选择 ${x.name}`}
-                      checked={selected.includes(x.id)}
-                      onChange={(e) =>
-                        setSelected((v) => (e.target.checked ? [...v, x.id] : v.filter((id) => id !== x.id)))
-                      }
-                    />
-                    <button className="wb-character-main" title={x.name} onClick={() => open(x)}>
-                      <span className="wb-portrait">
-                        <img src={x.image} alt="" />
-                      </span>
-                      <span>
+                    <Portrait item={x}>{x.active && <em>当前</em>}</Portrait>
+                    <span className="wb-character-card-body">
+                      <span className="wb-character-card-title">
                         <strong>{x.name}</strong>
-                        <small>{x.detail || "未分类角色"}</small>
+                        <time>{since(x.data?.date_last_chat)}</time>
                       </span>
-                      {x.active && <em>当前</em>}
-                    </button>
-                    <IconButton
-                      title={favorite(x) ? `取消收藏 ${x.name}` : `收藏 ${x.name}`}
-                      onClick={() => task.run(() => host.favorite(x))}
-                    >
-                      <Star size={15} fill={favorite(x) ? "currentColor" : "none"} />
-                    </IconButton>
-                    <IconButton title={`编辑角色 ${x.name}`} onClick={() => edit(x.id)}>
-                      <PencilLine size={14} />
-                    </IconButton>
-                  </article>
-                ))}
-              </div>
-              {!list.length && <Empty>没有符合条件的角色</Empty>}
-            </div>
+                      <span className="wb-character-card-desc">
+                        {plain(data?.description) || "暂无角色描述"}
+                      </span>
+                      {tagsOf(x).length > 0 && (
+                        <span className="wb-character-card-tags">
+                          {tagsOf(x)
+                            .slice(0, 3)
+                            .map((t) => (
+                              <i key={t}>{t}</i>
+                            ))}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  <input
+                    type="checkbox"
+                    aria-label={`选择 ${x.name}`}
+                    checked={on}
+                    onChange={(e) =>
+                      setSelected((v) => (e.target.checked ? [...v, x.id] : v.filter((id) => id !== x.id)))
+                    }
+                  />
+                  <button
+                    className={`wb-character-star ${favorite(x) ? "is-on" : ""}`}
+                    aria-label={favorite(x) ? `取消收藏 ${x.name}` : `收藏 ${x.name}`}
+                    title={favorite(x) ? "取消收藏" : "收藏"}
+                    aria-pressed={favorite(x)}
+                    onClick={() => task.run(() => host.favorite(x))}
+                  >
+                    <Star size={14} fill={favorite(x) ? "currentColor" : "none"} />
+                  </button>
+                </article>
+              );
+            })}
           </div>
+          {!list.length && <Empty>没有符合条件的角色</Empty>}
         </section>
       ) : (
         <div className="wb-character-detail-wrap">
@@ -493,12 +508,36 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
     </div>
   );
 }
+const editorTabs = ["人设", "第一条消息", "对话示例", "高级定义", "创作者注释"] as const;
+type EditorTab = (typeof editorTabs)[number];
+const budgetGroups = [
+  ["描述", ["description"], "var(--wb-trace-system)"],
+  ["性格与场景", ["personality", "scenario"], "var(--wb-trace-preset)"],
+  ["第一条消息", ["first_mes"], "var(--wb-trace-world)"],
+  ["对话示例", ["mes_example"], "var(--wb-trace-character)"],
+] as const;
+const tokenFields = [
+  "description",
+  "personality",
+  "scenario",
+  "first_mes",
+  "mes_example",
+  "system_prompt",
+  "post_history_instructions",
+];
+/** The character card editor (board CharacterEdit): portrait and facts, tabbed fields, then the token budget and greetings. */
 function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
   const task = useTask(),
     [base, setBase] = useState<Data | null>(host.drafts.get("character:" + id)?.base || null),
     [draft, setDraft] = useState<Data | null>(host.drafts.get("character:" + id)?.draft || null),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useState(""),
+    [tab, setTab] = useState<EditorTab>("人设"),
+    [tagText, setTagText] = useState("");
   const dirty = !!base && JSON.stringify(base) !== JSON.stringify(draft);
+  const tokens = useTokenCounts(
+    host,
+    draft ? tokenFields.map((k) => [k, String(draft[k] ?? "")] as [string, string]) : [],
+  );
   useEffect(() => {
     if (dirty) return;
     let live = true;
@@ -541,195 +580,345 @@ function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
         <Empty>正在读取角色…</Empty>
       </>
     );
-  const field = (key: string, label: string, rows = 4) => (
-    <Field label={label}>
+  const item = host.snapshot().characters.find((c) => c.id === id);
+  const put = (patch: Data) => {
+    setDraft({ ...draft, ...patch });
+    setMessage("");
+  };
+  const ext = (patch: Data) => put({ extensions: { ...draft.extensions, ...patch } });
+  const depth = (patch: Data) => ext({ depth_prompt: { ...draft.extensions?.depth_prompt, ...patch } });
+  const changed = (key: string) => JSON.stringify(draft[key] ?? "") !== JSON.stringify(base[key] ?? "");
+  const field = (key: string, label: string, rows = 4, reading = true) => (
+    <label className={`wb-ce-field ${reading ? "is-reading" : ""}`} key={key}>
+      <span className="wb-ce-label">
+        {label}
+        {changed(key) && <i className="wb-ce-dirty" aria-label="已修改" />}
+        {tokens[key] !== undefined && <small>{tokens[key].toLocaleString()} tokens</small>}
+      </span>
       <textarea
+        aria-label={label}
         rows={rows}
         value={draft[key] ?? ""}
-        onChange={(e) => {
-          setDraft({ ...draft, [key]: e.target.value });
-          setMessage("");
-        }}
+        onChange={(e) => put({ [key]: e.target.value })}
       />
-    </Field>
+    </label>
   );
+  const tags: string[] = draft.tags ?? [];
+  const greetings: string[] = [draft.first_mes ?? "", ...(draft.alternate_greetings ?? [])].filter(
+    (x, i) => i === 0 || x,
+  );
+  const examples = String(draft.mes_example ?? "")
+    .split(/<START>/i)
+    .filter((x) => x.trim()).length;
+  const counts: Partial<Record<EditorTab, number>> = {
+    人设: ["description", "personality", "scenario"].filter((k) => String(draft[k] ?? "").trim()).length,
+    第一条消息: greetings.filter((x) => x.trim()).length,
+    对话示例: examples,
+  };
+  const budget = budgetGroups.map(([label, keys, color]) => ({
+      label,
+      color,
+      value: keys.reduce((n, k) => n + (tokens[k] ?? 0), 0),
+    })),
+    total = budget.reduce((n, x) => n + x.value, 0),
+    limit = host.contextLimit();
+  const addTag = () => {
+    const value = tagText.trim();
+    if (value && !tags.includes(value)) put({ tags: [...tags, value] });
+    setTagText("");
+  };
+  const worlds = host.snapshot().resources.world;
   return (
     <fieldset disabled={task.busy} className="wb-character-editor">
-      <Notice error={task.error} />
-      <div className="wb-role-heading">
-        <img src={host.snapshot().characters.find((c) => c.id === id)?.image} />
-        <Field label="角色名称">
-          <input value={draft.name ?? ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-        </Field>
-      </div>
-      <div className="wb-designed-actions">
-        <button onClick={() => task.run(() => host.selectCharacter(id))}>
-          <Users size={15} />
-          开始对话
-        </button>
-        <label className="wb-import-character">
-          <Upload size={15} />
-          更换头像
-          <input
-            aria-label="上传角色头像"
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) task.run(() => host.characterAvatar(id, file));
-            }}
+      <aside className="wb-ce-side">
+        <figure className="wb-ce-portrait">
+          <img
+            src={`/characters/${encodeURIComponent(id)}?v=${host.resourceVersions.character ?? 0}`}
+            alt=""
           />
-        </label>
-        <button onClick={() => task.run(() => host.exportCharacter(id))}>
-          <Download size={15} />
-          导出角色
-        </button>
-        <button onClick={() => task.run(() => host.duplicateCharacter(id))}>
-          <Copy size={15} />
-          复制角色
-        </button>
-      </div>
-      <Field label="标签（逗号分隔）">
-        <input
-          value={(draft.tags ?? []).join(", ")}
-          onChange={(e) =>
-            setDraft({
-              ...draft,
-              tags: e.target.value
-                .split(",")
-                .map((x) => x.trim())
-                .filter(Boolean),
+          <label className="wb-ce-avatar">
+            <ImagePlus size={14} />
+            更换头像
+            <input
+              aria-label="上传角色头像"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) task.run(() => host.characterAvatar(id, file));
+              }}
+            />
+          </label>
+        </figure>
+        <dl className="wb-ce-meta">
+          <div>
+            <dt>创建者</dt>
+            <dd>
+              <input
+                aria-label="创建者"
+                value={draft.creator ?? ""}
+                placeholder="未填写"
+                onChange={(e) => put({ creator: e.target.value })}
+              />
+            </dd>
+          </div>
+          <div>
+            <dt>角色版本</dt>
+            <dd>
+              <input
+                aria-label="角色版本"
+                value={draft.character_version ?? ""}
+                placeholder="未填写"
+                onChange={(e) => put({ character_version: e.target.value })}
+              />
+            </dd>
+          </div>
+          <div>
+            <dt>角色世界书</dt>
+            <dd>
+              <Select
+                aria-label="角色世界书"
+                value={draft.extensions?.world || ""}
+                onChange={(e) => ext({ world: e.target.value })}
+              >
+                <option value="">不绑定</option>
+                {worlds.map((w) => (
+                  <option key={w.id}>{w.name}</option>
+                ))}
+              </Select>
+            </dd>
+          </div>
+          <div>
+            <dt>文件</dt>
+            <dd title={id}>{id}</dd>
+          </div>
+        </dl>
+      </aside>
+      <section className="wb-ce-main">
+        <Notice error={task.error} />
+        <header className="wb-ce-head">
+          <input
+            className="wb-ce-name"
+            aria-label="角色名称"
+            value={draft.name ?? ""}
+            onChange={(e) => put({ name: e.target.value })}
+          />
+          <div className="wb-ce-actions">
+            <button onClick={() => task.run(() => host.exportCharacter(id))}>导出角色</button>
+            <button onClick={() => task.run(() => host.duplicateCharacter(id))}>复制角色</button>
+            <button
+              className="is-raised"
+              disabled={item?.active}
+              onClick={() => task.run(() => host.selectCharacter(id))}
+            >
+              <MessageSquarePlus size={15} />
+              开始对话
+            </button>
+          </div>
+          <div className="wb-ce-tags">
+            {tags.map((t) => (
+              <span key={t}>
+                {t}
+                <button
+                  aria-label={`移除标签 ${t}`}
+                  onClick={() => put({ tags: tags.filter((x) => x !== t) })}
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+            <input
+              aria-label="添加标签"
+              placeholder="+ 标签"
+              value={tagText}
+              size={Math.max(4, tagText.length + 1)}
+              onChange={(e) => setTagText(e.target.value.replace(/,|，/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === "," || e.key === "，") {
+                  e.preventDefault();
+                  addTag();
+                }
+              }}
+              onBlur={addTag}
+            />
+          </div>
+        </header>
+        <nav className="wb-ce-tabs" role="tablist" aria-label="角色字段">
+          {editorTabs.map((name) => (
+            <button key={name} role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>
+              {name}
+              {!!counts[name] && <small>{counts[name]}</small>}
+            </button>
+          ))}
+        </nav>
+        <div className="wb-ce-body" role="tabpanel" aria-label={tab}>
+          {tab === "人设" && (
+            <>
+              {field("description", "角色描述", 8)}
+              {field("personality", "性格", 3)}
+              {field("scenario", "场景", 3)}
+            </>
+          )}
+          {tab === "第一条消息" && (
+            <>
+              {field("first_mes", "第一条消息", 7)}
+              <label className="wb-ce-field is-reading">
+                <span className="wb-ce-label">
+                  备选开场白
+                  {changed("alternate_greetings") && <i className="wb-ce-dirty" aria-label="已修改" />}
+                  <small>以单独一行 --- 分隔</small>
+                </span>
+                <textarea
+                  aria-label="备选开场白（以单独一行 --- 分隔）"
+                  rows={8}
+                  value={(draft.alternate_greetings || []).join("\n---\n")}
+                  onChange={(e) =>
+                    put({ alternate_greetings: e.target.value.split(/\n---\n/).filter(Boolean) })
+                  }
+                />
+              </label>
+            </>
+          )}
+          {tab === "对话示例" && field("mes_example", "对话示例", 14, false)}
+          {tab === "高级定义" && (
+            <>
+              {field("system_prompt", "系统提示词", 4, false)}
+              {field("post_history_instructions", "历史后指令", 3, false)}
+              <label className="wb-ce-field">
+                <span className="wb-ce-label">深度提示词</span>
+                <textarea
+                  aria-label="深度提示词"
+                  rows={3}
+                  value={draft.extensions?.depth_prompt?.prompt || ""}
+                  onChange={(e) => depth({ prompt: e.target.value })}
+                />
+              </label>
+              <div className="wb-ce-row">
+                <Field label="深度">
+                  <input
+                    type="number"
+                    min={0}
+                    value={draft.extensions?.depth_prompt?.depth ?? 4}
+                    onChange={(e) => depth({ depth: Number(e.target.value) })}
+                  />
+                </Field>
+                <Field label="注入角色">
+                  <Select
+                    value={draft.extensions?.depth_prompt?.role || "system"}
+                    onChange={(e) => depth({ role: e.target.value })}
+                  >
+                    <option>system</option>
+                    <option>user</option>
+                    <option>assistant</option>
+                  </Select>
+                </Field>
+                <label className="wb-field wb-ce-talk">
+                  <span>
+                    发言积极性 <output>{Math.round((draft.extensions?.talkativeness ?? 0.5) * 100)}%</output>
+                  </span>
+                  <input
+                    aria-label="发言积极性"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={draft.extensions?.talkativeness ?? 0.5}
+                    style={
+                      {
+                        "--wb-fill": `${(draft.extensions?.talkativeness ?? 0.5) * 100}%`,
+                      } as React.CSSProperties
+                    }
+                    onChange={(e) => ext({ talkativeness: Number(e.target.value) })}
+                  />
+                </label>
+              </div>
+            </>
+          )}
+          {tab === "创作者注释" && field("creator_notes", "创作者注释", 10)}
+        </div>
+        <SaveBar
+          dirty={dirty}
+          busy={task.busy}
+          message={message}
+          detail={[
+            ...["description", "personality", "scenario", "first_mes", "mes_example", "creator_notes"].filter(
+              changed,
+            ),
+            ...(changed("name") ? ["name"] : []),
+          ]
+            .map(
+              (k) =>
+                ({
+                  description: "描述",
+                  personality: "性格",
+                  scenario: "场景",
+                  first_mes: "第一条消息",
+                  mes_example: "对话示例",
+                  creator_notes: "创作者注释",
+                  name: "名称",
+                })[k],
+            )
+            .join(" · ")}
+          reset={() => {
+            setDraft(clone(base));
+            setMessage("");
+          }}
+          save={() =>
+            task.run(async () => {
+              const data = await host.saveCharacter(id, base, draft);
+              setBase(clone(data.data));
+              setDraft(clone(data.data));
+              setMessage("已保存");
             })
           }
         />
-      </Field>
-      {field("description", "角色描述", 7)}
-      {field("first_mes", "第一条消息", 6)}
-      <Field label="备选开场白（以单独一行 --- 分隔）">
-        <textarea
-          value={(draft.alternate_greetings || []).join("\n---\n")}
-          onChange={(e) =>
-            setDraft({ ...draft, alternate_greetings: e.target.value.split(/\n---\n/).filter(Boolean) })
-          }
-        />
-      </Field>
-      <details>
-        <summary>高级定义</summary>
-        {field("personality", "性格")}
-        {field("scenario", "场景")}
-        {field("mes_example", "对话示例")}
-        {field("system_prompt", "系统提示词")}
-        {field("post_history_instructions", "历史后指令")}
-        {field("creator_notes", "创作者注释")}
-        <div className="wb-designed-fields">
-          {[
-            ["creator", "创建者"],
-            ["character_version", "角色版本"],
-          ].map(([key, label]) => (
-            <Field key={key} label={label}>
-              <input
-                value={draft[key] || ""}
-                onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-              />
-            </Field>
-          ))}
-        </div>
-        <Field label="角色世界书">
-          <Select
-            value={draft.extensions?.world || ""}
-            onChange={(e) =>
-              setDraft({ ...draft, extensions: { ...draft.extensions, world: e.target.value } })
-            }
-          >
-            <option value="">不绑定</option>
-            {host.snapshot().resources.world.map((w) => (
-              <option key={w.id}>{w.name}</option>
+      </section>
+      <aside className="wb-ce-insight">
+        {total > 0 && (
+          <section className="wb-ce-card">
+            <header>
+              <h3>Token 预算</h3>
+              <small>
+                {total.toLocaleString()}
+                {limit ? ` / ${limit >= 1024 ? Math.round(limit / 1024) + "k" : limit}` : ""}
+              </small>
+            </header>
+            <div className="wb-ce-budget" aria-hidden="true">
+              {budget.map((x) => (
+                <i key={x.label} style={{ flexGrow: x.value, background: x.color }} />
+              ))}
+            </div>
+            <ul className="wb-ce-legend">
+              {budget.map((x) => (
+                <li key={x.label}>
+                  <i style={{ background: x.color }} />
+                  {x.label}
+                  <span>{x.value.toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <section className="wb-ce-card">
+          <header>
+            <h3>第一条消息</h3>
+            <small>{greetings.length} 条备选</small>
+          </header>
+          <ol className="wb-ce-greetings">
+            {greetings.map((text, i) => (
+              <li key={i}>
+                <button onClick={() => setTab("第一条消息")} className={i === 0 ? "is-default" : ""}>
+                  <small>
+                    #{i + 1}
+                    {i === 0 && " · 默认"}
+                  </small>
+                  <span>{plain(text) || "（空）"}</span>
+                </button>
+              </li>
             ))}
-          </Select>
-        </Field>
-        <Field label="发言积极性">
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={draft.extensions?.talkativeness ?? 0.5}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                extensions: { ...draft.extensions, talkativeness: Number(e.target.value) },
-              })
-            }
-          />
-        </Field>
-        <Field label="深度提示词">
-          <textarea
-            value={draft.extensions?.depth_prompt?.prompt || ""}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                extensions: {
-                  ...draft.extensions,
-                  depth_prompt: { ...draft.extensions?.depth_prompt, prompt: e.target.value },
-                },
-              })
-            }
-          />
-        </Field>
-        <div className="wb-form-pair">
-          <Field label="深度">
-            <input
-              type="number"
-              min={0}
-              value={draft.extensions?.depth_prompt?.depth ?? 4}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  extensions: {
-                    ...draft.extensions,
-                    depth_prompt: { ...draft.extensions?.depth_prompt, depth: Number(e.target.value) },
-                  },
-                })
-              }
-            />
-          </Field>
-          <Field label="注入角色">
-            <Select
-              value={draft.extensions?.depth_prompt?.role || "system"}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  extensions: {
-                    ...draft.extensions,
-                    depth_prompt: { ...draft.extensions?.depth_prompt, role: e.target.value },
-                  },
-                })
-              }
-            >
-              <option>system</option>
-              <option>user</option>
-              <option>assistant</option>
-            </Select>
-          </Field>
-        </div>
-      </details>
-      <SaveBar
-        dirty={dirty}
-        busy={task.busy}
-        message={message}
-        reset={() => {
-          setDraft(clone(base));
-          setMessage("");
-        }}
-        save={() =>
-          task.run(async () => {
-            const data = await host.saveCharacter(id, base, draft);
-            setBase(clone(data.data));
-            setDraft(clone(data.data));
-            setMessage("已保存");
-          })
-        }
-      />
+          </ol>
+        </section>
+      </aside>
     </fieldset>
   );
 }

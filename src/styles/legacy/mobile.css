@@ -533,8 +533,7 @@
     padding: 0 12px;
     gap: 16px;
   }
-  body.wb-mobile
-    :is(.wb-manager-grid, .wb-persona-manager, .wb-world-grid, .wb-manager-editor .wb-world-grid) {
+  body.wb-mobile :is(.wb-manager-grid, .wb-persona-manager) {
     grid-template-columns: minmax(0, 1fr) !important;
   }
   body.wb-mobile :is(.wb-manager-grid, .wb-persona-manager) {
@@ -545,9 +544,6 @@
   body.wb-mobile :is(.wb-manager-editor, .wb-persona-editor) {
     min-height: 350px;
     overflow: visible;
-  }
-  body.wb-mobile :is(.wb-parameters) {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
   body.wb-mobile :is(.wb-resource-detail, .wb-resources) {
     min-width: 0;

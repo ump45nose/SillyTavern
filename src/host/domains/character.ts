@@ -58,6 +58,19 @@ export const characterMethods = {
     this.refresh();
     return data.path;
   },
+  /** Tokens for a card field with the active tokenizer; null when the host has none. */
+  async tokenCount(this: HostAdapter, text: string): Promise<number | null> {
+    if (!text) return 0;
+    const count = ctx().getTokenCountAsync;
+    return typeof count === "function" ? Number(await count(text)) : null;
+  },
+  /** The context window the next prompt is cut to. */
+  contextLimit(this: HostAdapter): number | null {
+    const c = ctx();
+    return (
+      Number(c.mainApi === "openai" ? c.chatCompletionSettings?.openai_max_context : c.maxContext) || null
+    );
+  },
   async characterData(this: HostAdapter, id: string) {
     const i = ctx().characters.findIndex((x: Data) => x.avatar === id);
     if (i < 0) throw new Error("角色已不存在。");

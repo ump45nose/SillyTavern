@@ -134,202 +134,14 @@
     min-height: 100%;
     padding: 18px 24px;
   }
-  .wb-characters.is-management .wb-library-content {
-    width: 100%;
-    padding: 0;
-  }
   .wb-characters.is-management .wb-designed-page-head {
     margin-bottom: 8px;
-  }
-  .wb-character-bulk {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-bottom: 9px;
-    min-height: 34px;
-  }
-  .wb-character-bulk .wb-check {
-    font-size: 12px;
-    margin-right: 7px;
-  }
-  .wb-character-bulk button,
-  .wb-character-bulk .wb-import-character {
-    min-height: 31px;
-    padding: 5px 8px;
-    border: 0;
-    background: transparent;
-    font-size: 12px;
-  }
-  .wb-character-search-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .wb-character-search-row > .wb-search {
-    flex: 1;
-    min-width: 0;
-  }
-  .wb-character-search-row > .wb-select {
-    width: 124px;
-    flex: none;
-  }
-  .wb-character-search-row :is(.wb-search input, .wb-select-trigger) {
-    min-height: 34px;
-    font-size: 12px;
-    padding-top: 7px;
-    padding-bottom: 7px;
-  }
-  .wb-character-browse.has-info {
-    display: grid;
-    grid-template-columns: 180px minmax(0, 1fr);
-    gap: 16px;
-  }
-  .wb-character-browse > aside {
-    border-right: 1px solid var(--wb-line);
-    padding-right: 14px;
-    min-width: 0;
-  }
-  .wb-character-info {
-    padding: 12px 4px;
-    overflow: auto;
-    min-height: 0;
-  }
-  .wb-character-info > .wb-caption {
-    margin: 0 0 12px;
-    font-size: 11px;
-  }
-  .wb-character-info > img {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 50%;
-    margin-bottom: 10px;
-  }
-  .wb-character-info h3 {
-    margin: 0 0 5px;
-    font-size: 14px;
-    line-height: 1.6;
-    font-weight: 500;
-    overflow-wrap: anywhere;
-  }
-  .wb-character-info > small {
-    font-size: 11px;
-    line-height: 1.8;
-  }
-  .wb-character-info > p:not(.wb-caption) {
-    font-size: 12px;
-    line-height: 1.9;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    margin: 15px 0;
-  }
-  .wb-character-info > button {
-    font-size: 11px;
-    min-height: 30px;
   }
   .wb-character-rail {
     display: flex;
     flex-direction: column;
     padding: 10px;
     height: 100%;
-  }
-  .wb-character-rail .wb-character-info {
-    flex: 1;
-  }
-  .wb-character-rail .wb-character-info > .wb-caption {
-    display: none;
-  }
-  .wb-card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 10px;
-    padding: 0 0 18px;
-    align-items: start;
-  }
-  .wb-card-grid .wb-character-card {
-    position: relative;
-    min-height: 108px;
-    height: 108px;
-    padding: 12px;
-    border: 1px solid var(--wb-line);
-    border-radius: 9px;
-    background: var(--wb-surface);
-    display: block;
-  }
-  .wb-card-grid .wb-character-card.is-active {
-    background: var(--wb-selected);
-    border-color: #dcc9b6;
-  }
-  .wb-card-grid .wb-character-card.is-selected {
-    border-color: var(--wb-accent);
-  }
-  .wb-card-grid .wb-character-main {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    width: 100%;
-    padding: 2px 24px 2px 0;
-    height: 53px;
-    min-height: 0;
-    gap: 10px !important;
-    background: transparent;
-    border: 0;
-  }
-  .wb-card-grid .wb-character-main .wb-portrait,
-  .wb-card-grid .wb-character-main img {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px;
-    flex: none;
-    margin: 0;
-  }
-  .wb-card-grid .wb-character-main > span:last-of-type {
-    min-width: 0;
-    width: auto;
-    flex: 1;
-  }
-  .wb-card-grid .wb-character-main strong {
-    display: block;
-    font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .wb-card-grid .wb-character-main small {
-    display: block;
-    font-size: 11px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .wb-card-grid .wb-character-main > em {
-    left: 13px;
-    right: auto;
-    bottom: 10px;
-    font-size: 10px;
-  }
-  .wb-card-grid .wb-character-card > input {
-    right: 12px;
-    top: 12px;
-  }
-  .wb-card-grid .wb-character-card > .wb-icon {
-    width: 26px;
-    height: 26px;
-    min-height: 26px;
-    padding: 5px;
-    top: auto;
-    bottom: 8px;
-    right: 8px;
-  }
-  .wb-card-grid .wb-character-card > .wb-icon:nth-last-child(2) {
-    right: 38px;
-  }
-  .wb-card-grid
-    .wb-character-card
-    :is(button:is(:hover, :focus-visible), .wb-character-main:is(:hover, :focus-visible)) {
-    background: transparent;
-    color: var(--wb-accent);
   }
   .wb-persona-page {
     padding: 18px 24px;
@@ -455,9 +267,6 @@
     .wb-designed-fields .wb-field:has(textarea),
     .wb-designed-field.is-full {
       grid-column: 1;
-    }
-    .wb-character-search-row {
-      flex-wrap: wrap;
     }
   }
   /* Whole component migration: theme locally without flattening lists or actions. */

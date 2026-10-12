@@ -85,36 +85,12 @@
   .wb-right .wb-resource-title {
     font-size: 16px;
   }
-  .wb-right .wb-prompt-row,
-  .wb-right .wb-entry-row {
+  .wb-right .wb-prompt-row {
     border-radius: 8px;
   }
-  .wb-right :is(.wb-prompt-row, .wb-entry-row) .wb-icon:focus-visible {
+  .wb-right :is(.wb-prompt-row) .wb-icon:focus-visible {
     background: transparent;
     outline-offset: -2px;
-  }
-  .wb-character-bulk {
-    padding-bottom: 7px;
-    border-bottom: 1px solid var(--wb-line);
-  }
-  .wb-character-bulk button:not(:disabled):is(:hover, :focus-visible) {
-    color: var(--wb-accent);
-  }
-  .wb-card-grid .wb-character-card {
-    border-color: var(--wb-line);
-    transition:
-      background-color 180ms,
-      border-color 180ms;
-  }
-  .wb-card-grid .wb-character-card.is-active {
-    border-color: color-mix(in srgb, var(--wb-accent) 32%, var(--wb-line));
-  }
-  .wb-card-grid .wb-character-card.is-selected {
-    border-color: var(--wb-accent);
-  }
-  .wb-character-info > button {
-    font-size: 11px;
-    min-height: 31px;
   }
   .wb-persona-manager .wb-resource-heading {
     padding-bottom: 12px;
@@ -191,12 +167,7 @@
   .wb-ui {
     --wb-selection-line: color-mix(in srgb, var(--wb-accent) 65%, var(--wb-line));
   }
-  .wb-ui
-    :is(
-      .wb-selector.is-active,
-      .wb-card-grid .wb-character-card.is-active,
-      .wb-settings-nav > button[aria-pressed="true"]
-    ) {
+  .wb-ui :is(.wb-selector.is-active, .wb-settings-nav > button[aria-pressed="true"]) {
     border-color: var(--wb-selection-line);
   }
   .wb-ui .wb-option-state,
@@ -225,44 +196,10 @@
     min-height: 0;
     overflow: hidden;
   }
-  .wb-preset-editor.is-parameter-view .wb-prompt-collapse {
-    display: none;
-  }
   .wb-right .wb-resource-v3 .wb-preset-scroll {
     transition:
       max-height 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
       padding-top 260ms;
-  }
-  .wb-right .wb-world .wb-world-grid {
-    grid-template-rows: minmax(0, 1fr) minmax(0, 0fr);
-    transition: grid-template-rows 260ms cubic-bezier(0.22, 0.8, 0.3, 1);
-  }
-  .wb-right .wb-world.is-editor-open .wb-world-grid {
-    grid-template-rows: minmax(160px, 1fr) minmax(160px, 0.85fr);
-  }
-  .wb-right .wb-world .wb-entry-editor {
-    display: flex;
-    min-height: 0;
-    padding: 0 16px;
-    border-top: 0 solid transparent;
-    opacity: 0;
-    visibility: hidden;
-    overflow: hidden;
-    pointer-events: none;
-    transition:
-      opacity 180ms,
-      padding 260ms,
-      border-color 180ms,
-      border-top-width 260ms,
-      visibility 260ms;
-  }
-  .wb-right .wb-world.is-editor-open .wb-entry-editor {
-    padding: 12px 16px;
-    border-top-width: 1px;
-    border-color: var(--wb-line);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
   }
   /* The same paper transition in both directions, including portal menus. */
   @keyframes wb-paper-out {
@@ -286,8 +223,7 @@
   .wb-resource-menu.is-rail .wb-picker-list {
     animation: wb-value-in 220ms ease;
   }
-  .wb-prompt-editor .wb-editor-heading,
-  .wb-entry-editor .wb-editor-heading {
+  .wb-prompt-editor .wb-editor-heading {
     transition: color 180ms;
   }
 }

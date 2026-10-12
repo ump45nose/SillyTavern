@@ -82,8 +82,7 @@
     background: transparent;
     color: var(--wb-accent);
   }
-  .wb-favorites .wb-portrait,
-  .wb-character-main .wb-portrait {
+  .wb-favorites .wb-portrait {
     display: block;
     flex: none;
     width: 52px;
@@ -116,45 +115,20 @@
   .wb-favorites > button:is(:hover, :focus-visible) .wb-portrait {
     background: var(--wb-selected);
   }
-  .wb-favorites .is-active .wb-portrait,
-  .wb-character-card.is-active .wb-portrait {
+  .wb-favorites .is-active .wb-portrait {
     border-color: var(--wb-accent);
   }
-  .wb-ui .wb-favorites .is-active img,
-  .wb-ui .wb-character-card.is-active .wb-character-main img {
+  .wb-ui .wb-favorites .is-active img {
     padding: 0;
     border: 0;
     outline: 0;
   }
-  .wb-character-list .wb-character-main .wb-portrait {
-    width: 61px;
-    height: 61px;
-  }
-  .wb-character-card:is(:hover, :focus-visible) {
-    background: color-mix(in srgb, var(--wb-selected) 18%, var(--wb-surface));
-  }
-  .wb-card-grid .wb-character-main .wb-portrait {
-    width: 100%;
-    height: 175px;
-    border-radius: 10px;
-  }
-  .wb-card-grid .wb-character-main .wb-portrait img {
-    width: 100%;
-    height: 100%;
-  }
   body.wb-active .wb-composer-tools button:is(:hover, :focus-visible) {
     background: color-mix(in srgb, var(--wb-selected) 45%, var(--wb-surface));
-  }
-  .wb-world:not(.is-deep) .wb-world-grid {
-    grid-template-rows: minmax(160px, 1fr) minmax(230px, 1fr);
   }
   .wb-world .wb-editor-heading input {
     font-size: 15px;
     min-height: 32px;
-  }
-  .wb-world .wb-entry-editor .wb-tabs > button {
-    padding: 9px 3px;
-    font-size: 12px;
   }
   /* A single paper popup replaces OS-painted selects in workbench-owned forms. */
   .wb-select {
@@ -252,52 +226,16 @@
     border-color: var(--wb-accent);
     background: var(--wb-accent);
   }
-  .wb-entry-copy .wb-mode-label {
-    padding: 0;
-    min-height: 22px;
-  }
-  .wb-ui .wb-mode-label > .wb-select-trigger {
-    border: 0;
-    padding: 1px 4px;
-    min-height: 22px;
-    font-size: 11px;
-    color: var(--wb-muted);
-    gap: 5px;
-    background: transparent;
-  }
-  .wb-mode-label svg {
-    width: 11px;
-    height: 11px;
-  }
-  .wb-ui .wb-mode-label > .wb-select-trigger:is(:hover, :focus-visible) {
-    color: var(--wb-ink);
-    background: transparent;
-  }
   /* A resource row has one hover surface; nested controls never paint a second. */
-  .wb-ui
-    :is(.wb-resource-choice, .wb-row, .wb-book-row, .wb-entry-row, .wb-prompt-row, .wb-quick-row)
-    button:is(:hover, :focus-visible),
-  .wb-ui
-    :is(.wb-resource-choice, .wb-row, .wb-book-row, .wb-entry-row, .wb-prompt-row, .wb-quick-row)
-    button:active {
+  .wb-ui :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row) button:is(:hover, :focus-visible),
+  .wb-ui :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row) button:active {
     background: transparent;
   }
-  .wb-ui
-    :is(.wb-resource-choice, .wb-row, .wb-book-row, .wb-entry-row, .wb-prompt-row, .wb-quick-row):is(
-      :hover,
-      :focus-visible
-    ) {
+  .wb-ui :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row):is(:hover, :focus-visible) {
     background: color-mix(in srgb, var(--wb-selected) 28%, var(--wb-surface));
   }
   .wb-ui
-    :is(
-      .wb-resource-choice,
-      .wb-row,
-      .wb-book-row,
-      .wb-entry-row,
-      .wb-prompt-row,
-      .wb-quick-row
-    ).is-active:is(:hover, :focus-visible) {
+    :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row).is-active:is(:hover, :focus-visible) {
     background: var(--wb-selected);
   }
   /* Same quiet scroll thumb in reading, editors, popovers and leased controls. */
