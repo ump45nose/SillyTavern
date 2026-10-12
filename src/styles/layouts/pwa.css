@@ -369,6 +369,10 @@
   body.wb-mobile .wb-left :is(.wb-nav-toggle, .wb-nav-row) {
     min-height: 44px;
   }
+  /* Touch-height rows need the whole list; the drawer scrolls, so the desk's 170px cap is lifted. */
+  body.wb-mobile .wb-left .wb-fold-body.is-open > div {
+    max-height: none;
+  }
   body.wb-mobile .wb-left .wb-nav-footer {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
