@@ -1,379 +1,489 @@
-/* Legacy record-export styles (0.4.0), layered. Shrinks as screens move to wb.components. */
-@layer wb.legacy {
+/* Record export (board PanelExport): view segment, tag rules as a card of keep/drop pairs, options fold, export bar. */
+@layer wb.components {
   /* Loaded only while the record-export add-on workspace is open. */
   .wb-export-workspace {
-    display: flex;
-    flex-direction: column;
     flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    font: 12px/1.6 system-ui;
+    color: var(--wb-ink-1);
+    font-size: var(--wb-text-sm);
   }
   .wb-export-heading {
+    flex: none;
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--wb-line);
-    flex: none;
-  }
-  .wb-export-heading strong {
-    display: block;
-    font-size: 14px;
-  }
-  .wb-export-heading small {
-    display: block;
-    color: var(--wb-muted);
-    font-size: 10px;
-  }
-  .wb-export-heading .wb-icon {
-    width: 30px;
-    min-height: 30px;
-    padding: 6px;
-  }
-  .wb-export-presets {
-    display: flex;
     gap: 8px;
-    margin-top: 9px;
+    padding: 14px 16px 10px;
   }
-  .wb-export-presets > button {
-    font-size: 10px;
-    padding: 4px 8px;
-    min-height: 26px;
-    background: var(--wb-soft);
-    border: 1px solid var(--wb-line);
-    border-radius: 6px;
-  }
-  .wb-export-tree code {
-    background: transparent;
-    color: inherit;
-    border: 0;
-    padding: 0;
-  }
-  .wb-export-hint {
-    color: var(--wb-muted);
-    font-size: 10px;
-    margin: 8px 0 10px;
-    line-height: 1.6;
+  .wb-export-title {
+    font-size: 15px;
+    font-weight: 600;
   }
   .wb-export-tabs {
-    display: flex;
-    flex: none;
-    gap: 20px;
-    padding: 0 18px;
-    border-bottom: 1px solid var(--wb-line);
+    grid-template-columns: repeat(2, auto);
+    padding: 3px;
   }
-  .wb-ui .wb-export-tabs > button {
-    padding: 8px 0;
-    font-size: 12px;
-    background: transparent;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-  }
-  .wb-ui .wb-export-tabs > button[aria-pressed="true"] {
-    color: var(--wb-accent);
-    border-bottom-color: var(--wb-accent);
+  .wb-export-tabs button {
+    height: 28px;
+    min-height: 28px;
+    padding: 0 12px;
+    font-size: var(--wb-text-sm);
   }
   .wb-export-tabs small {
-    color: var(--wb-muted);
-    font-size: 10px;
+    margin-left: 2px;
+    color: var(--wb-ink-3);
+    font-size: 11px;
+    font-weight: 400;
   }
+  .wb-export-rescan,
+  .wb-export-clear,
+  .wb-export-message > header > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--wb-radius-md);
+    background: transparent;
+    box-shadow: none;
+    color: var(--wb-ink-2);
+    font: inherit;
+    font-size: var(--wb-text-sm);
+    cursor: pointer;
+  }
+  .wb-export-rescan:is(:hover, :focus-visible),
+  .wb-export-clear:is(:hover, :focus-visible),
+  .wb-export-message > header > button:is(:hover, :focus-visible) {
+    background: var(--wb-hover);
+    color: var(--wb-ink-1);
+  }
+  .wb-export-clear:disabled {
+    opacity: 0.45;
+    cursor: default;
+    background: transparent;
+  }
+
   .wb-export-scroll {
     flex: 1;
     min-height: 0;
     overflow: auto;
-    padding: 12px 16px;
-    overscroll-behavior: contain;
+    padding: 2px 16px 16px;
   }
-  .wb-export-search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid var(--wb-line);
-    border-radius: 8px;
-    padding: 7px 10px;
-    min-height: 36px;
-    margin-bottom: 10px;
-  }
-  .wb-ui .wb-export-search > input {
-    border: 0;
-    background: transparent;
-    padding: 0;
-    min-height: 24px;
-    width: 100%;
-    font-size: 12px;
-  }
-  .wb-export-tree {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .wb-export-tree > div {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    min-height: 39px;
-    padding: 6px 9px;
-    border: 1px solid transparent;
-    border-radius: 7px;
-    transition:
-      background 160ms,
-      border-color 160ms;
-  }
-  .wb-export-tree > div:is(:hover, :focus-visible) {
-    background: var(--wb-soft);
-  }
-  .wb-export-tree > div.is-selected {
-    background: var(--wb-selected);
-    border-color: color-mix(in srgb, var(--wb-accent) 30%, var(--wb-line));
-  }
-  .wb-export-tree code {
-    min-width: 0;
-    max-width: 170px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font:
-      12px/1.6 ui-monospace,
-      monospace;
-  }
-  .wb-export-tree small {
-    font-size: 10px;
-    color: var(--wb-muted);
-    white-space: nowrap;
-  }
-  .wb-export-tag-dot {
-    flex: none;
-    width: 10px;
-    height: 10px;
-    border: 1px solid #b9b0a0;
-    border-radius: 50%;
-    transition:
-      background 160ms,
-      border-color 160ms;
-  }
-  .wb-export-tag-dot.is-active {
-    background: var(--wb-accent);
-    border-color: var(--wb-accent);
-  }
-  .wb-export-tag-actions {
-    flex: none;
-    display: flex;
-    gap: 2px;
-  }
-  .wb-ui .wb-export-tag-actions > button {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 5px;
-    padding: 3px 6px;
-    min-height: 26px;
-    font-size: 10px;
-  }
-  .wb-ui .wb-export-tag-actions > button[aria-pressed="true"] {
-    background: var(--wb-surface);
-    border-color: color-mix(in srgb, var(--wb-accent) 35%, var(--wb-line));
-    color: var(--wb-accent);
-  }
-  .wb-export-tree > div > .wb-icon {
-    width: 23px;
-    min-width: 23px;
-    min-height: 26px;
-    padding: 4px;
-  }
+
+  /* ── Structure ── */
   .wb-export-tree-tools {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 10px;
-    font-size: 10px;
-    color: var(--wb-muted);
   }
-  .wb-export-tree-tools > span {
+  .wb-export-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .wb-export-presets > button {
+    height: 30px;
+    min-height: 30px;
+    padding: 0 11px;
+    border: 0;
+    border-radius: var(--wb-radius-md);
+    background: var(--wb-surface-2);
+    box-shadow: none;
+    color: var(--wb-ink-1);
+    font: inherit;
+    font-size: var(--wb-text-sm);
+    cursor: pointer;
+  }
+  .wb-export-presets > button:is(:hover, :focus-visible) {
+    background: var(--wb-hover);
+  }
+  .wb-export-tree-tools .wb-check {
+    flex: none;
+    color: var(--wb-ink-2);
+    font-size: var(--wb-text-sm);
+  }
+  .wb-export-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    margin-bottom: 10px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-3);
+  }
+  .wb-ui .wb-export-search > input {
     flex: 1;
-  }
-  .wb-export-tree-tools > button,
-  .wb-export-edit-rules {
-    font-size: 10px;
-    min-height: 24px;
-    padding: 2px 5px;
-    white-space: nowrap;
+    min-width: 0;
+    height: 34px;
+    padding: 0;
+    border: 0;
     background: transparent;
+    box-shadow: none;
+    color: var(--wb-ink-1);
+    font-size: var(--wb-text-sm);
+  }
+  .wb-export-card {
+    padding: 6px;
+    border-radius: 12px;
+    background: var(--wb-surface-2);
+  }
+  .wb-export-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .wb-export-tree > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding-right: 6px;
+    border-radius: 9px;
+  }
+  .wb-export-tree > div:hover {
+    background: color-mix(in srgb, var(--wb-surface-1) 55%, transparent);
+  }
+  .wb-export-tree code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--wb-ink-2);
+    font:
+      13px/1.4 var(--wb-font-mono),
+      monospace;
+    white-space: nowrap;
+  }
+  .wb-export-tree > div.is-retain code {
+    color: var(--wb-ink-1);
+    font-weight: 600;
+  }
+  .wb-export-tree > div.is-exclude code {
+    color: var(--wb-ink-3);
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--wb-ink-3) 60%, transparent);
+  }
+  .wb-export-tree small {
+    color: var(--wb-ink-3);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .wb-export-tag-actions {
+    flex: none;
+    display: flex;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--wb-surface-1);
+    box-shadow: var(--wb-shadow-1);
+  }
+  .wb-ui .wb-export-tag-actions > button {
+    height: 26px;
+    min-height: 26px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--wb-ink-3);
+    font-size: var(--wb-text-sm);
+    cursor: pointer;
+  }
+  .wb-ui .wb-export-tag-actions > button:is(:hover, :focus-visible) {
+    color: var(--wb-ink-1);
+  }
+  .wb-ui .wb-export-tag-actions > button[aria-pressed="true"] {
+    background: var(--wb-success-bg);
+    color: var(--wb-success);
+    font-weight: 600;
+  }
+  .wb-ui .wb-export-tag-actions > button + button[aria-pressed="true"] {
+    background: var(--wb-selected-bg);
+    color: var(--wb-accent);
+  }
+  .wb-export-tree > div > .wb-icon {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 26px;
+    padding: 0;
+    color: var(--wb-ink-3);
+  }
+  .wb-export-none {
+    margin: 10px 8px;
+    color: var(--wb-ink-3);
+    font-size: var(--wb-text-sm);
   }
   .wb-export-manual {
     display: flex;
-    gap: 8px;
-    margin: 12px 0;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    margin-top: 2px;
+    padding: 0 6px 0 12px;
+    color: var(--wb-accent);
   }
-  .wb-export-manual input {
-    min-width: 0;
+  .wb-ui .wb-export-manual input {
     flex: 1;
-    font-size: 11px;
-    padding: 7px 9px;
-    min-height: 34px;
+    min-width: 0;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--wb-ink-1);
+    font-size: var(--wb-text-sm);
+  }
+  .wb-ui .wb-export-manual input::placeholder {
+    color: var(--wb-accent);
+    opacity: 0.85;
   }
   .wb-export-manual button {
-    font-size: 11px;
-    padding: 6px 10px;
-    min-height: 34px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--wb-surface-1);
+    box-shadow: var(--wb-shadow-1);
+    color: var(--wb-ink-1);
+    font: inherit;
+    font-size: var(--wb-text-sm);
+    cursor: pointer;
   }
-  .wb-export-scroll .wb-check {
-    font-size: 11px;
+  .wb-export-manual button:disabled {
+    visibility: hidden;
   }
+  .wb-export-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 8px 2px 12px;
+    color: var(--wb-ink-3);
+    font-size: 11.5px;
+    line-height: 1.6;
+  }
+  .wb-export-hint > span {
+    flex: 1;
+    padding-top: 4px;
+  }
+  .wb-export-hint .wb-export-clear {
+    flex: none;
+    font-size: 11.5px;
+  }
+
+  /* ── Preview ── */
   .wb-export-message {
-    border: 1px solid var(--wb-line);
-    border-radius: 8px;
-    margin-bottom: 10px;
-    overflow: hidden;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: var(--wb-surface-2);
   }
   .wb-export-message > header {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 7px 10px;
-    background: var(--wb-paper);
-    border-bottom: 1px solid var(--wb-line);
+    gap: 8px;
+    padding: 6px 6px 0 14px;
   }
   .wb-export-message strong {
-    font-size: 11px;
     flex: 1;
     min-width: 0;
     overflow: hidden;
+    color: var(--wb-ink-2);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .wb-export-message > header > button {
-    padding: 3px 6px;
-    min-height: 24px;
-    font-size: 10px;
-    background: transparent;
-  }
   .wb-export-message pre {
+    max-height: 220px;
+    margin: 0;
+    padding: 4px 14px 12px;
+    overflow: auto;
+    border: 0;
+    background: transparent;
+    color: var(--wb-ink-1);
+    font: 13px/1.75 var(--wb-font-reading);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    margin: 0;
-    padding: 10px 12px;
-    font: 13px/1.8 serif;
-    color: var(--wb-ink);
-    max-height: 320px;
-    overflow: auto;
   }
-  .wb-export-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 12px;
-    padding-bottom: 12px;
-  }
-  .wb-export-options > label:not(.wb-check) {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-  }
-  .wb-export-options input[type="number"] {
-    flex: 1;
-    min-width: 0;
-    width: 64px;
-    min-height: 30px;
-    font-size: 12px;
-    padding: 5px 7px;
-  }
-  .wb-export-options > .wb-check:last-child {
-    grid-column: 1/-1;
-  }
+
   .wb-export-warnings {
-    border: 1px solid color-mix(in srgb, var(--wb-accent) 35%, var(--wb-line));
-    border-radius: 7px;
-    background: var(--wb-soft);
-    padding: 8px 10px;
-    margin: 10px 0;
+    margin: 4px 0 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--wb-warning-bg);
+    color: var(--wb-ink-2);
   }
   .wb-export-warnings > summary {
+    color: var(--wb-warning);
+    font-size: var(--wb-text-sm);
     cursor: pointer;
-    font-size: 11px;
-    color: var(--wb-accent);
   }
   .wb-export-warnings > button {
     display: block;
-    text-align: left;
-    font-size: 10px;
     width: 100%;
+    min-height: 28px;
+    padding: 4px 0;
+    border: 0;
     background: transparent;
-    padding: 5px 0;
-    line-height: 1.7;
+    box-shadow: none;
+    color: var(--wb-ink-2);
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
   }
+
+  /* ── Options ── */
+  .wb-export-workspace .wb-fold {
+    margin-top: 4px;
+  }
+  .wb-export-options {
+    display: flex;
+    flex-direction: column;
+    padding: 0 14px 6px;
+  }
+  .wb-export-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    border-top: 1px solid var(--wb-line-1);
+  }
+  .wb-export-option:first-child {
+    border-top: 0;
+  }
+  .wb-export-option > span {
+    flex: none;
+    width: 44px;
+    color: var(--wb-ink-2);
+  }
+  .wb-export-option > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+    padding: 8px 0;
+  }
+  .wb-export-option .wb-check {
+    font-size: var(--wb-text-sm);
+  }
+  .wb-export-option > .wb-export-range {
+    gap: 8px;
+  }
+  .wb-export-range i {
+    color: var(--wb-ink-3);
+    font-style: normal;
+  }
+  .wb-ui .wb-export-range input[type="number"] {
+    width: 72px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--wb-line-1);
+    border-radius: 8px;
+    background: var(--wb-surface-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .wb-export-range small {
+    margin-left: auto;
+    color: var(--wb-ink-3);
+    font-size: 11.5px;
+  }
+
+  /* ── Progress ── */
   .wb-export-progress {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 20px 16px;
-    font-size: 11px;
+    gap: 10px;
+    margin: 6px 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-2);
   }
   .wb-export-progress > progress {
     flex: 1;
-    min-width: 0;
+    height: 4px;
     accent-color: var(--wb-accent);
-    height: 5px;
   }
   .wb-export-progress > button {
+    display: inline-flex;
+    align-items: center;
     gap: 5px;
-    font-size: 11px;
-    padding: 4px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--wb-surface-1);
+    box-shadow: var(--wb-shadow-1);
+    font-size: var(--wb-text-sm);
+    cursor: pointer;
   }
+
+  /* ── Export bar ── */
   .wb-export-footer {
-    padding: 12px 16px;
-    border-top: 1px solid var(--wb-line);
-    background: var(--wb-surface);
-    margin-top: auto;
     flex: none;
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
     align-items: center;
     gap: 8px;
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--wb-line-1);
   }
   .wb-export-totals {
-    font-size: 11px;
-    color: var(--wb-muted);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    color: var(--wb-ink-2);
+    font-size: var(--wb-text-sm);
+    font-variant-numeric: tabular-nums;
   }
   .wb-export-totals small {
-    display: block;
-    font-size: 10px;
+    color: var(--wb-ink-3);
+    font-size: 11px;
   }
-  .wb-export-footer > div:last-of-type {
-    display: flex;
-    gap: 7px;
+  .wb-export-backup {
+    flex: none;
+    height: 34px;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--wb-line-2);
+    border-radius: var(--wb-radius-md);
+    background: var(--wb-surface-1);
+    box-shadow: none;
+    color: var(--wb-ink-1);
+    font: inherit;
+    font-size: var(--wb-text-sm);
+    cursor: pointer;
+  }
+  .wb-export-backup:is(:hover, :focus-visible) {
+    background: var(--wb-hover);
+  }
+  .wb-export-backup:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
   .wb-export-footer .wb-select {
-    width: 105px;
+    flex: none;
+    width: 92px;
   }
   .wb-export-footer .wb-select-trigger {
+    height: 34px;
     min-height: 34px;
-    font-size: 11px;
-    padding: 6px 9px;
   }
   .wb-export-footer .wb-primary {
+    flex: none;
+    height: 34px;
     min-height: 34px;
-    padding: 6px 11px;
-    font-size: 12px;
+    padding: 0 16px;
     gap: 6px;
-  }
-  .wb-export-footer > small {
-    grid-column: 1/-1;
-    font-size: 10px;
-    color: var(--wb-muted);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-  }
-  .wb-export-footer > small > button {
-    background: transparent;
-    font-size: 10px;
-    padding: 0;
-    min-height: 22px;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .wb-export-tree > div,
-    .wb-export-tag-dot {
-      transition: none;
-    }
   }
 }

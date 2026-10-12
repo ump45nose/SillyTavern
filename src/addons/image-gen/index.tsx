@@ -1,5 +1,15 @@
 import React, { useEffect, useState, useSyncExternalStore } from "react";
-import { ImagePlus, WandSparkles, Settings2, Square, Upload, RotateCcw, Trash2 } from "../../ui/icons";
+import {
+  ChevronRight,
+  ImagePlus,
+  RotateCcw,
+  SlidersHorizontal,
+  Sparkles,
+  Square,
+  Trash2,
+  Upload,
+  WandSparkles,
+} from "../../ui/icons";
 import References from "./References";
 import type { AddonViewProps } from "../types";
 import { Check } from "../../ui/ResourceControls";
@@ -61,7 +71,7 @@ export function Workspace({ host, runtime, editor }: AddonViewProps) {
         </strong>
         <div>
           <button aria-label="生图完整配置" onClick={() => host.open("editor")}>
-            <Settings2 size={16} />
+            <SlidersHorizontal size={16} />
           </button>
           <button disabled={task.status !== "running"} onClick={() => run("stop")}>
             <Square size={14} />
@@ -202,7 +212,7 @@ export function Workspace({ host, runtime, editor }: AddonViewProps) {
         <>
           <div className="wb-image-target">
             <label>
-              目标楼层
+              <span>目标楼层</span>
               <select
                 aria-label="生图目标楼层"
                 value={state.target?.id ?? ""}
@@ -210,7 +220,7 @@ export function Workspace({ host, runtime, editor }: AddonViewProps) {
               >
                 {messages.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.id + 1} · {m.name} · {m.text.replace(/<[^>]*>/g, "").slice(0, 30)}
+                    #{m.id + 1} · {m.name} · {m.text.replace(/<[^>]*>/g, "").slice(0, 30)}
                   </option>
                 ))}
               </select>
@@ -225,21 +235,24 @@ export function Workspace({ host, runtime, editor }: AddonViewProps) {
           </div>
           <References runtime={runtime} />
           <details className="wb-image-source">
-            <summary>场景来源 · 已排除思考块</summary>
+            <summary>
+              <ChevronRight size={14} />
+              场景来源 · 已排除思考块
+            </summary>
             <p>{state.source || "请选择目标楼层"}</p>
           </details>
           <label className="wb-image-prompt">
-            正面提示词
+            <span>正面提示词</span>
             <textarea
               aria-label="生图正面提示词"
-              rows={5}
+              rows={4}
               value={state.positive}
               onChange={(e) => run("patch", { positive: e.target.value })}
               placeholder="仅转写后可在此修改，或直接填写…"
             />
           </label>
-          <label className="wb-image-prompt">
-            负面提示词
+          <label className="wb-image-prompt is-negative">
+            <span>负面提示词</span>
             <textarea
               aria-label="生图负面提示词"
               rows={2}
@@ -247,57 +260,28 @@ export function Workspace({ host, runtime, editor }: AddonViewProps) {
               onChange={(e) => run("patch", { negative: e.target.value })}
             />
           </label>
-          <div className="wb-addon-actions">
+          <div className="wb-addon-actions wb-image-actions">
             <button disabled={task.status === "running" || !state.target} onClick={() => run("rewrite")}>
               <WandSparkles size={14} />
               仅转写
             </button>
-            <button
-              disabled={task.status === "running" || !state.target}
-              onClick={() => run("rewrite-generate")}
-            >
-              转写并生成
-            </button>
-            <button
-              className="wb-primary"
-              disabled={task.status === "running" || !state.positive}
-              onClick={() => run("generate")}
-            >
+            <button disabled={task.status === "running" || !state.positive} onClick={() => run("generate")}>
               <ImagePlus size={14} />
               生成
             </button>
-          </div>
-          <div className="wb-image-auto">
-            <Check
-              label="自动生图"
-              checked={state.auto.enabled}
-              onChange={(enabled) => run("auto", { enabled })}
-            />
-            <label>
-              每
-              <input
-                aria-label="自动生图间隔"
-                type="number"
-                min="1"
-                max="100"
-                value={state.auto.every}
-                onChange={(e) => run("auto", { every: Number(e.target.value) })}
-              />
-              轮
-            </label>
-            <select
-              aria-label="自动图片交付方式"
-              value={state.auto.delivery}
-              onChange={(e) => run("auto", { delivery: e.target.value })}
+            <span className="wb-grow" />
+            <button
+              className="wb-primary"
+              disabled={task.status === "running" || !state.target}
+              onClick={() => run("rewrite-generate")}
             >
-              <option value="insert">插入触发楼层</option>
-              <option value="pending">存入待选区</option>
-            </select>
-            <small>{state.count} 轮已计入</small>
+              <Sparkles size={14} />
+              转写并生成
+            </button>
           </div>
           <div className="wb-image-results">
             {(state.results as ImageResult[]).map((result) => (
-              <article key={result.id}>
+              <article key={result.id} className={result.attached ? "is-attached" : ""}>
                 <img
                   src={result.url}
                   alt={result.positive.slice(0, 100)}
@@ -310,16 +294,16 @@ export function Workspace({ host, runtime, editor }: AddonViewProps) {
                     e.dataTransfer.effectAllowed = "copy";
                   }}
                 />
+                <small className="wb-image-result-state">
+                  {result.attached ? "已插入" : "待选"} · {result.target.id + 1} 层
+                </small>
                 <footer>
-                  <small>
-                    {result.attached ? "已插入" : "待选"} · {result.target.id + 1} 层
-                  </small>
                   <button
                     title="插入当前目标楼层"
                     aria-label="插入图片"
                     onClick={() => run("insert", result.id, state.target)}
                   >
-                    <Upload size={14} />
+                    <Upload size={13} />
                   </button>
                   <button
                     title="重新生成并替换"
@@ -327,16 +311,57 @@ export function Workspace({ host, runtime, editor }: AddonViewProps) {
                     disabled={task.status === "running"}
                     onClick={() => run("regenerate", result.id)}
                   >
-                    <RotateCcw size={14} />
+                    <RotateCcw size={13} />
                   </button>
                   <button title="移除图片附件" aria-label="移除图片" onClick={() => run("remove", result.id)}>
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
                   </button>
                 </footer>
               </article>
             ))}
+            {task.status === "running" && (
+              <div className="wb-image-pending" role="presentation">
+                <span>{task.label || "生成中"}</span>
+                <i />
+              </div>
+            )}
           </div>
           <p className="wb-addon-hint">点击插入，或拖到正文楼层。回复改变后，结果保留在待选区。</p>
+          <div className="wb-image-auto">
+            <div>
+              <Check
+                label="自动生图"
+                checked={state.auto.enabled}
+                onChange={(enabled) => run("auto", { enabled })}
+              />
+              <span className="wb-grow" />
+              <label>
+                每
+                <input
+                  aria-label="自动生图间隔"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={state.auto.every}
+                  onChange={(e) => run("auto", { every: Number(e.target.value) })}
+                />
+                轮
+              </label>
+            </div>
+            <div>
+              <span>交付方式</span>
+              <span className="wb-grow" />
+              <small>{state.count} 轮已计入</small>
+              <select
+                aria-label="自动图片交付方式"
+                value={state.auto.delivery}
+                onChange={(e) => run("auto", { delivery: e.target.value })}
+              >
+                <option value="insert">插入触发楼层</option>
+                <option value="pending">存入待选区</option>
+              </select>
+            </div>
+          </div>
         </>
       )}
       {(error || task.error) && (

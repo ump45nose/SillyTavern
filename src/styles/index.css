@@ -20,7 +20,9 @@
 @import "./components/feedback.css";
 @import "./layouts/desk.css";
 @import "./layouts/panel.css";
+@import "./components/check.css";
 @import "./components/resource-panel.css";
 @import "./components/trace.css";
+@import "./components/addon.css";
 @import "./layouts/rp.css";
 @import "./native-bridge.css";

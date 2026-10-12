@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Download, FileOutput, RefreshCw, Search, Square, Trash2 } from "../../ui/icons";
+import { Download, Plus, RefreshCw, Search, Square, Trash2 } from "../../ui/icons";
 import type { AddonHost } from "../types";
 import type { ExportOptions, ExportRole, ExportSummary, TagStat } from "./xml-export";
 import { Check, Fold } from "../../ui/ResourceControls";
@@ -217,37 +217,47 @@ export default function ChatExport({ host }: { host: AddonHost }) {
     setDownloading(true);
     worker.current.postMessage({ type: "download", id, resultId: result.id, format, metadata });
   };
+  const snapshotAt = timestamp
+    ? new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  const roleLabels = [
+    ["user", "用户消息"],
+    ["assistant", "角色消息"],
+    ["system", "系统消息"],
+  ] as const;
   return (
     <section className="wb-export-workspace" aria-label="聊天记录分析与导出" data-wb-filter-mode={mode}>
       <header className="wb-export-heading">
-        <FileOutput size={18} />
-        <div>
-          <strong>分析与导出</strong>
-          <small>
-            {sourceCount} 层 ·{" "}
-            {timestamp
-              ? new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-              : ""}{" "}
-            快照
-          </small>
-        </div>
+        {phase === "ready" ? (
+          <nav className="wb-rail-segment wb-export-tabs" aria-label="导出工作区视图">
+            <button aria-pressed={tab === "structure"} onClick={() => setTab("structure")}>
+              XML 结构 <small>{stats.length}</small>
+            </button>
+            <button aria-pressed={tab === "preview"} onClick={() => setTab("preview")}>
+              结果预览 <small>{filtering ? "…" : (result?.matched ?? 0)} 层</small>
+            </button>
+          </nav>
+        ) : (
+          <strong className="wb-export-title">分析与导出</strong>
+        )}
         <span className="wb-grow" />
         <button
-          className="wb-icon"
+          className="wb-export-rescan"
           aria-label="重新分析聊天"
-          title="重新分析当前聊天"
+          title={`重新分析当前聊天${snapshotAt ? ` · 当前为 ${snapshotAt} 的 ${sourceCount} 层快照` : ""}`}
           onClick={() => setScanRevision((value) => value + 1)}
         >
-          <RefreshCw size={17} />
+          <RefreshCw size={14} />
+          重新分析
         </button>
       </header>
       <Notice error={error || task.error} />
       {phase === "scan" ? (
         <div className="wb-export-progress" role="status">
-          <progress value={progress.done} max={progress.total || 1} />
           <span>
             分析 {progress.done} / {progress.total} 层
           </span>
+          <progress value={progress.done} max={progress.total || 1} />
           <button
             onClick={() => {
               worker.current?.terminate();
@@ -256,7 +266,7 @@ export default function ChatExport({ host }: { host: AddonHost }) {
               setPhase("cancelled");
             }}
           >
-            <Square size={13} />
+            <Square size={12} />
             取消
           </button>
         </div>
@@ -265,44 +275,27 @@ export default function ChatExport({ host }: { host: AddonHost }) {
       ) : phase === "error" ? (
         <Empty>请重新分析后再导出。</Empty>
       ) : (
-        <>
-          <nav className="wb-export-tabs" aria-label="导出工作区视图">
-            <button aria-pressed={tab === "structure"} onClick={() => setTab("structure")}>
-              XML 结构 <small>{stats.length}</small>
-            </button>
-            <button aria-pressed={tab === "preview"} onClick={() => setTab("preview")}>
-              结果预览 <small>{filtering ? "…" : (result?.matched ?? 0)} 层</small>
-            </button>
-          </nav>
-          <div className="wb-export-scroll">
-            {tab === "structure" ? (
-              <>
-                <div className="wb-export-tree-tools">
-                  <span>对标签选择保留或排除，再次点击取消。</span>
-                  <button
-                    disabled={!retained.length && !excluded.length}
-                    onClick={() => {
-                      setRetained([]);
-                      setExcluded([]);
-                    }}
-                  >
-                    清空规则
-                  </button>
-                </div>
-                <label className="wb-export-search">
-                  <Search size={15} />
-                  <input
-                    aria-label="搜索 XML 标签"
-                    placeholder="搜索标签或层级"
-                    value={tagQuery}
-                    onChange={(e) => setTagQuery(e.target.value)}
-                  />
-                </label>
+        <div className="wb-export-scroll">
+          {tab === "structure" ? (
+            <>
+              <div className="wb-export-tree-tools">
                 <div className="wb-export-presets">
                   <button onClick={() => preset("retain")}>仅 content / after</button>
                   <button onClick={() => preset("exclude")}>排除 think</button>
                 </div>
-                <p className="wb-export-hint">{hint}</p>
+                <span className="wb-grow" />
+                <Check label="显示 HTML 标签" checked={html} onChange={setHtml} />
+              </div>
+              <label className="wb-export-search">
+                <Search size={15} />
+                <input
+                  aria-label="搜索 XML 标签"
+                  placeholder="搜索标签或层级"
+                  value={tagQuery}
+                  onChange={(e) => setTagQuery(e.target.value)}
+                />
+              </label>
+              <div className="wb-export-card">
                 <div className="wb-export-tree">
                   {visibleTags.map((stat) => {
                     const rule = retained.includes(stat.name)
@@ -315,12 +308,20 @@ export default function ChatExport({ host }: { host: AddonHost }) {
                         key={stat.path}
                         title={`${stat.path} · ${stat.floors} 层 · ${stat.characters.toLocaleString()} 字符`}
                         className={rule ? `is-selected is-${rule}` : ""}
-                        style={{ paddingLeft: 10 + Math.min(stat.depth, 5) * 10 }}
+                        style={{ paddingLeft: 12 + Math.min(stat.depth, 5) * 16 }}
                       >
-                        <span className={`wb-export-tag-dot ${rule ? "is-active" : ""}`} aria-hidden="true" />
-                        <code>{stat.name}</code>
-                        <span className="wb-grow" />
+                        <code>&lt;{stat.name}&gt;</code>
                         <small>{stat.count ? `${stat.count} 块` : "手动"}</small>
+                        <span className="wb-grow" />
+                        {custom.includes(stat.name) && !stat.count && (
+                          <button
+                            className="wb-icon"
+                            aria-label={`移除手动标签 ${stat.name}`}
+                            onClick={() => removeCustom(stat.name)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                         <div className="wb-export-tag-actions">
                           <button
                             aria-label={`保留 ${stat.path}`}
@@ -337,25 +338,16 @@ export default function ChatExport({ host }: { host: AddonHost }) {
                             排除
                           </button>
                         </div>
-                        {custom.includes(stat.name) && !stat.count && (
-                          <button
-                            className="wb-icon"
-                            aria-label={`移除手动标签 ${stat.name}`}
-                            onClick={() => removeCustom(stat.name)}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
                       </div>
                     );
                   })}
                 </div>
                 {!visibleTags.length && (
-                  <Empty>
+                  <p className="wb-export-none">
                     {stats.length
                       ? "没有匹配的 XML 标签，可显示 HTML 标签或手动添加。"
                       : "没有检测到 XML 块，可直接全文导出。"}
-                  </Empty>
+                  </p>
                 )}
                 <form
                   className="wb-export-manual"
@@ -364,67 +356,92 @@ export default function ChatExport({ host }: { host: AddonHost }) {
                     addManual();
                   }}
                 >
+                  <Plus size={14} />
                   <input
                     aria-label="手动添加 XML 标签"
                     placeholder="添加标签：content, after"
                     value={manual}
                     onChange={(e) => setManual(e.target.value)}
                   />
-                  <button type="submit">添加</button>
+                  <button type="submit" disabled={!manual.trim()}>
+                    添加
+                  </button>
                 </form>
-                <Check label="显示 HTML 标签" checked={html} onChange={setHtml} />
-              </>
-            ) : (
-              <>
-                <p className="wb-export-hint">
-                  {hint}{" "}
-                  <button className="wb-export-edit-rules" onClick={() => setTab("structure")}>
-                    编辑 XML 规则
-                  </button>
-                </p>
-                <label className="wb-export-search">
-                  <Search size={15} />
-                  <input
-                    aria-label="搜索导出内容"
-                    placeholder="在筛选后的内容中搜索"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
-                </label>
-                {result?.preview.map((message) => (
-                  <article className="wb-export-message" key={message.id}>
-                    <header>
-                      <strong>
-                        {message.id + 1} 层 · {message.name}
-                      </strong>
-                      <button onClick={() => host.jump(message.id)}>定位</button>
-                    </header>
-                    <pre>{message.text}</pre>
-                  </article>
-                ))}
-                {!filtering && !result?.matched && (
-                  <Empty>没有匹配内容。请检查标签、消息类型和楼层范围。</Empty>
-                )}
-                {filtering && <Empty>正在更新预览…</Empty>}
-                {!!result?.matched && (
-                  <p className="wb-export-hint">预览前 30 层，单层最多 12,000 字符；下载包含全部匹配内容。</p>
-                )}
-              </>
-            )}
-            {!!result?.warningCount && (
-              <details className="wb-export-warnings">
-                <summary>{result.warningCount} 处 XML 结构提示</summary>
-                {result.warnings.map((warning, index) => (
-                  <button key={index} onClick={() => host.jump(warning.id)}>
-                    {warning.id + 1} 层 · {warning.message}
-                  </button>
-                ))}
-              </details>
-            )}
-            <Fold title="范围与导出选项">
-              <div className="wb-export-options">
-                <label>
-                  起始楼层
+              </div>
+              <div className="wb-export-hint">
+                <span>{hint} 对标签选择保留或排除，再次点击取消。</span>
+                <button
+                  className="wb-export-clear"
+                  disabled={!retained.length && !excluded.length}
+                  onClick={() => {
+                    setRetained([]);
+                    setExcluded([]);
+                  }}
+                >
+                  清空规则
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="wb-export-search">
+                <Search size={15} />
+                <input
+                  aria-label="搜索导出内容"
+                  placeholder="在筛选后的内容中搜索"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                />
+              </label>
+              <div className="wb-export-hint">
+                <span>{hint}</span>
+                <button className="wb-export-clear" onClick={() => setTab("structure")}>
+                  编辑 XML 规则
+                </button>
+              </div>
+              {result?.preview.map((message) => (
+                <article className="wb-export-message" key={message.id}>
+                  <header>
+                    <strong>
+                      {message.id + 1} 层 · {message.name}
+                    </strong>
+                    <button onClick={() => host.jump(message.id)}>定位</button>
+                  </header>
+                  <pre>{message.text}</pre>
+                </article>
+              ))}
+              {!filtering && !result?.matched && (
+                <Empty>没有匹配内容。请检查标签、消息类型和楼层范围。</Empty>
+              )}
+              {filtering && <Empty>正在更新预览…</Empty>}
+              {!!result?.matched && (
+                <p className="wb-export-hint">预览前 30 层，单层最多 12,000 字符；下载包含全部匹配内容。</p>
+              )}
+            </>
+          )}
+          {!!result?.warningCount && (
+            <details className="wb-export-warnings">
+              <summary>{result.warningCount} 处 XML 结构提示</summary>
+              {result.warnings.map((warning, index) => (
+                <button key={index} onClick={() => host.jump(warning.id)}>
+                  {warning.id + 1} 层 · {warning.message}
+                </button>
+              ))}
+            </details>
+          )}
+          <Fold
+            title="范围与导出选项"
+            hint={`${from}–${to} 层 · ${
+              roleLabels
+                .filter(([role]) => roles.includes(role))
+                .map(([, label]) => label.replace("消息", ""))
+                .join(" / ") || "无消息"
+            }`}
+          >
+            <div className="wb-export-options">
+              <div className="wb-export-option">
+                <span>楼层</span>
+                <div className="wb-export-range">
                   <input
                     aria-label="导出起始楼层"
                     type="number"
@@ -433,9 +450,7 @@ export default function ChatExport({ host }: { host: AddonHost }) {
                     value={from}
                     onChange={(e) => setFrom(Math.max(1, Number(e.target.value) || 1))}
                   />
-                </label>
-                <label>
-                  结束楼层
+                  <i aria-hidden="true">—</i>
                   <input
                     aria-label="导出结束楼层"
                     type="number"
@@ -444,69 +459,70 @@ export default function ChatExport({ host }: { host: AddonHost }) {
                     value={to}
                     onChange={(e) => setTo(Math.max(1, Number(e.target.value) || 1))}
                   />
-                </label>
-                {(
-                  [
-                    ["user", "用户消息"],
-                    ["assistant", "角色消息"],
-                    ["system", "系统消息"],
-                  ] as const
-                ).map(([role, label]) => (
-                  <Check
-                    key={role}
-                    label={label}
-                    checked={roles.includes(role)}
-                    onChange={(selected) =>
-                      setRoles((value) => (selected ? [...value, role] : value.filter((r) => r !== role)))
-                    }
-                  />
-                ))}
-                <Check label="附带说话者与楼层" checked={metadata} onChange={setMetadata} />
-                <Check
-                  label="保留所选块的外层标签"
-                  checked={keepTags}
-                  disabled={mode !== "include"}
-                  onChange={setKeepTags}
-                />
+                  <small>共 {sourceCount} 层</small>
+                </div>
               </div>
-            </Fold>
-          </div>
-        </>
+              <div className="wb-export-option">
+                <span>消息</span>
+                <div>
+                  {roleLabels.map(([role, label]) => (
+                    <Check
+                      key={role}
+                      label={label}
+                      checked={roles.includes(role)}
+                      onChange={(selected) =>
+                        setRoles((value) => (selected ? [...value, role] : value.filter((r) => r !== role)))
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="wb-export-option">
+                <span>显示</span>
+                <div>
+                  <Check label="附带说话者与楼层" checked={metadata} onChange={setMetadata} />
+                  <Check
+                    label="保留所选块的外层标签"
+                    checked={keepTags}
+                    disabled={mode !== "include"}
+                    onChange={setKeepTags}
+                  />
+                </div>
+              </div>
+            </div>
+          </Fold>
+        </div>
       )}
       <footer className="wb-export-footer">
-        <div className="wb-export-totals" role="status">
+        <div className="wb-export-totals" role="status" title="仅处理导出副本，聊天原文保持不变。">
           {filtering
             ? "更新中…"
             : `${result?.matched ?? 0} 层 · ${(result?.characters ?? 0).toLocaleString()} 字符`}
           {snap.busy && <small>生成中 · 导出当前快照</small>}
         </div>
-        <div>
-          <Select
-            aria-label="记录导出格式"
-            value={format}
-            onChange={(e) => setFormat(e.target.value as "txt" | "md")}
-          >
-            <option value="txt">TXT</option>
-            <option value="md">Markdown</option>
-          </Select>
-          <button
-            className="wb-primary"
-            disabled={!result?.matched || filtering || downloading || phase !== "ready"}
-            onClick={save}
-          >
-            <Download size={15} />
-            {downloading ? "准备中…" : "导出"}
-          </button>
-        </div>
-        <small>
-          仅处理导出副本，聊天原文保持不变。
-          <button
-            disabled={!snap.chatName || snap.busy || task.busy}
-            onClick={() => task.run(() => host.exportChat(snap.chatName))}
-          >
-            原文 JSONL 备份
-          </button>
-        </small>
+        <button
+          className="wb-export-backup"
+          disabled={!snap.chatName || snap.busy || task.busy}
+          onClick={() => task.run(() => host.exportChat(snap.chatName))}
+        >
+          原文 JSONL 备份
+        </button>
+        <Select
+          aria-label="记录导出格式"
+          value={format}
+          onChange={(e) => setFormat(e.target.value as "txt" | "md")}
+        >
+          <option value="txt">TXT</option>
+          <option value="md">Markdown</option>
+        </Select>
+        <button
+          className="wb-primary"
+          disabled={!result?.matched || filtering || downloading || phase !== "ready"}
+          onClick={save}
+        >
+          <Download size={15} />
+          {downloading ? "准备中…" : "导出"}
+        </button>
       </footer>
     </section>
   );
