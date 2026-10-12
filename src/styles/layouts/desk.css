@@ -321,8 +321,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 44px;
-    padding: 4px 10px;
+    min-height: 50px;
+    padding: 6px 10px;
     cursor: pointer;
   }
   .wb-pill-pop-list input {
@@ -383,6 +383,7 @@
     font-weight: var(--wb-weight-strong);
   }
   .wb-pill-pop-copy small {
+    margin-top: 2px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -395,9 +396,18 @@
   .wb-pill-pop-foot {
     display: flex;
     align-items: center;
-    padding: 8px;
+    gap: 8px;
+    padding: 8px 8px 8px 14px;
     border-top: 1px solid var(--wb-line-1);
     background: var(--wb-surface-2);
+  }
+  .wb-pill-pop-foot small {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wb-ink-3);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .wb-pill-pop-foot button {
     display: flex;

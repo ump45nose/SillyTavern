@@ -1,6 +1,6 @@
 import { Select } from "../ui/Select";
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { Plus, Trash2, Search, X, Braces } from "../ui/icons";
+import { Plus, Trash2, Search, X, Braces, BookMarked } from "../ui/icons";
 import { SaveBar } from "../ui/ResourceControls";
 import { useTokenCounts } from "../ui/tokens";
 import { clone, activation, setActivation, validateBook } from "../host/model";
@@ -714,8 +714,33 @@ export default function World({
                   </React.Fragment>
                 );
               })}
-              {!entries.length && <Empty>{name ? "这本世界书还没有条目" : "选择世界书，开始整理条目"}</Empty>}
-              {!!entries.length && !shown.length && <Empty>没有符合条件的条目</Empty>}
+              {!entries.length &&
+                (name ? (
+                  <Empty
+                    icon={<BookMarked size={18} />}
+                    title="这本世界书还没有条目"
+                    action={{ label: "新增条目", onClick: addEntry }}
+                  >
+                    条目在关键词出现时注入上下文，常驻条目每次都会带上。
+                  </Empty>
+                ) : (
+                  <Empty>选择世界书，开始整理条目</Empty>
+                ))}
+              {!!entries.length && !shown.length && (
+                <Empty
+                  icon={<Search size={18} />}
+                  title="没有符合条件的条目"
+                  action={{
+                    label: "清除筛选",
+                    onClick: () => {
+                      setQuery("");
+                      setFilter("all");
+                    },
+                  }}
+                >
+                  换个关键词，或清除筛选。
+                </Empty>
+              )}
             </div>
           </>
         )}

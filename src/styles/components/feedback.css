@@ -60,3 +60,52 @@
     color: var(--wb-accent);
   }
 }
+
+/* Board Feedback: an empty state with an icon in a soft circle, a title, one line and one way forward. */
+@layer wb.components {
+  .wb-empty.is-rich {
+    flex-direction: column;
+    gap: 6px;
+    padding: 40px 24px;
+    color: var(--wb-ink-2);
+    text-align: center;
+  }
+  .wb-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 8px;
+    border-radius: 50%;
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-2);
+  }
+  .wb-empty.is-rich > strong {
+    color: var(--wb-ink-1);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .wb-empty.is-rich > p {
+    max-width: 280px;
+    margin: 0;
+    color: var(--wb-ink-2);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .wb-ui .wb-empty-action {
+    height: 30px;
+    min-height: 30px;
+    margin-top: 10px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--wb-radius-md);
+    background: var(--wb-surface-2);
+    box-shadow: none;
+    color: var(--wb-accent);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .wb-ui .wb-empty-action:is(:hover, :focus-visible) {
+    background: var(--wb-selected-bg);
+  }
+}

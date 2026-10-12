@@ -490,7 +490,21 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
               );
             })}
           </div>
-          {!list.length && <Empty>没有符合条件的角色</Empty>}
+          {!list.length && (
+            <Empty
+              icon={<Search size={18} />}
+              title="没有符合条件的角色"
+              action={{
+                label: "清除筛选",
+                onClick: () => {
+                  setQuery("");
+                  setFilter("all");
+                },
+              }}
+            >
+              换个名字或标签，或清除筛选。
+            </Empty>
+          )}
         </section>
       ) : (
         <div className="wb-character-detail-wrap">

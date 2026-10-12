@@ -54,8 +54,31 @@ export function IconButton({
     </button>
   );
 }
-export function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="wb-empty">{children}</div>;
+/** An empty state. Plain text by default; with an icon, title or action it becomes the board's centred card. */
+export function Empty({
+  children,
+  icon,
+  title,
+  action,
+}: {
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  title?: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  if (!icon && !title && !action) return <div className="wb-empty">{children}</div>;
+  return (
+    <div className="wb-empty is-rich">
+      {icon && <span className="wb-empty-icon">{icon}</span>}
+      {title && <strong>{title}</strong>}
+      {children && <p>{children}</p>}
+      {action && (
+        <button className="wb-empty-action" onClick={action.onClick}>
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
 }
 export function SearchBox({
   value,

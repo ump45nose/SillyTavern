@@ -1,6 +1,6 @@
 import { Select } from "../ui/Select";
 import React, { useEffect, useState } from "react";
-import { ArrowUpRight, Download, Info } from "../ui/icons";
+import { Activity, ArrowUpRight, Download, Info } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Empty } from "../ui/common";
 const groups = [
@@ -141,7 +141,9 @@ export default function Trace({ host, trace }: { host: HostAdapter; trace: any }
         )}
       </header>
       {!record ? (
-        <Empty>发送消息后，可查看请求与世界书命中。</Empty>
+        <Empty icon={<Activity size={18} />} title="还没有请求">
+          发送消息后，可查看请求与世界书命中。
+        </Empty>
       ) : (
         <>
           <div className="wb-tr-scroll">

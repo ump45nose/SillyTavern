@@ -1101,150 +1101,8 @@
     width: 28px;
     padding: 5px;
   }
-  .wb-designed-extensions > div {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 15px 3px;
-    border-bottom: 1px solid var(--wb-line);
-  }
-  .wb-designed-extensions > div > span {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .wb-designed-extensions strong {
-    font-weight: 500;
-    font-size: 14px;
-  }
-  .wb-designed-extensions small {
-    font-size: 11px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .wb-designed-extensions .wb-check {
-    font-size: 0;
-  }
-  .wb-designed-extensions button {
-    font-size: 12px;
-    border: 0;
-    background: transparent;
-  }
   .wb-designed-settings.page-extensions > .wb-search {
     margin-bottom: 12px;
-  }
-  .wb-persona-manager {
-    display: grid;
-    height: 100%;
-    grid-template-columns: 210px minmax(0, 1fr);
-    gap: 23px;
-    padding: 24px 29px;
-  }
-  .wb-persona-page {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    padding: 24px 29px;
-  }
-  .wb-persona-page > .wb-persona-manager {
-    height: auto;
-    flex: 1;
-    min-height: 0;
-    padding: 0;
-  }
-  .wb-persona-manager > aside {
-    min-height: 0;
-    overflow: auto;
-    padding-right: 17px;
-    border-right: 1px solid var(--wb-line);
-  }
-  .wb-persona-manager > aside > button {
-    display: flex;
-    width: 100%;
-    gap: 10px;
-    padding: 11px 9px;
-    text-align: left;
-    border: 0;
-    background: transparent;
-    margin-top: 3px;
-  }
-  .wb-persona-manager > aside > button[aria-pressed="true"] {
-    background: var(--wb-selected);
-  }
-  .wb-persona-manager > aside img {
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    object-fit: cover;
-  }
-  .wb-persona-manager > aside span {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-  }
-  .wb-persona-manager > aside strong {
-    font-size: 13px;
-    font-weight: 500;
-    overflow-wrap: anywhere;
-  }
-  .wb-persona-manager > aside small {
-    font-size: 11px;
-  }
-  .wb-persona-manager .wb-resource-heading {
-    padding: 0 0 18px;
-  }
-  .wb-persona-manager .wb-resource-heading {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
-  .wb-persona-manager .wb-resource-title-line {
-    flex: 1;
-    min-width: 0;
-  }
-  .wb-persona-manager .wb-persona-header-actions {
-    margin: 0;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-  .wb-persona-manager .wb-resource-title {
-    font:
-      500 20px/1.5 "Noto Serif CJK SC",
-      serif;
-  }
-  .wb-persona-manager .wb-resource-title-copy > small {
-    display: none;
-  }
-  .wb-persona-manager .wb-heading-avatar {
-    width: 42px;
-    height: 42px;
-  }
-  .wb-persona-manager .wb-persona-editor {
-    overflow: auto;
-  }
-  .wb-persona-manager .wb-resource-detail {
-    padding: 22px 0;
-    max-width: none !important;
-  }
-  .wb-persona-manager .wb-field {
-    margin: 0 0 15px;
-    gap: 7px;
-  }
-  .wb-persona-manager .wb-field input {
-    min-height: 39px;
-  }
-  .wb-persona-manager .wb-persona-editor h4 {
-    margin: 22px 0 14px;
-    font: 500 12px/1.5 system-ui;
-    color: var(--wb-muted);
-  }
-  .wb-persona-manager .wb-persona-actions button {
-    background: transparent;
-    border: 0;
   }
   .wb-group-layout {
     display: grid;
@@ -1392,20 +1250,6 @@
     --button-height: 20px;
     --button-border-radius: 50%;
   }
-  .wb-persona-manager .wb-persona-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 15px 22px;
-    align-content: start;
-  }
-  .wb-persona-manager .wb-persona-fields > .wb-form-pair,
-  .wb-persona-manager .wb-persona-fields > .wb-field:has(textarea),
-  .wb-persona-manager .wb-persona-fields > :is(h4, p, .wb-lock-grid, .wb-check, .wb-persona-actions) {
-    grid-column: 1/-1;
-  }
-  .wb-persona-manager .wb-persona-fields > .wb-field {
-    margin: 0;
-  }
   .wb-group-layout > aside {
     position: sticky;
     top: 0;
@@ -1413,35 +1257,12 @@
     max-height: calc(100vh - 240px);
     overflow: auto;
   }
-  .wb-persona-manager .wb-persona-fields > h4 {
-    display: flex;
-    gap: 9px;
-    align-items: center;
-    margin: 10px 0 0;
-  }
-  .wb-persona-manager .wb-persona-fields > h4::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--wb-line);
-  }
-  .wb-persona-manager .wb-persona-fields .wb-field:has(input[type="number"]) input {
-    max-width: 93px;
-  }
-  .wb-persona-manager .wb-persona-fields .wb-check {
-    font-size: 13px;
-  }
   .wb-designed-gallery .wb-background-preview.is-current {
     outline: 2px solid var(--wb-accent);
     outline-offset: -3px;
   }
   .wb-designed-gallery .wb-background-preview:is(:hover, :focus-visible) {
     filter: brightness(0.97);
-  }
-  .wb-designed-extensions > div .wb-icon {
-    width: 28px;
-    height: 28px;
-    padding: 5px;
   }
   .wb-ui .wb-designed-actions > button:is(:hover, :focus-visible),
   .wb-ui .wb-group-member > button:is(:hover, :focus-visible) {

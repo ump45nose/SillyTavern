@@ -27,6 +27,8 @@
 @import "./components/character-editor.css";
 @import "./components/world-workspace.css";
 @import "./components/preset-desk.css";
+@import "./components/persona-desk.css";
+@import "./components/extensions.css";
 @import "./components/addon.css";
 @import "./components/reading-settings.css";
 @import "./layouts/rp.css";

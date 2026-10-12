@@ -533,10 +533,10 @@
     padding: 0 12px;
     gap: 16px;
   }
-  body.wb-mobile :is(.wb-manager-grid, .wb-persona-manager) {
+  body.wb-mobile :is(.wb-manager-grid) {
     grid-template-columns: minmax(0, 1fr) !important;
   }
-  body.wb-mobile :is(.wb-manager-grid, .wb-persona-manager) {
+  body.wb-mobile :is(.wb-manager-grid) {
     display: flex;
     flex-direction: column;
     overflow: auto;

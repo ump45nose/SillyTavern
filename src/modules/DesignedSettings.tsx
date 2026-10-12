@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import {
+  ChevronRight,
   Copy,
   Download,
   FilePlus,
@@ -814,7 +815,13 @@ export function ReadingForm({ host }: { host: HostAdapter }) {
             </p>
             <p>钟楼又敲了五下。雾已大到看不见对面的街。</p>
             <div className={`wb-reading-user ${p.userCollapsed !== false ? "is-collapsed" : ""}`}>
-              {p.userCollapsed !== false ? "› 你的输入 · 已折叠" : "我把书拉过来，翻到夹信的那一页。"}
+              {/* The same fold the reading column draws: arrow, label, then the first words. */}
+              <span className="wb-reading-user-head">
+                <ChevronRight size={14} className={p.userCollapsed !== false ? "" : "is-open"} />
+                <span>你的输入</span>
+                {p.userCollapsed !== false && <small>我把书拉过来，翻到夹信的那一页。</small>}
+              </span>
+              {p.userCollapsed === false && <p>我把书拉过来，翻到夹信的那一页。</p>}
             </div>
           </div>
         </div>
@@ -910,15 +917,19 @@ export function InstalledExtensions({ host, open }: { host: HostAdapter; open: (
   useEffect(() => {
     refresh().catch((e) => host.report(e));
   }, [host]);
+  const shown = list.filter((x) => x.name.toLowerCase().includes(query.toLowerCase()));
+  // Board "SettingsExt": one tool row, then one quiet row per extension with its switch at the end.
   return (
     <>
       <Notice error={task.error} />
-      <div className="wb-designed-actions">
-        <button onClick={() => setInstall(true)}>
-          <Download size={15} />
-          安装扩展
-        </button>
+      <div className="wb-ext-tools">
+        <SearchBox value={query} onChange={setQuery} placeholder="搜索已安装的扩展" />
+        <small className="wb-ext-count">
+          已安装 {list.length} · 已启用 {list.filter((x) => x.enabled).length}
+        </small>
+        <span className="wb-grow" />
         <button
+          className="wb-ext-refresh"
           disabled={task.busy}
           onClick={() =>
             task.run(async () => {
@@ -927,74 +938,85 @@ export function InstalledExtensions({ host, open }: { host: HostAdapter; open: (
             })
           }
         >
-          <RefreshCw size={15} />
+          <RefreshCw size={14} />
           刷新列表
         </button>
-        {message && <small role="status">{message}</small>}
+        <button className="wb-ext-install" onClick={() => setInstall(true)}>
+          <Plus size={15} />
+          安装扩展
+        </button>
       </div>
-      <SearchBox value={query} onChange={setQuery} placeholder="搜索已安装的扩展" />
-      <div className="wb-designed-extensions">
-        {list
-          .filter((x) => x.name.toLowerCase().includes(query.toLowerCase()))
-          .map((x) => (
-            <div key={x.id}>
-              <Puzzle size={21} />
-              <span>
-                <strong>{x.name}</strong>
-                <small>
-                  {x.version || "内置"} · {x.description || x.id}
-                </small>
-              </span>
-              <Check
-                label={`启用 ${x.name}`}
-                checked={x.enabled}
-                disabled={task.busy}
-                onChange={(v) =>
-                  task.run(async () => {
-                    await host.toggleExtension(x.id, v);
-                    setList((l) => l.map((item) => (item.id === x.id ? { ...item, enabled: v } : item)));
-                    setMessage("启停设置已保存，刷新页面后完全生效。");
-                  })
-                }
-              />
-              <button disabled={!x.container} onClick={() => open(x.container)}>
-                设置
-              </button>
-              {x.id.startsWith("third-party/") && (
-                <>
-                  <button
-                    title={`更新 ${x.name}`}
-                    aria-label={`更新 ${x.name}`}
-                    disabled={task.busy}
-                    onClick={() =>
+      {message && (
+        <p className="wb-ext-status" role="status">
+          {message}
+        </p>
+      )}
+      <div className="wb-ext-list">
+        {shown.map((x) => (
+          <div key={x.id} className={`wb-ext-row ${x.enabled ? "is-on" : ""}`}>
+            <span className="wb-ext-icon" aria-hidden="true">
+              <Puzzle size={17} />
+            </span>
+            <span className="wb-ext-copy">
+              <strong>
+                {x.name}
+                <small>{x.version ? (/^v/i.test(x.version) ? x.version : "v" + x.version) : "内置"}</small>
+              </strong>
+              <small>{x.description || x.id}</small>
+            </span>
+            {x.id.startsWith("third-party/") && (
+              <>
+                <button
+                  className="wb-ext-icon-button"
+                  title={`更新 ${x.name}`}
+                  aria-label={`更新 ${x.name}`}
+                  disabled={task.busy}
+                  onClick={() =>
+                    task.run(async () => {
+                      await host.extensionAction(x.id, "update");
+                      setMessage("更新完成，刷新页面后生效。");
+                      await refresh();
+                    })
+                  }
+                >
+                  <RefreshCw size={15} />
+                </button>
+                <button
+                  className="wb-ext-icon-button is-danger"
+                  title={`卸载 ${x.name}`}
+                  aria-label={`卸载 ${x.name}`}
+                  disabled={task.busy}
+                  onClick={() => {
+                    if (confirm(`卸载 ${x.name}？`))
                       task.run(async () => {
-                        await host.extensionAction(x.id, "update");
-                        setMessage("更新完成，刷新页面后生效。");
-                        await refresh();
-                      })
-                    }
-                  >
-                    <RefreshCw size={15} />
-                  </button>
-                  <button
-                    title={`卸载 ${x.name}`}
-                    aria-label={`卸载 ${x.name}`}
-                    disabled={task.busy}
-                    onClick={() => {
-                      if (confirm(`卸载 ${x.name}？`))
-                        task.run(async () => {
-                          await host.extensionAction(x.id, "delete");
-                          setList((l) => l.filter((item) => item.id !== x.id));
-                          setMessage("扩展已卸载，刷新页面后生效。");
-                        });
-                    }}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </>
-              )}
-            </div>
-          ))}
+                        await host.extensionAction(x.id, "delete");
+                        setList((l) => l.filter((item) => item.id !== x.id));
+                        setMessage("扩展已卸载，刷新页面后生效。");
+                      });
+                  }}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </>
+            )}
+            <button className="wb-ext-open" disabled={!x.container} onClick={() => open(x.container)}>
+              设置
+            </button>
+            <Switch
+              label={`启用 ${x.name}`}
+              checked={x.enabled}
+              disabled={task.busy}
+              onChange={(v) =>
+                task.run(async () => {
+                  await host.toggleExtension(x.id, v);
+                  setList((l) => l.map((item) => (item.id === x.id ? { ...item, enabled: v } : item)));
+                  setMessage("启停设置已保存，刷新页面后完全生效。");
+                })
+              }
+            />
+          </div>
+        ))}
+        {!shown.length && <p className="wb-ext-empty">{query ? "没有符合的扩展" : "还没有扩展"}</p>}
       </div>
       {install && (
         <Dialog title="安装扩展" onClose={() => setInstall(false)}>

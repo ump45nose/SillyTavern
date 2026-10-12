@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Plus, Search, Upload, SquareArrowOutUpRight, X } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
+import type { Item } from "../host/types";
 import { Dialog, Empty, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";
 import World from "./World";
@@ -65,6 +66,17 @@ export default function ResourceManager({
             .join("；"),
         );
     });
+  // The row's second line says what the item is, not that it is open: the highlight already says that.
+  const rowDetail = (item: Item) =>
+    kind === "connection"
+      ? [...new Set([item.detail, item.data?.model].filter(Boolean))].join(" · ")
+      : kind === "world"
+        ? item.active
+          ? "已启用"
+          : "未启用"
+        : item.id === snap.current.preset
+          ? "运行中"
+          : item.detail || label;
   const create = () => {
     if (kind === "connection") {
       task.run(() => host.click("#create_connection_profile"));
@@ -197,7 +209,7 @@ export default function ResourceManager({
                     onClick={() => browse(item.id)}
                   >
                     <strong>{item.name}</strong>
-                    <small>{id === item.id ? "编辑中" : item.detail || "世界书"}</small>
+                    <small>{rowDetail(item)}</small>
                   </button>
                 </div>
               ))}

@@ -143,86 +143,6 @@
     padding: 10px;
     height: 100%;
   }
-  .wb-persona-page {
-    padding: 18px 24px;
-  }
-  .wb-persona-page > .wb-designed-page-head {
-    margin-bottom: 12px;
-  }
-  .wb-persona-manager {
-    grid-template-columns: 180px minmax(0, 1fr);
-    gap: 20px;
-  }
-  .wb-persona-manager > aside {
-    padding-right: 12px;
-  }
-  .wb-persona-manager > aside > button {
-    padding: 8px;
-    gap: 7px;
-  }
-  .wb-persona-manager > aside > button img {
-    width: 32px;
-    height: 32px;
-    flex: none;
-  }
-  .wb-persona-manager > aside > button .wb-choice-state {
-    width: 8px;
-    height: 8px;
-    border: 0;
-    background: transparent;
-    flex: none;
-  }
-  .wb-persona-manager > aside > button .wb-choice-state.is-current {
-    background: var(--wb-accent);
-  }
-  .wb-persona-manager > aside > button strong {
-    font-size: 12px;
-  }
-  .wb-persona-manager .wb-persona-fields {
-    display: block;
-    padding-top: 14px;
-  }
-  .wb-persona-short-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-  .wb-persona-manager .wb-persona-short-fields {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .wb-persona-top-actions {
-    display: flex;
-    flex-wrap: wrap;
-    flex: none;
-    padding: 8px 16px !important;
-    margin: 0 !important;
-    border: 0 !important;
-    border-bottom: 1px solid var(--wb-line) !important;
-  }
-  .wb-persona-more {
-    position: relative;
-  }
-  .wb-persona-more summary {
-    cursor: pointer;
-    font-size: 11px;
-    padding: 7px 8px;
-  }
-  .wb-persona-more > div {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    z-index: 6;
-    min-width: 145px;
-    padding: 7px;
-    border: 1px solid var(--wb-line);
-    border-radius: 8px;
-    background: var(--wb-surface);
-    box-shadow: 0 4px 14px #34291e10;
-  }
-  .wb-persona-more > div > button {
-    width: 100%;
-    justify-content: flex-start;
-  }
   .wb-group-layout {
     grid-template-columns: 180px minmax(0, 1fr);
     gap: 20px;
@@ -240,8 +160,7 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px 18px;
   }
-  .wb-designed-fields .wb-field :is(input:not([type="range"]):not([type="checkbox"]), textarea),
-  .wb-persona-manager .wb-field input {
+  .wb-designed-fields .wb-field :is(input:not([type="range"]):not([type="checkbox"]), textarea) {
     min-height: 35px;
     padding: 7px 9px;
   }
@@ -254,14 +173,12 @@
     container-name: settings-content;
   }
   @container settings-content (max-width:950px) {
-    .wb-designed-fields,
-    .wb-persona-manager .wb-persona-short-fields {
+    .wb-designed-fields {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
   @container settings-content (max-width:570px) {
-    .wb-designed-fields,
-    .wb-persona-manager .wb-persona-short-fields {
+    .wb-designed-fields {
       grid-template-columns: 1fr;
     }
     .wb-designed-fields .wb-field:has(textarea),
@@ -292,18 +209,6 @@
   /* Native background nodes keep directory/file/video ownership and lazy loading. */
   .wb-component-settings.page-background > .wb-designed-page-head {
     margin-bottom: 8px;
-  }
-  .wb-persona-manager .wb-persona-short-fields > .wb-field {
-    margin-bottom: 14px;
-  }
-  .wb-persona-manager .wb-resource-detail {
-    overflow: visible;
-  }
-  .wb-persona-manager .wb-persona-editor {
-    overflow: visible;
-  }
-  .wb-persona-manager .wb-lock-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .wb-component-settings .wb-native-bg-directory {
     grid-column: 1;

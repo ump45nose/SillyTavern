@@ -2822,11 +2822,17 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes {
   padding: 8px 0 18px !important;
   border-bottom: 0 !important;
 }
+/* The card sits on the text column (the turn's 32px gutters), not on the turn's outer edge. */
 body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"] {
-  margin: 6px auto 24px !important;
+  max-width: calc(var(--wb-reading-size, 17px) * 44 - 64px);
+  margin: 14px auto 6px !important;
   padding: 10px 18px 16px !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   background: var(--wb-surface-2) !important;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"] .mes_block {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 /* Folding changes only the bottom edge, so the heading never moves. */
 body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"].wb-user-collapsed {
@@ -3275,6 +3281,10 @@ body.wb-rp.reduced-motion #form_sheld {
    toolbar on wide screens. They stay connected for the extension to manage. */
 body.wb-active :is(#expression-wrapper, #visual-novel-wrapper) {
   pointer-events: none !important;
+}
+/* Its resize grip would otherwise float over the desk's left column. */
+body.wb-active #expression-holder {
+  resize: none !important;
 }
 
 /* ── from addon-shell.css ── */
@@ -4013,4 +4023,15 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #send_textarea {
 /* PWA RP: the reply chips float over the stage foot, so the chat keeps room for them. */
 body.wb-mobile-rp:not(.wb-mobile-editor):has(.wb-mobile-replies) #chat {
   padding-bottom: 48px !important;
+}
+
+/* Board "Main": the send button keeps its place at the end of the tool row. SillyTavern hides it
+   while no model is connected; on the desk it stays as a quiet, inert circle instead of vanishing. */
+body.wb-active:not(.wb-mobile):not(.wb-rp):not(.wb-image-input-mode) #send_but.displayNone {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
 }

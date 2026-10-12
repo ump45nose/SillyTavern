@@ -118,11 +118,36 @@
   }
   .wb-reading-user {
     margin-top: 14px;
-    padding: 10px 14px;
-    border-radius: 10px;
+    padding: 9px 14px;
+    border-radius: 12px;
     background: var(--wb-surface-2);
     color: var(--wb-ink-2);
     font: 13px/1.7 var(--wb-font-ui);
+  }
+  .wb-reading-user-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 12px;
+  }
+  .wb-reading-user-head svg {
+    flex: none;
+    color: var(--wb-ink-3);
+  }
+  .wb-reading-user-head svg.is-open {
+    transform: rotate(90deg);
+  }
+  .wb-reading-user-head small {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wb-ink-3);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wb-reading-settings .wb-reading-user p {
+    margin: 4px 0 0 22px;
   }
 
   .wb-reading-native .wb-native-settings-slot {

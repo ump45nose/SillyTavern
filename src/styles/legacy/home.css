@@ -41,17 +41,17 @@
     pointer-events: auto;
   }
   .wb-input-grip span {
-    width: 43px;
-    height: 4px;
-    border-radius: 4px;
-    background: #d0c8bb;
+    width: 36px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--wb-line-2);
     transition:
       width 120ms,
       background 120ms;
   }
   .wb-input-grip:hover span,
   .wb-input-grip:focus-visible span {
-    width: 52px;
+    width: 44px;
     background: var(--wb-accent);
   }
   body.wb-resizing * {

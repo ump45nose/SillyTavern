@@ -92,19 +92,6 @@
     background: transparent;
     outline-offset: -2px;
   }
-  .wb-persona-manager .wb-resource-heading {
-    padding-bottom: 12px;
-  }
-  .wb-persona-manager .wb-persona-top-actions {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-  .wb-persona-manager .wb-persona-top-actions button {
-    gap: 6px;
-  }
-  .wb-persona-manager .wb-field > span {
-    font-size: 11px;
-  }
   body.wb-active .wb-ui input[type="range"] {
     height: 22px !important;
     margin: 0 !important;

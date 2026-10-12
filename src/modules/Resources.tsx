@@ -118,7 +118,7 @@ export default function Resources({
   return (
     <div className={`wb-resources wb-resource-v3 kind-${kind} ${deep ? "is-deep" : ""}`}>
       <header className="wb-panel-heading">
-        {kind === "persona" && current && (
+        {kind === "persona" && current && !deep && (
           <button
             className="wb-panel-avatar"
             aria-label="更换头像"
@@ -345,7 +345,8 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
       key: "persona:" + id,
     });
   const { draft, change } = edit,
-    options = host.personaOptions(id);
+    options = host.personaOptions(id),
+    tokens = useTokenCounts(host, deep ? [["description", draft.description ?? ""]] : []);
   const action = (selector: string) =>
     task.run(async () => {
       if (id !== snap.current.persona) await host.select("persona", id);
@@ -406,7 +407,6 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
       ))}
     </Select>
   );
-  const positionField = <Field label="注入位置">{positionSelect}</Field>;
   if (!deep) {
     // Board "PanelPersona": who uses this persona first (applies at once), then what it says, then the rest.
     const locks = [
@@ -574,96 +574,131 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
       </fieldset>
     );
   }
+  // Board "WsPersona": the face and who uses it on the left, what it says on the right.
+  const image = snap.resources.persona.find((x) => x.id === id)?.image;
+  const locks = [
+    ["chat", "锁定当前对话"],
+    ["character", "锁定当前角色"],
+    ["default", "默认身份"],
+  ] as const;
   return (
-    <fieldset className="wb-persona-editor" disabled={task.busy}>
+    <fieldset className="wb-persona-editor wb-persona-desk" disabled={task.busy}>
       <Notice error={task.error} />
-      <div className="wb-persona-actions wb-persona-top-actions">
-        <button disabled={edit.dirty} onClick={exportPersona}>
-          <Download size={15} />
-          导出
-        </button>
-        <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
-          <RefreshCw size={15} />
-          同步名称
-        </button>
-        <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
-          <ChartNoAxesColumn size={15} />
-          统计
-        </button>
-        <button disabled={edit.dirty} onClick={() => action("#persona_delete_button")}>
-          <Trash2 size={15} />
-          删除
-        </button>
-        <details className="wb-persona-more">
-          <summary>更多</summary>
-          <div>
+      <div className="wb-persona-desk-grid">
+        <div className="wb-persona-side">
+          <section className="wb-persona-portrait" aria-label="头像">
+            <span className="wb-persona-face">
+              {image ? <img src={image} alt="" /> : (draft.name || "?").slice(0, 1)}
+            </span>
+            <button onClick={() => action("#persona_set_image_button")}>更换头像</button>
+          </section>
+          <section className="wb-persona-card" aria-label="使用范围">
+            <p className="wb-persona-card-title">
+              {options.current ? "使用范围 · 立即生效" : "使用范围 · 切换到此身份后可调整"}
+            </p>
+            {locks.map(([key, label]) => (
+              <div key={key} className="wb-persona-card-row">
+                <span>{label}</span>
+                <Switch
+                  label={label}
+                  checked={!!options.locks[key]}
+                  disabled={!options.current || edit.dirty}
+                  onChange={(v) => task.run(() => host.personaLock(key, v))}
+                />
+              </div>
+            ))}
+          </section>
+          <section className="wb-persona-card" aria-label="注入与绑定">
+            <p className="wb-persona-card-title">注入与绑定</p>
+            <label className="wb-persona-card-row">
+              <span>注入位置</span>
+              {React.cloneElement(positionSelect, { "aria-label": "注入位置" })}
+            </label>
+            {draft.position === 4 && (
+              <>
+                <label className="wb-persona-card-row">
+                  <span>深度</span>
+                  <input
+                    aria-label="深度"
+                    type="number"
+                    min={0}
+                    max={9999}
+                    value={draft.depth ?? 2}
+                    onChange={(e) => change("depth", Number(e.target.value))}
+                  />
+                </label>
+                <label className="wb-persona-card-row">
+                  <span>注入角色</span>
+                  {roleSelect}
+                </label>
+              </>
+            )}
+            <label className="wb-persona-card-row">
+              <span>绑定世界书</span>
+              <Select
+                aria-label="绑定世界书"
+                value={draft.lorebook || ""}
+                onChange={(e) => change("lorebook", e.target.value)}
+              >
+                <option value="">不绑定</option>
+                {snap.resources.world.map((w) => (
+                  <option key={w.id}>{w.name}</option>
+                ))}
+              </Select>
+            </label>
+          </section>
+          <div className="wb-persona-tools">
+            <button disabled={edit.dirty} onClick={exportPersona}>
+              <Download size={14} />
+              导出
+            </button>
+            <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
+              <RefreshCw size={14} />
+              同步名称
+            </button>
+            <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
+              <ChartNoAxesColumn size={14} />
+              统计
+            </button>
             <button onClick={() => action("#personas_backup")}>
-              <Download size={15} />
+              <Download size={14} />
               备份全部身份
             </button>
-            <button onClick={() => action("#personas_restore")}>
-              <Upload size={15} />
-              恢复备份
+            <button
+              className="is-danger"
+              disabled={edit.dirty}
+              onClick={() => action("#persona_delete_button")}
+            >
+              <Trash2 size={14} />
+              删除
             </button>
           </div>
-        </details>
-      </div>
-      <div className="wb-resource-detail wb-persona-fields">
-        <div className="wb-persona-short-fields">
-          <Field label="用户名称">
-            <input value={draft.name ?? ""} onChange={(e) => change("name", e.target.value)} />
-          </Field>
-          {positionField}
-          <Field label="深度">
-            <input
-              type="number"
-              min={0}
-              max={9999}
-              value={draft.depth ?? 2}
-              onChange={(e) => change("depth", Number(e.target.value))}
-            />
-          </Field>
-          <Field label="注入角色">{roleSelect}</Field>
         </div>
-        <Field label="用户描述">
+        <div className="wb-persona-main">
+          <label className="wb-persona-line">
+            <span>用户名称</span>
+            <input value={draft.name ?? ""} onChange={(e) => change("name", e.target.value)} />
+          </label>
+          <label className="wb-persona-line">
+            <span>说明标题</span>
+            <input
+              placeholder="列表中名称下方的一行"
+              value={draft.title ?? ""}
+              onChange={(e) => change("title", e.target.value)}
+            />
+          </label>
           <textarea
-            rows={5}
+            className="wb-persona-desc"
+            aria-label="用户描述"
+            placeholder="写下你在故事里是谁：身份、性格、说话方式……"
             value={draft.description ?? ""}
             onChange={(e) => change("description", e.target.value)}
           />
-        </Field>
-        <Field label="绑定世界书">
-          <Select value={draft.lorebook || ""} onChange={(e) => change("lorebook", e.target.value)}>
-            <option value="">不绑定</option>
-            {snap.resources.world.map((w) => (
-              <option key={w.id}>{w.name}</option>
-            ))}
-          </Select>
-        </Field>
-        <h4>默认与锁定</h4>
-        {!options.current && <p className="wb-native-caption">切换到此身份后可调整锁定关系。</p>}
-        <div className="wb-lock-grid">
-          {(
-            [
-              ["default", "默认身份"],
-              ["character", "锁定当前角色"],
-              ["chat", "锁定当前对话"],
-            ] as const
-          ).map(([key, label]) => (
-            <Check
-              key={key}
-              label={label}
-              disabled={!options.current || edit.dirty}
-              checked={!!options.locks[key]}
-              onChange={(v) => task.run(() => host.personaLock(key, v))}
-            />
-          ))}
+          <small className="wb-persona-count">
+            {(draft.description ?? "").length} 字
+            {tokens.description !== undefined && ` · ${tokens.description} tokens`}
+          </small>
         </div>
-        <Fold title="说明标题">
-          <Field label="说明标题">
-            <input value={draft.title ?? ""} onChange={(e) => change("title", e.target.value)} />
-          </Field>
-        </Fold>
       </div>
       {save}
     </fieldset>

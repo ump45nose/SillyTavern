@@ -18,14 +18,6 @@ export default function ComponentSettings({
   const installed = page === "extensions" && group === "已安装";
   return (
     <section className={`wb-component-settings page-${page}`} aria-label={group}>
-      {installed && (
-        <header className="wb-designed-page-head">
-          <div>
-            <h2>{group}</h2>
-            <small>内置与第三方扩展</small>
-          </div>
-        </header>
-      )}
       {page === "settings" && group === "外观与阅读" && <ReadingForm host={host} />}
       {installed ? (
         <InstalledExtensions

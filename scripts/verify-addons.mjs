@@ -57,7 +57,7 @@ try {
   await page.getByRole('region', { name: '工作台附加功能' }).waitFor();
   assert.equal(hasExportRequests(requests), false);
   await page.screenshot({ path: directory + '/addon-settings-1496.png' });
-  await page.getByRole('checkbox', { name: '启用记录导出', exact: true }).uncheck();
+  { const toggle = page.getByRole('switch', { name: '启用记录导出', exact: true }); if ((await toggle.getAttribute('aria-checked')) === 'true') await toggle.click(); assert.equal(await toggle.getAttribute('aria-checked'), 'false'); }
   await page.evaluate(() => workbench.host.persistSettings()); await button('返回工作台').click(); await settle();
   assert.equal(await page.locator('[data-wb-tool="wb:export"]').count(), 0);
   await toggleRight(page); await settle();

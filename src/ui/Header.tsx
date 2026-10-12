@@ -13,7 +13,7 @@ import {
   X,
 } from "./icons";
 import { createPortal } from "react-dom";
-import type { HostSnapshot, Panel, Resource } from "../host/types";
+import type { HostSnapshot, Item, Panel, Resource } from "../host/types";
 import { Empty, IconButton } from "./common";
 import { usePresence } from "./Motion";
 export const resourceLabels = { connection: "连接", preset: "预设", world: "世界书", persona: "用户设定" };
@@ -26,6 +26,18 @@ const manageLabels: Record<Resource, string> = {
   world: "打开世界书",
   persona: "打开用户设定",
 };
+/** What a choice in the popover changes, said once in its footer. */
+const footHints: Partial<Record<Resource, string>> = {
+  connection: "切换后立即用于下一次生成",
+  world: "勾选即生效 · 全局",
+};
+/** The second line of a popover row: the profile's backend and model, the book's binding. */
+function rowDetail(kind: Resource, item: Item, bound: string) {
+  if (kind === "connection")
+    return [item.data?.api, item.data?.model].filter(Boolean).join(" · ") || item.detail;
+  if (kind === "world") return item.id === bound ? "角色绑定" : "";
+  return item.detail;
+}
 export function Header({
   snap,
   panel,
@@ -150,7 +162,12 @@ function ResourcePills({
   return (
     <nav className="wb-top-pills" aria-label="当前资源">
       {(Object.keys(resourceLabels) as Resource[]).map((kind) => {
-        const items = snap.resources[kind],
+        const bound = String(snap.character?.data?.data?.extensions?.world ?? "");
+        // The character's own book leads the list, as it does in the world panel.
+        const items =
+            kind === "world" && bound
+              ? [...snap.resources.world].sort((a, b) => Number(b.id === bound) - Number(a.id === bound))
+              : snap.resources[kind],
           selected = items.find((x) => x.id === snap.current[kind]);
         const Icon = pillIcons[kind];
         const value = selected?.name || (kind === "connection" ? model || "未连接" : "未选择");
@@ -197,6 +214,7 @@ function ResourcePills({
                 <ul className="wb-pill-pop-list">
                   {items.map((item) => {
                     const on = kind === "world" ? !!item.active : item.id === snap.current[kind];
+                    const detail = rowDetail(kind, item, bound);
                     return (
                       <li key={item.id} className={on ? "is-on" : ""}>
                         <label>
@@ -216,7 +234,7 @@ function ResourcePills({
                           </span>
                           <span className="wb-pill-pop-copy">
                             <strong>{item.name}</strong>
-                            {item.detail && <small>{item.detail}</small>}
+                            {detail && <small>{detail}</small>}
                           </span>
                         </label>
                       </li>
@@ -225,6 +243,7 @@ function ResourcePills({
                 </ul>
                 {!items.length && <Empty>暂无配置</Empty>}
                 <div className="wb-pill-pop-foot">
+                  {footHints[kind] && <small>{footHints[kind]}</small>}
                   <button onClick={() => goPanel(kind)}>
                     {manageLabels[kind]}
                     <ChevronRight size={14} />

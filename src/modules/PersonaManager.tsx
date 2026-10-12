@@ -1,7 +1,7 @@
-import { Download, Upload } from "../ui/icons";
+import { Download, Plus, Upload } from "../ui/icons";
 import React, { useState } from "react";
 import type { HostAdapter } from "../host/adapter";
-import { Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";
+import { Empty, Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";
 import { Check } from "../ui/ResourceControls";
 export default function PersonaManager({
@@ -61,51 +61,80 @@ export default function PersonaManager({
       </div>
     );
   }
+  const items = snap.resources.persona.filter((x) => x.name.toLowerCase().includes(query.toLowerCase()));
+  // Board "WsPersona": the same list column as the other resource pages, then the persona's own desk.
   return (
     <div className="wb-persona-page">
-      <header className="wb-designed-page-head">
-        <div>
-          <h2>用户设定</h2>
-          <small>身份、描述与注入关系</small>
-        </div>
-      </header>
-      <div className="wb-persona-manager">
-        <aside>
+      <div className="wb-manager-grid wb-persona-manager">
+        <aside className="wb-manager-resources">
+          <header className="wb-manager-head">
+            <h3>用户设定</h3>
+            <span className="wb-grow" />
+            <button
+              className="wb-manager-icon"
+              aria-label="恢复身份备份"
+              title="恢复身份备份"
+              disabled={snap.busy}
+              onClick={() => host.click("#personas_restore")}
+            >
+              <Upload size={15} />
+            </button>
+            <button
+              className="wb-manager-icon is-raised"
+              aria-label="新建用户设定"
+              title="新建用户设定"
+              disabled={snap.busy}
+              onClick={() => host.click("#create_dummy_persona")}
+            >
+              <Plus size={15} />
+            </button>
+          </header>
           <SearchBox value={query} onChange={setQuery} placeholder="搜索用户设定" />
-          {snap.resources.persona
-            .filter((x) => x.name.toLowerCase().includes(query.toLowerCase()))
-            .map((x) => (
-              <button
-                key={x.id}
-                aria-pressed={id === x.id}
-                onClick={() => {
-                  setId(x.id);
-                  onPosition(x.id);
-                }}
-              >
-                <i
-                  className={`wb-choice-state ${snap.current.persona === x.id ? "is-current" : ""}`}
-                  aria-label={snap.current.persona === x.id ? "当前身份" : undefined}
-                />
-                <img src={x.image} alt="" />
-                <span>
-                  <strong>{x.name}</strong>
-                  <small>{snap.current.persona === x.id ? "当前身份" : x.detail || "用户设定"}</small>
-                </span>
-              </button>
-            ))}
+          <div className="wb-manager-list">
+            {items.map((x) => {
+              const current = snap.current.persona === x.id;
+              return (
+                <div
+                  key={x.id}
+                  className={`wb-manager-row wb-persona-row ${id === x.id ? "is-editing" : ""}`}
+                >
+                  <button
+                    aria-pressed={id === x.id}
+                    onClick={() => {
+                      setId(x.id);
+                      onPosition(x.id);
+                    }}
+                  >
+                    <span className="wb-persona-row-avatar">
+                      {x.image ? <img src={x.image} alt="" /> : x.name.slice(0, 1)}
+                    </span>
+                    <span className="wb-persona-row-copy">
+                      <strong>
+                        {x.name}
+                        {current && <i className="wb-choice-state is-current" aria-label="当前身份" />}
+                      </strong>
+                      <small>{current ? "当前身份" : x.detail || "用户设定"}</small>
+                    </span>
+                  </button>
+                </div>
+              );
+            })}
+            {!items.length && <Empty>{query ? "没有符合的用户设定" : "还没有用户设定"}</Empty>}
+          </div>
         </aside>
-        <Resources
-          key={id}
-          host={host}
-          kind="persona"
-          initial={id}
-          deep
-          onSelection={(next) => {
-            setId(next);
-            onPosition(next);
-          }}
-        />
+        <div className="wb-manager-editor">
+          <Resources
+            key={id}
+            host={host}
+            kind="persona"
+            initial={id}
+            deep
+            onSelection={(next) => {
+              setId(next);
+              onPosition(next);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

@@ -138,85 +138,12 @@
     height: 15px;
     flex: none;
   }
-  .wb-addon-settings {
-    padding: 24px 28px;
-    max-width: 1600px;
-    margin: 0 auto;
-    width: 100%;
-  }
-  .wb-addon-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-  }
-  .wb-addon-card {
-    background: var(--wb-surface);
-    border: 1px solid var(--wb-line);
-    border-radius: 12px;
-    padding: 18px;
-    transition:
-      border-color 160ms,
-      background 160ms;
-  }
-  .wb-addon-card.is-enabled {
-    border-color: color-mix(in srgb, var(--wb-accent) 30%, var(--wb-line));
-  }
-  .wb-addon-card > header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .wb-addon-card strong {
-    flex: 1;
-    font: 17px/1.5 serif;
-  }
-  .wb-addon-card strong > small {
-    display: block;
-    color: var(--wb-muted);
-    font: 10px/1.6 system-ui;
-  }
-  .wb-addon-card .wb-check {
-    font-size: 11px;
-    gap: 6px;
-    white-space: nowrap;
-  }
-  .wb-addon-card > p {
-    margin: 14px 0;
-    color: var(--wb-muted);
-    font-size: 12px;
-    line-height: 1.8;
-  }
-  .wb-addon-card > footer {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 10px;
-    color: var(--wb-muted);
-    padding-top: 12px;
-    border-top: 1px solid var(--wb-line);
-  }
-  .wb-addon-card.is-enabled > footer > span {
-    color: var(--wb-accent);
-  }
   .wb-addon-message {
     padding: 20px;
   }
   .wb-addon-message > button {
     font-size: 12px;
     gap: 6px;
-  }
-  @media (max-width: 1100px) {
-    .wb-addon-settings {
-      padding: 18px;
-    }
-    .wb-addon-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .wb-addon-card {
-      transition: none;
-    }
   }
   .wb-startup-table code {
     background: transparent;
