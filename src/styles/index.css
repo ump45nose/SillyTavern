@@ -22,4 +22,5 @@
 @import "./layouts/panel.css";
 @import "./components/resource-panel.css";
 @import "./layouts/rp.css";
+@import "./layouts/pwa.css";
 @import "./native-bridge.css";

@@ -3294,57 +3294,135 @@ body.wb-active.wb-image-input-mode #leftSendForm {
   }
 }
 
-/* ── from mobile.css ── */
-/* PWA layouts use the actual visible viewport. No mock phone frame or status bar. */
+/* ── PWA (boards "NovelPwa / RpPwa / RpPwaLight") ──
+   Phones use the actual visible viewport, no mock frame. Noval is one sheet of paper: a header, the
+   quick-config card, the reading and a pill composer. RP is the scene itself with frosted panes on it.
+   Chrome drawn by the workbench lives in layouts/pwa.css; this file only restyles native nodes. */
 body.wb-active.wb-mobile {
   --wb-header: 58px;
   --wb-left: 0px;
   --wb-right: 0px;
   --wb-mobile-lower: 0px;
+  /* Everything above #sheld: the header plus, in Noval, the quick-config card under it. */
+  --wb-mobile-chrome: 110px;
   --wb-safe-top: env(safe-area-inset-top, 0px);
   --wb-safe-bottom: env(safe-area-inset-bottom, 0px);
   width: 100%;
   overflow: hidden;
   overscroll-behavior: none;
 }
+body.wb-active.wb-mobile-rp {
+  --wb-mobile-chrome: 64px;
+}
 body.wb-active.wb-mobile #sheld {
   inset: auto 0 auto 0 !important;
-  top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 58px + var(--wb-mobile-lower)) !important;
+  top: calc(
+    var(--wb-mobile-top, 0px) + var(--wb-safe-top) + var(--wb-mobile-chrome) + var(--wb-mobile-lower)
+  ) !important;
   height: calc(
-    var(--wb-mobile-height, 100dvh) - var(--wb-safe-top) - 58px - var(--wb-mobile-lower)
+    var(--wb-mobile-height, 100dvh) - var(--wb-safe-top) - var(--wb-mobile-chrome) - var(--wb-mobile-lower)
   ) !important;
   width: 100% !important;
   min-height: 0 !important;
+  background: var(--wb-m-paper) !important;
   transition:
     top 240ms cubic-bezier(0.22, 0.8, 0.3, 1),
-    height 240ms cubic-bezier(0.22, 0.8, 0.3, 1),
-    border-radius 240ms;
+    height 240ms cubic-bezier(0.22, 0.8, 0.3, 1);
 }
+
+/* ── Noval reading ── */
 body.wb-active.wb-mobile #chat {
-  padding: 18px clamp(18px, 6vw, 40px) 22px !important;
+  padding: 14px 22px 40px !important;
   touch-action: pan-y;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
   scroll-behavior: smooth;
+  background: transparent !important;
 }
 body.wb-active.wb-mobile #chat .mes {
+  position: relative;
   max-width: 730px;
-  padding: 10px 0 26px !important;
-  margin: 0 auto 14px !important;
+  padding: 4px 0 6px !important;
+  margin: 0 auto 10px !important;
+  border: 0 !important;
 }
 body.wb-active.wb-mobile #chat .mes_block {
   padding: 0 !important;
 }
 body.wb-active.wb-mobile #chat .mes_text {
   font-size: var(--wb-reading-size, 17px) !important;
-  line-height: var(--wb-reading-leading, 1.95) !important;
+  line-height: var(--wb-reading-leading, 1.9) !important;
+  letter-spacing: 0.01em;
   padding: 0 !important;
 }
-body.wb-mobile #chat .wb-reading-meta {
-  font-size: 10px;
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes_text p {
+  margin: 0 0 0.9em;
 }
-body.wb-mobile #chat .mes .ch_name {
-  margin-bottom: 10px;
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes .mes_block {
+  display: flex !important;
+  flex-direction: column;
+}
+/* The user's turns are soft cards, as on the desk. */
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes[is_user="true"] {
+  margin: 4px auto 22px !important;
+  padding: 10px 14px 12px !important;
+  border-radius: 12px !important;
+  background: var(--wb-surface-2) !important;
+}
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes[is_user="true"].wb-user-collapsed {
+  padding: 8px 14px !important;
+}
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes[is_user="true"] .mes_text {
+  font-size: calc(var(--wb-reading-size, 17px) - 2px) !important;
+  line-height: 1.75 !important;
+  color: var(--wb-ink-2);
+}
+body.wb-active.wb-mobile #chat .wb-user-heading button {
+  min-height: 32px;
+  font-size: 12px;
+}
+body.wb-active.wb-mobile #chat .wb-user-heading small {
+  font-size: 12px;
+}
+/* No hover on a phone: a message's tools float over its corner after a tap (MobileShell). */
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes .ch_name {
+  position: absolute !important;
+  inset: -46px 0 auto auto !important;
+  z-index: 2;
+  display: none !important;
+  height: auto !important;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 2px 4px !important;
+  border-radius: 12px;
+  background: var(--wb-surface-1);
+  box-shadow:
+    var(--wb-shadow-2),
+    0 0 0 1px var(--wb-line-1);
+  pointer-events: auto !important;
+}
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes:is(.wb-mobile-actions, :has(.edit_textarea)) .ch_name {
+  display: flex !important;
+}
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes:has(.edit_textarea) .ch_name {
+  position: static !important;
+  align-self: flex-end;
+  margin-bottom: 8px !important;
+}
+body.wb-active.wb-mobile:not(.wb-mobile-rp)
+  #chat
+  .mes
+  .ch_name
+  :is(.name_text, .timestamp, .wb-reading-meta) {
+  display: none !important;
+}
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes.wb-mobile-actions .mes_block {
+  outline: 2px solid color-mix(in srgb, var(--wb-accent) 22%, transparent);
+  outline-offset: 6px;
+  border-radius: 6px;
+}
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes[is_user="true"].wb-mobile-actions .mes_block {
+  outline: 0;
 }
 body.wb-mobile #chat .mes_buttons {
   opacity: 1 !important;
@@ -3352,20 +3430,20 @@ body.wb-mobile #chat .mes_buttons {
 }
 body.wb-mobile #chat .mes .mes_buttons > .mes_button,
 body.wb-mobile #chat .wb-image-message-button {
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 40px;
+  min-height: 40px;
   align-items: center;
   justify-content: center;
 }
 body.wb-active.wb-mobile #chat .swipe_left,
 body.wb-active.wb-mobile #chat .swipeRightBlock {
-  bottom: 0;
+  bottom: -6px;
 }
 body.wb-active.wb-mobile #chat .swipe_left {
-  left: 0;
+  left: -10px;
 }
 body.wb-active.wb-mobile #chat .swipeRightBlock {
-  right: 0;
+  right: -10px;
 }
 body.wb-active.wb-mobile #chat :is(.swipe_left, .swipe_right) {
   width: 36px;
@@ -3374,24 +3452,43 @@ body.wb-active.wb-mobile #chat :is(.swipe_left, .swipe_right) {
 body.wb-mobile #chat .swipes-counter {
   display: none;
 }
+
+/* ── Composer: a raised pill. ＋ opens the tools sheet; the handle above it opens the full editor ── */
 body.wb-active.wb-mobile #form_sheld {
   position: relative !important;
   inset: auto !important;
   flex: none;
   width: 100% !important;
-  padding: 0 12px max(8px, var(--wb-safe-bottom)) !important;
-  background: var(--wb-paper) !important;
+  padding: 10px 12px max(14px, var(--wb-safe-bottom)) !important;
+  background: var(--wb-m-paper) !important;
+  container-type: normal;
   z-index: 4;
+}
+/* Reading fades into the composer instead of meeting a rule. */
+body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) #form_sheld::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--wb-m-paper));
+  pointer-events: none;
 }
 body.wb-active.wb-mobile #send_form {
   display: flex !important;
   flex-direction: column;
+  position: relative;
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
-  padding: 28px 8px 8px !important;
-  border-radius: 23px !important;
-  box-shadow: 0 -9px 18px var(--wb-paper) !important;
+  padding: 6px !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: var(--wb-surface-1) !important;
+  box-shadow:
+    var(--wb-shadow-2),
+    0 0 0 1px var(--wb-line-1) !important;
   gap: 0 !important;
 }
 body.wb-active.wb-mobile #nonQRFormItems {
@@ -3399,29 +3496,37 @@ body.wb-active.wb-mobile #nonQRFormItems {
   height: auto;
   flex: none;
   display: grid !important;
-  grid-template-columns: 88px minmax(0, 1fr) 44px;
-  grid-template-rows: auto 66px 44px;
-  gap: 4px 0;
-  align-items: center;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-rows: auto;
+  gap: 0 6px;
+  align-items: end;
 }
 body.wb-active.wb-mobile #send_textarea {
-  grid-column: 1/-1;
-  grid-row: 2;
-  height: 66px !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  padding: 0 8px !important;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  height: auto !important;
+  min-height: 44px !important;
+  max-height: calc(var(--wb-mobile-height, 100dvh) * 0.3) !important;
+  padding: 10px 2px !important;
   margin: 0 !important;
   border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
   background: transparent !important;
-  font:
-    16px/1.8 system-ui,
-    sans-serif !important;
-  field-sizing: fixed;
+  color: var(--wb-ink-1) !important;
+  font: 16px/1.5 var(--wb-font-ui) !important;
+  field-sizing: content;
+}
+body.wb-active.wb-mobile #send_textarea::placeholder {
+  color: var(--wb-ink-3);
+}
+body.wb-active.wb-mobile:not(.wb-mobile-editor) :is(#leftSendForm, .wb-composer-actions) {
+  display: none !important;
 }
 body.wb-active.wb-mobile #leftSendForm {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 2;
   width: 88px !important;
   height: 44px !important;
   gap: 0;
@@ -3431,7 +3536,7 @@ body.wb-active.wb-mobile :is(#options_button, #extensionsMenuButton) {
   height: 44px;
 }
 body.wb-active.wb-mobile #rightSendForm {
-  grid-row: 3;
+  grid-row: 1;
   grid-column: 3;
   height: 44px;
   width: auto;
@@ -3441,242 +3546,7 @@ body.wb-active.wb-mobile :is(#send_but, #mes_stop) {
   width: 44px !important;
   height: 44px !important;
   line-height: 44px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor #sheld {
-  top: var(--wb-mobile-top, 0px) !important;
-  height: var(--wb-mobile-height, 100dvh) !important;
-}
-body.wb-mobile-editor #chat {
-  visibility: hidden;
-  pointer-events: none;
-}
-body.wb-active.wb-mobile.wb-mobile-editor #form_sheld {
-  height: 100% !important;
-  padding: var(--wb-safe-top) 0 var(--wb-safe-bottom) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor #send_form {
-  height: 100% !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  padding: 0 12px 12px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor #nonQRFormItems {
-  flex: 1;
-  min-height: 0;
-  grid-template-rows: minmax(0, 1fr) 44px;
-}
-body.wb-active.wb-mobile.wb-mobile-editor #send_textarea {
-  grid-row: 1;
-  height: 100% !important;
-  line-height: 2 !important;
-  padding: 16px 8px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor :is(#leftSendForm, .wb-composer-actions, #rightSendForm) {
-  grid-row: 2;
-}
-body.wb-mobile-keyboard.wb-mobile-rp {
-  --wb-mobile-lower: 0px !important;
-}
-body.wb-mobile-keyboard .wb-mobile-scene {
-  visibility: hidden;
-}
-/* RP keeps a chronological native chat. The actor is behind a movable foreground sheet. */
-body.wb-mobile-rp {
-  --wb-reading-size: 15px;
-  --wb-reading-leading: 1.8;
-}
-.wb-mobile-scene {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  background: var(--wb-soft);
-  overflow: hidden;
-}
-.wb-mobile-scene img {
-  height: 100%;
-  width: 100%;
-  object-fit: contain;
-  object-position: center top;
-}
-body.wb-mobile-dragging #sheld {
-  transition: none !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat {
-  padding: 12px 12px 18px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes {
-  border: 0 !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  display: flex !important;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 8px;
-  width: 100%;
-  max-width: 650px;
-  padding: 0 !important;
-  margin: 0 auto 16px !important;
-}
-body.wb-mobile-rp #chat .mes > .avatar {
-  display: block !important;
-  width: 30px !important;
-  height: 30px !important;
-  flex: none;
-  margin: 0 0 2px !important;
-}
-body.wb-mobile-rp #chat .mes > .avatar img {
-  width: 30px !important;
-  height: 30px !important;
-  min-width: 0 !important;
-  border-radius: 50%;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_block {
-  min-width: 0;
-  flex: none;
-  width: auto;
-  max-width: calc(100% - 52px);
-  padding: 12px 14px !important;
-  border-radius: 17px 17px 17px 4px;
-  background: var(--wb-surface);
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
-  font:
-    15px/1.85 system-ui,
-    sans-serif !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] {
-  flex-direction: row-reverse;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mes_block {
-  background: var(--wb-selected);
-  border-radius: 17px 17px 4px 17px;
-}
-body.wb-mobile-rp
-  #chat
-  .mes
-  :is(
-    .wb-user-heading,
-    .ch_name,
-    .mes_buttons,
-    .swipe_left,
-    .swipeRightBlock,
-    .swipe_right,
-    .swipes-counter
-  ) {
-  display: none !important;
-}
-body.wb-mobile-rp #chat .mes:has(.edit_textarea) .mes_buttons,
-body.wb-mobile-rp #chat .mes:has(.edit_textarea) .ch_name {
-  display: flex !important;
-}
-body.wb-mobile-rp #chat .mes:has(.edit_textarea) .mes_block {
-  width: calc(100% - 38px);
-  max-width: none;
-}
-body.wb-mobile-rp #chat .edit_textarea {
-  min-height: 160px;
-  width: 100%;
-  font-size: 16px;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #form_sheld {
-  padding: 8px 10px max(8px, var(--wb-safe-bottom)) !important;
-  border-top: 1px solid var(--wb-line);
-}
-body.wb-active.wb-mobile.wb-mobile-rp #send_form {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #nonQRFormItems {
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
-  grid-template-rows: minmax(44px, auto);
-  gap: 8px;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #send_textarea {
-  grid-row: 1;
-  grid-column: 2;
-  height: 44px !important;
-  border: 1px solid var(--wb-line) !important;
-  border-radius: 22px !important;
-  background: var(--wb-surface) !important;
-  padding: 7px 12px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #rightSendForm {
-  grid-row: 1;
-  grid-column: 3;
-}
-body.wb-mobile-rp :is(#leftSendForm, .wb-composer-actions, .wb-input-grip) {
-  display: none !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #form_sheld {
-  padding: var(--wb-safe-top) 0 var(--wb-safe-bottom) !important;
-  border-top: 0;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_form {
-  padding: 0 12px 12px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #nonQRFormItems {
-  grid-template-rows: minmax(0, 1fr) 44px;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_textarea {
-  grid-row: 1;
-  grid-column: 1/-1;
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #rightSendForm {
-  grid-row: 2;
-}
-/* Manual image mode stays inside the native composer, including reference uploads. */
-body.wb-active.wb-mobile.wb-image-input-mode #nonQRFormItems {
-  grid-template-columns: minmax(0, 1fr) 44px;
-  grid-template-rows: 66px auto;
-}
-body.wb-active.wb-mobile.wb-image-input-mode #send_textarea {
-  grid-row: 1;
-  grid-column: 1/-1;
-  height: 66px !important;
-}
-body.wb-active.wb-mobile.wb-image-input-mode #rightSendForm {
-  grid-row: 2;
-  grid-column: 2;
-  align-self: end;
-}
-body.wb-mobile .wb-image-input-anchor {
-  grid-row: 2;
-  grid-column: 1;
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: 3px;
-  padding: 0 3px;
-}
-body.wb-mobile.wb-mobile-rp.wb-image-input-mode #send_form {
-  background: var(--wb-surface) !important;
-  border: 1px solid var(--wb-line) !important;
-  padding: 10px 8px !important;
-  border-radius: 20px !important;
-}
-body.wb-mobile.wb-mobile-rp.wb-image-input-mode #send_textarea {
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  padding: 0 8px !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  body.wb-mobile *,
-  body.wb-mobile #sheld {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
-}
-body.wb-mobile.reduced-motion *,
-body.wb-mobile.reduced-motion #sheld {
-  animation: none !important;
-  transition: none !important;
+  border-radius: 50% !important;
 }
 body.wb-active.wb-mobile:not(.wb-native-panel) #top-settings-holder {
   display: none !important;
@@ -3692,61 +3562,320 @@ body.wb-mobile-offline #send_but {
 body.wb-mobile-busy #send_but {
   display: none !important;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes .ch_name {
-  position: static !important;
-  display: flex;
-  align-items: center;
-  min-height: 36px;
-  margin-bottom: 6px;
-}
-body.wb-active.wb-mobile #form_sheld {
-  container-type: normal;
-}
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes .mes_block {
-  display: flex !important;
-  flex-direction: column;
-}
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes .ch_name {
-  order: -1;
+
+/* ── Full-screen editor (both layouts) ── */
+body.wb-active.wb-mobile.wb-mobile-editor #sheld {
+  top: var(--wb-mobile-top, 0px) !important;
+  height: var(--wb-mobile-height, 100dvh) !important;
 }
 body.wb-active.wb-mobile.wb-mobile-editor #chat {
   display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-editor #form_sheld {
+  height: 100% !important;
+  padding: var(--wb-safe-top) 0 var(--wb-safe-bottom) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-editor #send_form {
+  height: 100% !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 12px 12px !important;
+}
+body.wb-active.wb-mobile.wb-mobile-editor #nonQRFormItems {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: 88px minmax(0, 1fr) 44px;
+  grid-template-rows: minmax(0, 1fr) 44px;
+}
+body.wb-active.wb-mobile.wb-mobile-editor #send_textarea {
+  grid-row: 1;
+  grid-column: 1/-1;
+  align-self: stretch;
+  height: 100% !important;
+  max-height: none !important;
+  font-size: 17px !important;
+  line-height: 2 !important;
+  padding: 16px 8px !important;
+  field-sizing: fixed;
+}
+body.wb-active.wb-mobile.wb-mobile-editor :is(#leftSendForm, .wb-composer-actions, #rightSendForm) {
+  grid-row: 2;
+}
+
+/* ── RP: the scene is the page. Native backgrounds show; the chat is a stack of frosted boxes that
+   fades out toward the top so the figure stays in view. Header drag or the eye lowers the stack. ── */
+body.wb-mobile-keyboard.wb-mobile-rp {
+  --wb-mobile-lower: 0px !important;
+}
+body.wb-mobile-keyboard .wb-mobile-scene {
+  visibility: hidden;
+}
+body.wb-mobile-rp {
+  --wb-reading-size: 17px;
+  --wb-reading-leading: 1.8;
+}
+body.wb-active.wb-mobile-rp :is(#bg1, #bg_custom) {
+  opacity: 1 !important;
 }
 body.wb-mobile .wb-mobile-scene {
   width: 100vw;
   height: 100dvh;
   pointer-events: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes > .avatar {
-  display: block !important;
+body.wb-mobile-dragging #sheld {
+  transition: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mesAvatarWrapper {
+body.wb-active.wb-mobile.wb-mobile-rp #sheld,
+body.wb-active.wb-mobile.wb-mobile-rp #form_sheld {
+  background: transparent !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #chat {
   display: flex !important;
   flex-direction: column;
-  width: 30px;
-  min-width: 30px;
-  flex: none;
-  align-self: flex-end;
+  padding: 0 12px 6px !important;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 20%, #000 46%);
+  mask-image: linear-gradient(to bottom, transparent 0, transparent 20%, #000 46%);
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mesAvatarWrapper > .avatar {
+/* A short chat sits on the composer, like a single line of dialogue. */
+body.wb-active.wb-mobile.wb-mobile-rp #chat > .mes:first-of-type {
+  margin-top: auto !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes {
+  position: relative;
   display: block !important;
-  width: 30px !important;
-  height: 30px !important;
+  width: 100%;
+  max-width: 650px;
+  padding: 0 !important;
+  margin: 26px auto 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--wb-m-ink-1);
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_block {
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  padding: 24px 18px 14px !important;
+  border-radius: 20px;
+  background: var(--wb-m-box);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    var(--wb-m-shadow),
+    0 0 0 1px var(--wb-m-line);
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
+  color: var(--wb-m-ink-1) !important;
+  font-family: var(--wb-font-reading) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text :is(q, em, i) {
+  color: inherit;
+}
+/* The speaker's name plate sits on the top edge of the box, the avatar inset at its start. */
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]):not(:has(.edit_textarea)) .ch_name {
+  position: absolute !important;
+  top: -16px;
+  left: 14px;
+  z-index: 1;
+  display: flex !important;
+  align-items: center;
+  right: auto !important;
+  width: max-content !important;
+  height: 32px;
+  max-width: calc(100% - 28px);
+  padding: 0 14px 0 34px !important;
+  border-radius: 16px;
+  background: var(--wb-m-plate);
+  color: var(--wb-m-plate-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  font: 600 14px/1 var(--wb-font-ui);
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]) .ch_name div {
+  flex: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]) .ch_name .name_text {
+  display: block !important;
+  color: inherit !important;
+  font: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.wb-active.wb-mobile.wb-mobile-rp
+  #chat
+  .mes:not(:has(.edit_textarea))
+  .ch_name
+  :is(.timestamp, .wb-reading-meta, .mes_ghost, .mes_buttons) {
+  display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]) .mesAvatarWrapper {
+  position: absolute;
+  top: -13px;
+  left: 17px;
+  z-index: 2;
+  display: block !important;
+  --wb-m-avatar: 26px;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper {
+  width: var(--wb-m-avatar, 28px) !important;
+  min-width: 0 !important;
+  height: var(--wb-m-avatar, 28px) !important;
+  min-height: 0 !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper > .avatar {
+  display: block !important;
+  width: var(--wb-m-avatar, 28px) !important;
+  height: var(--wb-m-avatar, 28px) !important;
   margin: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mesAvatarWrapper > .avatar img {
-  width: 30px !important;
-  height: 30px !important;
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper > .avatar img {
+  display: block;
+  width: var(--wb-m-avatar, 28px) !important;
+  height: var(--wb-m-avatar, 28px) !important;
+  min-width: 0 !important;
   border-radius: 50%;
+  object-fit: cover;
 }
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mesAvatarWrapper > :not(.avatar) {
   display: none !important;
+}
+/* The user's own lines answer from the right, a smaller box tinted with the accent. */
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] {
+  display: flex !important;
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 12px !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mesAvatarWrapper {
+  display: flex !important;
+  flex: none;
+  margin-bottom: 4px;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mes_block {
+  max-width: calc(100% - 64px);
+  padding: 11px 16px !important;
+  border-radius: 18px 18px 6px 18px;
+  background: var(--wb-m-box-user);
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mes_text {
+  font-size: 15px !important;
+  line-height: 1.7 !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .ch_name {
+  display: none !important;
+}
+body.wb-mobile-rp
+  #chat
+  .mes
+  :is(.wb-user-heading, .swipe_left, .swipeRightBlock, .swipe_right, .swipes-counter) {
+  display: none !important;
+}
+body.wb-mobile-rp #chat .mes:not(:has(.edit_textarea)) .mes_buttons {
+  display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) .ch_name {
+  display: flex !important;
+  margin-bottom: 8px;
+}
+body.wb-mobile-rp #chat .mes:has(.edit_textarea) .mes_buttons {
+  display: flex !important;
+}
+body.wb-mobile-rp #chat .edit_textarea {
+  min-height: 160px;
+  width: 100%;
+  font-size: 16px;
+  color: var(--wb-m-ink-1);
+}
+/* The composer is one more frosted pill on the scene. */
+body.wb-active.wb-mobile.wb-mobile-rp #form_sheld {
+  padding: 10px 12px max(16px, var(--wb-safe-bottom)) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #send_form {
+  padding: 5px !important;
+  background: var(--wb-m-box) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 0 0 1px var(--wb-m-line) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #send_textarea {
+  color: var(--wb-m-ink-1) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #send_textarea::placeholder {
+  color: var(--wb-m-ink-3);
+}
+body.wb-mobile-rp :is(#leftSendForm, .wb-composer-actions, .wb-input-grip) {
+  display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_form {
+  background: var(--wb-m-paper) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_textarea {
+  color: var(--wb-ink-1) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #nonQRFormItems {
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #rightSendForm {
+  grid-column: 3;
+}
+
+/* ── Manual image mode stays inside the native composer, including reference uploads ── */
+body.wb-active.wb-mobile.wb-image-input-mode #send_form {
+  padding: 10px 8px !important;
+  border-radius: 20px !important;
+}
+body.wb-active.wb-mobile.wb-image-input-mode #nonQRFormItems {
+  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-rows: 66px auto;
+}
+body.wb-active.wb-mobile.wb-image-input-mode #send_textarea {
+  grid-row: 1;
+  grid-column: 1/-1;
+  height: 66px !important;
+  padding: 0 8px !important;
+}
+body.wb-active.wb-mobile.wb-image-input-mode #rightSendForm {
+  grid-row: 2;
+  grid-column: 2;
+  align-self: end;
+}
+body.wb-mobile .wb-image-input-anchor {
+  grid-row: 2;
+  grid-column: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 0 3px;
 }
 body.wb-active.wb-mobile.wb-image-input-mode .wb-image-input-anchor {
   grid-column: 1;
   height: auto;
   min-height: 44px;
   gap: 3px;
+}
+body.wb-mobile.wb-mobile-rp.wb-image-input-mode #send_form {
+  background: var(--wb-surface-1) !important;
+}
+body.wb-mobile.wb-mobile-rp.wb-image-input-mode #send_textarea {
+  color: var(--wb-ink-1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.wb-mobile *,
+  body.wb-mobile #sheld {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+body.wb-mobile.reduced-motion *,
+body.wb-mobile.reduced-motion #sheld {
+  animation: none !important;
+  transition: none !important;
 }
 
 /* ── phase E · the Noval desk (board "Main") ──

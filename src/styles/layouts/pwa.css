@@ -1,0 +1,529 @@
+/*
+ * PWA (boards "NovelPwa / RpPwa / RpPwaLight"): the chrome MobileShell draws on a phone. Noval is a
+ * single sheet of paper with a centred title, a quick-config card and a pill composer; RP is the scene
+ * with frosted panes floating on it. Native nodes (#sheld, #chat, #send_form) are restyled in
+ * native-bridge.css. Every rule is scoped to body.wb-mobile so desktop never changes.
+ */
+@layer wb.layouts {
+  body.wb-active.wb-mobile {
+    /* The reading sheet: between the desk and the raised surface, as on the board's s0. */
+    --wb-m-paper: color-mix(in srgb, var(--wb-surface-1) 65%, var(--wb-surface-0));
+    --wb-m-scrim: rgb(40 30 20 / 32%);
+    --wb-m-sheet-shadow: 0 -12px 40px rgb(0 0 0 / 18%);
+    /* RP panes, light: warm paper glass over the scene. */
+    --wb-m-ink-1: #2f2c27;
+    --wb-m-ink-2: #5f574b;
+    --wb-m-ink-3: #7a7266;
+    --wb-m-line: rgb(60 45 30 / 10%);
+    --wb-m-glass: rgb(255 253 248 / 76%);
+    --wb-m-box: rgb(255 253 248 / 88%);
+    --wb-m-box-user: color-mix(in srgb, var(--wb-accent) 10%, rgb(255 253 248 / 86%));
+    --wb-m-field: rgb(60 45 30 / 6%);
+    --wb-m-plate: #2f2c27;
+    --wb-m-plate-ink: #fffefa;
+    --wb-m-tint: rgb(255 250 240 / 6%);
+    --wb-m-fade: rgb(250 246 238 / 50%);
+    --wb-m-shadow: 0 8px 24px rgb(52 41 30 / 12%);
+  }
+  :root[data-wb-theme="dark"] body.wb-active.wb-mobile {
+    --wb-m-scrim: rgb(0 0 0 / 50%);
+    --wb-m-ink-1: #f3eee5;
+    --wb-m-ink-2: #d2c8b8;
+    --wb-m-ink-3: #a89e8f;
+    --wb-m-line: rgb(255 255 255 / 10%);
+    --wb-m-glass: rgb(30 26 22 / 58%);
+    --wb-m-box: rgb(26 22 19 / 76%);
+    --wb-m-box-user: color-mix(in srgb, var(--wb-accent) 14%, rgb(26 22 19 / 74%));
+    --wb-m-field: rgb(255 255 255 / 8%);
+    --wb-m-plate: #f3eee5;
+    --wb-m-plate-ink: #2a2420;
+    --wb-m-tint: rgb(20 14 10 / 18%);
+    --wb-m-fade: rgb(16 12 9 / 60%);
+    --wb-m-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+  }
+
+  /* ── Header: menu · title · person · more ── */
+  body.wb-mobile .wb-mobile-header {
+    gap: 2px;
+    padding: 6px 4px 0;
+    border-bottom: 0;
+    background: var(--wb-m-paper);
+    color: var(--wb-ink-1);
+  }
+  body.wb-mobile .wb-mobile-header > button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    border-radius: 12px;
+    color: inherit;
+  }
+  body.wb-mobile .wb-mobile-title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    text-align: center;
+  }
+  body.wb-mobile .wb-mobile-title :is(strong, small) {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.wb-mobile .wb-mobile-title strong {
+    font: 600 16px/1.3 var(--wb-font-reading);
+  }
+  body.wb-mobile .wb-mobile-title small {
+    font-size: 12px;
+    color: var(--wb-ink-3);
+  }
+  body.wb-mobile .wb-mobile-header .wb-mobile-person {
+    flex: none;
+  }
+  body.wb-mobile .wb-mobile-person :is(img, .wb-avatar-fallback) {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    background: var(--wb-surface-3);
+    font-size: 12px;
+  }
+
+  /* RP: the same row as frosted tiles on the scene. Lowered, it rides on top of the dialogue stack
+     and is the handle that drags the stack back up. */
+  body.wb-mobile-rp .wb-mobile-header {
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 8px);
+    left: 10px;
+    right: 10px;
+    height: 48px;
+    gap: 6px;
+    padding: 0;
+    background: transparent;
+    color: var(--wb-m-ink-1);
+  }
+  body.wb-mobile-rp .wb-mobile-header > button,
+  body.wb-mobile-rp .wb-mobile-title {
+    height: 44px;
+    border-radius: 14px;
+    background: var(--wb-m-glass);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  body.wb-mobile-rp .wb-mobile-title {
+    align-items: flex-start;
+    padding: 0 12px;
+    text-align: left;
+  }
+  body.wb-mobile-rp .wb-mobile-title strong {
+    font: 500 13px/1.3 var(--wb-font-ui);
+  }
+  body.wb-mobile-rp .wb-mobile-title small {
+    font-size: 11px;
+    color: var(--wb-m-ink-3);
+  }
+  body.wb-mobile-rp .wb-mobile-person[aria-expanded="true"] {
+    background: var(--wb-m-plate);
+    color: var(--wb-m-plate-ink);
+  }
+  body.wb-mobile-rp.wb-mobile-lowered .wb-mobile-header {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* ── Quick configuration: one raised card under the header ── */
+  body.wb-mobile .wb-mobile-config {
+    position: fixed;
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 62px);
+    left: 12px;
+    right: 12px;
+    z-index: 5;
+    height: 44px;
+    margin: 0;
+    padding: 0 4px 0 0;
+    border: 0;
+    border-radius: 12px;
+    background: var(--wb-surface-1);
+    box-shadow: var(--wb-shadow-1);
+    color: var(--wb-ink-1);
+  }
+  body.wb-mobile-editor .wb-mobile-config {
+    display: none;
+  }
+  body.wb-mobile .wb-mobile-summary {
+    gap: 8px;
+    padding: 0 6px 0 14px;
+    font-size: 14px;
+    color: inherit;
+  }
+  body.wb-mobile .wb-mobile-summary > span {
+    flex: none;
+    max-width: 50%;
+    font-weight: 500;
+  }
+  body.wb-mobile .wb-mobile-summary small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--wb-ink-3);
+  }
+  body.wb-mobile .wb-mobile-summary .wb-dot {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--wb-ink-3);
+  }
+  body.wb-mobile .wb-mobile-summary .wb-dot.online {
+    background: var(--wb-success);
+  }
+  body.wb-mobile .wb-mobile-config .wb-mobile-config-fold {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: auto;
+    min-width: 44px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--wb-ink-2);
+    white-space: nowrap;
+  }
+  body.wb-mobile .wb-mobile-config:not(.is-collapsed) .wb-contexts {
+    padding-left: 4px;
+  }
+  /* Expanded, the four selectors scroll sideways at a readable width instead of squeezing to "g…". */
+  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-contexts {
+    gap: 4px;
+    scroll-snap-type: x proximity;
+  }
+  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector {
+    flex: 0 0 auto;
+    min-width: 132px;
+    max-width: 190px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--wb-surface-2);
+    scroll-snap-align: start;
+  }
+  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector > .wb-selector-value {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+  }
+  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector > .wb-selector-detail {
+    color: var(--wb-ink-3);
+  }
+  body.wb-mobile .wb-mobile-config:not(.is-collapsed) {
+    padding-left: 0;
+  }
+
+  /* ── Composer chrome: ＋, and the handle that pulls the full editor up ── */
+  body.wb-mobile .wb-mobile-plus {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: end;
+    width: 44px;
+    height: 44px;
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-1);
+  }
+  body.wb-mobile-rp .wb-mobile-plus {
+    background: var(--wb-m-field);
+    color: var(--wb-m-ink-1);
+  }
+  body.wb-mobile.wb-mobile-editor .wb-mobile-plus {
+    display: none;
+  }
+  body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) .wb-input-grip {
+    margin: 0 auto;
+    transform: translateY(-24px);
+    background: transparent;
+  }
+  body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) .wb-input-grip span {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--wb-ink-3) 45%, transparent);
+  }
+
+  /* ── RP scene: native background, a light tint, the figure, and a scrim behind the panes ── */
+  body.wb-mobile .wb-mobile-scene {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    background: transparent;
+    isolation: isolate;
+  }
+  body.wb-mobile .wb-mobile-scene::before,
+  body.wb-mobile .wb-mobile-scene::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  body.wb-mobile .wb-mobile-scene::before {
+    z-index: -1;
+    background: var(--wb-m-tint);
+  }
+  body.wb-mobile .wb-mobile-scene::after {
+    top: auto;
+    height: 50%;
+    background: linear-gradient(to bottom, transparent, var(--wb-m-fade) 55%);
+  }
+  body.wb-mobile .wb-mobile-scene img {
+    position: absolute;
+    left: 50%;
+    bottom: 18%;
+    width: auto;
+    max-width: none;
+    height: 72%;
+    object-fit: contain;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 12px 30px rgb(0 0 0 / 25%));
+  }
+  body.wb-mobile .wb-mobile-no-portrait {
+    top: 30%;
+    color: var(--wb-m-ink-2);
+  }
+
+  /* Suggested replies ride on the composer's top edge. */
+  body.wb-mobile .wb-mobile-replies {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(100% - 2px);
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  body.wb-mobile .wb-mobile-replies > button {
+    flex: none;
+    height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 18px;
+    background: var(--wb-m-glass);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    color: var(--wb-m-ink-1);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  body.wb-mobile-rp:not(.wb-mobile-editor):has(.wb-mobile-replies) #chat {
+    padding-bottom: 48px !important;
+  }
+
+  /* ── Drawers: the outline slides in as a sheet with a rounded edge; the scrim dims the page ── */
+  body.wb-mobile .wb-mobile-shade,
+  body.wb-mobile .wb-mobile-sheet-shade {
+    background: var(--wb-m-scrim);
+  }
+  body.wb-mobile .wb-left {
+    width: min(84vw, 330px);
+    padding-top: calc(var(--wb-safe-top) + 56px);
+    border-radius: 0 22px 22px 0;
+    background: var(--wb-m-paper);
+    box-shadow: 12px 0 40px rgb(0 0 0 / 16%);
+  }
+  body.wb-mobile .wb-right {
+    background: var(--wb-m-paper);
+  }
+  body.wb-mobile .wb-mobile-drawer-title {
+    position: fixed;
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 12px);
+    left: 22px;
+    z-index: 27;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: var(--wb-ink-3);
+    pointer-events: none;
+  }
+  body.wb-mobile .wb-mobile-drawer-close {
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 6px);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--wb-ink-2);
+  }
+  body.wb-mobile.wb-left-open .wb-mobile-drawer-close {
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 12px);
+    left: calc(min(84vw, 330px) - 54px);
+  }
+  body.wb-mobile .wb-left .wb-nav-card {
+    border-radius: 14px;
+    background: var(--wb-surface-1);
+    box-shadow: var(--wb-shadow-1);
+  }
+  body.wb-mobile .wb-left .wb-nav-card-title {
+    font-size: 18px;
+  }
+  body.wb-mobile .wb-left :is(.wb-nav-toggle, .wb-nav-row) {
+    min-height: 44px;
+  }
+  body.wb-mobile .wb-left .wb-nav-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 0;
+  }
+  body.wb-mobile .wb-left .wb-nav-foot {
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-1);
+    font-size: 14px;
+  }
+  /* Keyboard shortcuts have no use on a touch screen. */
+  body.wb-mobile .wb-left .wb-nav-keys {
+    display: none;
+  }
+
+  /* ── Bottom sheets: grab handle, a caption, the layout switch in a well, rows in one card ── */
+  body.wb-mobile .wb-mobile-sheet {
+    padding-top: 8px;
+    border: 0;
+    background: var(--wb-surface-1);
+    box-shadow: var(--wb-m-sheet-shadow);
+  }
+  body.wb-mobile .wb-mobile-sheet-grip {
+    display: block;
+    width: 38px;
+    height: 5px;
+    margin: 2px auto 4px;
+    border-radius: 3px;
+    background: var(--wb-line-1);
+  }
+  body.wb-mobile .wb-mobile-sheet > header {
+    min-height: 40px;
+    margin: 0 -8px 4px 4px;
+  }
+  body.wb-mobile .wb-mobile-sheet > header strong {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--wb-ink-3);
+  }
+  body.wb-mobile .wb-mobile-sheet > header button {
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: var(--wb-ink-2);
+  }
+  /* The session menu names itself by its caption; its close button rides beside the grip. */
+  body.wb-mobile .wb-mobile-sheet.is-management > header {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    margin: 0;
+  }
+  body.wb-mobile .wb-mobile-sheet.is-management > header strong {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  body.wb-mobile .wb-mobile-sheet.is-management .wb-mobile-sheet-grip {
+    margin-bottom: 14px;
+  }
+  body.wb-mobile .wb-mobile-sheet-caption {
+    display: block;
+    margin: 0 4px 8px;
+    font-size: 12px;
+    color: var(--wb-ink-3);
+  }
+  body.wb-mobile .wb-mobile-mode-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin: 0;
+    padding: 4px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--wb-well);
+  }
+  body.wb-mobile .wb-mobile-mode-row > button {
+    gap: 6px;
+    height: 44px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--wb-ink-2);
+    font-size: 14px;
+  }
+  body.wb-mobile .wb-mobile-mode-row > button[aria-pressed="true"] {
+    background: var(--wb-surface-1);
+    box-shadow: var(--wb-shadow-1);
+    color: var(--wb-ink-1);
+    font-weight: 500;
+  }
+  body.wb-mobile .wb-mobile-sheet-list {
+    margin-top: 14px;
+    border-radius: 14px;
+    background: var(--wb-surface-2);
+    overflow: hidden;
+  }
+  body.wb-mobile .wb-mobile-sheet-list > button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--wb-ink-1);
+    font-size: 15px;
+    text-align: left;
+  }
+  body.wb-mobile .wb-mobile-sheet-list > button + button {
+    box-shadow: 0 -1px 0 var(--wb-line-1);
+  }
+  body.wb-mobile .wb-mobile-sheet-list > button > svg:first-child {
+    color: var(--wb-ink-2);
+  }
+  body.wb-mobile .wb-mobile-sheet-list > button > svg:last-child:not(:first-child) {
+    margin-left: auto;
+    color: var(--wb-ink-3);
+  }
+  body.wb-mobile .wb-mobile-sheet-list > button:disabled {
+    opacity: 0.45;
+  }
+  body.wb-mobile .wb-mobile-candidates {
+    padding: 8px 14px;
+    box-shadow: 0 -1px 0 var(--wb-line-1);
+  }
+  body.wb-mobile .wb-mobile-candidates > button {
+    border: 0;
+    border-radius: 12px;
+    background: var(--wb-surface-1);
+  }
+  body.wb-mobile .wb-mobile-tool-config {
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--wb-line-1);
+  }
+  body.wb-mobile .wb-mobile-tool-grid > button {
+    border-radius: 14px;
+    color: var(--wb-ink-1);
+    font-size: 12px;
+  }
+  body.wb-mobile .wb-mobile-tool-grid > button > svg {
+    color: var(--wb-ink-2);
+  }
+  body.wb-mobile .wb-mobile-tool-grid > button:disabled {
+    opacity: 0.4;
+  }
+}
