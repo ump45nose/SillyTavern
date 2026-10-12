@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowRight,
+  ArrowUp,
   BookOpen,
   Check,
   ChevronLeft,
@@ -384,6 +385,7 @@ export function RPStage({
   const scene = presentation.scene,
     sceneValue = (key: string) =>
       typeof scene[key] === "string" || typeof scene[key] === "number" ? String(scene[key]) : "";
+  const sceneHidden = isHidden || width < 1000 || (expanded && compose) || (history && width < 1400);
   return (
     <>
       {createPortal(
@@ -410,8 +412,8 @@ export function RPStage({
       )}
       {/* Board "RpDesktop": glass cards over the scene; the native message is the dialogue box itself. */}
       <aside
-        className={`wb-rp-scene ${isHidden || width < 1000 || (expanded && compose) || history ? "is-hidden" : ""}`}
-        inert={isHidden || width < 1000 || history}
+        className={`wb-rp-scene ${sceneHidden ? "is-hidden" : ""}`}
+        inert={sceneHidden}
         aria-label="当前场景信息"
       >
         <div className="wb-rp-scene-head">
@@ -456,15 +458,6 @@ export function RPStage({
             </div>
           )}
           <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
-            <button
-              className="wb-rp-tool is-label"
-              aria-label="查看对话记录"
-              title="对话记录"
-              onClick={() => setHistory(true)}
-            >
-              <History size={16} />
-              <span>记录</span>
-            </button>
             <button
               className="wb-rp-tool"
               aria-label="切换阅读布局"
@@ -547,7 +540,6 @@ export function RPStage({
                 {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
             )}
-            <span className="wb-rp-tools-rule" aria-hidden="true" />
             <button
               className="wb-rp-tool"
               aria-label="上一段对白"
@@ -561,9 +553,6 @@ export function RPStage({
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="wb-rp-count" aria-live="polite">
-              {compose ? "输入" : `${page + 1} / ${current?.pages.length || 1}`}
-            </span>
             <button
               className="wb-rp-tool"
               aria-label="下一段对白或输入"
@@ -580,7 +569,6 @@ export function RPStage({
             <img src={compose || current?.user ? presentation.userPortrait : presentation.portrait} alt="" />
           )}
           <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
-          {(compose || current?.user) && <small>{compose ? "你的回应" : "你的输入"}</small>}
         </div>
         {!compose && (
           <div className="wb-rp-foot">
@@ -604,8 +592,10 @@ export function RPStage({
               disabled={!!current?.editing}
               onClick={enterCompose}
             >
-              <PencilLine size={14} aria-hidden="true" />
               <span>{scroll.overflow ? "长对白可滚动阅读 · 输入回应…" : "输入回应…"}</span>
+              <i className="wb-rp-reply-send" aria-hidden="true">
+                <ArrowUp size={15} />
+              </i>
             </button>
             {!current?.editing && (
               <button className="wb-rp-next" onClick={() => turn(1)}>
@@ -620,6 +610,18 @@ export function RPStage({
           </div>
         )}
       </section>
+      {!isHidden && (
+        <button
+          className="wb-rp-corner wb-rp-log-toggle"
+          aria-label={history ? "关闭对话记录" : "查看对话记录"}
+          title={history ? "回到对白" : "对话记录"}
+          aria-pressed={history}
+          onClick={() => setHistory(!history)}
+        >
+          <History size={16} aria-hidden="true" />
+          {history ? "对白" : "记录"}
+        </button>
+      )}
       {history && (
         <>
           <div className="wb-rp-log-head">
@@ -629,10 +631,11 @@ export function RPStage({
               {messages.length ? ` · ${messages.length} 层` : ""}
             </small>
             <button aria-label="返回 RP 对白" onClick={() => setHistory(false)}>
-              返回对白 <X size={16} />
+              <ChevronLeft size={15} aria-hidden="true" />
+              返回对白
             </button>
           </div>
-          <ReadingPresentation host={host} />
+          <ReadingPresentation host={host} chatStyle />
         </>
       )}
     </>

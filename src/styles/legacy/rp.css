@@ -6,12 +6,7 @@
     display: contents;
   }
   body.wb-rp .wb-top {
-    padding-right: 72px;
-    grid-template-columns: minmax(130px, 1fr) minmax(0, 860px) minmax(106px, 1fr);
     z-index: 30;
-  }
-  body.wb-rp .wb-contexts {
-    transform: translateX(24px);
   }
   body.wb-rp.wb-rp-top-collapsed .wb-top {
     transform: translateY(-100%);

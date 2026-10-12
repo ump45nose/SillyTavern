@@ -148,6 +148,7 @@ try {
 
       // RP presentation: character sprite and chat background, as the RP demo does.
       await upload("/api/sprites/upload", { name: actor.name, label: "neutral" }, "r-character.webp");
+      await upload("/api/sprites/upload", { name: "workbench-visual-user", label: "neutral" }, "r-user-character.webp");
       const background = await upload(
         "/api/backgrounds/upload",
         {},
@@ -161,6 +162,12 @@ try {
       const backgroundPath = "backgrounds/" + encodeURIComponent(background);
       current.chatMetadata.custom_background = `url("${backgroundPath}")`;
       current.chatMetadata.chat_backgrounds = [backgroundPath];
+      // The stage reads sprites from the native expressions extension; the chat supplies them here.
+      current.chatMetadata.workbenchRP = {
+        ...current.chatMetadata.workbenchRP,
+        characterSprite: "/characters/" + encodeURIComponent(actor.name) + "/neutral.webp",
+        userSprite: "/characters/workbench-visual-user/neutral.webp",
+      };
       await current.saveMetadata();
 
       (await import("/script.js")).setActiveCharacter(actor.avatar);

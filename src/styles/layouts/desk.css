@@ -41,14 +41,15 @@
   /*
    * Both side columns keep the width of the tools group (Trace, focus or pin, and the switcher's
    * space), so the pills stay centred and shrink to ellipses before anything overlaps. The RP bar
-   * keeps its own chrome until E4 but shares the columns.
+   * shares the columns; its eye and history keys sit under the bar (layouts/rp.css).
    */
   body.wb-active .wb-top {
     --wb-top-side: 242px;
   }
   body.wb-active.wb-rp:not(.wb-mobile) .wb-top {
-    --wb-top-side: 300px;
+    --wb-top-side: 252px;
     grid-template-columns: minmax(var(--wb-top-side), 1fr) minmax(0, auto) minmax(var(--wb-top-side), 1fr);
+    padding: 0 var(--wb-space-5) 0 var(--wb-space-4);
   }
   body.wb-active .wb-top > .wb-top-pills {
     justify-self: center;
@@ -452,9 +453,6 @@
     flex: none;
     width: 166px;
   }
-  body.wb-rp .wb-top-switcher-space {
-    width: 214px;
-  }
 
   /* ── Layout switcher: a segmented control; only the current mode spells out its name ── */
   .wb-layout-switcher {
@@ -468,9 +466,6 @@
     transition:
       opacity var(--wb-duration-base),
       visibility var(--wb-duration-base);
-  }
-  .wb-layout-switcher.is-rp {
-    right: 72px;
   }
   body.wb-active.wb-focus:not(.wb-rp) .wb-layout-switcher {
     opacity: 0;
@@ -870,4 +865,5 @@
       transition: none;
     }
   }
+
 }

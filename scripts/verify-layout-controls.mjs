@@ -114,7 +114,7 @@ try {
       });
       assert.equal(rects.overflow, false); assert.ok(rects.contexts.right <= rects.actions.left + 1, JSON.stringify(rects));
       assert.ok(rects.pin.right < rects.trigger.left, JSON.stringify(rects)); assert.ok(rects.trigger.right <= width, JSON.stringify(rects));
-      if (rects.eye) assert.ok(rects.trigger.right < rects.eye.left, JSON.stringify(rects));
+      if (rects.eye) assert.ok(rects.eye.top >= rects.actions.bottom + 12 && rects.eye.right <= width, JSON.stringify(rects));
       for (const state of ["closed", "left", "right", "closed-again"]) {
         if (state === "left") await page.locator(".wb-edge-left").click();
         if (state === "right") await toggleRight(page);
@@ -204,10 +204,10 @@ try {
       const dot=getComputedStyle(n,'::before'),matrix=new DOMMatrixReadOnly(dot.transform==='none'?undefined:dot.transform),rect=n.getBoundingClientRect(),caption=n.closest('.wb-rp-foot').getBoundingClientRect();
       return {current:n.getAttribute('aria-current')==='true',width:Number.parseFloat(dot.width)*matrix.a,height:Number.parseFloat(dot.height)*matrix.d,radius:dot.borderRadius,background:getComputedStyle(n).backgroundColor,hitWidth:rect.width,hitHeight:rect.height,inside:rect.left>=caption.left&&rect.right<=caption.right};
     }));
-    for(const dot of dots){if(dot.current)assert.ok(dot.width>dot.height*2,JSON.stringify(dot));else{assert.ok(Math.abs(dot.width-dot.height)<.01,JSON.stringify(dot));assert.equal(dot.radius,'50%');}assert.equal(dot.background,'rgba(0, 0, 0, 0)');assert.ok(dot.hitWidth>=23.9&&dot.hitHeight>=23.9);assert.equal(dot.inside,true);}
+    for(const dot of dots){if(dot.current)assert.ok(dot.width>dot.height*2,JSON.stringify(dot));else{assert.ok(Math.abs(dot.width-dot.height)<.01,JSON.stringify(dot));assert.equal(dot.radius,'50%');}assert.equal(dot.background,'rgba(0, 0, 0, 0)');assert.ok(dot.hitWidth>=15.9&&dot.hitHeight>=23.9);assert.equal(dot.inside,true);}
   }
   await page.setViewportSize({width:1496,height:817});await settle();await page.screenshot({path:directory+'/rp-round-dots.png'});
-  pass("RP pagination markers are circles with the current page drawn as a pill, inside 24px hit areas; selecting a dot changes the page and retains click animation");
+  pass("RP pagination markers are circles with the current page drawn as a pill, in 16×24px hit areas beside full-size previous/next keys; selecting a dot changes the page and retains click animation");
   await page.evaluate(async () => {const ctx=SillyTavern.getContext();ctx.chat.splice(0,ctx.chat.length,...__layoutRealChat);delete window.__layoutRealChat;await (await import('/script.js')).printMessages();});await settle();
   await role("RP 外观").click();
   const checkbox = page.getByRole("checkbox", {name:"鼠标悬浮显示顶栏",exact:true});

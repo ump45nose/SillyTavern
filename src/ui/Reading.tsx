@@ -347,7 +347,7 @@ export function ReadingPresentation({ host, chatStyle = false }: { host: HostAda
       output.push(
         createPortal(
           <span className="wb-reading-meta">
-            {id + 1} 层{timestamp ? " · " + timestamp : ""}
+            {id + 1} 层{timestamp && <span className="wb-reading-time">{" · " + timestamp}</span>}
           </span>,
           meta,
           "meta-" + id,

@@ -18,6 +18,7 @@
     --wb-rp-dot: rgb(60 45 30 / 22%);
     --wb-rp-bar: rgb(250 249 245 / 82%);
     --wb-rp-chip: #fffefa;
+    --wb-rp-on-accent: #fffefa;
     --wb-rp-tint: rgb(255 250 240 / 6%);
     --wb-rp-scrim: rgb(250 246 238 / 42%);
     --wb-rp-shadow: 0 8px 24px rgb(52 41 30 / 12%);
@@ -39,6 +40,7 @@
     --wb-rp-dot: rgb(255 255 255 / 28%);
     --wb-rp-bar: rgb(27 25 22 / 72%);
     --wb-rp-chip: rgb(255 255 255 / 8%);
+    --wb-rp-on-accent: #1b1916;
     --wb-rp-tint: rgb(20 14 10 / 18%);
     --wb-rp-scrim: rgb(16 12 9 / 55%);
     --wb-rp-shadow: 0 8px 24px rgb(0 0 0 / 22%);
@@ -203,13 +205,6 @@
     color: var(--wb-rp-ink-2);
     cursor: pointer;
   }
-  .wb-rp-tool.is-label {
-    display: flex;
-    gap: 6px;
-    width: auto;
-    padding: 0 10px 0 8px;
-    font: inherit;
-  }
   .wb-rp-tool:is(:hover, :focus-visible),
   .wb-rp-tool[aria-expanded="true"] {
     background: var(--wb-rp-field);
@@ -219,20 +214,6 @@
     opacity: 0.4;
     cursor: default;
   }
-  .wb-rp-tools-rule {
-    width: 1px;
-    height: 18px;
-    margin: 0 4px;
-    background: var(--wb-rp-line);
-  }
-  .wb-rp-count {
-    min-width: 40px;
-    color: var(--wb-rp-ink-3);
-    font-size: var(--wb-text-xs);
-    font-variant-numeric: tabular-nums;
-    text-align: center;
-  }
-  .wb-rp-deck.is-compact .wb-rp-tool.is-label span,
   .wb-rp-deck.is-compact .wb-rp-replies {
     display: none;
   }
@@ -274,11 +255,6 @@
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .wb-rp-plate small {
-    flex: none;
-    opacity: 0.7;
-    font-size: var(--wb-text-xs);
-  }
   .wb-rp-foot {
     position: absolute;
     inset: auto 0 0;
@@ -296,7 +272,7 @@
   .wb-rp-dots button {
     display: grid;
     place-items: center;
-    width: 24px;
+    width: 16px;
     height: 24px;
     min-width: 0;
     min-height: 24px;
@@ -316,6 +292,9 @@
       width var(--wb-duration-base) var(--wb-ease-standard),
       background-color var(--wb-duration-fast);
   }
+  .wb-rp-dots button[aria-current="true"] {
+    width: 26px;
+  }
   .wb-rp-dots button[aria-current="true"]::before {
     width: 18px;
     border-radius: 3px;
@@ -334,7 +313,7 @@
     justify-content: flex-start;
     gap: 8px;
     margin-left: 14px;
-    padding: 0 14px;
+    padding: 0 4px 0 14px;
     border: 0;
     border-radius: 12px;
     background: var(--wb-rp-field);
@@ -345,6 +324,7 @@
     cursor: text;
   }
   .wb-rp-reply-field span {
+    flex: 1;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -374,6 +354,16 @@
     background: var(--wb-rp-field);
     color: var(--wb-rp-ink-1);
   }
+  .wb-rp-reply-send {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--wb-accent);
+    color: var(--wb-rp-on-accent);
+  }
   .wb-rp-deck.is-compact .wb-rp-reply-field span {
     display: none;
   }
@@ -399,7 +389,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 0 12px 0 28px;
+    padding: 0 16px 0 28px;
     border-radius: 18px 18px 0 0;
     background: var(--wb-rp-box);
     backdrop-filter: blur(24px);
@@ -431,40 +421,98 @@
     height: 34px;
     min-height: 34px;
     margin-left: auto;
-    padding: 0 10px 0 12px;
+    padding: 0 14px 0 10px;
     border: 0;
     border-radius: 10px;
-    background: transparent;
+    background: var(--wb-rp-field);
     box-shadow: none;
-    color: var(--wb-rp-ink-2);
+    color: var(--wb-rp-ink-1);
     font: inherit;
     cursor: pointer;
   }
   .wb-rp-log-head button:is(:hover, :focus-visible) {
-    background: var(--wb-rp-field);
-    color: var(--wb-rp-ink-1);
-  }
-  body.wb-rp.wb-rp-history .wb-rp-stage :is(.wb-rp-actor, .wb-rp-user) {
-    opacity: 0;
+    background: color-mix(in srgb, var(--wb-rp-ink-1) 12%, transparent);
   }
   body.wb-rp.wb-focus .wb-rp-log-head {
     opacity: 0;
     visibility: hidden;
   }
 
-  /* ── Show/hide and the auto top bar's handle ── */
-  body.wb-rp .wb-rp-visibility {
+  /* ── Top-right corner: history and show/hide, glass keys under the top bar ── */
+  body.wb-rp :is(.wb-rp-corner, .wb-rp-visibility) {
+    position: fixed;
+    top: calc(var(--wb-rp-chrome) + 20px);
+    z-index: 29;
+    height: 38px;
+    min-height: 38px;
     border: 0;
     border-radius: 12px;
-    background: transparent;
-    color: var(--wb-rp-ink-1);
-  }
-  body.wb-rp:is(.wb-focus, .wb-rp-top-collapsed) .wb-rp-visibility {
     background: var(--wb-rp-glass);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow:
       var(--wb-rp-shadow),
       inset 0 0 0 1px var(--wb-rp-line);
+    color: var(--wb-rp-ink-1);
+    transition:
+      top var(--wb-duration-base),
+      right var(--wb-duration-base),
+      background-color var(--wb-duration-fast);
+  }
+  body.wb-rp .wb-rp-visibility {
+    right: calc(var(--wb-right) + 52px);
+    width: 38px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+  body.wb-rp .wb-rp-visibility svg {
+    width: 17px;
+    height: 17px;
+  }
+  /* The eye keeps its place when it hides the interface, so a second click restores it. */
+  body.wb-rp.wb-focus .wb-rp-visibility {
+    background: var(--wb-rp-glass-soft);
+    box-shadow: none;
+  }
+  .wb-rp-corner {
+    right: calc(var(--wb-right) + 52px + 46px);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px 0 12px;
+    font: 13px / 1 var(--wb-font-ui);
+    cursor: pointer;
+  }
+  body.wb-rp :is(.wb-rp-corner, .wb-rp-visibility):is(:hover, :focus-visible) {
+    background: var(--wb-rp-box);
+  }
+
+  /* ── Edge handles: soft glass tabs (the button itself stays a transparent lane) ── */
+  body.wb-rp:not(.wb-mobile) .wb-edge-arrow {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    color: var(--wb-rp-ink-2);
+  }
+  body.wb-rp:not(.wb-mobile) .wb-edge-arrow::before {
+    content: "";
+    position: absolute;
+    inset: 0 5px;
+    z-index: -1;
+    border-radius: 9px;
+    background: var(--wb-rp-glass-soft);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: background-color var(--wb-duration-fast);
+  }
+  body.wb-rp:not(.wb-mobile) .wb-edge-arrow:is(:hover, :focus-visible)::before {
+    background: var(--wb-rp-glass);
+  }
+  body.wb-rp:not(.wb-mobile) .wb-edge-arrow svg {
+    width: 15px;
+    height: 15px;
+    stroke-width: 1.9;
   }
 }
