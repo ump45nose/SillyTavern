@@ -3377,12 +3377,22 @@ body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes[is_user="true"] .mes_text
   line-height: 1.75 !important;
   color: var(--wb-ink-2);
 }
+/* Folded, a turn reads as its label and one line of what was written. */
 body.wb-active.wb-mobile #chat .wb-user-heading button {
   min-height: 32px;
-  font-size: 12px;
+  gap: 6px;
+  font: 12px/1.6 var(--wb-font-ui);
+  color: var(--wb-ink-3);
 }
 body.wb-active.wb-mobile #chat .wb-user-heading small {
-  font-size: 12px;
+  font-size: 14px;
+  color: var(--wb-ink-2);
+  opacity: 1;
+}
+/* Lines slide under the config card through a short fade instead of being cut. */
+body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
 }
 /* No hover on a phone: a message's tools float over its corner after a tap (MobileShell). */
 body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes .ch_name {
@@ -3459,7 +3469,7 @@ body.wb-active.wb-mobile #form_sheld {
   inset: auto !important;
   flex: none;
   width: 100% !important;
-  padding: 10px 12px max(14px, var(--wb-safe-bottom)) !important;
+  padding: 10px 12px max(22px, var(--wb-safe-bottom)) !important;
   background: var(--wb-m-paper) !important;
   container-type: normal;
   z-index: 4;
@@ -3520,6 +3530,7 @@ body.wb-active.wb-mobile #send_textarea {
 }
 body.wb-active.wb-mobile #send_textarea::placeholder {
   color: var(--wb-ink-3);
+  opacity: 1;
 }
 body.wb-active.wb-mobile:not(.wb-mobile-editor) :is(#leftSendForm, .wb-composer-actions) {
   display: none !important;
@@ -3602,8 +3613,9 @@ body.wb-active.wb-mobile.wb-mobile-editor :is(#leftSendForm, .wb-composer-action
   grid-row: 2;
 }
 
-/* ── RP: the scene is the page. Native backgrounds show; the chat is a stack of frosted boxes that
-   fades out toward the top so the figure stays in view. Header drag or the eye lowers the stack. ── */
+/* ── RP: the scene is the page. Native backgrounds show and the stage holds one frosted line of
+   dialogue, the newest message, so the figure stays in view. 查看对话记录 (wb-mobile-history) turns
+   the chat into the full log over a dimmed scene. Header drag or the eye lowers the dialogue. ── */
 body.wb-mobile-keyboard.wb-mobile-rp {
   --wb-mobile-lower: 0px !important;
 }
@@ -3633,12 +3645,31 @@ body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #chat {
   display: flex !important;
   flex-direction: column;
   padding: 0 12px 6px !important;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 20%, #000 46%);
-  mask-image: linear-gradient(to bottom, transparent 0, transparent 20%, #000 46%);
 }
-/* A short chat sits on the composer, like a single line of dialogue. */
-body.wb-active.wb-mobile.wb-mobile-rp #chat > .mes:first-of-type {
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-history) #chat > .mes:has(~ .mes) {
+  display: none !important;
+}
+/* The line sits on the composer; a long reply scrolls inside its own box. */
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-history) #chat > .mes:not(:has(~ .mes)) {
   margin-top: auto !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-history) #chat > .mes:not(:has(~ .mes)) .mes_text {
+  max-height: calc(var(--wb-mobile-height, 100dvh) * 0.32);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-history #chat > .mes:first-of-type {
+  margin-top: auto !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-history:not(.wb-mobile-editor) #sheld {
+  background: var(--wb-m-log) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-history:not(.wb-mobile-editor) #chat {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 36px);
 }
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mes {
   position: relative;
@@ -3666,6 +3697,7 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_block {
     0 0 0 1px var(--wb-m-line);
 }
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
+  margin: 0 !important;
   color: var(--wb-m-ink-1) !important;
   font-family: var(--wb-font-reading) !important;
 }
@@ -3673,7 +3705,7 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text :is(q, em, i) {
   color: inherit;
 }
 /* The speaker's name plate sits on the top edge of the box, the avatar inset at its start. */
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]):not(:has(.edit_textarea)) .ch_name {
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not(:has(.edit_textarea)) .ch_name {
   position: absolute !important;
   top: -16px;
   left: 14px;
@@ -3691,12 +3723,12 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]):not(:has(
   box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
   font: 600 14px/1 var(--wb-font-ui);
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]) .ch_name div {
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .ch_name div {
   flex: none !important;
   width: auto !important;
   min-width: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]) .ch_name .name_text {
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .ch_name .name_text {
   display: block !important;
   color: inherit !important;
   font: inherit;
@@ -3711,7 +3743,7 @@ body.wb-active.wb-mobile.wb-mobile-rp
   :is(.timestamp, .wb-reading-meta, .mes_ghost, .mes_buttons) {
   display: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not([is_user="true"]) .mesAvatarWrapper {
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper {
   position: absolute;
   top: -13px;
   left: 17px;
@@ -3742,31 +3774,24 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper > .avatar img
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mesAvatarWrapper > :not(.avatar) {
   display: none !important;
 }
-/* The user's own lines answer from the right, a smaller box tinted with the accent. */
+/* The user's lines mirror the speaker's: the same box, tinted with the accent, the plate on the right.
+   The row stays a reversed flex row so the avatar keeps its place for native layouts. */
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] {
   display: flex !important;
   flex-direction: row-reverse;
-  align-items: flex-end;
-  gap: 8px;
-  margin-top: 12px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mesAvatarWrapper {
-  display: flex !important;
-  flex: none;
-  margin-bottom: 4px;
 }
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mes_block {
-  max-width: calc(100% - 64px);
-  padding: 11px 16px !important;
-  border-radius: 18px 18px 6px 18px;
+  flex: 1;
   background: var(--wb-m-box-user);
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mes_text {
-  font-size: 15px !important;
-  line-height: 1.7 !important;
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"]:not(:has(.edit_textarea)) .ch_name {
+  left: auto !important;
+  right: 14px !important;
+  padding: 0 34px 0 14px !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .ch_name {
-  display: none !important;
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mesAvatarWrapper {
+  left: auto;
+  right: 17px;
 }
 body.wb-mobile-rp
   #chat

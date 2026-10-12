@@ -11,8 +11,10 @@ import {
   Expand,
   Eye,
   Folder,
+  History,
   ImagePlus,
   Menu,
+  MenuDrawer,
   MoreHorizontal,
   PanelsTopLeft,
   PencilLine,
@@ -76,6 +78,7 @@ export function MobileShell({
     [editor, setEditor] = useState(false),
     [collapsed, setCollapsed] = useState(true),
     [lower, setLower] = useState(0),
+    [history, setHistory] = useState(false),
     [length, setLength] = useState(0),
     [mediaVersion, setMediaVersion] = useState(0);
   const presence = usePresence(sheet),
@@ -137,16 +140,28 @@ export function MobileShell({
     document.body.classList.toggle("wb-mobile-editor", editor);
     document.body.classList.toggle("wb-mobile-tools", sheet === "tools");
     document.body.classList.toggle("wb-mobile-lowered", lower > 0);
+    document.body.classList.toggle("wb-mobile-history", rp && history);
     document.body.style.setProperty("--wb-mobile-lower", `${editor ? 0 : lower}px`);
     return () => {
-      document.body.classList.remove("wb-mobile-editor", "wb-mobile-tools", "wb-mobile-lowered");
+      document.body.classList.remove(
+        "wb-mobile-editor",
+        "wb-mobile-tools",
+        "wb-mobile-lowered",
+        "wb-mobile-history",
+      );
       document.body.style.removeProperty("--wb-mobile-lower");
     };
-  }, [editor, sheet, lower]);
+  }, [editor, sheet, lower, history, rp]);
+  // The log opens at its newest line, like the stage it replaces.
+  useLayoutEffect(() => {
+    const chat = document.getElementById("chat");
+    chat?.scrollTo({ top: chat.scrollHeight, behavior: "instant" });
+  }, [history]);
   useEffect(() => {
     setSheet(null);
     setEditor(false);
     setLower(0);
+    setHistory(false);
   }, [rp, snap.chatName, snap.character?.id]);
   useEffect(() => {
     const changed = () => {
@@ -478,7 +493,7 @@ export function MobileShell({
           aria-expanded={left}
           onClick={toggleLeft}
         >
-          <Menu size={21} />
+          <MenuDrawer size={21} />
         </button>
         <div className="wb-mobile-title">
           <strong>{title}</strong>
@@ -499,17 +514,29 @@ export function MobileShell({
           {rp ? (
             <Eye size={20} />
           ) : snap.character?.image ? (
-            <img src={snap.character.image} alt="" />
+            <span className="wb-mobile-face">
+              <img src={snap.character.image} alt="" />
+            </span>
           ) : (
             <span className="wb-avatar-fallback">N</span>
           )}
         </button>
+        {rp && (
+          <button
+            className="wb-mobile-history"
+            aria-label={history ? "关闭对话记录" : "查看对话记录"}
+            aria-pressed={history}
+            onClick={() => setHistory(!history)}
+          >
+            <History size={20} />
+          </button>
+        )}
         <button
           className="wb-mobile-management"
           aria-label="打开会话管理"
           onClick={() => setSheet("management")}
         >
-          <MoreHorizontal size={21} />
+          <MoreHorizontal size={21} strokeWidth={2.6} />
         </button>
       </header>
       {(left || panel) && (

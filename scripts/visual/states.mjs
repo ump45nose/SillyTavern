@@ -84,6 +84,7 @@ export const states = [
   { name: "m-rp-tools", viewport: phone, mobile: true, steps: [layout("rp"), label("打开输入工具")] },
   { name: "m-rp-lowered", viewport: phone, mobile: true, steps: [layout("rp"), label("展开或收起立绘")] },
   { name: "m-rp-dark", viewport: phone, mobile: true, steps: [layout("rp"), dark] },
+  { name: "m-rp-history", viewport: phone, mobile: true, steps: [layout("rp"), label("查看对话记录")] },
   { name: "m-novel-dark", viewport: phone, mobile: true, steps: [dark] },
   { name: "m-novel-tools", viewport: phone, mobile: true, steps: [label("打开输入工具")] },
   { name: "m-novel-config", viewport: phone, mobile: true, steps: [label("展开快捷配置")] },
