@@ -2792,6 +2792,25 @@ body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat .swipes-counter {
   color: var(--wb-muted);
 }
 
+/* ── Desk reading (board "Main"): one centred measure, no rules between turns, the user's
+   turns as soft cards. Desktop Noval only; RP history and the PWA keep their own layouts. ── */
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes {
+  max-width: calc(var(--wb-reading-size, 17px) * 44);
+  margin: 0 auto 6px !important;
+  padding: 8px 0 18px !important;
+  border-bottom: 0 !important;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"] {
+  margin: 6px auto 24px !important;
+  padding: 10px 18px 16px !important;
+  border-radius: 12px !important;
+  background: var(--wb-surface-2) !important;
+}
+/* Folding changes only the bottom edge, so the heading never moves. */
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"].wb-user-collapsed {
+  padding: 10px 18px !important;
+}
+
 /* ── from rp.css ── */
 body.wb-active.wb-rp {
   --wb-header: 74px;

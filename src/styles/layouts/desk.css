@@ -866,4 +866,33 @@
     }
   }
 
+  /* ── Composer (board "Main"): thin rules group the native menus, built-in actions and pins ── */
+  body.wb-active:not(.wb-mobile) .wb-composer-actions::before {
+    content: "";
+    flex: none;
+    width: 1px;
+    height: 18px;
+    margin: 0 6px;
+    background: var(--wb-line-strong, var(--wb-line));
+  }
+  body.wb-active:not(.wb-mobile)
+    .wb-composer-actions
+    > [data-wb-tool^="builtin:"]
+    + button:not([data-wb-tool^="builtin:"]) {
+    position: relative;
+    margin-left: 13px;
+  }
+  body.wb-active:not(.wb-mobile)
+    .wb-composer-actions
+    > [data-wb-tool^="builtin:"]
+    + button:not([data-wb-tool^="builtin:"])::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 50%;
+    width: 1px;
+    height: 18px;
+    transform: translateY(-50%);
+    background: var(--wb-line-strong, var(--wb-line));
+  }
 }
