@@ -9,12 +9,15 @@ fs.mkdirSync(artifacts, { recursive: true });
 const env = Object.fromEntries(fs.readFileSync(path.join(root, '.env'), 'utf8').split('\n')
     .filter(line => line.includes('=') && !line.startsWith('#')).map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
 export const credentials = { username: env.WB_USERNAME, password: env.WB_PASSWORD };
+// WB_PORT_OFFSET lets a second checkout run its own local instances beside the default ones.
+const offset = Number(process.env.WB_PORT_OFFSET ?? env.WB_PORT_OFFSET ?? 0);
+export const ports = { baseline: 32011 + offset, validation: 32012 + offset, mock: 32013 + offset, visual: 32014 + offset };
 export const urls = {
-    baseline: `http://${env.WB_BIND_ADDRESS}:32011`,
-    validation: `http://${env.WB_BIND_ADDRESS}:32012`,
-    mock: 'http://127.0.0.1:32013',
+    baseline: `http://${env.WB_BIND_ADDRESS}:${ports.baseline}`,
+    validation: `http://${env.WB_BIND_ADDRESS}:${ports.validation}`,
+    mock: `http://127.0.0.1:${ports.mock}`,
     // Disposable, reseeded instance for screenshot baselines (local runtime only).
-    visual: `http://${env.WB_BIND_ADDRESS}:32014`,
+    visual: `http://${env.WB_BIND_ADDRESS}:${ports.visual}`,
 };
 // The URL the tavern server uses to reach the deterministic provider (Docker DNS by default).
 export const mockApi = env.WB_MOCK_API || 'http://mock-model:4010/v1';
