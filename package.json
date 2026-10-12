@@ -36,6 +36,7 @@
     "verify:writing-addons": "node scripts/verify-writing-addons.mjs",
     "verify:pwa": "node scripts/verify-pwa-runtime.mjs",
     "verify:edge": "node scripts/verify-edge-lane.mjs",
+    "verify:layout-controls": "node scripts/verify-layout-controls.mjs",
     "verify:stale": "node scripts/verify-stale-chunk.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",

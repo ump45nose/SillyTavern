@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BookOpen, PanelsTopLeft, Theater } from "lucide-react";
 
 export type LayoutMode = "novel" | "rp" | "native";
@@ -21,13 +21,24 @@ export function LayoutSwitcher({
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const group = useRef<HTMLDivElement>(null),
+    // The mode that should take focus once it renders as checked; the host re-renders this root
+    // on its own schedule (e.g. synchronously before resolving a switch to native), so focus waits for the commit.
+    focusTarget = useRef<LayoutMode | undefined>(undefined);
+  useEffect(() => {
+    if (busy || focusTarget.current !== mode) return;
+    focusTarget.current = undefined;
+    group.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+  }, [mode, busy]);
   const choose = async (next: LayoutMode) => {
     if (busy || next === mode) return;
+    if (group.current?.contains(document.activeElement)) focusTarget.current = next;
     setBusy(true);
     setError("");
     try {
-      await onChange(next);
+      if (!(await onChange(next))) focusTarget.current = undefined;
     } catch (reason) {
+      focusTarget.current = undefined;
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setBusy(false);
@@ -36,6 +47,7 @@ export function LayoutSwitcher({
   return (
     <div className={`wb-layout-switcher wb-ui ${mode === "rp" ? "is-rp" : ""}`}>
       <div
+        ref={group}
         className="wb-layout-controls"
         role="radiogroup"
         aria-label="切换工作台"
@@ -49,12 +61,9 @@ export function LayoutSwitcher({
                 : 0;
           if (!step) return;
           event.preventDefault();
-          const group = event.currentTarget,
-            index = modes.findIndex((item) => item.id === mode),
+          const index = modes.findIndex((item) => item.id === mode),
             next = modes[(index + step + modes.length) % modes.length];
-          void choose(next.id).then(() =>
-            group.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus({ preventScroll: true }),
-          );
+          void choose(next.id);
         }}
       >
         {modes.map(({ id, name, detail, Icon }) => (
