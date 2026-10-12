@@ -14,13 +14,13 @@ export function RPAppearance({ host }: { host: HostAdapter }) {
   return (
     <>
       <button
-        className="wb-icon"
+        className="wb-rp-tool"
         title="RP 外观"
         aria-label="RP 外观"
         aria-expanded={!!anchor}
         onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}
       >
-        <Type size={17} />
+        <Type size={16} />
       </button>
       {presence.value && (
         <Popover

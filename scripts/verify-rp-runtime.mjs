@@ -80,7 +80,7 @@ try {
   await role("对白第 1 段").click(); await page.waitForTimeout(65);
   assert(await page.locator("#chat .wb-rp-current .mes_text").evaluate(n => n.getAnimations().some(a => a.playState === "running"))); await settle();
   assert.equal(await page.evaluate(() => __rpMessage === document.querySelector(".wb-rp-current") && __rpParent === __rpMessage.parentElement && __rpText === __rpMessage.querySelector(".mes_text") && __rpChildren.every((n, i) => n === __rpText.childNodes[i])), true);
-  assert.equal(await page.locator(".wb-rp-page-dots button:not(.wb-icon)").count() >= 3, true);
+  assert.equal(await page.locator(".wb-rp-dots button").count() >= 3, true);
   pass("real formatted messages paginate with visible motion and no DOM reparenting", { id });
   await role("对白第 2 段").click(); await settle();
   assert(await page.locator("#chat").evaluate(n => n.scrollHeight > n.clientHeight));
@@ -130,10 +130,10 @@ try {
   await role("收纳左边栏").click(); await settle(); pass("existing floor navigation selects the corresponding RP message");
   await role("展开左边栏").click(); await openResource(page,'世界书详情'); await settle();
   const compact = await page.evaluate(() => {
-    const header = document.querySelector(".wb-rp-deck-header").getBoundingClientRect(), speaker = document.querySelector(".wb-rp-speaker").getBoundingClientRect(), actions = document.querySelector(".wb-rp-deck-actions").getBoundingClientRect();
-    return { header: header.toJSON(), speaker: speaker.toJSON(), actions: actions.toJSON() };
+    const r = s => document.querySelector(s).getBoundingClientRect().toJSON();
+    return { bar: r(".wb-rp-deck-bar"), plate: r(".wb-rp-plate"), tools: r(".wb-rp-tools"), box: r("#sheld") };
   });
-  assert(compact.speaker.right < compact.actions.left && compact.actions.right <= compact.header.right + 1, JSON.stringify(compact));
+  assert(compact.tools.bottom <= compact.plate.top && compact.tools.top >= compact.bar.top - 1 && compact.tools.right <= compact.bar.right + 1 && compact.plate.top < compact.box.top && compact.plate.bottom > compact.box.top, JSON.stringify(compact));
   await role("关闭右栏").click(); await role("收纳左边栏").click(); await settle();
   pass("both panels can open together without dialogue controls overlapping the speaker", compact);
   await withReducedMotion(page, async () => assert.equal(await css("#sheld", "transitionDuration"), "0s")); pass("reduced motion is honored and the account preference restored");

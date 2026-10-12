@@ -193,21 +193,21 @@ try {
     ctx.chat.splice(0,ctx.chat.length,{name:ctx.characters[ctx.characterId]?.name || '布局验证',is_user:false,is_system:false,send_date:'2026-10-09T10:57:00',mes,extra:{}});
     await (await import('/script.js')).printMessages();
   }); await settle();
-  assert.ok(await page.locator('.wb-rp-page-dots>button:not(.wb-icon)').count()>1);
-  const dotLabel=await page.locator('.wb-rp-page-dots>button:not(.wb-icon)').first().getAttribute('aria-label');
+  assert.ok(await page.locator('.wb-rp-dots>button').count()>1);
+  const dotLabel=await page.locator('.wb-rp-dots>button').first().getAttribute('aria-label');
   await role(dotLabel).click(); await page.waitForTimeout(70);
   assert.equal(await role(dotLabel).evaluate(n=>n.getAnimations().some(a=>a.playState==='running')),true); await settle();
   assert.equal(await role(dotLabel).getAttribute('aria-current'),'true');
   for(const width of [1024,1496,2992]) {
     await page.setViewportSize({width,height:817});await settle();
-    const dots=await page.locator('.wb-rp-page-dots>button:not(.wb-icon)').evaluateAll(nodes=>nodes.map(n=>{
-      const dot=getComputedStyle(n,'::before'),matrix=new DOMMatrixReadOnly(dot.transform==='none'?undefined:dot.transform),rect=n.getBoundingClientRect(),caption=n.closest('.wb-rp-caption').getBoundingClientRect();
-      return {width:Number.parseFloat(dot.width)*matrix.a,height:Number.parseFloat(dot.height)*matrix.d,radius:dot.borderRadius,background:getComputedStyle(n).backgroundColor,hitWidth:rect.width,hitHeight:rect.height,inside:rect.left>=caption.left&&rect.right<=caption.right};
+    const dots=await page.locator('.wb-rp-dots>button').evaluateAll(nodes=>nodes.map(n=>{
+      const dot=getComputedStyle(n,'::before'),matrix=new DOMMatrixReadOnly(dot.transform==='none'?undefined:dot.transform),rect=n.getBoundingClientRect(),caption=n.closest('.wb-rp-foot').getBoundingClientRect();
+      return {current:n.getAttribute('aria-current')==='true',width:Number.parseFloat(dot.width)*matrix.a,height:Number.parseFloat(dot.height)*matrix.d,radius:dot.borderRadius,background:getComputedStyle(n).backgroundColor,hitWidth:rect.width,hitHeight:rect.height,inside:rect.left>=caption.left&&rect.right<=caption.right};
     }));
-    for(const dot of dots){assert.ok(Math.abs(dot.width-dot.height)<.01,JSON.stringify(dot));assert.equal(dot.radius,'50%');assert.equal(dot.background,'rgba(0, 0, 0, 0)');assert.ok(dot.hitWidth>=23.9&&dot.hitHeight>=23.9);assert.equal(dot.inside,true);}
+    for(const dot of dots){if(dot.current)assert.ok(dot.width>dot.height*2,JSON.stringify(dot));else{assert.ok(Math.abs(dot.width-dot.height)<.01,JSON.stringify(dot));assert.equal(dot.radius,'50%');}assert.equal(dot.background,'rgba(0, 0, 0, 0)');assert.ok(dot.hitWidth>=23.9&&dot.hitHeight>=23.9);assert.equal(dot.inside,true);}
   }
   await page.setViewportSize({width:1496,height:817});await settle();await page.screenshot({path:directory+'/rp-round-dots.png'});
-  pass("RP pagination markers remain circular with larger invisible hit areas; selecting a dot changes the page and retains click animation");
+  pass("RP pagination markers are circles with the current page drawn as a pill, inside 24px hit areas; selecting a dot changes the page and retains click animation");
   await page.evaluate(async () => {const ctx=SillyTavern.getContext();ctx.chat.splice(0,ctx.chat.length,...__layoutRealChat);delete window.__layoutRealChat;await (await import('/script.js')).printMessages();});await settle();
   await role("RP 外观").click();
   const checkbox = page.getByRole("checkbox", {name:"鼠标悬浮显示顶栏",exact:true});

@@ -1,0 +1,470 @@
+/*
+ * RP desktop (boards "RpDesktop / RpChrome / RpHistory / RpBare"): the scene fills the window and
+ * every control is a pane of frosted paper over it. The native message box (#sheld, restyled in
+ * native-bridge.css) is the dialogue pane; this file draws what floats around it.
+ */
+@layer wb.layouts {
+  body.wb-active.wb-rp {
+    --wb-rp-ink-1: #2f2c27;
+    --wb-rp-ink-2: #5f574b;
+    --wb-rp-ink-3: #7a7266;
+    --wb-rp-line: rgb(60 45 30 / 10%);
+    --wb-rp-glass: rgb(255 253 248 / 78%);
+    --wb-rp-glass-soft: rgb(255 253 248 / 55%);
+    --wb-rp-box: rgb(255 253 248 / 86%);
+    --wb-rp-field: rgb(60 45 30 / 5%);
+    --wb-rp-plate: #2f2c27;
+    --wb-rp-plate-ink: #fffefa;
+    --wb-rp-dot: rgb(60 45 30 / 22%);
+    --wb-rp-bar: rgb(250 249 245 / 82%);
+    --wb-rp-chip: #fffefa;
+    --wb-rp-tint: rgb(255 250 240 / 6%);
+    --wb-rp-scrim: rgb(250 246 238 / 42%);
+    --wb-rp-shadow: 0 8px 24px rgb(52 41 30 / 12%);
+    --wb-rp-box-shadow: 0 24px 60px rgb(0 0 0 / 22%);
+    --wb-rp-bar-height: 38px;
+    --wb-rp-bar-gap: 24px;
+  }
+  :root[data-wb-theme="dark"] body.wb-active.wb-rp {
+    --wb-rp-ink-1: #f3eee5;
+    --wb-rp-ink-2: #d2c8b8;
+    --wb-rp-ink-3: #a89e8f;
+    --wb-rp-line: rgb(255 255 255 / 10%);
+    --wb-rp-glass: rgb(30 26 22 / 62%);
+    --wb-rp-glass-soft: rgb(30 26 22 / 38%);
+    --wb-rp-box: rgb(26 22 19 / 74%);
+    --wb-rp-field: rgb(255 255 255 / 7%);
+    --wb-rp-plate: #f3eee5;
+    --wb-rp-plate-ink: #2a2420;
+    --wb-rp-dot: rgb(255 255 255 / 28%);
+    --wb-rp-bar: rgb(27 25 22 / 72%);
+    --wb-rp-chip: rgb(255 255 255 / 8%);
+    --wb-rp-tint: rgb(20 14 10 / 18%);
+    --wb-rp-scrim: rgb(16 12 9 / 55%);
+    --wb-rp-shadow: 0 8px 24px rgb(0 0 0 / 22%);
+    --wb-rp-box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
+  }
+
+  /* ── Top bar when pinned: frosted, one hairline under it ── */
+  body.wb-active.wb-rp:not(.wb-mobile) .wb-top {
+    background: var(--wb-rp-bar);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 1px 0 var(--wb-rp-line);
+  }
+
+  /* ── Scene card ── */
+  .wb-rp-scene {
+    position: fixed;
+    top: calc(var(--wb-rp-chrome) + 20px);
+    left: calc(var(--wb-left) + 52px);
+    z-index: 3;
+    width: 216px;
+    max-width: 24vw;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--wb-rp-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      var(--wb-rp-shadow),
+      inset 0 0 0 1px var(--wb-rp-line);
+    color: var(--wb-rp-ink-1);
+    font: var(--wb-text-sm) / 1.45 var(--wb-font-ui);
+    transition:
+      top var(--wb-duration-base),
+      left var(--wb-duration-base),
+      opacity var(--wb-duration-fast),
+      visibility var(--wb-duration-fast);
+  }
+  .wb-rp-scene-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .wb-rp-scene-head strong {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--wb-font-reading);
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wb-rp-scene-head span {
+    flex: none;
+    color: var(--wb-rp-ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .wb-rp-scene > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--wb-rp-ink-2);
+    overflow-wrap: anywhere;
+  }
+  .wb-rp-scene svg {
+    flex: none;
+  }
+
+  /* ── Deck: the band above the dialogue pane, and the plate and foot drawn onto it ── */
+  .wb-rp-deck {
+    position: fixed;
+    left: var(--wb-rp-dialog-left);
+    bottom: var(--wb-rp-bottom);
+    z-index: 6;
+    width: var(--wb-rp-dialog-width);
+    height: calc(var(--wb-rp-deck) + var(--wb-rp-bar-height) + var(--wb-rp-bar-gap));
+    color: var(--wb-rp-ink-1);
+    font: var(--wb-text-sm) / 1.45 var(--wb-font-ui);
+    pointer-events: none;
+    transition:
+      left var(--wb-duration-base),
+      width var(--wb-duration-base),
+      height 260ms var(--wb-ease-emphasized),
+      opacity var(--wb-duration-fast),
+      visibility var(--wb-duration-fast);
+  }
+  .wb-rp-deck.is-hidden,
+  .wb-rp-scene.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .wb-rp-deck :is(button, .wb-rp-replies, .wb-rp-tools) {
+    pointer-events: auto;
+  }
+  .wb-rp-deck-bar {
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--wb-rp-bar-height);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .wb-rp-replies {
+    min-width: 0;
+    display: flex;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .wb-rp-replies button {
+    flex: none;
+    max-width: 260px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0 14px;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--wb-radius-pill);
+    background: var(--wb-rp-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 0 0 1px var(--wb-rp-line);
+    color: var(--wb-rp-ink-1);
+    font: inherit;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  .wb-rp-replies button:is(:hover, :focus-visible) {
+    background: var(--wb-rp-box);
+  }
+  .wb-rp-tools {
+    flex: none;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--wb-rp-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 0 0 1px var(--wb-rp-line);
+  }
+  .wb-rp-tool {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--wb-rp-ink-2);
+    cursor: pointer;
+  }
+  .wb-rp-tool.is-label {
+    display: flex;
+    gap: 6px;
+    width: auto;
+    padding: 0 10px 0 8px;
+    font: inherit;
+  }
+  .wb-rp-tool:is(:hover, :focus-visible),
+  .wb-rp-tool[aria-expanded="true"] {
+    background: var(--wb-rp-field);
+    color: var(--wb-rp-ink-1);
+  }
+  .wb-rp-tool:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .wb-rp-tools-rule {
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background: var(--wb-rp-line);
+  }
+  .wb-rp-count {
+    min-width: 40px;
+    color: var(--wb-rp-ink-3);
+    font-size: var(--wb-text-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+  .wb-rp-deck.is-compact .wb-rp-tool.is-label span,
+  .wb-rp-deck.is-compact .wb-rp-replies {
+    display: none;
+  }
+  .wb-rp-plate {
+    position: absolute;
+    left: 28px;
+    bottom: calc(var(--wb-rp-deck) - 19px);
+    z-index: 1;
+    max-width: 40%;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px 0 6px;
+    border-radius: 12px;
+    background: var(--wb-rp-plate);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+    color: var(--wb-rp-plate-ink);
+    transition: bottom 260ms var(--wb-ease-emphasized);
+  }
+  .wb-rp-plate:not(:has(img)) {
+    padding-left: 18px;
+  }
+  .wb-rp-plate img {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center 18%;
+  }
+  .wb-rp-plate strong {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--wb-font-reading);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wb-rp-plate small {
+    flex: none;
+    opacity: 0.7;
+    font-size: var(--wb-text-xs);
+  }
+  .wb-rp-foot {
+    position: absolute;
+    inset: auto 0 0;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px 14px 40px;
+  }
+  .wb-rp-dots {
+    flex: none;
+    display: flex;
+    align-items: center;
+  }
+  .wb-rp-dots button {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    min-width: 0;
+    min-height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    cursor: pointer;
+  }
+  .wb-rp-dots button::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--wb-rp-dot);
+    transition:
+      width var(--wb-duration-base) var(--wb-ease-standard),
+      background-color var(--wb-duration-fast);
+  }
+  .wb-rp-dots button[aria-current="true"]::before {
+    width: 18px;
+    border-radius: 3px;
+    background: var(--wb-accent);
+  }
+  .wb-rp-dots button:not([aria-current]):hover::before {
+    background: color-mix(in srgb, var(--wb-accent) 55%, var(--wb-rp-dot));
+  }
+  .wb-rp-reply-field {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-left: 14px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--wb-rp-field);
+    box-shadow: inset 0 0 0 1px var(--wb-rp-line);
+    color: var(--wb-rp-ink-3);
+    font: inherit;
+    text-align: left;
+    cursor: text;
+  }
+  .wb-rp-reply-field span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wb-rp-reply-field:is(:hover, :focus-visible) {
+    color: var(--wb-rp-ink-2);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent);
+  }
+  .wb-rp-next {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 12px 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--wb-rp-ink-1);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .wb-rp-next:is(:hover, :focus-visible) {
+    background: var(--wb-rp-field);
+    color: var(--wb-rp-ink-1);
+  }
+  .wb-rp-deck.is-compact .wb-rp-reply-field span {
+    display: none;
+  }
+  .wb-rp-deck.is-compact .wb-rp-reply-field {
+    flex: none;
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  /* ── History: the whole conversation on one centred pane ── */
+  body.wb-active.wb-rp {
+    --wb-rp-log-width: min(860px, calc(var(--wb-rp-area) - 48px));
+    --wb-rp-log-left: calc(var(--wb-left) + (var(--wb-rp-area) - var(--wb-rp-log-width)) / 2);
+  }
+  .wb-rp-log-head {
+    position: fixed;
+    top: calc(var(--wb-rp-chrome) + 20px);
+    left: var(--wb-rp-log-left);
+    z-index: 6;
+    width: var(--wb-rp-log-width);
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px 0 28px;
+    border-radius: 18px 18px 0 0;
+    background: var(--wb-rp-box);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow:
+      inset 0 0 0 1px var(--wb-rp-line),
+      inset 0 -1px 0 var(--wb-rp-line);
+    color: var(--wb-rp-ink-1);
+    font: var(--wb-text-sm) / 1.45 var(--wb-font-ui);
+  }
+  .wb-rp-log-head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .wb-rp-log-head small {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wb-rp-ink-3);
+    font-size: var(--wb-text-sm);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wb-rp-log-head button {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    min-height: 34px;
+    margin-left: auto;
+    padding: 0 10px 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--wb-rp-ink-2);
+    font: inherit;
+    cursor: pointer;
+  }
+  .wb-rp-log-head button:is(:hover, :focus-visible) {
+    background: var(--wb-rp-field);
+    color: var(--wb-rp-ink-1);
+  }
+  body.wb-rp.wb-rp-history .wb-rp-stage :is(.wb-rp-actor, .wb-rp-user) {
+    opacity: 0;
+  }
+  body.wb-rp.wb-focus .wb-rp-log-head {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  /* ── Show/hide and the auto top bar's handle ── */
+  body.wb-rp .wb-rp-visibility {
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--wb-rp-ink-1);
+  }
+  body.wb-rp:is(.wb-focus, .wb-rp-top-collapsed) .wb-rp-visibility {
+    background: var(--wb-rp-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      var(--wb-rp-shadow),
+      inset 0 0 0 1px var(--wb-rp-line);
+  }
+}

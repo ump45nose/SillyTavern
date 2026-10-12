@@ -6,8 +6,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  CornerDownLeft,
+  CloudSun,
   History,
   MapPin,
   Maximize2,
@@ -20,7 +19,7 @@ import {
 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import { boundedPreference, dialoguePages } from "../host/rp";
-import { IconButton, useHostSlices } from "./common";
+import { useHostSlices } from "./common";
 import { ReadingPresentation } from "./Reading";
 import { beginImage } from "./AddonControls";
 import { addonEnabled } from "../addons/catalog";
@@ -409,187 +408,228 @@ export function RPStage({
         </div>,
         document.body,
       )}
+      {/* Board "RpDesktop": glass cards over the scene; the native message is the dialogue box itself. */}
       <aside
-        className={`wb-rp-situation ${isHidden || width < 1000 || (expanded && compose) || history ? "is-hidden" : ""}`}
+        className={`wb-rp-scene ${isHidden || width < 1000 || (expanded && compose) || history ? "is-hidden" : ""}`}
         inert={isHidden || width < 1000 || history}
         aria-label="当前场景信息"
       >
-        <small>{sceneValue("day") ? "DAY " + sceneValue("day") : "当前对话"}</small>
-        <strong>{sceneValue("location") || snap.groupName || snap.character?.name || "等待故事开始"}</strong>
+        <div className="wb-rp-scene-head">
+          <strong>{sceneValue("day") ? "DAY " + sceneValue("day") : "当前对话"}</strong>
+          <span>
+            {sceneValue("time") ||
+              host.messageTime(snap.messages.find((m) => m.id === current?.id)?.send_date)}
+          </span>
+        </div>
+        <span>
+          <MapPin size={14} aria-hidden="true" />
+          {sceneValue("location") || snap.groupName || snap.character?.name || "等待故事开始"}
+        </span>
         {sceneValue("weather") && (
           <span>
-            <MapPin size={13} />
+            <CloudSun size={14} aria-hidden="true" />
             {sceneValue("weather")}
           </span>
         )}
-        <span>
-          <Clock3 size={13} />
-          {sceneValue("time") ||
-            host.messageTime(snap.messages.find((m) => m.id === current?.id)?.send_date) ||
-            "选择角色后开始"}
-        </span>
       </aside>
       <section
-        className={`wb-rp-dialog-shell ${width < 800 ? "is-compact" : ""} ${isHidden || history ? "is-hidden" : ""}`}
+        className={`wb-rp-deck ${width < 800 ? "is-compact" : ""} ${compose ? "is-compose" : ""} ${isHidden || history ? "is-hidden" : ""}`}
         inert={isHidden || history}
         aria-label="RP 对白与输入"
       >
-        <div className="wb-rp-deck-header">
-          <div className="wb-rp-speaker">
-            <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
-            <small>{compose ? "你的回应" : current?.user ? "你的输入" : "对白"}</small>
-          </div>
-          <div className="wb-rp-deck-actions">
-            <button aria-label="查看对话记录" title="对话记录" onClick={() => setHistory(true)}>
-              <History size={15} />
+        <div className="wb-rp-deck-bar">
+          {!expanded && !!replies.length && (
+            <div className="wb-rp-replies" role="group" aria-label="建议回应">
+              {replies.map((qr) => (
+                <button
+                  key={qr.key}
+                  title={qr.message}
+                  disabled={snap.busy}
+                  onClick={() => {
+                    host.setInput(qr.message || "");
+                    enterCompose();
+                  }}
+                >
+                  {qr.label || qr.message?.slice(0, 45)}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
+            <button
+              className="wb-rp-tool is-label"
+              aria-label="查看对话记录"
+              title="对话记录"
+              onClick={() => setHistory(true)}
+            >
+              <History size={16} />
               <span>记录</span>
             </button>
-            <IconButton title="切换阅读布局" onClick={readingLayout}>
+            <button
+              className="wb-rp-tool"
+              aria-label="切换阅读布局"
+              title="切换阅读布局"
+              onClick={readingLayout}
+            >
               <BookOpen size={16} />
-            </IconButton>
+            </button>
             <RPAppearance host={host} />
             {host.isGenerating() && (
-              <IconButton title="停止生成" onClick={() => run(() => host.click("#mes_stop"))}>
+              <button
+                className="wb-rp-tool"
+                aria-label="停止生成"
+                title="停止生成"
+                onClick={() => run(() => host.click("#mes_stop"))}
+              >
                 <Square size={16} />
-              </IconButton>
+              </button>
             )}
             {current?.editing ? (
               <>
-                <IconButton title="保存对白编辑" onClick={() => nativeAction(".mes_edit_done")}>
+                <button
+                  className="wb-rp-tool"
+                  aria-label="保存对白编辑"
+                  title="保存对白编辑"
+                  onClick={() => nativeAction(".mes_edit_done")}
+                >
                   <Check size={16} />
-                </IconButton>
-                <IconButton title="取消对白编辑" onClick={() => nativeAction(".mes_edit_cancel")}>
+                </button>
+                <button
+                  className="wb-rp-tool"
+                  aria-label="取消对白编辑"
+                  title="取消对白编辑"
+                  onClick={() => nativeAction(".mes_edit_cancel")}
+                >
                   <X size={16} />
-                </IconButton>
+                </button>
               </>
             ) : (
               <>
-                <IconButton
+                <button
+                  className="wb-rp-tool"
+                  aria-label={`${actionLabels.regenerate}当前回复`}
                   title={`${actionLabels.regenerate}当前回复`}
                   disabled={snap.busy || !current || current.user || current.id !== snap.messages.length - 1}
                   onClick={() => run(() => host.click("#option_regenerate"))}
                 >
                   <RotateCcw size={16} />
-                </IconButton>
-                <IconButton
+                </button>
+                <button
+                  className="wb-rp-tool"
+                  aria-label="编辑当前对白"
                   title="编辑当前对白"
                   disabled={snap.busy || !current || compose}
                   onClick={() => nativeAction(".mes_edit")}
                 >
                   <PencilLine size={16} />
-                </IconButton>
+                </button>
                 {addonEnabled(prefs, "image-gen") && (
-                  <IconButton
+                  <button
+                    className="wb-rp-tool"
+                    aria-label="为当前对白生图"
                     title="为当前对白生图"
                     disabled={snap.busy || !current || compose}
                     onClick={() => beginImage(host, current!.id)}
                   >
                     <ImagePlus size={16} />
-                  </IconButton>
+                  </button>
                 )}
               </>
             )}
-            <div className="wb-rp-page-control">
-              <IconButton
-                title="上一段对白"
-                disabled={
-                  (!compose && current === messages[0] && page === 0 && !scroll.scrolled) ||
-                  !current ||
-                  current.editing
-                }
-                onClick={() => turn(-1)}
-              >
-                <ChevronLeft size={17} />
-              </IconButton>
-              <span aria-live="polite">
-                {compose ? "输入" : `${page + 1} / ${current?.pages.length || 1}`}
-              </span>
-              <IconButton
-                title="下一段对白或输入"
-                disabled={compose || !!current?.editing}
-                onClick={() => turn(1)}
-              >
-                <ChevronRight size={17} />
-              </IconButton>
-            </div>
-          </div>
-        </div>
-        <div className="wb-rp-caption">
-          <span>
-            {compose
-              ? "写下接下来发生的事"
-              : `#${(current?.id ?? 0) + 1} · ${scroll.overflow ? "长对白 · 可滚动阅读" : page + 1 === current?.pages.length ? "最后一段" : "对白"}`}
-          </span>
-          <div className="wb-rp-page-dots">
-            {visibleDots.map((index) => (
-              <button
-                key={index}
-                aria-label={`对白第 ${index + 1} 段`}
-                aria-current={!compose && index === page ? "true" : undefined}
-                disabled={!!current?.editing}
-                onClick={() => {
-                  live.current = false;
-                  setCursor({ id: current!.id, page: index, compose: false });
-                }}
-              />
-            ))}
-            <button
-              className="wb-icon"
-              aria-label="输入回应"
-              aria-current={compose ? "true" : undefined}
-              disabled={!!current?.editing}
-              onClick={enterCompose}
-            >
-              <PencilLine size={14} />
-            </button>
             {compose && (
               <button
-                className="wb-icon"
+                className="wb-rp-tool"
                 aria-label={expanded ? "还原 RP 输入区" : "展开 RP 输入区"}
+                title={expanded ? "还原输入区" : "展开输入区"}
                 aria-expanded={expanded}
                 onClick={() => setExpanded(!expanded)}
               >
                 {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
             )}
+            <span className="wb-rp-tools-rule" aria-hidden="true" />
+            <button
+              className="wb-rp-tool"
+              aria-label="上一段对白"
+              title="上一段对白"
+              disabled={
+                (!compose && current === messages[0] && page === 0 && !scroll.scrolled) ||
+                !current ||
+                current.editing
+              }
+              onClick={() => turn(-1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="wb-rp-count" aria-live="polite">
+              {compose ? "输入" : `${page + 1} / ${current?.pages.length || 1}`}
+            </span>
+            <button
+              className="wb-rp-tool"
+              aria-label="下一段对白或输入"
+              title="下一段对白或输入"
+              disabled={compose || !!current?.editing}
+              onClick={() => turn(1)}
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
-        {!compose && !current?.editing && (
-          <button className="wb-rp-next-hint" onClick={() => turn(1)}>
-            {!scroll.end
-              ? "继续阅读"
-              : page + 1 === current?.pages.length && current === messages.at(-1)
-                ? "继续，轮到你回应"
-                : "继续下一段"}
-            <ArrowRight size={14} />
-          </button>
-        )}
-        {compose && !expanded && !!replies.length && (
-          <div className="wb-rp-suggestions" aria-label="你的回应">
-            {replies.map((qr) => (
-              <button
-                key={qr.key}
-                title={qr.message}
-                disabled={snap.busy}
-                onClick={() => {
-                  host.setInput(qr.message || "");
-                }}
-              >
-                <span>{qr.label || qr.message?.slice(0, 45)}</span>
-                <CornerDownLeft size={14} />
+        <div className="wb-rp-plate">
+          {(compose || current?.user ? presentation.userPortrait : presentation.portrait) && (
+            <img src={compose || current?.user ? presentation.userPortrait : presentation.portrait} alt="" />
+          )}
+          <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
+          {(compose || current?.user) && <small>{compose ? "你的回应" : "你的输入"}</small>}
+        </div>
+        {!compose && (
+          <div className="wb-rp-foot">
+            <div className="wb-rp-dots">
+              {visibleDots.map((index) => (
+                <button
+                  key={index}
+                  aria-label={`对白第 ${index + 1} 段`}
+                  aria-current={index === page ? "true" : undefined}
+                  disabled={!!current?.editing}
+                  onClick={() => {
+                    live.current = false;
+                    setCursor({ id: current!.id, page: index, compose: false });
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              className="wb-rp-reply-field"
+              aria-label="输入回应"
+              disabled={!!current?.editing}
+              onClick={enterCompose}
+            >
+              <PencilLine size={14} aria-hidden="true" />
+              <span>{scroll.overflow ? "长对白可滚动阅读 · 输入回应…" : "输入回应…"}</span>
+            </button>
+            {!current?.editing && (
+              <button className="wb-rp-next" onClick={() => turn(1)}>
+                {!scroll.end
+                  ? "继续阅读"
+                  : page + 1 === current?.pages.length && current === messages.at(-1)
+                    ? "继续，轮到你回应"
+                    : "继续下一段"}
+                <ArrowRight size={14} />
               </button>
-            ))}
+            )}
           </div>
         )}
       </section>
       {history && (
         <>
-          <div className="wb-rp-history-bar">
-            <strong>对话记录</strong>
-            <small>{snap.chatName}</small>
-            <span className="wb-grow" />
+          <div className="wb-rp-log-head">
+            <h2>对话记录</h2>
+            <small>
+              {snap.chatName}
+              {messages.length ? ` · ${messages.length} 层` : ""}
+            </small>
             <button aria-label="返回 RP 对白" onClick={() => setHistory(false)}>
-              返回对白 <X size={17} />
+              返回对白 <X size={16} />
             </button>
           </div>
           <ReadingPresentation host={host} />

@@ -2797,7 +2797,7 @@ body.wb-active.wb-rp {
   --wb-header: 74px;
   --wb-rp-chrome: 74px;
   --wb-rp-bottom: clamp(20px, 3vh, 40px);
-  --wb-rp-deck: clamp(180px, 25vh, 360px);
+  --wb-rp-deck: clamp(200px, 28vh, 360px);
   --wb-rp-width: 0.88;
   --wb-rp-text: 19px;
   --wb-rp-area: calc(100vw - var(--wb-left) - var(--wb-right));
@@ -2829,7 +2829,8 @@ body.wb-rp :is(#expression-wrapper, #visual-novel-wrapper) {
 .wb-rp-atmosphere {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #faf9f508 15%, #f7eddd10 55%, #39362c38 100%);
+  background:
+    linear-gradient(to bottom, transparent 52%, var(--wb-rp-scrim, #39362c38)), var(--wb-rp-tint, transparent);
 }
 .wb-rp-actor,
 .wb-rp-user {
@@ -2877,10 +2878,11 @@ body.wb-rp :is(#expression-wrapper, #visual-novel-wrapper) {
     calc(100vh - var(--wb-rp-chrome) - 148px - var(--wb-rp-deck) - var(--wb-rp-bottom))
   );
   width: min(220px, calc(var(--wb-rp-sprite, 91vh) * 0.32), calc(var(--wb-rp-area) * 0.27));
-  border: 1px solid #ffffffa0;
-  border-radius: 12px;
-  background: var(--wb-soft);
-  box-shadow: 0 12px 38px #241f2914;
+  border-radius: 16px;
+  background: var(--wb-rp-glass, var(--wb-soft));
+  box-shadow:
+    0 18px 48px rgb(0 0 0 / 18%),
+    inset 0 0 0 1px rgb(255 255 255 / 45%);
   overflow: hidden;
 }
 .wb-rp-stage .is-portrait img {
@@ -2892,10 +2894,11 @@ body.wb-rp :is(#expression-wrapper, #visual-novel-wrapper) {
 .wb-rp-stage .is-portrait span {
   position: absolute;
   inset: auto 0 0;
-  padding: 24px 18px 12px;
+  padding: 28px 16px 12px;
   color: white;
-  font: 14px/1.5 system-ui;
-  background: linear-gradient(transparent, #332d248a);
+  font: 600 15px/1.5 var(--wb-font-reading);
+  letter-spacing: 0.06em;
+  background: linear-gradient(transparent, rgb(30 24 18 / 62%));
 }
 body.wb-active.wb-rp #sheld {
   inset: auto auto var(--wb-rp-bottom) var(--wb-rp-dialog-left) !important;
@@ -2903,11 +2906,14 @@ body.wb-active.wb-rp #sheld {
   height: var(--wb-rp-deck) !important;
   min-height: 0;
   display: block !important;
-  background: color-mix(in srgb, var(--wb-surface) 97%, transparent) !important;
-  border: 1px solid var(--wb-line) !important;
-  border-top: 0 !important;
-  border-radius: 0 0 12px 12px !important;
-  box-shadow: 0 8px 28px #302e291a !important;
+  background: var(--wb-rp-box) !important;
+  backdrop-filter: blur(22px) saturate(1.1);
+  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  border: 0 !important;
+  border-radius: 18px !important;
+  box-shadow:
+    var(--wb-rp-box-shadow),
+    inset 0 0 0 1px var(--wb-rp-line) !important;
   overflow: hidden;
   transition:
     left 220ms,
@@ -2921,10 +2927,10 @@ body.wb-active.wb-rp:not(.wb-rp-history) #chat {
   position: absolute;
   inset: 0;
   height: 100%;
-  padding: 0 28px 36px !important;
+  padding: 34px 40px 60px !important;
   display: flex;
   flex-direction: column;
-  justify-content: safe center;
+  justify-content: flex-start;
   overflow: auto;
   transition:
     opacity 160ms,
@@ -2954,7 +2960,9 @@ body.wb-rp:not(.wb-rp-history)
   display: none !important;
 }
 body.wb-active.wb-rp:not(.wb-rp-history) #chat .mes_text {
-  font: var(--wb-rp-text) / 1.9 var(--wb-rp-font, serif) !important;
+  font: var(--wb-rp-text) / 1.85 var(--wb-rp-font, serif) !important;
+  letter-spacing: 0.02em;
+  color: var(--wb-rp-ink-1) !important;
   padding: 0 !important;
 }
 body.wb-rp:not(.wb-rp-history) #chat .mes_text p {
@@ -2983,7 +2991,7 @@ body.wb-active.wb-rp #form_sheld {
 body.wb-active.wb-rp #send_form {
   height: 100% !important;
   min-height: 0 !important;
-  padding: 12px 20px 10px !important;
+  padding: 34px 32px 14px !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -3017,15 +3025,19 @@ body.wb-rp:not(.wb-rp-history) .edit_textarea {
   font: var(--wb-rp-text) / 1.8 var(--wb-rp-font, serif);
   resize: vertical;
 }
+/* History: the log continues the centred pane under .wb-rp-log-head (layouts/rp.css). */
 body.wb-active.wb-rp.wb-rp-history #sheld {
-  inset: calc(var(--wb-rp-chrome) + 52px) calc(var(--wb-right) + var(--wb-lane-right)) 0
-    calc(var(--wb-left) + var(--wb-lane-left)) !important;
-  width: auto !important;
+  inset: calc(var(--wb-rp-chrome) + 76px) auto 24px var(--wb-rp-log-left) !important;
+  width: var(--wb-rp-log-width) !important;
   height: auto !important;
-  border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: 0 0 18px 18px !important;
   display: flex !important;
-  background: var(--wb-paper) !important;
+  background: var(--wb-rp-box) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 24px 60px rgb(0 0 0 / 30%),
+    inset 0 0 0 1px var(--wb-rp-line) !important;
 }
 body.wb-rp.wb-rp-history #chat {
   height: 100%;

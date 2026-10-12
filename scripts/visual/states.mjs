@@ -26,6 +26,10 @@ const layout = (mode) => async (page) => {
   await page.evaluate((mode) => workbench.host.preference({ layout: mode }), mode);
 };
 
+const dark = async (page) => {
+  await page.evaluate(() => workbench.host.preference({ theme: "dark" }));
+};
+
 // Each state starts from a fresh load; steps run in order.
 export const states = [
   { name: "novel-home", viewport: desktop, steps: [] },
@@ -56,6 +60,8 @@ export const states = [
   { name: "rp-compose", viewport: desktop, steps: [layout("rp"), label("输入回应")] },
   { name: "rp-history", viewport: desktop, steps: [layout("rp"), label("查看对话记录")] },
   { name: "rp-panel-world", viewport: desktop, steps: [layout("rp"), key("Alt+Shift+Digit3")] },
+  { name: "rp-stage-dark", viewport: desktop, steps: [layout("rp"), dark] },
+  { name: "rp-history-dark", viewport: desktop, steps: [layout("rp"), dark, label("查看对话记录")] },
   { name: "m-novel-home", viewport: phone, mobile: true, steps: [] },
   { name: "m-novel-left", viewport: phone, mobile: true, steps: [label("打开大纲与导航")] },
   { name: "m-novel-right", viewport: phone, mobile: true, steps: [label("打开角色与 Trace")] },
