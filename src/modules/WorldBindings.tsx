@@ -1,5 +1,5 @@
 import React from "react";
-import { BookOpen } from "lucide-react";
+import { BookOpen } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Field, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import { BoundControl } from "../ui/HostControl";

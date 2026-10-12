@@ -1,4 +1,4 @@
-import { Download, Upload } from "lucide-react";
+import { Download, Upload } from "../ui/icons";
 import React, { useState } from "react";
 import type { HostAdapter } from "../host/adapter";
 import { Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";

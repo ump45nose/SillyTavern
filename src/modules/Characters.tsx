@@ -2,6 +2,7 @@ import { Select } from "../ui/Select";
 import React, { useContext, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
+  BookMarked,
   Star,
   Plus,
   Upload,
@@ -17,7 +18,7 @@ import {
   BookOpen,
   MessageSquarePlus,
   Search,
-} from "lucide-react";
+} from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data, Item } from "../host/types";
 import { clone } from "../host/model";
@@ -209,7 +210,10 @@ function CharacterPanel({ host, onManage }: { host: HostAdapter; onManage?: (gro
       ) : item ? (
         <article className="wb-character-profile" aria-label={`角色 ${item.name}`}>
           <header className="wb-character-hero">
-            {item.image && <img src={item.image} alt="" />}
+            {item.image && (
+              // The hero is too large for the native thumbnail (a small flattened JPEG); show the card image itself.
+              <img src={`/characters/${encodeURIComponent(item.id)}`} alt="" />
+            )}
             <div className="wb-character-hero-tools">
               {star(item, "wb-character-hero-tool is-star")}
               {rail && (
@@ -247,7 +251,7 @@ function CharacterPanel({ host, onManage }: { host: HostAdapter; onManage?: (gro
             {text || "暂无内容"}
           </div>
           <p className="wb-character-world">
-            <BookOpen size={14} aria-hidden="true" />
+            <BookMarked size={14} aria-hidden="true" />
             绑定世界书
             <span>{data.extensions?.world || "未绑定"}</span>
           </p>

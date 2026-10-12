@@ -2,7 +2,7 @@ import React, { Suspense, useEffect, useRef, useState } from "react";
 import { lazyChunk } from "../ui/lazyChunk";
 import {
   ArrowLeft,
-  BookOpen,
+  BookMarked,
   Image,
   Plug,
   Puzzle,
@@ -13,7 +13,7 @@ import {
   UserRound,
   UsersRound,
   X,
-} from "lucide-react";
+} from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { SettingsPage } from "../host/types";
 import { Dialog, Loading, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
@@ -36,7 +36,7 @@ export const settingsPages = (
     ["generation", SlidersHorizontal],
     ["connection", Plug],
     ["formatting", TextCursorInput],
-    ["world", BookOpen],
+    ["world", BookMarked],
     ["settings", Settings],
     ["background", Image],
     ["extensions", Puzzle],

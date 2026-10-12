@@ -17,7 +17,7 @@ import {
   Square,
   X,
   ImagePlus,
-} from "lucide-react";
+} from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { boundedPreference, dialoguePages } from "../host/rp";
 import { useHostSlices } from "./common";

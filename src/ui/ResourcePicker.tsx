@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Plus, Search } from "./icons";
 import type { Item } from "../host/types";
 import { Empty, SearchBox } from "./common";
 import { Select } from "./Select";

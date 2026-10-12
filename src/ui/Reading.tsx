@@ -19,7 +19,7 @@ import {
   Trash2,
   Volume2,
   X,
-} from "lucide-react";
+} from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { useHostSlices } from "./common";
 import { Popover } from "./Popover";

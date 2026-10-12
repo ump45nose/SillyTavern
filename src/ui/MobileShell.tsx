@@ -18,7 +18,7 @@ import {
   Theater,
   WandSparkles,
   X,
-} from "lucide-react";
+} from "./icons";
 import { pinnedTools, resolveTool } from "../host/tools";
 import { addonEnabled } from "../addons/catalog";
 import type { HostAdapter } from "../host/adapter";

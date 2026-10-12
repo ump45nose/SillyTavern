@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useSyncExternalStore } from "react";
-import { ImagePlus, WandSparkles, Settings2, Square, Upload, RotateCcw, Trash2 } from "lucide-react";
+import { ImagePlus, WandSparkles, Settings2, Square, Upload, RotateCcw, Trash2 } from "../../ui/icons";
 import References from "./References";
 import type { AddonViewProps } from "../types";
 import { Check } from "../../ui/ResourceControls";

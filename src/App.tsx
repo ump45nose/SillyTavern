@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { lazyChunk } from "./ui/lazyChunk";
 import {
+  BookMarked,
   ScanLine,
   X,
   Activity,
@@ -29,7 +30,7 @@ import {
   ListTree,
   ImagePlus,
   Maximize2,
-} from "lucide-react";
+} from "./ui/icons";
 import { resolveTool } from "./host/tools";
 import { addonEnabled } from "./addons/catalog";
 import { addonManager } from "./addons/runtime";
@@ -679,7 +680,7 @@ export default function App({
             {(
               [
                 ["character", UsersRound],
-                ["world", BookOpen],
+                ["world", BookMarked],
                 ["preset", SlidersHorizontal],
                 ["connection", Plug],
                 ["persona", UserRound],

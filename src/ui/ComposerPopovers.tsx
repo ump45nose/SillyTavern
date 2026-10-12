@@ -10,7 +10,7 @@ import {
   Trash2,
   Upload,
   UsersRound,
-} from "lucide-react";
+} from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data, SettingsPage } from "../host/types";
 import { Popover } from "./Popover";

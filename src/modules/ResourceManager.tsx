@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Copy, Download, Plus, Search, Upload, SquareArrowOutUpRight, Trash2, X } from "lucide-react";
+import { Copy, Download, Plus, Search, Upload, SquareArrowOutUpRight, Trash2, X } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Empty, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Keyboard, RotateCcw, X } from "lucide-react";
+import { Keyboard, RotateCcw, X } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import {
   bindingError,

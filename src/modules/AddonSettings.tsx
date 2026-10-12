@@ -1,5 +1,5 @@
 import React from "react";
-import { FileOutput, Puzzle, ListTree, ImagePlus } from "lucide-react";
+import { FileOutput, Puzzle, ListTree, ImagePlus } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { addons, addonEnabled } from "../addons/catalog";
 import { Check } from "../ui/ResourceControls";

@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState, useRef, useSyncExternalStore, Suspense } from "react";
 import { lazyChunk } from "./lazyChunk";
 import { createPortal } from "react-dom";
-import { ImagePlus, Pause, Play, Square, X, ListTree, Images } from "lucide-react";
+import { ImagePlus, Pause, Play, Square, X, ListTree, Images } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import type { MessageTarget } from "../addons/types";
 import { addonEnabled } from "../addons/catalog";

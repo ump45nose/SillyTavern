@@ -15,7 +15,7 @@ import {
   PanelRightClose,
   Send,
   FileText,
-} from "lucide-react";
+} from "../../ui/icons";
 import type { AddonViewProps } from "../types";
 import { Check } from "../../ui/ResourceControls";
 import { createRuntime } from "./runtime";

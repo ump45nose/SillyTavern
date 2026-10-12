@@ -19,7 +19,7 @@ import {
   TextSearch,
   UserRoundPen,
   Volume2,
-} from "lucide-react";
+} from "./icons";
 import { actionLabels } from "../host/labels";
 export const composerTools = [
   { id: "builtin:continue", label: actionLabels.continue },

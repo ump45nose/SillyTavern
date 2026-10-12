@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import {
+  BookMarked,
   Activity,
   BookOpen,
   Check,
@@ -10,13 +11,13 @@ import {
   SlidersHorizontal,
   UserRound,
   X,
-} from "lucide-react";
+} from "./icons";
 import { createPortal } from "react-dom";
 import type { HostSnapshot, Panel, Resource } from "../host/types";
 import { Empty, IconButton } from "./common";
 import { usePresence } from "./Motion";
 export const resourceLabels = { connection: "连接", preset: "预设", world: "世界书", persona: "用户设定" };
-const icons = { preset: SlidersHorizontal, world: BookOpen, persona: UserRound };
+const icons = { preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
 const pillIcons = { connection: Plug, ...icons };
 /** The popover's way into the full panel, named after what the panel lets you do there. */
 const manageLabels: Record<Resource, string> = {

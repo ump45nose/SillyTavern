@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUp, Menu, MoreHorizontal, WandSparkles } from "lucide-react";
+import { ArrowUp, Menu, MoreHorizontal, WandSparkles } from "./icons";
 import { addonEnabled } from "../addons/catalog";
 import { pinnedTools } from "../host/tools";
 import { composerTools, toolIcon } from "./ToolIcon";

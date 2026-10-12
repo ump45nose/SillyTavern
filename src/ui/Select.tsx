@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "./icons";
 import { usePresence } from "./Motion";
 
 type Props = React.SelectHTMLAttributes<HTMLSelectElement>;

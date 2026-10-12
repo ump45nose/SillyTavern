@@ -1,6 +1,6 @@
 import { Select } from "../ui/Select";
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { Plus, Trash2, BookOpen, Search, X } from "lucide-react";
+import { BookMarked, Plus, Trash2, BookOpen, Search, X } from "../ui/icons";
 import { SaveBar } from "../ui/ResourceControls";
 import { clone, activation, setActivation, validateBook } from "../host/model";
 import type { Data } from "../host/types";
@@ -450,7 +450,7 @@ export default function World({
       className={`wb-world is-deep is-editor-open ${managed ? "is-managed" : ""}`}
     >
       <div className="wb-world-tools">
-        <BookOpen size={18} />
+        <BookMarked size={18} />
         <strong>{name || "世界书"}</strong>
         <span className="wb-grow" />
       </div>

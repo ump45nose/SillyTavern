@@ -20,7 +20,7 @@ import {
   Upload,
   WandSparkles,
   type LucideIcon,
-} from "lucide-react";
+} from "./icons";
 
 /** Decorate the existing native action, keeping its node, handlers and local owner. */
 export const nativeGlyphs: Record<string, LucideIcon> = {

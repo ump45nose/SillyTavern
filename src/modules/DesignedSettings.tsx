@@ -16,7 +16,7 @@ import {
   Upload,
   Volume2,
   WandSparkles,
-} from "lucide-react";
+} from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Field, Notice, SearchBox, useTask } from "../ui/common";
 import { HostControl, HostWidget, type FormControl } from "../ui/HostControl";

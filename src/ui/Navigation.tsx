@@ -11,7 +11,7 @@ import {
   PencilLine,
   Settings,
   UsersRound,
-} from "lucide-react";
+} from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data, HostSnapshot, SettingsPage } from "../host/types";
 import AddonWorkspace from "./AddonWorkspace";

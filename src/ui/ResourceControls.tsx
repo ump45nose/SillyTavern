@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
 import { clone, mergeEdits } from "../host/model";

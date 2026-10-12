@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Empty, Select } from "../ui/common";
 const seconds = (value?: number) => (Number.isFinite(value) ? `${(value! / 1000).toFixed(2)} s` : "—");

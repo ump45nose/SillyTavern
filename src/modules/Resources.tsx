@@ -17,7 +17,7 @@ import {
   MessageSquare,
   Star,
   UserRound,
-} from "lucide-react";
+} from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Resource, Data } from "../host/types";
 import { clone, validatePreset } from "../host/model";

@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer } from "react";
-import { FlaskConical, PlugZap, RefreshCw } from "lucide-react";
+import { FlaskConical, PlugZap, RefreshCw } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { useTask, Notice, useHostSlices, withoutChat } from "../ui/common";
 import DesignedSettings from "./DesignedSettings";

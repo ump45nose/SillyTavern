@@ -33,7 +33,7 @@ try {
   const choose = async name => { await chooseLayout(page, name); await settle(); };
   await page.evaluate(() => { workbench.host.preference({ layout:"rp", rpTopAuto:false }); window.__layoutNative = { chat:document.getElementById("chat"), input:document.getElementById("send_textarea"), form:document.getElementById("send_form") }; }); await settle();
   assert.equal(await role("固定顶栏").getAttribute("aria-pressed"), "true");
-  assert.equal(await role("固定顶栏").locator(".lucide-pin").count(), 1);
+  assert.equal(await role("固定顶栏").locator(".wb-i-pin").count(), 1);
   await role("固定顶栏").click(); await page.mouse.move(750, 400); await settle();
   assert.equal(await collapsed(), true); assert.equal(await page.locator(".wb-top-pin").getAttribute("aria-pressed"), "false");
   const strip = await role("显示顶栏").evaluate(node => ({ height:node.getBoundingClientRect().height, background:getComputedStyle(node).backgroundColor }));

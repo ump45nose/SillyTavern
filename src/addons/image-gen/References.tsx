@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X } from "../../ui/icons";
 import type { AddonRuntime } from "../types";
 import { readReference, referenceLimit, type ImageReference } from "./reference-files";
 export default function References({

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Type } from "lucide-react";
+import { Type } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { useHostSlices } from "./common";
 import { Popover } from "./Popover";

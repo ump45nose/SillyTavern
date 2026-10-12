@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { addonEnabled, type AddonId } from "../addons/catalog";
 import { addonHost, addonStyles, loadAddon } from "../addons/loader";

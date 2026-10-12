@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Image, MessageSquare, Plus, Save, Trash2, UsersRound } from "lucide-react";
+import { ArrowDown, ArrowUp, Image, MessageSquare, Plus, Save, Trash2, UsersRound } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
 import { Field, IconButton, Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";

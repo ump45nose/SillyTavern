@@ -4,7 +4,7 @@ import type { HostAdapter } from "../host/adapter";
 import { Select } from "../ui/Select";
 import { Notice, Field } from "../ui/common";
 import { nativeGlyphs } from "../ui/NativeGlyph";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "../ui/icons";
 type Section = { label: string; selectors: string[] };
 export const nativePages: Record<string, { id: string; sections: Section[] }> = {
   connection: { id: "rm_api_block", sections: [{ label: "服务与凭据", selectors: [] }] },

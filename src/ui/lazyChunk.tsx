@@ -1,5 +1,5 @@
 import React, { lazy, type ComponentType } from "react";
-import { RotateCw } from "lucide-react";
+import { RotateCw } from "./icons";
 
 /**
  * Every build replaces the hashed chunks, so a page opened before an update asks for chunks that

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { X, Search, LoaderCircle, ChevronRight } from "lucide-react";
+import { X, Search, LoaderCircle, ChevronRight } from "./icons";
 export { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Slice, Slices } from "../host/types";

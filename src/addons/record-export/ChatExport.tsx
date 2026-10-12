@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Download, FileOutput, RefreshCw, Search, Square, Trash2 } from "lucide-react";
+import { Download, FileOutput, RefreshCw, Search, Square, Trash2 } from "../../ui/icons";
 import type { AddonHost } from "../types";
 import type { ExportOptions, ExportRole, ExportSummary, TagStat } from "./xml-export";
 import { Check, Fold } from "../../ui/ResourceControls";

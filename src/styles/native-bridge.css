@@ -508,6 +508,28 @@ body.wb-active #mes_stop {
   line-height: 40px;
   font-size: 26px;
 }
+/* Board "Main": stop is a round ink key holding a small rounded square. */
+body.wb-active:not(.wb-mobile) #mes_stop {
+  position: relative;
+  border-radius: 50%;
+  background: var(--wb-ink-1);
+  color: var(--wb-surface-1) !important;
+  font-size: 0;
+  box-shadow: 0 1px 2px rgb(52 41 30 / 8%);
+}
+body.wb-active:not(.wb-mobile) #mes_stop > * {
+  display: none !important;
+}
+body.wb-active:not(.wb-mobile) #mes_stop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 12px;
+  height: 12px;
+  margin: auto;
+  border-radius: 2.5px;
+  background: currentColor;
+}
 body.wb-active #qr--bar {
   display: none !important;
 }
@@ -582,8 +604,7 @@ body.wb-active #send_but .wb-native-icon * {
   width: 15px;
   height: 15px;
   border: 1.5px solid #b9b0a0;
-  border-radius: 50%;
-  background: transparent;
+  border-radius: 4.5px;
   box-shadow: none;
   transition:
     background-color 160ms,
@@ -591,11 +612,13 @@ body.wb-active #send_but .wb-native-icon * {
     box-shadow 160ms;
 }
 .wb-ui input[type="checkbox"]:checked {
-  background: var(--wb-entry-tone, var(--wb-accent));
-  border-color: var(--wb-entry-tone, var(--wb-accent));
+  border-color: var(--wb-accent);
+  background: var(--wb-accent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.3l2.6 2.5L12 5.4' fill='none' stroke='%23fffdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 100% no-repeat;
 }
 .wb-ui input[type="checkbox"]:hover {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wb-entry-tone, var(--wb-accent)) 12%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wb-accent) 12%, transparent);
 }
 .wb-ui input[type="checkbox"]::before,
 .wb-ui input[type="checkbox"]::after {
@@ -939,13 +962,13 @@ body.wb-active .select2-results__option--highlighted[aria-selected] {
 .wb-ui input[type="checkbox"] {
   appearance: none;
   flex: none;
-  width: 15px !important;
-  height: 15px !important;
-  min-height: 15px !important;
+  width: 16px !important;
+  height: 16px !important;
+  min-height: 16px !important;
   padding: 0 !important;
-  border: 1.5px solid #b9b0a0;
-  border-radius: 50%;
-  background: transparent;
+  border: 1.5px solid color-mix(in srgb, var(--wb-ink-3) 55%, transparent);
+  border-radius: 4.5px;
+  background-color: var(--wb-surface-1);
   box-shadow: none;
   transition:
     background-color 180ms,

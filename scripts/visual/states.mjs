@@ -30,10 +30,19 @@ const dark = async (page) => {
   await page.evaluate(() => workbench.host.preference({ theme: "dark" }));
 };
 
+const hover = (selector) => async (page) => {
+  await page.locator(selector).last().hover();
+};
+const fill = (selector, value) => async (page) => {
+  await page.locator(selector).fill(value);
+};
+
 // Each state starts from a fresh load; steps run in order.
 export const states = [
   { name: "novel-home", viewport: desktop, steps: [] },
   { name: "novel-home-1366", viewport: compact, steps: [] },
+  { name: "novel-hover", viewport: desktop, steps: [hover('#chat .mes[is_user="false"]:not(.last_mes)')] },
+  { name: "novel-draft", viewport: desktop, steps: [fill("#send_textarea", "她把信封翻过来，背面写着一行小字。")] },
   { name: "novel-left-collapsed", viewport: desktop, steps: [label("收纳左边栏")] },
   { name: "panel-character", viewport: desktop, steps: [label("角色与资源侧栏")] },
   { name: "panel-world", viewport: desktop, steps: [key("Alt+Shift+Digit3")] },
