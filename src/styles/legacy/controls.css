@@ -273,9 +273,6 @@
     color: var(--wb-ink);
     background: transparent;
   }
-  .wb-trace-scroll > .wb-select {
-    width: 100%;
-  }
   /* A resource row has one hover surface; nested controls never paint a second. */
   .wb-ui
     :is(.wb-resource-choice, .wb-row, .wb-book-row, .wb-entry-row, .wb-prompt-row, .wb-quick-row)

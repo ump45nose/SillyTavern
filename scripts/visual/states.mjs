@@ -37,6 +37,28 @@ const fill = (selector, value) => async (page) => {
   await page.locator(selector).fill(value);
 };
 
+/** A captured request shaped like the trace collector's records, so the Trace panel has something to show. */
+const traceRecord = async (page) => {
+  await page.evaluate(() => {
+    workbench.records.push({
+      id: "visual-trace", atMs: 0, timestamp: Date.now() - 42_000, path: "/api/backends/chat-completions/generate",
+      capturePoint: "browser-to-sillytavern", status: 200, elapsedMs: 3240, generation: { id: "g", type: "normal" },
+      body: { model: "claude-opus", temperature: 0.9, max_tokens: 1200, stream: true, messages: [
+        { role: "system", content: "你是一位克制的叙事者，用第三人称写作。" },
+        { role: "system", content: "[雾港志 / 灯塔] 雾港北岬的灯塔已经熄灭七年，守塔人下落不明。" },
+        { role: "user", content: "我把书拉过来，翻到夹信的那一页。" },
+      ] },
+      assemblyEvent: "CHAT_COMPLETION_SETTINGS_READY", assembled: null,
+      worldInfo: [
+        { world: "雾港志", comment: "灯塔", uid: 1, key: ["灯塔"], content: "雾港北岬的灯塔已经熄灭七年，守塔人下落不明。", position: 0 },
+        { world: "雾港志", comment: "雾港 · 码头区", uid: 3, constant: true, key: [], content: "码头区终年有雾。", position: 4, depth: 2 },
+      ],
+      worldInfoEvidence: "WORLD_INFO_ACTIVATED",
+      composition: { counts: { main: 1840, charDescription: 1312, worldInfoBefore: 2286, chatHistory: 32610, nsfw: 364 }, limit: 65536 },
+    });
+  });
+};
+
 // Each state starts from a fresh load; steps run in order.
 export const states = [
   { name: "novel-home", viewport: desktop, steps: [] },
@@ -51,6 +73,10 @@ export const states = [
   { name: "panel-connection", viewport: desktop, steps: [key("Alt+Shift+Digit1")] },
   { name: "panel-persona", viewport: desktop, steps: [key("Alt+Shift+Digit4")] },
   { name: "panel-trace", viewport: desktop, steps: [key("Alt+Shift+KeyT")] },
+  { name: "panel-trace-record", viewport: desktop, steps: [traceRecord, key("Alt+Shift+KeyT")] },
+  { name: "panel-export", viewport: desktop, steps: [key("Alt+Shift+KeyT"), click('.wb-panel-tabs [aria-label="记录导出"]')] },
+  { name: "panel-image", viewport: desktop, steps: [key("Alt+Shift+KeyT"), click('.wb-panel-tabs [aria-label="生图"]')] },
+  { name: "panel-outline", viewport: desktop, steps: [key("Alt+Shift+KeyT"), click('.wb-panel-tabs [aria-label="大纲"]')] },
   { name: "chooser-world", viewport: desktop, steps: [click('[aria-controls="wb-choices-world"]')] },
   {
     name: "chooser-connection",

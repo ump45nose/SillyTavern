@@ -30,9 +30,9 @@ try {
   const downloadText = async () => { const downloading = page.waitForEvent('download'); await exportPanel.getByRole('button', { name: '导出', exact: true }).click(); const file = await downloading; return { text: fs.readFileSync(await file.path(), 'utf8'), name: file.suggestedFilename() }; };
 
   assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').some(x => /addons\/record-export\/|export-worker/.test(x.name))), false);
-  const arrows = await page.locator('.wb-edge-arrow').evaluateAll(nodes => nodes.map(node => ({ width: node.getBoundingClientRect().width, icon: node.querySelector('svg').getBoundingClientRect().width, background: getComputedStyle(node).backgroundColor })));
-  arrows.forEach(arrow => { assert.equal(arrow.width, 36); assert.equal(arrow.icon, 28); assert.equal(arrow.background, 'rgba(0, 0, 0, 0)'); });
-  pass('larger 28px unbacked edge arrows; export code remains unloaded until requested');
+  const arrows = await page.locator('.wb-edge-arrow').evaluateAll(nodes => nodes.map(node => ({ left: node.classList.contains('wb-edge-left'), width: node.getBoundingClientRect().width, icon: node.querySelector('svg').getBoundingClientRect().width, background: getComputedStyle(node).backgroundColor })));
+  arrows.forEach(arrow => { assert.equal(arrow.width, 36); assert.equal(arrow.icon, arrow.left ? 12 : 16); assert.equal(arrow.background, 'rgba(0, 0, 0, 0)'); });
+  pass('board edge controls (12px tab chevron, 16px right chevron, tab drawn on ::before); export code remains unloaded until requested');
 
   await settingsGroup('常用工具');
   for (const name of ['作者注释', '变量管理器', 'Token 计数', '数据银行']) await page.getByRole('checkbox', { name: `固定 ${name}`, exact: true }).check();
