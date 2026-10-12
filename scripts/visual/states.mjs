@@ -30,6 +30,10 @@ const dark = async (page) => {
   await page.evaluate(() => workbench.host.preference({ theme: "dark" }));
 };
 
+/** Clicks the last match: the newest message, which stays in view once the chat is pinned to the bottom. */
+const tap = (selector) => async (page) => {
+  await page.locator(selector).last().click();
+};
 const hover = (selector) => async (page) => {
   await page.locator(selector).last().hover();
 };
@@ -120,6 +124,14 @@ export const states = [
   { name: "m-novel-menu", viewport: phone, mobile: true, steps: [label("打开会话管理")] },
   { name: "m-novel-editor", viewport: phone, mobile: true, steps: [label("全屏编辑草稿")] },
   { name: "m-rp-home", viewport: phone, mobile: true, steps: [layout("rp")] },
+  { name: "m-rp-tools", viewport: phone, mobile: true, steps: [layout("rp"), label("打开输入工具")] },
+  { name: "m-rp-lowered", viewport: phone, mobile: true, steps: [layout("rp"), label("展开或收起立绘")] },
+  { name: "m-rp-dark", viewport: phone, mobile: true, steps: [layout("rp"), dark] },
+  { name: "m-rp-history", viewport: phone, mobile: true, steps: [layout("rp"), label("查看对话记录")] },
+  { name: "m-novel-dark", viewport: phone, mobile: true, steps: [dark] },
+  { name: "m-novel-tools", viewport: phone, mobile: true, steps: [label("打开输入工具")] },
+  { name: "m-novel-config", viewport: phone, mobile: true, steps: [label("展开快捷配置")] },
+  { name: "m-novel-actions", viewport: phone, mobile: true, steps: [tap('#chat .mes[is_user="false"] .mes_text')] },
 ];
 
 /** Opens a fresh session, drives it into `state`, then hands the page to `inspect`. */

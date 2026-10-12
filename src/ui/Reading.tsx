@@ -24,7 +24,8 @@ import type { HostAdapter } from "../host/adapter";
 import { useHostSlices } from "./common";
 import { Popover } from "./Popover";
 import { usePresence } from "./Motion";
-export function ReadingSettings({ host }: { host: HostAdapter }) {
+/** `row` renders a labelled list row (the phone's session menu) instead of the toolbar icon. */
+export function ReadingSettings({ host, row = false }: { host: HostAdapter; row?: boolean }) {
   const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     prefs = host.prefs(),
     [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -32,13 +33,15 @@ export function ReadingSettings({ host }: { host: HostAdapter }) {
   return (
     <>
       <button
-        className={`wb-icon ${anchor ? "is-active" : ""}`}
+        className={`${row ? "wb-reading-row" : "wb-icon"} ${anchor ? "is-active" : ""}`}
         title="阅读设置"
         aria-label="阅读设置"
         aria-expanded={!!anchor}
         onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}
       >
-        <Type size={17} />
+        <Type size={row ? 19 : 17} />
+        {row && "阅读设置"}
+        {row && <ChevronRight size={15} />}
       </button>
       {presence.value && (
         <Popover

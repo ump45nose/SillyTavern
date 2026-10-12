@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { launch, session, ready, urls, artifacts } from "./browser.mjs";
+import { launch, session, ready, urls, artifacts, ports } from "./browser.mjs";
 
 // Explicitly configures the existing validation account. No model calls or service changes.
 // Dedicated resources and chat metadata keep the user's existing cards/persona intact.
@@ -9,7 +9,7 @@ const chatName = "RP双立绘演示";
 const marker = "workbench-rp-two-sprites-v1";
 const directory = "docs/design/rp-desktop/assets/";
 const assets = Object.fromEntries(["r-character.webp", "r-user-character.webp", "r-background.webp"].map(file => [file, fs.readFileSync(directory + file).toString("base64")]));
-assert.equal(new URL(urls.validation).port, "32012", "Only the validation instance can be configured");
+assert.equal(new URL(urls.validation).port, String(ports.validation), "Only the validation instance can be configured");
 
 const browser = await launch();
 try {

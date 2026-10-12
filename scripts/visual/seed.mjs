@@ -2,10 +2,10 @@
 // Run after `node scripts/local-runtime.mjs reset-visual`. Never points at validation or production.
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { launch, session, ready, urls } from "../browser.mjs";
+import { launch, session, ready, urls, ports } from "../browser.mjs";
 import { fixture } from "./fixture.mjs";
 
-assert.equal(new URL(urls.visual).port, "32014", "Seeding is limited to the disposable visual instance");
+assert.equal(new URL(urls.visual).port, String(ports.visual), "Seeding is limited to the disposable visual instance");
 const directory = "docs/design/rp-desktop/assets/";
 const assets = Object.fromEntries(
   ["r-character.webp", "r-user-character.webp", "r-background.webp"].map((file) => [

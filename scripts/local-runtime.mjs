@@ -14,8 +14,10 @@ const runtime = path.join(root, "runtime");
 const pidFile = path.join(runtime, "local-pids.json");
 const envPath = path.join(root, ".env");
 // visual: a disposable instance reseeded for screenshot baselines (scripts/visual/*).
-const instances = { baseline: 32011, validation: 32012, visual: 32014 };
-const mockPort = 32013;
+// WB_PORT_OFFSET (environment or .env) shifts every port so a second checkout can run beside the first.
+const offset = Number(process.env.WB_PORT_OFFSET ?? readEnv().WB_PORT_OFFSET ?? 0);
+const instances = { baseline: 32011 + offset, validation: 32012 + offset, visual: 32014 + offset };
+const mockPort = 32013 + offset;
 
 function readEnv() {
   if (!fs.existsSync(envPath)) return {};
@@ -42,6 +44,7 @@ function prepare() {
       "WB_USERNAME=workbench",
       `WB_PASSWORD=${crypto.randomBytes(18).toString("base64url")}`,
       `WB_MOCK_API=http://127.0.0.1:${mockPort}/v1`,
+      ...(offset ? [`WB_PORT_OFFSET=${offset}`] : []),
       "",
     ].join("\n"), { mode: 0o600 });
   }

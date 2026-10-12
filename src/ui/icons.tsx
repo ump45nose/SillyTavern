@@ -73,6 +73,7 @@ const paths = {
   left: "M15 6l-6 6 6 6",
   mask: "M4 4h16v7a8 8 0 0 1-16 0zM9 9.5h.01M15 9.5h.01M9.5 14.5a3.5 2.5 0 0 0 5 0",
   menu: "M4 6h16M4 12h16M4 18h16",
+  drawer: "M4 7h16M4 12h10M4 17h16",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   native: "M3 4h18v16H3zM9 4v16",
   newchat: "M20 11.5a8 8 0 0 1-11.8 7L3 20l1.5-5A8 8 0 1 1 20 11.5zM12 8.5v6M9 11.5h6",
@@ -142,6 +143,7 @@ export const LoaderCircle = drawn("spin", paths.spin);
 export const MapPin = drawn("pin2", paths.pin2);
 export const Maximize2 = drawn("expand", paths.expand);
 export const Menu = drawn("menu", paths.menu);
+export const MenuDrawer = drawn("drawer", paths.drawer);
 export const MessageSquarePlus = drawn("newchat", paths.newchat);
 export const MessagesSquare = drawn("reply", paths.reply);
 export const MoreHorizontal = drawn("more", paths.more);

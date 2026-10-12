@@ -9,13 +9,19 @@ import {
   ChevronRight,
   Copy,
   Expand,
+  Eye,
+  Folder,
+  History,
+  ImagePlus,
   Menu,
+  MenuDrawer,
   MoreHorizontal,
   PanelsTopLeft,
   PencilLine,
   Plus,
   Settings,
   Theater,
+  Users,
   WandSparkles,
   X,
 } from "./icons";
@@ -72,6 +78,7 @@ export function MobileShell({
     [editor, setEditor] = useState(false),
     [collapsed, setCollapsed] = useState(true),
     [lower, setLower] = useState(0),
+    [history, setHistory] = useState(false),
     [length, setLength] = useState(0),
     [mediaVersion, setMediaVersion] = useState(0);
   const presence = usePresence(sheet),
@@ -101,6 +108,29 @@ export function MobileShell({
       Math.min((visualViewport?.height ?? innerHeight) * 0.48, (visualViewport?.height ?? innerHeight) - 280),
     );
   const presentation = host.rpPresentation();
+  // Novel names the story; RP names the scene, falling back to the story when the card has none.
+  const scene = (key: string) => {
+      const value = presentation.scene?.[key];
+      return typeof value === "string" || typeof value === "number" ? String(value) : "";
+    },
+    who = snap.character?.name || snap.groupName || "选择角色",
+    title = (rp && scene("location")) || snap.chatName || who,
+    subtitle =
+      rp && scene("location")
+        ? [scene("time"), scene("weather")].filter(Boolean).join(" · ") || who
+        : snap.chatName
+          ? `${who} · ${snap.messages.length} 层`
+          : "开始一段新的故事";
+  const worlds = snap.resources.world.filter((x) => x.active),
+    summary = [
+      snap.resources.preset.find((x) => x.id === snap.current.preset)?.name,
+      worlds.length ? worlds[0].name + (worlds.length > 1 ? ` +${worlds.length - 1}` : "") : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  const replies = rp
+    ? ([...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(0, 3) as any[])
+    : [];
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-mobile-busy", snap.busy);
     document.body.classList.toggle("wb-mobile-offline", !snap.online);
@@ -110,16 +140,28 @@ export function MobileShell({
     document.body.classList.toggle("wb-mobile-editor", editor);
     document.body.classList.toggle("wb-mobile-tools", sheet === "tools");
     document.body.classList.toggle("wb-mobile-lowered", lower > 0);
+    document.body.classList.toggle("wb-mobile-history", rp && history);
     document.body.style.setProperty("--wb-mobile-lower", `${editor ? 0 : lower}px`);
     return () => {
-      document.body.classList.remove("wb-mobile-editor", "wb-mobile-tools", "wb-mobile-lowered");
+      document.body.classList.remove(
+        "wb-mobile-editor",
+        "wb-mobile-tools",
+        "wb-mobile-lowered",
+        "wb-mobile-history",
+      );
       document.body.style.removeProperty("--wb-mobile-lower");
     };
-  }, [editor, sheet, lower]);
+  }, [editor, sheet, lower, history, rp]);
+  // The log opens at its newest line, like the stage it replaces.
+  useLayoutEffect(() => {
+    const chat = document.getElementById("chat");
+    chat?.scrollTo({ top: chat.scrollHeight, behavior: "instant" });
+  }, [history]);
   useEffect(() => {
     setSheet(null);
     setEditor(false);
     setLower(0);
+    setHistory(false);
   }, [rp, snap.chatName, snap.character?.id]);
   useEffect(() => {
     const changed = () => {
@@ -301,6 +343,24 @@ export function MobileShell({
       document.removeEventListener("swiped-right", nativeSwipe, true);
     };
   }, [rp, toggleLeft, goPanel]);
+  // Phones have no hover: a tap on a Novel message shows its tools, a second tap or another message hides them.
+  useEffect(() => {
+    if (rp) return;
+    const chat = document.getElementById("chat")!;
+    const tap = (e: MouseEvent) => {
+      const target = e.target as Element,
+        message = target.closest<HTMLElement>(".mes");
+      if (!message || target.closest(`${interactive},[role=button]`) || getSelection()?.toString()) return;
+      const shown = message.classList.contains("wb-mobile-actions");
+      chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
+      if (!shown) message.classList.add("wb-mobile-actions");
+    };
+    chat.addEventListener("click", tap);
+    return () => {
+      chat.removeEventListener("click", tap);
+      chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
+    };
+  }, [rp]);
   useEffect(() => {
     if (!left && !panel) return;
     const drawer = document.querySelector<HTMLElement>(left ? ".wb-left" : ".wb-right")!;
@@ -433,8 +493,12 @@ export function MobileShell({
           aria-expanded={left}
           onClick={toggleLeft}
         >
-          {rp ? <ChevronLeft size={22} /> : <Menu size={21} />}
+          <MenuDrawer size={21} />
         </button>
+        <div className="wb-mobile-title">
+          <strong>{title}</strong>
+          <small>{subtitle}</small>
+        </div>
         <button
           className="wb-mobile-person"
           aria-label={rp ? "展开或收起立绘" : "打开角色与 Trace"}
@@ -447,75 +511,106 @@ export function MobileShell({
             rp ? setLower(lower ? 0 : stageLimit()) : goPanel("character");
           }}
         >
-          {snap.character?.image ? (
-            <img src={snap.character.image} alt="" />
+          {rp ? (
+            <Eye size={20} />
+          ) : snap.character?.image ? (
+            <span className="wb-mobile-face">
+              <img src={snap.character.image} alt="" />
+            </span>
           ) : (
             <span className="wb-avatar-fallback">N</span>
           )}
-          <span>
-            <strong>{snap.character?.name || snap.groupName || "选择角色"}</strong>
-            <small>{snap.chatName || "开始一段新的故事"}</small>
-          </span>
-          {rp && <ChevronDown size={14} />}
         </button>
+        {rp && (
+          <button
+            className="wb-mobile-history"
+            aria-label={history ? "关闭对话记录" : "查看对话记录"}
+            aria-pressed={history}
+            onClick={() => setHistory(!history)}
+          >
+            <History size={20} />
+          </button>
+        )}
         <button
           className="wb-mobile-management"
           aria-label="打开会话管理"
           onClick={() => setSheet("management")}
         >
-          <MoreHorizontal size={22} />
+          <MoreHorizontal size={21} strokeWidth={2.6} />
         </button>
       </header>
       {(left || panel) && (
         <>
           <button className="wb-mobile-shade" aria-label="收起边栏" onClick={closeDrawers} />
+          {left && <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>}
           <button className="wb-mobile-drawer-close wb-ui" aria-label="关闭边栏" onClick={closeDrawers}>
-            <X size={21} />
+            <X size={20} />
           </button>
         </>
       )}
-      {!rp &&
-        createPortal(
-          <div className={`wb-mobile-config wb-ui ${collapsed ? "is-collapsed" : ""}`}>
-            <div hidden={collapsed}>{resources}</div>
-            {collapsed && (
-              <button className="wb-mobile-summary" onClick={() => setCollapsed(false)}>
-                <i className={`wb-dot ${snap.online ? "online" : ""}`} />
-                <span>
-                  {snap.resources.connection.find((x) => x.id === snap.current.connection)?.name ||
-                    host.model() ||
-                    "未连接"}
-                </span>
-                <small>快捷配置</small>
-              </button>
-            )}
-            <button
-              className="wb-mobile-config-fold"
-              aria-label={collapsed ? "展开快捷配置" : "收起快捷配置"}
-              aria-expanded={!collapsed}
-              onClick={() => {
-                setCollapsed(!collapsed);
-                setChooser(null);
-              }}
-            >
-              <ChevronDown size={17} />
+      {!rp && (
+        <div
+          className={`wb-mobile-config wb-ui ${collapsed ? "is-collapsed" : ""}`}
+          inert={left || !!panel || !!sheet || editor}
+        >
+          <div hidden={collapsed}>{resources}</div>
+          {collapsed && (
+            <button className="wb-mobile-summary" onClick={() => setCollapsed(false)}>
+              <i className={`wb-dot ${snap.online ? "online" : ""}`} />
+              <span>
+                {snap.resources.connection.find((x) => x.id === snap.current.connection)?.name ||
+                  host.model() ||
+                  "未连接"}
+              </span>
+              {!!summary && <small>· {summary}</small>}
             </button>
-          </div>,
-          items,
-        )}
-      {rp &&
-        createPortal(
+          )}
           <button
-            type="button"
-            className="wb-mobile-plus wb-ui"
-            aria-label="打开输入工具"
-            aria-expanded={sheet === "tools"}
-            onClick={() => setSheet(sheet === "tools" ? null : "tools")}
+            className="wb-mobile-config-fold"
+            aria-label={collapsed ? "展开快捷配置" : "收起快捷配置"}
+            aria-expanded={!collapsed}
+            onClick={() => {
+              setCollapsed(!collapsed);
+              setChooser(null);
+            }}
           >
-            <Plus size={23} />
-          </button>,
-          items,
+            {collapsed && <span>快捷配置</span>}
+            <ChevronDown size={15} />
+          </button>
+        </div>
+      )}
+      {rp &&
+        !!replies.length &&
+        createPortal(
+          <div className="wb-mobile-replies wb-ui" role="group" aria-label="建议回应">
+            {replies.map((qr) => (
+              <button
+                key={qr.key}
+                title={qr.message}
+                disabled={snap.busy}
+                onClick={() => {
+                  host.setInput(qr.message || "");
+                  input.focus({ preventScroll: true });
+                }}
+              >
+                {qr.label || qr.message?.slice(0, 45)}
+              </button>
+            ))}
+          </div>,
+          document.getElementById("form_sheld")!,
         )}
+      {createPortal(
+        <button
+          type="button"
+          className="wb-mobile-plus wb-ui"
+          aria-label="打开输入工具"
+          aria-expanded={sheet === "tools"}
+          onClick={() => setSheet(sheet === "tools" ? null : "tools")}
+        >
+          <Plus size={23} />
+        </button>,
+        items,
+      )}
       {createPortal(
         <>
           <div className="wb-mobile-editor-heading wb-ui">
@@ -552,13 +647,14 @@ export function MobileShell({
           />
           <div
             ref={sheetRef}
-            className="wb-mobile-sheet wb-ui"
+            className={`wb-mobile-sheet wb-ui ${presence.value === "management" ? "is-management" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={sheet === "management" ? "会话管理" : sheet === "tools" ? "输入工具" : "最新回复操作"}
             inert={presence.exiting}
             data-wb-exiting={presence.exiting || undefined}
           >
+            <span className="wb-mobile-sheet-grip" aria-hidden="true" />
             <header>
               <strong>
                 {presence.value === "management"
@@ -573,10 +669,13 @@ export function MobileShell({
             </header>
             {presence.value === "management" ? (
               <>
-                <div className="wb-mobile-mode-row" aria-label="工作台模式">
+                <span className="wb-mobile-sheet-caption" aria-hidden="true">
+                  布局模式
+                </span>
+                <div className="wb-mobile-mode-row" role="group" aria-label="工作台模式">
                   {(
                     [
-                      ["novel", "Novel", BookOpen],
+                      ["novel", "Noval", BookOpen],
                       ["rp", "RP", Theater],
                       ["native", "原生", PanelsTopLeft],
                     ] as const
@@ -589,7 +688,7 @@ export function MobileShell({
                         onLayout(mode);
                       }}
                     >
-                      <Icon size={20} />
+                      <Icon size={17} />
                       {name}
                     </button>
                   ))}
@@ -601,8 +700,9 @@ export function MobileShell({
                       goPanel("character");
                     }}
                   >
-                    <BookOpen size={19} />
+                    <Users size={19} />
                     角色与资源
+                    <ChevronRight size={15} />
                   </button>
                   <button
                     onClick={() => {
@@ -612,6 +712,7 @@ export function MobileShell({
                   >
                     <Activity size={19} />
                     Trace
+                    <ChevronRight size={15} />
                   </button>
                   <button
                     onClick={(e) => {
@@ -619,18 +720,21 @@ export function MobileShell({
                       open({ kind: "files", anchor: e.currentTarget });
                     }}
                   >
+                    <Folder size={19} />
                     聊天文件
+                    <ChevronRight size={15} />
                   </button>
                   <button onClick={() => goSettings("settings")}>
                     <Settings size={19} />
                     用户设置
+                    <ChevronRight size={15} />
                   </button>
-                  <ReadingSettings host={host} />
+                  <ReadingSettings host={host} row />
                 </div>
               </>
             ) : presence.value === "tools" ? (
               <>
-                <div className="wb-mobile-tool-config">{resources}</div>
+                {rp && <div className="wb-mobile-tool-config">{resources}</div>}
                 <div className="wb-mobile-tool-grid">
                   {tools.map((tool) => {
                     const Icon = toolIcon(tool.id, tool.label);
@@ -694,6 +798,7 @@ export function MobileShell({
                 </div>
                 {(presence.value as HTMLElement).querySelector(".wb-image-message-button") && (
                   <button disabled={snap.busy} onClick={() => nativeAction(".wb-image-message-button")}>
+                    <ImagePlus size={19} />
                     为此回复生图
                   </button>
                 )}

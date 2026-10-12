@@ -31,4 +31,5 @@
 @import "./components/reading-settings.css";
 @import "./layouts/rp.css";
 @import "./layouts/settings.css";
+@import "./layouts/pwa.css";
 @import "./native-bridge.css";
