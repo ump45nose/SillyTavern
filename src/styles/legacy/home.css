@@ -81,22 +81,66 @@
   /* Phase E components colour icons through their own text colour (see native-bridge). */
   body.wb-active
     .wb-ui
-    svg:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *),
+    svg:not(
+      :where(
+          .wb-top,
+          .wb-nav,
+          .wb-layout-switcher,
+          .wb-reading-bar,
+          .wb-panel-head,
+          .wb-character-hero,
+          .wb-rail-row
+        )
+        *
+    ),
   body.wb-active
     .wb-ui
     svg
-    *:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *) {
+    *:not(
+      :where(
+          .wb-top,
+          .wb-nav,
+          .wb-layout-switcher,
+          .wb-reading-bar,
+          .wb-panel-head,
+          .wb-character-hero,
+          .wb-rail-row
+        )
+        *
+    ) {
     color: var(--wb-control-ink) !important;
   }
   body.wb-active
     .wb-ui
     .is-active
-    > svg:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *),
+    > svg:not(
+      :where(
+          .wb-top,
+          .wb-nav,
+          .wb-layout-switcher,
+          .wb-reading-bar,
+          .wb-panel-head,
+          .wb-character-hero,
+          .wb-rail-row
+        )
+        *
+    ),
   body.wb-active
     .wb-ui
     .is-active
     > svg
-    *:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *) {
+    *:not(
+      :where(
+          .wb-top,
+          .wb-nav,
+          .wb-layout-switcher,
+          .wb-reading-bar,
+          .wb-panel-head,
+          .wb-character-hero,
+          .wb-rail-row
+        )
+        *
+    ) {
     color: var(--wb-accent) !important;
   }
   body.wb-active .wb-ui .wb-primary svg,

@@ -113,7 +113,9 @@ try {
     .click();
   // The sidebar reopens on the last panel (world); switch to the character panel from its tab.
   await page.locator(".wb-panel-tabs").getByRole("button", { name: "角色", exact: true }).click();
-  await page.getByRole("button", { name: "当前角色", exact: true }).click();
+  // Board PanelCharacter: the panel opens on the current character's card; editing is one click away.
+  await page.locator(".wb-character-profile").waitFor();
+  await page.getByRole("button", { name: "编辑角色", exact: true }).click();
   await page.getByLabel("角色描述", { exact: true }).waitFor();
   await page
     .getByLabel("角色描述", { exact: true })
@@ -128,15 +130,22 @@ try {
   check(
     "character editor saves through official merge endpoint without rewriting raw Markdown/XML",
   );
-  await page.getByRole("button", { name: "全部角色", exact: true }).click();
+  await page.getByRole("button", { name: "← 返回角色", exact: true }).click();
+  await page
+    .locator("#wb-resource-rail .wb-rail-open")
+    .filter({ hasText: "WorkbenchFixture" })
+    .first()
+    .click();
   const star = page.getByRole("button", {
     name: "收藏 WorkbenchFixture",
     exact: true,
   });
   if (await star.count()) await star.click();
   await page
-    .locator(".wb-favorites button")
+    .locator("#wb-resource-rail .wb-rail-row")
     .filter({ hasText: "WorkbenchFixture" })
+    .locator(".wb-rail-star")
+    .first()
     .waitFor();
   await page.getByRole("button", { name: "独立管理", exact: true }).click();
   await page.locator(".wb-card-grid").waitFor();

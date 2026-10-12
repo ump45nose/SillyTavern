@@ -529,11 +529,33 @@ body.wb-active .wb-native-icon * {
 /* Redesigned components (phase E) colour icons through their own text colour. */
 body.wb-active
   .wb-ui
-  svg:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *),
+  svg:not(
+    :where(
+        .wb-top,
+        .wb-nav,
+        .wb-layout-switcher,
+        .wb-reading-bar,
+        .wb-panel-head,
+        .wb-character-hero,
+        .wb-rail-row
+      )
+      *
+  ),
 body.wb-active
   .wb-ui
   svg
-  *:not(:where(.wb-top, .wb-nav, .wb-layout-switcher, .wb-reading-bar, .wb-panel-head) *),
+  *:not(
+    :where(
+        .wb-top,
+        .wb-nav,
+        .wb-layout-switcher,
+        .wb-reading-bar,
+        .wb-panel-head,
+        .wb-character-hero,
+        .wb-rail-row
+      )
+      *
+  ),
 body.wb-active .wb-native-icon,
 body.wb-active .wb-native-icon * {
   color: var(--wb-control-ink) !important;

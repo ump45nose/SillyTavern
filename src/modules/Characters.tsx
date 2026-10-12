@@ -14,6 +14,9 @@ import {
   PencilLine,
   PanelLeftClose,
   PanelLeftOpen,
+  BookOpen,
+  MessageSquarePlus,
+  Search,
 } from "lucide-react";
 import type { HostAdapter } from "../host/adapter";
 import type { Data, Item } from "../host/types";
@@ -55,28 +58,238 @@ function CharacterInfo({ item, onEdit }: { item?: Item; onEdit: (id: string) => 
     </div>
   );
 }
-export default function Characters({
-  host,
-  management,
-  onManage,
-}: {
+export default function Characters(props: {
   host: HostAdapter;
   management?: boolean;
   onManage?: (group?: string) => void;
 }) {
+  return props.management ? <CharacterLibrary host={props.host} /> : <CharacterPanel {...props} />;
+}
+const favorite = (x: Item) => Boolean(x.data?.data?.extensions?.fav ?? x.data?.fav);
+const fieldTabs = [
+  ["description", "描述"],
+  ["personality", "性格"],
+  ["scenario", "场景"],
+  ["first_mes", "第一条消息"],
+] as const;
+const plain = (text: unknown) =>
+  String(text ?? "")
+    .replace(/<[^>]*>/g, "")
+    .trim();
+/** The right panel (board "PanelCharacter"): the list lives in the rail; the card shows one character to read, then act on. */
+function CharacterPanel({ host, onManage }: { host: HostAdapter; onManage?: (group?: string) => void }) {
   const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     rail = useContext(ResourceRailContext);
   const [query, setQuery] = useState(""),
-    [tab, setTab] = useState("all"),
+    [viewing, setViewing] = useState(snap.character?.id || ""),
+    [field, setField] = useState<(typeof fieldTabs)[number][0]>("description"),
+    [editing, setEditing] = useState<string | null>(null);
+  const item = snap.characters.find((x) => x.id === viewing) ?? snap.character ?? snap.characters[0];
+  const data = item?.data?.data ?? item?.data ?? {};
+  const list = snap.characters
+    .filter((x) =>
+      `${x.name} ${x.detail} ${(x.data?.data?.tags || []).join(" ")}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+    )
+    .sort((a, b) => Number(favorite(b)) - Number(favorite(a)) || a.name.localeCompare(b.name, "zh"));
+  const create = () => {
+    const name = prompt("角色名称");
+    if (name) task.run(async () => setEditing(await host.createCharacter(name)));
+  };
+  const star = (x: Item, className: string) => (
+    <button
+      className={className}
+      aria-label={favorite(x) ? `取消收藏 ${x.name}` : `收藏 ${x.name}`}
+      title={favorite(x) ? "取消收藏" : "收藏"}
+      aria-pressed={favorite(x)}
+      onClick={() => task.run(() => host.favorite(x))}
+    >
+      <Star size={14} fill={favorite(x) ? "currentColor" : "none"} />
+    </button>
+  );
+  const listNav = (
+    <nav className={`wb-ui wb-rail wb-character-nav ${rail ? "" : "is-inline"}`} aria-label="角色列表">
+      <label className="wb-rail-search">
+        <Search size={14} />
+        <input
+          aria-label="搜索角色"
+          placeholder="搜索角色或标签"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
+      <div className="wb-rail-scroll">
+        <ul className="wb-rail-list">
+          {list.map((x) => (
+            <li
+              key={x.id}
+              className={`wb-rail-row ${x.id === item?.id && !editing ? "is-viewing" : ""} ${x.active ? "is-on" : ""}`}
+            >
+              <button
+                className="wb-rail-open"
+                aria-current={(x.id === item?.id && !editing) || undefined}
+                title={x.active ? `${x.name} · 当前角色` : x.name}
+                onClick={() => {
+                  if (editing && !guards.check()) return;
+                  setEditing(null);
+                  setViewing(x.id);
+                }}
+              >
+                <span className="wb-rail-avatar" aria-hidden="true">
+                  {x.image ? <img src={x.image} alt="" /> : x.name.slice(0, 1)}
+                </span>
+                <span className="wb-rail-copy">
+                  <span className="wb-rail-name">{x.name}</span>
+                  <small>{x.active ? "当前角色" : x.detail || "未分类角色"}</small>
+                </span>
+              </button>
+              {favorite(x) && (
+                <Star className="wb-rail-star" size={12} fill="currentColor" aria-label="收藏" role="img" />
+              )}
+            </li>
+          ))}
+        </ul>
+        {!list.length && <p className="wb-rail-empty">没有符合条件的角色</p>}
+      </div>
+      <div className="wb-rail-foot">
+        <button className="wb-rail-new" disabled={task.busy} onClick={create}>
+          <Plus size={15} />
+          新建
+        </button>
+        <label className="wb-rail-tool" title="导入角色卡">
+          <Upload size={15} />
+          <input
+            aria-label="导入角色卡"
+            type="file"
+            accept=".png,.json,.yaml,.yml,.charx,.byaf"
+            multiple
+            onChange={(e) => {
+              const files = [...(e.target.files || [])];
+              task.run(async () => {
+                for (const file of files) await host.importCharacter(file);
+              });
+            }}
+          />
+        </label>
+        <button className="wb-rail-tool" aria-label="群组" title="群组" onClick={() => onManage?.("群组")}>
+          <Users size={15} />
+        </button>
+        {onManage && (
+          <button
+            className="wb-rail-tool"
+            aria-label="独立管理"
+            title="打开角色管理"
+            onClick={() => onManage()}
+          >
+            <Grid2X2 size={15} />
+          </button>
+        )}
+      </div>
+    </nav>
+  );
+  const tags: string[] = data.tags || [];
+  const text = plain(data[field]);
+  return (
+    <div className="wb-characters wb-character-panel">
+      <Notice error={task.error} />
+      {editing ? (
+        <div className="wb-character-detail-wrap">
+          <button
+            className="wb-link"
+            onClick={() => {
+              if (guards.check()) setEditing(null);
+            }}
+          >
+            ← 返回角色
+          </button>
+          <CharacterEditor key={editing} id={editing} host={host} />
+        </div>
+      ) : item ? (
+        <article className="wb-character-profile" aria-label={`角色 ${item.name}`}>
+          <header className="wb-character-hero">
+            {item.image && <img src={item.image} alt="" />}
+            <div className="wb-character-hero-tools">
+              {star(item, "wb-character-hero-tool is-star")}
+              {rail && (
+                <button
+                  className="wb-character-hero-tool"
+                  aria-label={rail.open ? "收起角色列表" : "展开角色列表"}
+                  title={rail.open ? "收起角色列表" : "展开角色列表"}
+                  aria-expanded={rail.open}
+                  onClick={() => rail.setOpen(!rail.open)}
+                >
+                  {rail.open ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
+                </button>
+              )}
+            </div>
+            <div className="wb-character-hero-copy">
+              <h2 title={item.name}>{item.name}</h2>
+              <p>{item.active ? "当前对话中" : item.detail || data.creator || "未分类角色"}</p>
+              {tags.length > 0 && (
+                <div className="wb-character-tags">
+                  {tags.slice(0, 4).map((t) => (
+                    <span key={t}>{t}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </header>
+          <div className="wb-character-fields" role="tablist" aria-label="角色字段">
+            {fieldTabs.map(([key, label]) => (
+              <button key={key} role="tab" aria-selected={field === key} onClick={() => setField(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className={`wb-character-text ${text ? "" : "is-empty"}`} role="tabpanel">
+            {text || "暂无内容"}
+          </div>
+          <p className="wb-character-world">
+            <BookOpen size={14} aria-hidden="true" />
+            绑定世界书
+            <span>{data.extensions?.world || "未绑定"}</span>
+          </p>
+          <footer className="wb-character-actions">
+            <button
+              className="wb-character-start"
+              disabled={task.busy || !!item.active}
+              onClick={() => task.run(() => host.selectCharacter(item.id))}
+            >
+              <MessageSquarePlus size={14} />
+              {item.active ? "当前角色" : "开始对话"}
+            </button>
+            <button
+              className="wb-character-quiet"
+              onClick={() => task.run(() => host.exportCharacter(item.id))}
+            >
+              导出角色
+            </button>
+            <button className="wb-character-edit" onClick={() => setEditing(item.id)}>
+              <PencilLine size={14} />
+              编辑角色
+            </button>
+          </footer>
+        </article>
+      ) : (
+        <Empty>还没有角色，先新建或导入一张角色卡</Empty>
+      )}
+      {rail ? rail.target && rail.open && createPortal(listNav, rail.target) : listNav}
+    </div>
+  );
+}
+/** The independent character library (deep view; restyled with the settings workspace in E6). */
+function CharacterLibrary({ host }: { host: HostAdapter }) {
+  const snap = useHostSlices(host, withoutChat),
+    task = useTask();
+  const [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
     [tag, setTag] = useState(""),
     [sort, setSort] = useState("name"),
     [selected, setSelected] = useState<string[]>([]),
     [editing, setEditing] = useState<string | null>(null),
     [preview, setPreview] = useState<string>("");
-  const favorite = (x: Item) => Boolean(x.data?.data?.extensions?.fav ?? x.data?.fav),
-    favorites = snap.characters.filter(favorite);
   const tags = [...new Set(snap.characters.flatMap((x) => x.data?.data?.tags ?? []))] as string[];
   const list = snap.characters
     .filter(
@@ -93,13 +306,7 @@ export default function Characters({
         ? Number(b.data?.date_last_chat ?? 0) - Number(a.data?.date_last_chat ?? 0)
         : a.name.localeCompare(b.name, "zh"),
     );
-  const open = (item: Item) =>
-    management
-      ? setEditing(item.id)
-      : task.run(async () => {
-          await host.selectCharacter(item.id);
-          setTab("current");
-        });
+  const open = (item: Item) => setEditing(item.id);
   const edit = (id: string) => setEditing(id),
     info = <CharacterInfo item={snap.characters.find((x) => x.id === preview)} onEdit={edit} />;
   const importCard = (
@@ -190,96 +397,41 @@ export default function Characters({
     </div>
   );
   return (
-    <div className={`wb-characters ${management ? "is-management" : ""}`}>
+    <div className="wb-characters is-management">
       <Notice error={task.error} />
-      {!management && (
-        <>
-          <div className="wb-section-title">
-            <span>收藏角色</span>
-            <span className="wb-grow" />
-            {onManage && (
-              <button className="wb-link" onClick={() => onManage()}>
-                管理
-                <Grid2X2 size={14} />
-              </button>
-            )}
-          </div>
-          <div className="wb-favorites">
-            {favorites.map((x) => (
-              <button
-                key={x.id}
-                title={x.name}
-                className={x.active ? "is-active" : ""}
-                onClick={() => open(x)}
-                onMouseEnter={() => setPreview(x.id)}
-                onFocus={() => setPreview(x.id)}
-              >
-                <span className="wb-portrait">
-                  <img src={x.image} alt="" />
-                </span>
-                <span>{x.name}</span>
-              </button>
-            ))}
-            {!favorites.length && <small>收藏常用角色，便于快速切换</small>}
-          </div>
-          <div className="wb-tabs">
-            <button className={tab === "all" ? "is-active" : ""} onClick={() => setTab("all")}>
-              全部角色
-            </button>
-            <button className={tab === "current" ? "is-active" : ""} onClick={() => setTab("current")}>
-              当前角色
-            </button>
-            <span className="wb-grow" />
-            {rail && (
-              <IconButton
-                title={rail.open ? "收起角色信息" : "展开角色信息"}
-                onClick={() => rail.setOpen(!rail.open)}
-              >
-                {rail.open ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-              </IconButton>
-            )}
-          </div>
-        </>
-      )}
-      {(tab === "all" || management) && !editing ? (
+      {!editing ? (
         <section className="wb-library-content">
-          {management && (
-            <>
-              <header className="wb-designed-page-head">
-                <div>
-                  <h2>角色管理</h2>
-                  <small>{list.length} 个角色 · 悬浮查看介绍</small>
-                </div>
-              </header>
-              {batch}
-            </>
-          )}
-          <div className={`wb-character-search-row ${management ? "is-management" : ""}`}>
+          <header className="wb-designed-page-head">
+            <div>
+              <h2>角色管理</h2>
+              <small>{list.length} 个角色 · 悬浮查看介绍</small>
+            </div>
+          </header>
+          {batch}
+          <div className="wb-character-search-row is-management">
             <SearchBox value={query} onChange={setQuery} placeholder="搜索角色或标签" />
-            {management && (
-              <>
-                <Select aria-label="角色筛选" value={filter} onChange={(e) => setFilter(e.target.value)}>
-                  <option value="all">全部角色</option>
-                  <option value="favorite">我的收藏</option>
-                  <option value="current">当前角色</option>
-                </Select>
-                <Select aria-label="标签筛选" value={tag} onChange={(e) => setTag(e.target.value)}>
-                  <option value="">所有标签</option>
-                  {tags.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </Select>
-              </>
-            )}
+            <>
+              <Select aria-label="角色筛选" value={filter} onChange={(e) => setFilter(e.target.value)}>
+                <option value="all">全部角色</option>
+                <option value="favorite">我的收藏</option>
+                <option value="current">当前角色</option>
+              </Select>
+              <Select aria-label="标签筛选" value={tag} onChange={(e) => setTag(e.target.value)}>
+                <option value="">所有标签</option>
+                {tags.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </Select>
+            </>
             <Select aria-label="角色排序" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="name">名称排序</option>
               <option value="recent">最近对话</option>
             </Select>
           </div>
-          <div className={`wb-character-browse ${management ? "has-info" : ""}`}>
-            {management && <aside>{info}</aside>}
+          <div className="wb-character-browse has-info">
+            <aside>{info}</aside>
             <div>
-              <div className={management ? "wb-card-grid" : "wb-character-list"}>
+              <div className="wb-card-grid">
                 {list.map((x) => (
                   <article
                     key={x.id}
@@ -287,18 +439,14 @@ export default function Characters({
                     onMouseEnter={() => setPreview(x.id)}
                     onFocus={() => setPreview(x.id)}
                   >
-                    {management && (
-                      <input
-                        type="checkbox"
-                        aria-label={`选择 ${x.name}`}
-                        checked={selected.includes(x.id)}
-                        onChange={(e) =>
-                          setSelected((v) =>
-                            e.target.checked ? [...v, x.id] : v.filter((id) => id !== x.id),
-                          )
-                        }
-                      />
-                    )}
+                    <input
+                      type="checkbox"
+                      aria-label={`选择 ${x.name}`}
+                      checked={selected.includes(x.id)}
+                      onChange={(e) =>
+                        setSelected((v) => (e.target.checked ? [...v, x.id] : v.filter((id) => id !== x.id)))
+                      }
+                    />
                     <button className="wb-character-main" title={x.name} onClick={() => open(x)}>
                       <span className="wb-portrait">
                         <img src={x.image} alt="" />
@@ -315,11 +463,9 @@ export default function Characters({
                     >
                       <Star size={15} fill={favorite(x) ? "currentColor" : "none"} />
                     </IconButton>
-                    {management && (
-                      <IconButton title={`编辑角色 ${x.name}`} onClick={() => edit(x.id)}>
-                        <PencilLine size={14} />
-                      </IconButton>
-                    )}
+                    <IconButton title={`编辑角色 ${x.name}`} onClick={() => edit(x.id)}>
+                      <PencilLine size={14} />
+                    </IconButton>
                   </article>
                 ))}
               </div>
@@ -329,60 +475,17 @@ export default function Characters({
         </section>
       ) : (
         <div className="wb-character-detail-wrap">
-          {editing && (
-            <button
-              className="wb-link"
-              onClick={() => {
-                if (guards.check()) setEditing(null);
-              }}
-            >
-              ← 返回角色库
-            </button>
-          )}
-          {editing || snap.character ? (
-            <CharacterEditor
-              key={editing || snap.character!.id}
-              id={editing || snap.character!.id}
-              host={host}
-            />
-          ) : (
-            <Empty>先选择角色</Empty>
-          )}
+          <button
+            className="wb-link"
+            onClick={() => {
+              if (guards.check()) setEditing(null);
+            }}
+          >
+            ← 返回角色库
+          </button>
+          <CharacterEditor key={editing} id={editing} host={host} />
         </div>
       )}
-      {!management && (
-        <footer className="wb-resource-footer">
-          <button onClick={create}>
-            <Plus size={16} />
-            新建
-          </button>
-          {importCard}
-          <button onClick={() => onManage?.("群组")}>
-            <Users size={16} />
-            群组
-          </button>
-          {onManage && (
-            <button onClick={() => onManage()}>
-              <Grid2X2 size={16} />
-              独立管理
-            </button>
-          )}
-        </footer>
-      )}
-      {rail?.open &&
-        rail.target &&
-        createPortal(
-          <div className="wb-character-rail">
-            <header className="wb-rail-heading">
-              <strong>角色信息</strong>
-              <IconButton title="收起角色信息" onClick={() => rail.setOpen(false)}>
-                <PanelLeftClose size={16} />
-              </IconButton>
-            </header>
-            {info}
-          </div>,
-          rail.target,
-        )}
     </div>
   );
 }
