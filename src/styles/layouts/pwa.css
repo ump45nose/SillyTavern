@@ -343,9 +343,6 @@
     font-size: 13px;
     white-space: nowrap;
   }
-  body.wb-mobile-rp:not(.wb-mobile-editor):has(.wb-mobile-replies) #chat {
-    padding-bottom: 48px !important;
-  }
 
   /* ── Drawers: the outline slides in as a sheet with a rounded edge; the scrim dims the page ── */
   body.wb-mobile .wb-mobile-shade,

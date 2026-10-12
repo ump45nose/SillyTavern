@@ -2832,6 +2832,46 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"] {
 body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"].wb-user-collapsed {
   padding: 10px 18px !important;
 }
+/* Board "Main": a character turn keeps a strip above its text — floor, name and time on the left,
+   the turn's actions on the right — that becomes a soft pill while the turn is hovered or focused. */
+body.wb-active #chat .wb-reading-time::before {
+  content: " · ";
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes:not([is_user="true"]) {
+  padding: 40px 0 12px !important;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes:not([is_user="true"]) .wb-reading-time::before {
+  content: none;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes:not([is_user="true"]) .ch_name {
+  top: 0;
+  right: 22px;
+  left: 22px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 4px 0 10px;
+  border-radius: 9px;
+  background: transparent;
+  transition: background-color 160ms;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile)
+  #chat
+  .mes:not([is_user="true"]):is(:hover, :focus-within)
+  .ch_name {
+  background: var(--wb-surface-2);
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes:not([is_user="true"]) .wb-reading-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font: 11.5px/1.5 var(--wb-font-ui);
+  color: var(--wb-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .wb-reading-meta > b {
+  color: var(--wb-ink-2);
+  font-weight: 500;
+}
 
 /* ── from rp.css ── */
 body.wb-active.wb-rp {
@@ -3968,4 +4008,9 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #send_textarea {
 :is(#wb-root, #wb-layout-root, .wb-ui, #wb-x#wb-x#wb-x#wb-x#wb-x)
   *:not(.wb-native-embedded, .wb-native-embedded *) {
   all: revert-layer;
+}
+
+/* PWA RP: the reply chips float over the stage foot, so the chat keeps room for them. */
+body.wb-mobile-rp:not(.wb-mobile-editor):has(.wb-mobile-replies) #chat {
+  padding-bottom: 48px !important;
 }

@@ -344,13 +344,14 @@ export function ReadingPresentation({ host, chatStyle = false }: { host: HostAda
         ),
       );
     }
-    const timestamp = node.querySelector(".timestamp")?.textContent || host.messageTime(m?.send_date),
+    const timestamp = host.messageTime(m?.send_date) || node.querySelector(".timestamp")?.textContent,
       meta = node.querySelector<HTMLElement>(".ch_name>.flex1");
     if (meta)
       output.push(
         createPortal(
           <span className="wb-reading-meta">
-            {id + 1} 层{timestamp && <span className="wb-reading-time">{" · " + timestamp}</span>}
+            {!user && m?.name && <b>{m.name}</b>}
+            {id + 1} 层{timestamp && <span className="wb-reading-time">{timestamp}</span>}
           </span>,
           meta,
           "meta-" + id,
