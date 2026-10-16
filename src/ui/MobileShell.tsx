@@ -10,8 +10,8 @@ import {
   Copy,
   Expand,
   Eye,
+  EyeOff,
   Folder,
-  History,
   ImagePlus,
   Menu,
   MenuDrawer,
@@ -56,6 +56,8 @@ export function MobileShell({
   activate,
   next,
   select,
+  focus,
+  toggleFocus,
 }: {
   host: HostAdapter;
   snap: HostSnapshot;
@@ -73,25 +75,20 @@ export function MobileShell({
   activate: (id: string, anchor: HTMLElement) => void;
   next: (kind: Resource) => unknown;
   select: (kind: Resource, id: string, on: boolean) => void;
+  /** Focus mode: Noval keeps only the reading and the composer; RP hides every pane. */
+  focus: boolean;
+  toggleFocus: () => void;
 }) {
   const [sheet, setSheet] = useState<Sheet>(null),
     [editor, setEditor] = useState(false),
     [collapsed, setCollapsed] = useState(true),
-    [lower, setLower] = useState(0),
-    [history, setHistory] = useState(false),
-    [length, setLength] = useState(0),
-    [mediaVersion, setMediaVersion] = useState(0);
+    [length, setLength] = useState(0);
   const presence = usePresence(sheet),
     sheetRef = useRef<HTMLDivElement>(null),
-    header = useRef<HTMLElement>(null),
     input = document.getElementById("send_textarea") as HTMLTextAreaElement,
     form = document.getElementById("send_form")!,
     items = document.getElementById("nonQRFormItems")!;
-  const drag = useRef<{ pointer: number; y: number; lower: number; next: number; moved: boolean } | null>(
-      null,
-    ),
-    skipClick = useRef(0),
-    latest = useRef({ left, panel, editor, sheet });
+  const latest = useRef({ left, panel, editor, sheet });
   latest.current = { left, panel, editor, sheet };
   const close = () => {
       setSheet(null);
@@ -102,11 +99,6 @@ export function MobileShell({
       setChooser(null);
       setEditor(value);
     };
-  const stageLimit = () =>
-    Math.max(
-      0,
-      Math.min((visualViewport?.height ?? innerHeight) * 0.48, (visualViewport?.height ?? innerHeight) - 280),
-    );
   const presentation = host.rpPresentation();
   // Novel names the story; RP names the scene, falling back to the story when the card has none.
   const scene = (key: string) => {
@@ -128,9 +120,6 @@ export function MobileShell({
     ]
       .filter(Boolean)
       .join(" · ");
-  const replies = rp
-    ? ([...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(0, 3) as any[])
-    : [];
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-mobile-busy", snap.busy);
     document.body.classList.toggle("wb-mobile-offline", !snap.online);
@@ -139,29 +128,13 @@ export function MobileShell({
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-mobile-editor", editor);
     document.body.classList.toggle("wb-mobile-tools", sheet === "tools");
-    document.body.classList.toggle("wb-mobile-lowered", lower > 0);
-    document.body.classList.toggle("wb-mobile-history", rp && history);
-    document.body.style.setProperty("--wb-mobile-lower", `${editor ? 0 : lower}px`);
     return () => {
-      document.body.classList.remove(
-        "wb-mobile-editor",
-        "wb-mobile-tools",
-        "wb-mobile-lowered",
-        "wb-mobile-history",
-      );
-      document.body.style.removeProperty("--wb-mobile-lower");
+      document.body.classList.remove("wb-mobile-editor", "wb-mobile-tools");
     };
-  }, [editor, sheet, lower, history, rp]);
-  // The log opens at its newest line, like the stage it replaces.
-  useLayoutEffect(() => {
-    const chat = document.getElementById("chat");
-    chat?.scrollTo({ top: chat.scrollHeight, behavior: "instant" });
-  }, [history]);
+  }, [editor, sheet]);
   useEffect(() => {
     setSheet(null);
     setEditor(false);
-    setLower(0);
-    setHistory(false);
   }, [rp, snap.chatName, snap.character?.id]);
   useEffect(() => {
     const changed = () => {
@@ -175,24 +148,16 @@ export function MobileShell({
         setEditor(false);
         closeDrawers();
       };
-    const off = [bus.on("mobile-editor-open", edit), bus.on("image-compose", image)];
-    const nativeEdit = (e: Event) => {
-      if ((e.target as Element)?.closest(".mes_edit")) setLower(0);
-    };
-    document.getElementById("chat")?.addEventListener("click", nativeEdit);
+    const off = [
+      bus.on("mobile-editor-open", edit),
+      bus.on("image-compose", image),
+      bus.on("mobile-menu", () => setSheet("management")),
+    ];
     return () => {
       input.removeEventListener("input", changed);
       off.forEach((f) => f());
-      document.getElementById("chat")?.removeEventListener("click", nativeEdit);
     };
   }, []);
-  useEffect(() => {
-    const resize = () => setLower((value) => Math.min(value, stageLimit()));
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
-  // The live expression remains owned by its native extension; only its URL is presented here.
-  useEffect(() => host.media.subscribe(() => setMediaVersion((v) => v + 1)), [host]);
   useLayoutEffect(() => {
     const chat = document.getElementById("sheld")!,
       previous = chat.inert;
@@ -255,8 +220,11 @@ export function MobileShell({
       if (previous?.isConnected && previous.tagName !== "TEXTAREA") previous.focus({ preventScroll: true });
     };
   }, [left, panel, !!sheet]);
+  // Sideways swipes open the drawers: anywhere in Noval's reading, and on RP's scene (the dialogue
+  // box turns pages with the same gesture, so it is left to RPStage).
   useEffect(() => {
-    const chat = document.getElementById("chat")!;
+    const chat = document.getElementById("chat")!,
+      surface = rp ? document.body : chat;
     let start: { x: number; y: number; target: Element; pointer: number } | null = null,
       press: ReturnType<typeof setTimeout> | undefined;
     const cancel = () => {
@@ -276,9 +244,12 @@ export function MobileShell({
         (selection?.toString() && anchor?.closest("#chat"))
       )
         return;
-      start = { x: e.clientX, y: e.clientY, target: e.target as Element, pointer: e.pointerId };
+      const target = e.target as Element;
+      if (rp && target.closest(".wb-ui,#form_sheld,.wb-mobile-header")) return;
+      if (!rp || !target.closest("#sheld"))
+        start = { x: e.clientX, y: e.clientY, target, pointer: e.pointerId };
       if (rp) {
-        const message = (e.target as Element).closest<HTMLElement>(".mes");
+        const message = target.closest<HTMLElement>(".mes");
         const last = chat.querySelector(".mes:last-child");
         if (message && message === last && message.getAttribute("is_user") !== "true")
           press = setTimeout(() => {
@@ -312,10 +283,10 @@ export function MobileShell({
       cancel();
       start = null;
     };
-    chat.addEventListener("pointerdown", down);
-    chat.addEventListener("pointermove", move);
-    chat.addEventListener("pointerup", up);
-    chat.addEventListener("pointercancel", stopped);
+    surface.addEventListener("pointerdown", down);
+    surface.addEventListener("pointermove", move);
+    surface.addEventListener("pointerup", up);
+    surface.addEventListener("pointercancel", stopped);
     const context = (e: MouseEvent) => {
       if (!rp) return;
       const message = (e.target as Element).closest<HTMLElement>(".mes");
@@ -334,10 +305,10 @@ export function MobileShell({
     document.addEventListener("swiped-right", nativeSwipe, true);
     return () => {
       cancel();
-      chat.removeEventListener("pointerdown", down);
-      chat.removeEventListener("pointermove", move);
-      chat.removeEventListener("pointerup", up);
-      chat.removeEventListener("pointercancel", stopped);
+      surface.removeEventListener("pointerdown", down);
+      surface.removeEventListener("pointermove", move);
+      surface.removeEventListener("pointerup", up);
+      surface.removeEventListener("pointercancel", stopped);
       chat.removeEventListener("contextmenu", context);
       document.removeEventListener("swiped-left", nativeSwipe, true);
       document.removeEventListener("swiped-right", nativeSwipe, true);
@@ -437,55 +408,9 @@ export function MobileShell({
       : id !== "wb:export" && (!resolveTool(id) || !!resolveTool(id)?.disabled);
   return (
     <>
-      {rp &&
-        createPortal(
-          <div className="wb-mobile-scene" aria-hidden={lower === 0} data-revision={mediaVersion}>
-            {presentation.sprite || presentation.portrait ? (
-              <img src={presentation.sprite || presentation.portrait} alt={presentation.name} />
-            ) : (
-              <div className="wb-mobile-no-portrait">选择角色后展示立绘</div>
-            )}
-          </div>,
-          document.body,
-        )}
       <header
-        ref={header}
         className="wb-mobile-header wb-ui"
-        style={{ transform: `translateY(${editor ? 0 : lower}px)` }}
         inert={left || !!panel || !!sheet || editor}
-        onPointerDown={(e) => {
-          if (!rp || e.button !== 0 || (e.target as Element).closest(".wb-mobile-nav,.wb-mobile-management"))
-            return;
-          ((e.target as Element).closest("button") ?? e.currentTarget).setPointerCapture(e.pointerId);
-          drag.current = { pointer: e.pointerId, y: e.clientY, lower, next: lower, moved: false };
-        }}
-        onPointerMove={(e) => {
-          const start = drag.current;
-          if (!start || start.pointer !== e.pointerId) return;
-          const dy = e.clientY - start.y;
-          if (Math.abs(dy) > 7) {
-            if (!start.moved) e.currentTarget.setPointerCapture(e.pointerId);
-            start.moved = true;
-            document.body.classList.add("wb-mobile-dragging");
-            start.next = Math.max(0, Math.min(stageLimit(), start.lower + dy));
-            setLower(start.next);
-          }
-        }}
-        onPointerUp={(e) => {
-          const start = drag.current;
-          if (!start || start.pointer !== e.pointerId) return;
-          drag.current = null;
-          document.body.classList.remove("wb-mobile-dragging");
-          if (start.moved) {
-            skipClick.current = Date.now() + 250;
-            setLower(start.next > stageLimit() * 0.28 ? stageLimit() : 0);
-          }
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-          document.body.classList.remove("wb-mobile-dragging");
-          setLower(lower > stageLimit() * 0.5 ? stageLimit() : 0);
-        }}
       >
         <button
           className="wb-mobile-nav"
@@ -501,18 +426,17 @@ export function MobileShell({
         </div>
         <button
           className="wb-mobile-person"
-          aria-label={rp ? "展开或收起立绘" : "打开角色与 Trace"}
-          aria-expanded={rp ? lower > 0 : !!panel}
-          onClick={() => {
-            if (Date.now() < skipClick.current) {
-              skipClick.current = 0;
-              return;
-            }
-            rp ? setLower(lower ? 0 : stageLimit()) : goPanel("character");
-          }}
+          aria-label={rp ? (focus ? "显示界面" : "隐藏界面") : "打开角色与 Trace"}
+          aria-pressed={rp ? focus : undefined}
+          aria-expanded={rp ? undefined : !!panel}
+          onClick={() => (rp ? toggleFocus() : goPanel("character"))}
         >
           {rp ? (
-            <Eye size={20} />
+            focus ? (
+              <Eye size={20} />
+            ) : (
+              <EyeOff size={20} />
+            )
           ) : snap.character?.image ? (
             <span className="wb-mobile-face">
               <img src={snap.character.image} alt="" />
@@ -562,37 +486,18 @@ export function MobileShell({
           </button>
         </div>
       )}
-      {rp &&
-        !!replies.length &&
+      {!rp &&
         createPortal(
-          <div className="wb-mobile-replies wb-ui" role="group" aria-label="建议回应">
-            {replies.map((qr) => (
-              <button
-                key={qr.key}
-                title={qr.message}
-                disabled={snap.busy}
-                onClick={() => {
-                  host.setInput(qr.message || "");
-                  input.focus({ preventScroll: true });
-                }}
-              >
-                {qr.label || qr.message?.slice(0, 45)}
-              </button>
-            ))}
-          </div>,
+          <button
+            type="button"
+            className="wb-mobile-management wb-ui"
+            aria-label="打开会话管理"
+            onClick={() => setSheet("management")}
+          >
+            <MoreHorizontal size={21} strokeWidth={2.6} />
+          </button>,
           document.getElementById("form_sheld")!,
         )}
-      {createPortal(
-        <button
-          type="button"
-          className="wb-mobile-management wb-ui"
-          aria-label="打开会话管理"
-          onClick={() => setSheet("management")}
-        >
-          <MoreHorizontal size={21} strokeWidth={2.6} />
-        </button>,
-        document.getElementById("form_sheld")!,
-      )}
       {createPortal(
         <button
           type="button"

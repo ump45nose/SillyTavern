@@ -20,6 +20,8 @@ export interface BusEvents {
   "settings-group": { group: string; extension?: string };
   /** The PWA composer asked for the full-screen editor. */
   "mobile-editor-open": undefined;
+  /** The phone RP deck asked for the session menu. */
+  "mobile-menu": undefined;
 }
 type Name = keyof BusEvents;
 type Handler<K extends Name> = (payload: BusEvents[K]) => void;

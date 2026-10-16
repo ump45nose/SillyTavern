@@ -423,26 +423,6 @@
   body.wb-mobile-keyboard .wb-mobile-header {
     transform: none !important;
   }
-  body.wb-mobile-rp .wb-mobile-header {
-    touch-action: none;
-    user-select: none;
-  }
-  .wb-mobile-no-portrait {
-    position: absolute;
-    top: 18%;
-    left: 0;
-    right: 0;
-    text-align: center;
-    color: var(--wb-muted);
-    font-size: 13px;
-  }
-  body.wb-mobile-rp.wb-mobile-lowered .wb-mobile-header {
-    border-radius: 22px 22px 0 0;
-    box-shadow: 0 -8px 24px #43362815;
-  }
-  body.wb-mobile-dragging .wb-mobile-header {
-    transition: none !important;
-  }
   body.wb-mobile-rp :is(#leftSendForm, .wb-composer-actions, .wb-input-grip) {
     display: none !important;
   }

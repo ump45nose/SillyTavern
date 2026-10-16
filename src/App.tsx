@@ -509,6 +509,8 @@ export default function App({
           select={(kind, id, enabled) => {
             void task.run(() => (kind === "world" ? host.toggleBook(id, enabled) : host.select(kind, id)));
           }}
+          focus={focus}
+          toggleFocus={toggleFocus}
         />
       )}
       {!mobile && (
@@ -774,17 +776,18 @@ export default function App({
           </IconButton>
         </div>
       )}
-      {rp && !mobile ? (
+      {rp ? (
         <RPStage
           host={host}
           hidden={focus}
-          blocked={width <= 1100 && !!(navigationShown || shown)}
-          width={stageWidth(s, hovered, sizes)}
+          blocked={!mobile && width <= 1100 && !!(navigationShown || shown)}
+          width={mobile ? width : stageWidth(s, hovered, sizes)}
           readingLayout={() => onLayout("novel")}
           run={task.run}
+          mobile={mobile}
         />
       ) : (
-        <ReadingPresentation host={host} chatStyle={mobile && rp} />
+        <ReadingPresentation host={host} />
       )}
       {popupPresence.value && (
         <ComposerPopovers

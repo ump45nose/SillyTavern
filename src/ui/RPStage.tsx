@@ -10,6 +10,7 @@ import {
   MapPin,
   Maximize2,
   Minimize2,
+  MoreHorizontal,
   PanelBottom,
   PencilLine,
   RotateCcw,
@@ -91,6 +92,7 @@ export function RPStage({
   width,
   readingLayout,
   run,
+  mobile = false,
 }: {
   host: HostAdapter;
   hidden: boolean;
@@ -98,6 +100,8 @@ export function RPStage({
   width: number;
   readingLayout: () => void;
   run: (fn: () => unknown) => unknown;
+  /** Board "RpPwa": one figure, the dialogue box above the bottom edge, no separate input. */
+  mobile?: boolean;
 }) {
   const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     prefs = host.prefs();
@@ -109,15 +113,23 @@ export function RPStage({
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
-  const capacity = Math.max(
-    120,
-    Math.round(
-      (((width * dialogWidth) / 100 - 56) / textSize) *
-        Math.max(2, (Math.min(360, Math.max(180, height * 0.25)) - 50) / (textSize * 1.9)),
-    ),
-  );
+  // A page is what fits the dialogue box: its line length times its lines (phone box: a quarter of
+  // the screen between 180 and 260px, less the plate row and the foot; text 17px at 1.8).
+  const capacity = mobile
+    ? Math.max(
+        48,
+        Math.round(((width - 60) / 17) * Math.max(2, Math.floor((Math.min(260, Math.max(180, height * 0.25)) - 78) / 30.6))),
+      )
+    : Math.max(
+        120,
+        Math.round(
+          (((width * dialogWidth) / 100 - 56) / textSize) *
+            Math.max(2, (Math.min(360, Math.max(180, height * 0.25)) - 50) / (textSize * 1.9)),
+        ),
+      );
   const messages = useNativeDialogue(host, capacity),
     [cursor, setCursor] = useState<Cursor>({ id: -1, page: -1, compose: false });
+  const inertBefore = useRef<{ sheld: boolean; form: boolean } | null>(null);
   const beforeImage = useRef<Cursor | null>(null),
     cursorNow = useRef(cursor);
   cursorNow.current = cursor;
@@ -196,8 +208,10 @@ export function RPStage({
     document.body.classList.toggle("wb-rp-history", history);
     const sheld = document.getElementById("sheld")!,
       form = document.getElementById("form_sheld")!;
-    sheld.inert = isHidden;
-    form.inert = history || isHidden;
+    // Written only when they change: on a phone MobileShell also makes the box inert under drawers.
+    if (inertBefore.current?.sheld !== isHidden) sheld.inert = isHidden;
+    if (inertBefore.current?.form !== (history || isHidden)) form.inert = history || isHidden;
+    inertBefore.current = { sheld: isHidden, form: history || isHidden };
     document.body.style.setProperty("--wb-rp-text", textSize + "px");
     document.body.style.setProperty("--wb-rp-width", String(dialogWidth / 100));
     document.body.style.setProperty(
@@ -366,6 +380,83 @@ export function RPStage({
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
   });
+  const turnNow = useRef(turn);
+  turnNow.current = turn;
+  const deck = useRef<HTMLElement>(null);
+  // Phone: the log opens at its newest line.
+  useLayoutEffect(() => {
+    if (!mobile || !history) return;
+    const chat = document.getElementById("chat")!;
+    chat.scrollTop = chat.scrollHeight;
+  }, [mobile, history]);
+  // Phone gestures on the dialogue box: sideways turns the page, pulling up past the end of the
+  // text opens the log, and pulling the log down from its top closes it. The box follows the
+  // finger through --wb-rp-pull while the pull lasts.
+  useEffect(() => {
+    if (!mobile || compose || current?.editing) return;
+    const box = document.getElementById("sheld")!,
+      chat = document.getElementById("chat")!,
+      body = document.body;
+    let start: { x: number; y: number; axis: "x" | "y" | null; edge: boolean } | null = null,
+      pull = 0;
+    const setPull = (value: number) => {
+      pull = value;
+      body.style.setProperty("--wb-rp-pull", `${value}px`);
+      body.classList.toggle("wb-rp-pulling", value !== 0);
+    };
+    const down = (e: TouchEvent) => {
+      start = null;
+      if (e.touches.length !== 1 || (e.target as Element).closest("button,a,input,textarea,select,iframe,video"))
+        return;
+      const t = e.touches[0];
+      start = {
+        x: t.clientX,
+        y: t.clientY,
+        axis: null,
+        edge: history ? chat.scrollTop <= 2 : chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 2,
+      };
+    };
+    const move = (e: TouchEvent) => {
+      if (!start) return;
+      const t = e.touches[0],
+        dx = t.clientX - start.x,
+        dy = t.clientY - start.y;
+      if (!start.axis) {
+        if (Math.hypot(dx, dy) < 10) return;
+        start.axis = !history && Math.abs(dx) > Math.abs(dy) * 1.3 ? "x" : "y";
+      }
+      if (start.axis === "x") e.preventDefault();
+      else if (start.edge && (history ? dy > 0 : dy < 0)) {
+        e.preventDefault();
+        setPull(Math.sign(dy) * Math.min(180, Math.abs(dy) * 0.55));
+      }
+    };
+    const up = (e: TouchEvent) => {
+      if (!start) return;
+      const t = e.changedTouches[0],
+        dx = t.clientX - start.x;
+      if (start.axis === "x" && Math.abs(dx) > 48) turnNow.current(dx < 0 ? 1 : -1);
+      if (start.axis === "y" && Math.abs(pull) > 44) setHistory(!history);
+      start = null;
+      setPull(0);
+    };
+    const cancel = () => {
+      start = null;
+      setPull(0);
+    };
+    box.addEventListener("touchstart", down, { passive: true });
+    box.addEventListener("touchmove", move, { passive: false });
+    box.addEventListener("touchend", up);
+    box.addEventListener("touchcancel", cancel);
+    return () => {
+      cancel();
+      box.removeEventListener("touchstart", down);
+      box.removeEventListener("touchmove", move);
+      box.removeEventListener("touchend", up);
+      box.removeEventListener("touchcancel", cancel);
+      body.style.removeProperty("--wb-rp-pull");
+    };
+  }, [mobile, compose, history, current?.editing]);
   const nativeAction = (selector: string) =>
     run(() => {
       const button = current?.node.querySelector<HTMLElement>(selector);
@@ -378,8 +469,12 @@ export function RPStage({
     setHistory(false);
     setCursor({ id: current?.id ?? -1, page: -1, compose: true });
   };
-  /** The native input lives in the dialogue box's bottom row; replying is focusing it. */
-  const reply = () => document.getElementById("send_textarea")?.focus();
+  /** The native input lives in the dialogue box's bottom row; replying is focusing it. On a phone the
+      box itself turns into the input. */
+  const reply = () => {
+    if (mobile) enterCompose();
+    requestAnimationFrame(() => document.getElementById("send_textarea")?.focus());
+  };
   // The foot leaves a slot between the page dots and "continue"; the native form row fills it.
   const slot = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -418,7 +513,7 @@ export function RPStage({
               <span>{presentation.name}</span>
             </div>
           )}
-          {(presentation.userSprite || (prefs.rpShowPortraits !== false && presentation.userPortrait)) && (
+          {!mobile && (presentation.userSprite || (prefs.rpShowPortraits !== false && presentation.userPortrait)) && (
             <div
               className={`wb-rp-user ${presentation.userSprite ? "is-sprite" : "is-portrait"} ${current?.user || compose ? "is-speaking" : "is-listening"}`}
             >
@@ -430,6 +525,7 @@ export function RPStage({
         document.body,
       )}
       {/* Board "RpDesktop": glass cards over the scene; the native message is the dialogue box itself. */}
+      {!mobile && (
       <aside
         className={`wb-rp-scene ${sceneHidden ? "is-hidden" : ""}`}
         inert={sceneHidden}
@@ -453,8 +549,10 @@ export function RPStage({
           </span>
         )}
       </aside>
+      )}
       <section
-        className={`wb-rp-deck ${width < 800 ? "is-compact" : ""} ${compose ? "is-compose" : ""} ${isHidden || history ? "is-hidden" : ""}`}
+        ref={deck}
+        className={`wb-rp-deck ${mobile ? "is-mobile" : width < 800 ? "is-compact" : ""} ${compose ? "is-compose" : ""} ${isHidden || history ? "is-hidden" : ""}`}
         inert={isHidden || history}
         aria-label="RP 对白与输入"
       >
@@ -476,6 +574,47 @@ export function RPStage({
               ))}
             </div>
           )}
+          {mobile ? (
+            <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
+              {host.isGenerating() && (
+                <button
+                  className="wb-rp-tool"
+                  aria-label="停止生成"
+                  onClick={() => run(() => host.click("#mes_stop"))}
+                >
+                  <Square size={16} />
+                </button>
+              )}
+              {compose ? (
+                <button
+                  className="wb-rp-tool is-labelled"
+                  aria-label="返回对白"
+                  disabled={!current}
+                  onClick={() => setCursor({ id: current?.id ?? -1, page: -1, compose: false })}
+                >
+                  <ChevronLeft size={16} />
+                  对白
+                </button>
+              ) : (
+                <button
+                  className="wb-rp-tool is-labelled"
+                  aria-label="快进到你的回应"
+                  disabled={!!current?.editing}
+                  onClick={reply}
+                >
+                  <PencilLine size={15} />
+                  回应
+                </button>
+              )}
+              <button
+                className="wb-rp-tool"
+                aria-label="打开会话管理"
+                onClick={() => bus.emit("mobile-menu")}
+              >
+                <MoreHorizontal size={18} strokeWidth={2.6} />
+              </button>
+            </div>
+          ) : (
           <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
             <button
               className="wb-rp-tool"
@@ -589,6 +728,7 @@ export function RPStage({
               <ChevronRight size={16} />
             </button>
           </div>
+          )}
         </div>
         <div className="wb-rp-plate">
           {(compose || current?.user ? presentation.userPortrait : presentation.portrait) && (
@@ -626,7 +766,7 @@ export function RPStage({
           </div>
         )}
       </section>
-      {!isHidden && (
+      {!isHidden && !mobile && (
         <button
           className="wb-rp-corner wb-rp-log-toggle"
           aria-label={history ? "关闭对话记录" : "查看对话记录"}

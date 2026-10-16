@@ -36,6 +36,28 @@ const dark = async (page) => {
 const tap = (selector) => async (page) => {
   await page.locator(selector).last().click();
 };
+/** A one-finger touch drag on the first match, as a phone gesture (touchstart → moves → touchend). */
+const swipe = (selector, dx, dy) => async (page) => {
+  await page.locator(selector).first().evaluate((node, [dx, dy]) => {
+    const box = node.getBoundingClientRect(),
+      x = box.left + box.width / 2,
+      y = box.top + box.height / 2;
+    const touch = (cx, cy) => new Touch({ identifier: 7, target: node, clientX: cx, clientY: cy });
+    const send = (type, cx, cy) =>
+      node.dispatchEvent(
+        new TouchEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          touches: type === "touchend" ? [] : [touch(cx, cy)],
+          changedTouches: [touch(cx, cy)],
+        }),
+      );
+    send("touchstart", x, y);
+    for (let i = 1; i <= 6; i++) send("touchmove", x + (dx * i) / 6, y + (dy * i) / 6);
+    send("touchend", x + dx, y + dy);
+  }, [dx, dy]);
+  await page.waitForTimeout(450);
+};
 const hover = (selector) => async (page) => {
   await page.locator(selector).last().hover();
 };
@@ -138,10 +160,11 @@ export const states = [
   { name: "m-novel-menu", viewport: phone, mobile: true, steps: [label("打开会话管理")] },
   { name: "m-novel-editor", viewport: phone, mobile: true, steps: [label("全屏编辑草稿")] },
   { name: "m-rp-home", viewport: phone, mobile: true, steps: [layout("rp")] },
-  { name: "m-rp-tools", viewport: phone, mobile: true, steps: [layout("rp"), label("打开输入工具")] },
-  { name: "m-rp-lowered", viewport: phone, mobile: true, steps: [layout("rp"), label("展开或收起立绘")] },
+  { name: "m-rp-tools", viewport: phone, mobile: true, steps: [layout("rp"), label("快进到你的回应"), label("打开输入工具")] },
+  { name: "m-rp-hidden", viewport: phone, mobile: true, steps: [layout("rp"), label("隐藏界面")] },
+  { name: "m-rp-compose", viewport: phone, mobile: true, steps: [layout("rp"), label("快进到你的回应")] },
   { name: "m-rp-dark", viewport: phone, mobile: true, steps: [layout("rp"), dark] },
-  { name: "m-rp-history", viewport: phone, mobile: true, steps: [layout("rp"), label("查看对话记录")] },
+  { name: "m-rp-history", viewport: phone, mobile: true, steps: [layout("rp"), swipe("#sheld", 0, -160)] },
   { name: "m-novel-dark", viewport: phone, mobile: true, steps: [dark] },
   { name: "m-novel-tools", viewport: phone, mobile: true, steps: [label("打开输入工具")] },
   { name: "m-novel-config", viewport: phone, mobile: true, steps: [label("展开快捷配置")] },

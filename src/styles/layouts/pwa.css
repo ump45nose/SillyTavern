@@ -18,21 +18,6 @@
     --wb-m-paper: var(--wb-surface-0);
     --wb-m-scrim: rgb(40 30 20 / 32%);
     --wb-m-sheet-shadow: 0 -12px 40px rgb(0 0 0 / 18%);
-    /* RP panes, light: warm paper glass over the scene. */
-    --wb-m-ink-1: #2f2c27;
-    --wb-m-ink-2: #5f574b;
-    --wb-m-ink-3: #7a7266;
-    --wb-m-line: rgb(60 45 30 / 10%);
-    --wb-m-glass: rgb(255 253 248 / 76%);
-    --wb-m-box: rgb(255 253 248 / 88%);
-    --wb-m-box-user: color-mix(in srgb, var(--wb-accent) 10%, rgb(255 253 248 / 86%));
-    --wb-m-field: rgb(60 45 30 / 6%);
-    --wb-m-plate: #2f2c27;
-    --wb-m-plate-ink: #fffefa;
-    --wb-m-tint: rgb(255 250 240 / 6%);
-    --wb-m-fade: rgb(250 246 238 / 50%);
-    --wb-m-log: rgb(250 246 238 / 62%);
-    --wb-m-shadow: 0 8px 24px rgb(52 41 30 / 12%);
   }
   :root[data-wb-theme="dark"] body.wb-active.wb-mobile {
     --wb-surface-0: color-mix(
@@ -43,23 +28,9 @@
     --wb-surface-1: color-mix(in srgb, var(--wb-theme-dark-surface, #221f1b) 98.5%, #fff);
     --wb-surface-2: color-mix(in srgb, var(--wb-theme-dark-soft, #2b2823) 98.5%, #fff);
     --wb-m-scrim: rgb(0 0 0 / 50%);
-    --wb-m-ink-1: #f3eee5;
-    --wb-m-ink-2: #d2c8b8;
-    --wb-m-ink-3: #a89e8f;
-    --wb-m-line: rgb(255 255 255 / 10%);
-    --wb-m-glass: rgb(30 26 22 / 58%);
-    --wb-m-box: rgb(26 22 19 / 76%);
-    --wb-m-box-user: color-mix(in srgb, var(--wb-accent) 14%, rgb(26 22 19 / 74%));
-    --wb-m-field: rgb(255 255 255 / 8%);
-    --wb-m-plate: #f3eee5;
-    --wb-m-plate-ink: #2a2420;
-    --wb-m-tint: rgb(20 14 10 / 18%);
-    --wb-m-fade: rgb(16 12 9 / 60%);
-    --wb-m-log: rgb(16 12 9 / 62%);
-    --wb-m-shadow: 0 8px 24px rgb(0 0 0 / 24%);
   }
 
-  /* ── Header: menu · title · person · more ── */
+  /* ── Header: menu · title · person (the title is truly centred; ⋯ lives by the composer) ── */
   body.wb-mobile .wb-mobile-header {
     gap: 2px;
     padding: 6px 4px 0;
@@ -134,25 +105,32 @@
     transform: translateX(-50%);
   }
 
-  /* RP: the same row as frosted tiles on the scene. Lowered, it rides on top of the dialogue stack
-     and is the handle that drags the stack back up. */
+  /* RP: the same row as frosted tiles on the scene — menu, the scene's place and time, show/hide. */
   body.wb-mobile-rp .wb-mobile-header {
-    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 8px);
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 12px);
     left: 10px;
     right: 10px;
-    height: 48px;
+    height: 44px;
+    align-items: stretch;
     gap: 6px;
     padding: 0;
     background: transparent;
-    color: var(--wb-m-ink-1);
+    color: var(--wb-rp-ink-1);
+    z-index: 7;
   }
   body.wb-mobile-rp .wb-mobile-header > button,
   body.wb-mobile-rp .wb-mobile-title {
     height: 44px;
+    min-height: 44px;
     border-radius: 14px;
-    background: var(--wb-m-glass);
+    background: var(--wb-rp-glass);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px var(--wb-rp-line);
+    transition:
+      opacity 180ms,
+      visibility 180ms,
+      background-color 160ms;
   }
   body.wb-mobile-rp .wb-mobile-title {
     align-items: flex-start;
@@ -164,15 +142,16 @@
   }
   body.wb-mobile-rp .wb-mobile-title small {
     font-size: 11px;
-    color: var(--wb-m-ink-3);
+    color: var(--wb-rp-ink-3);
   }
-  body.wb-mobile-rp :is(.wb-mobile-person[aria-expanded="true"], .wb-mobile-history[aria-pressed="true"]) {
-    background: var(--wb-m-plate);
-    color: var(--wb-m-plate-ink);
+  /* Hidden interface: only the eye stays, a quieter pane, to bring everything back. */
+  body.wb-mobile-rp.wb-focus .wb-mobile-header > :not(.wb-mobile-person) {
+    opacity: 0;
+    visibility: hidden;
   }
-  body.wb-mobile-rp.wb-mobile-lowered .wb-mobile-header {
-    border-radius: 0;
-    box-shadow: none;
+  body.wb-mobile-rp.wb-focus .wb-mobile-person {
+    margin-left: auto;
+    background: color-mix(in srgb, var(--wb-rp-glass) 60%, transparent);
   }
 
   /* ── Quick configuration: one raised card under the header ── */
@@ -354,14 +333,6 @@
   body.wb-mobile.wb-mobile-editor .wb-mobile-management {
     display: none;
   }
-  body.wb-mobile-rp .wb-mobile-management {
-    bottom: calc(max(16px, var(--wb-safe-bottom)) + 2px);
-    background: var(--wb-m-box);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-    box-shadow: 0 0 0 1px var(--wb-m-line);
-    color: var(--wb-m-ink-1);
-  }
 
   /* ── Composer chrome: ＋, and the handle that pulls the full editor up ── */
   body.wb-mobile .wb-mobile-plus {
@@ -374,8 +345,9 @@
     color: var(--wb-ink-1);
   }
   body.wb-mobile-rp .wb-mobile-plus {
-    background: var(--wb-m-field);
-    color: var(--wb-m-ink-1);
+    grid-row: 2;
+    background: var(--wb-rp-field);
+    color: var(--wb-rp-ink-1);
   }
   body.wb-mobile.wb-mobile-editor .wb-mobile-plus {
     display: none;
@@ -391,70 +363,167 @@
     opacity: 0;
   }
 
-  /* ── RP scene: native background, a light tint, the figure, and a scrim behind the panes ── */
-  body.wb-mobile .wb-mobile-scene {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    overflow: hidden;
-    background: transparent;
-    isolation: isolate;
+  /* ── RP deck (RPStage): replies and tools above the box, the speaker's plate on its edge, page
+     dots and "continue" along its foot ── */
+  body.wb-mobile-rp .wb-rp-deck {
+    top: calc(var(--wb-rp-box-top) - var(--wb-rp-bar-height) - var(--wb-rp-bar-gap));
+    bottom: auto;
+    transition:
+      top 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
+      height 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
+      opacity 180ms,
+      visibility 180ms;
   }
-  body.wb-mobile .wb-mobile-scene::before,
-  body.wb-mobile .wb-mobile-scene::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
+  body.wb-mobile-rp.wb-rp-pulling .wb-rp-deck {
+    transition: none;
   }
-  body.wb-mobile .wb-mobile-scene::before {
-    z-index: -1;
-    background: var(--wb-m-tint);
-  }
-  body.wb-mobile .wb-mobile-scene::after {
-    top: auto;
-    height: 50%;
-    background: linear-gradient(to bottom, transparent, var(--wb-m-fade) 55%);
-  }
-  body.wb-mobile .wb-mobile-scene img {
-    position: absolute;
-    left: 50%;
-    bottom: 18%;
-    width: auto;
-    max-width: none;
-    height: 72%;
-    object-fit: contain;
-    transform: translateX(-50%);
-    filter: drop-shadow(0 12px 30px rgb(0 0 0 / 25%));
-  }
-  body.wb-mobile .wb-mobile-no-portrait {
-    top: 30%;
-    color: var(--wb-m-ink-2);
-  }
-
-  /* Suggested replies ride on the composer's top edge. */
-  body.wb-mobile .wb-mobile-replies {
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: calc(100% - 2px);
-    display: flex;
+  body.wb-mobile-rp .wb-rp-deck-bar {
+    align-items: center;
     gap: 8px;
+  }
+  body.wb-mobile-rp .wb-rp-replies {
+    flex: 1;
     overflow-x: auto;
     scrollbar-width: none;
+    pointer-events: auto;
   }
-  body.wb-mobile .wb-mobile-replies > button {
-    flex: none;
+  body.wb-mobile-rp .wb-rp-replies button {
     height: 36px;
+    min-height: 36px;
+    max-width: 70vw;
     padding: 0 14px;
-    border: 0;
     border-radius: 18px;
-    background: var(--wb-m-glass);
+    background: var(--wb-rp-glass);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
-    color: var(--wb-m-ink-1);
     font-size: 13px;
+  }
+  body.wb-mobile-rp .wb-rp-tools {
+    padding: 3px;
+    border-radius: 18px;
+    background: var(--wb-rp-glass);
+  }
+  body.wb-mobile-rp .wb-rp-tool {
+    width: 32px;
+    height: 30px;
+    min-height: 30px;
+    border-radius: 15px;
+    color: var(--wb-rp-ink-1);
+  }
+  body.wb-mobile-rp .wb-rp-tool.is-labelled {
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px 0 9px;
+    font: 500 13px/1 var(--wb-font-ui);
+  }
+  body.wb-mobile-rp .wb-rp-plate {
+    left: 14px;
+    bottom: calc(var(--wb-rp-deck) - 16px);
+    max-width: calc(100% - 28px);
+    height: 32px;
+    gap: 8px;
+    padding: 0 14px 0 3px;
+    border-radius: 16px;
+    box-shadow: var(--wb-rp-plate-shadow);
+  }
+  body.wb-mobile-rp .wb-rp-plate img {
+    width: 26px;
+    height: 26px;
+  }
+  body.wb-mobile-rp .wb-rp-plate strong {
+    font: 600 14px/1 var(--wb-font-ui);
+    letter-spacing: 0;
+  }
+  body.wb-mobile-rp .wb-rp-foot {
+    height: 48px;
+    gap: 6px;
+    padding: 0 6px 6px 18px;
+  }
+  body.wb-mobile-rp .wb-rp-dots button {
+    width: 11px;
+    height: 36px;
+    min-height: 36px;
+  }
+  body.wb-mobile-rp .wb-rp-dots button[aria-current="true"] {
+    width: 21px;
+  }
+  body.wb-mobile-rp .wb-rp-dots button[aria-current="true"]::before {
+    width: 16px;
+  }
+  body.wb-mobile-rp .wb-rp-next {
+    margin-left: auto;
+    height: 36px;
+    min-height: 36px;
+    gap: 4px;
+    padding: 0 6px 0 10px;
+    border-radius: 10px;
+    color: var(--wb-rp-ink-2);
+    font-size: 13px;
+  }
+  body.wb-mobile-rp .wb-rp-field-slot {
+    display: none;
+  }
+  /* The log's head rides on top of the history pane (native-bridge.css). */
+  body.wb-mobile-rp .wb-rp-log-head {
+    position: fixed;
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 66px);
+    left: 0;
+    right: 0;
+    z-index: 6;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 0 22px;
+    color: var(--wb-rp-ink-1);
+    font: 13px/1.4 var(--wb-font-ui);
+    transform: translateY(max(0px, var(--wb-rp-pull, 0px)));
+    animation: wb-mobile-fade-in 220ms ease both;
+  }
+  body.wb-mobile-rp .wb-rp-log-head::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 38px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--wb-rp-line);
+    transform: translateX(-50%);
+  }
+  body.wb-mobile-rp .wb-rp-log-head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  body.wb-mobile-rp .wb-rp-log-head small {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--wb-rp-ink-3);
     white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  body.wb-mobile-rp .wb-rp-log-head button {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    min-height: 36px;
+    margin-left: auto;
+    padding: 0 12px 0 8px;
+    border: 0;
+    border-radius: 18px;
+    background: var(--wb-rp-field);
+    color: var(--wb-rp-ink-1);
+    font: inherit;
+  }
+  @keyframes wb-mobile-fade-in {
+    from {
+      opacity: 0;
+    }
   }
 
   /* ── Drawers: the outline slides in as a sheet with a rounded edge; the scrim dims the page ── */
