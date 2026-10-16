@@ -2,8 +2,6 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowRight,
-  ArrowUp,
-  BookOpen,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -12,6 +10,7 @@ import {
   MapPin,
   Maximize2,
   Minimize2,
+  PanelBottom,
   PencilLine,
   RotateCcw,
   Square,
@@ -103,7 +102,7 @@ export function RPStage({
   const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     prefs = host.prefs();
   const textSize = boundedPreference(prefs.rpTextSize, 19, 14, 26),
-    dialogWidth = boundedPreference(prefs.rpDialogWidth, 88, 65, 94);
+    dialogWidth = boundedPreference(prefs.rpDialogWidth, 72, 65, 94);
   const [height, setHeight] = useState(innerHeight);
   useEffect(() => {
     const resize = () => setHeight(innerHeight);
@@ -159,6 +158,8 @@ export function RPStage({
       return;
     }
     const newest = messages.at(-1)!;
+    // Sending from the reading row returns the stage to the live end of the conversation.
+    if (newest.user && messages.length > lastCount.current && lastCount.current) live.current = true;
     if (live.current && newest.id !== cursor.id && (messages.length !== lastCount.current || cursor.id < 0))
       setCursor({ id: newest.id, page: 0, compose: false });
     lastCount.current = messages.length;
@@ -196,7 +197,7 @@ export function RPStage({
     const sheld = document.getElementById("sheld")!,
       form = document.getElementById("form_sheld")!;
     sheld.inert = isHidden;
-    form.inert = !compose || history || isHidden;
+    form.inert = history || isHidden;
     document.body.style.setProperty("--wb-rp-text", textSize + "px");
     document.body.style.setProperty("--wb-rp-width", String(dialogWidth / 100));
     document.body.style.setProperty(
@@ -284,7 +285,7 @@ export function RPStage({
       document.getElementById("sheld")!.inert = false;
       document.getElementById("form_sheld")!.inert = false;
       document.body.classList.remove("wb-rp-compose", "wb-rp-expanded", "wb-rp-history");
-      for (const name of ["text", "width", "sprite", "font"])
+      for (const name of ["text", "width", "sprite", "font", "field-left", "field-right"])
         document.body.style.removeProperty("--wb-rp-" + name);
     },
     [],
@@ -340,7 +341,7 @@ export function RPStage({
       setCursor({ id: messages[index + 1].id, page: 0, compose: false });
     else if (delta > 0) {
       live.current = true;
-      setCursor({ id: current.id, page: -1, compose: true });
+      reply();
     }
   };
   useEffect(() => {
@@ -377,6 +378,24 @@ export function RPStage({
     setHistory(false);
     setCursor({ id: current?.id ?? -1, page: -1, compose: true });
   };
+  /** The native input lives in the dialogue box's bottom row; replying is focusing it. */
+  const reply = () => document.getElementById("send_textarea")?.focus();
+  // The foot leaves a slot between the page dots and "continue"; the native form row fills it.
+  const slot = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const node = slot.current;
+    if (!node) return;
+    const place = () => {
+      const deck = node.closest(".wb-rp-deck")!.getBoundingClientRect(),
+        rect = node.getBoundingClientRect();
+      document.body.style.setProperty("--wb-rp-field-left", Math.round(rect.left - deck.left) + "px");
+      document.body.style.setProperty("--wb-rp-field-right", Math.round(deck.right - rect.right) + "px");
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(node);
+    return () => observer.disconnect();
+  });
   const visibleDots = current?.pages.map((_, i) => i).filter((i) => Math.abs(i - page) <= 3) || [];
   const replies = [...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(
     0,
@@ -449,7 +468,7 @@ export function RPStage({
                   disabled={snap.busy}
                   onClick={() => {
                     host.setInput(qr.message || "");
-                    enterCompose();
+                    reply();
                   }}
                 >
                   {qr.label || qr.message?.slice(0, 45)}
@@ -464,7 +483,7 @@ export function RPStage({
               title="切换阅读布局"
               onClick={readingLayout}
             >
-              <BookOpen size={16} />
+              <PanelBottom size={16} />
             </button>
             <RPAppearance host={host} />
             {host.isGenerating() && (
@@ -529,17 +548,24 @@ export function RPStage({
                 )}
               </>
             )}
-            {compose && (
-              <button
-                className="wb-rp-tool"
-                aria-label={expanded ? "还原 RP 输入区" : "展开 RP 输入区"}
-                title={expanded ? "还原输入区" : "展开输入区"}
-                aria-expanded={expanded}
-                onClick={() => setExpanded(!expanded)}
-              >
-                {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              </button>
-            )}
+            <button
+              className="wb-rp-tool"
+              aria-label={compose ? "还原 RP 输入区" : "展开 RP 输入区"}
+              title={compose ? "还原输入区" : "展开输入区"}
+              aria-expanded={compose}
+              disabled={!current || !!current.editing}
+              onClick={() => {
+                if (compose) {
+                  setExpanded(false);
+                  setCursor({ id: current?.id ?? -1, page: -1, compose: false });
+                } else {
+                  enterCompose();
+                  setExpanded(true);
+                }
+              }}
+            >
+              {compose ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
             <button
               className="wb-rp-tool"
               aria-label="上一段对白"
@@ -586,24 +612,14 @@ export function RPStage({
                 />
               ))}
             </div>
-            <button
-              className="wb-rp-reply-field"
-              aria-label="输入回应"
-              disabled={!!current?.editing}
-              onClick={enterCompose}
-            >
-              <span>{scroll.overflow ? "长对白可滚动阅读 · 输入回应…" : "输入回应…"}</span>
-              <i className="wb-rp-reply-send" aria-hidden="true">
-                <ArrowUp size={15} />
-              </i>
-            </button>
+            <span className="wb-rp-field-slot" ref={slot} />
             {!current?.editing && (
               <button className="wb-rp-next" onClick={() => turn(1)}>
                 {!scroll.end
                   ? "继续阅读"
                   : page + 1 === current?.pages.length && current === messages.at(-1)
-                    ? "继续，轮到你回应"
-                    : "继续下一段"}
+                    ? "轮到你回应"
+                    : "下一段"}
                 <ArrowRight size={14} />
               </button>
             )}

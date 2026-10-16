@@ -31,8 +31,8 @@ try {
 
   assert.equal(await page.evaluate(() => performance.getEntriesByType('resource').some(x => /addons\/record-export\/|export-worker/.test(x.name))), false);
   const arrows = await page.locator('.wb-edge-arrow').evaluateAll(nodes => nodes.map(node => ({ left: node.classList.contains('wb-edge-left'), width: node.getBoundingClientRect().width, icon: node.querySelector('svg').getBoundingClientRect().width, background: getComputedStyle(node).backgroundColor })));
-  arrows.forEach(arrow => { assert.equal(arrow.width, 36); assert.equal(arrow.icon, arrow.left ? 12 : 16); assert.equal(arrow.background, 'rgba(0, 0, 0, 0)'); });
-  pass('board edge controls (12px tab chevron, 16px right chevron, tab drawn on ::before); export code remains unloaded until requested');
+  arrows.forEach(arrow => { assert.equal(arrow.width, 36); assert.equal(arrow.icon, 22); assert.equal(arrow.background, 'rgba(0, 0, 0, 0)'); });
+  pass('edge controls are bare 22px chevrons with no tab; export code remains unloaded until requested');
 
   await settingsGroup('常用工具');
   for (const name of ['作者注释', '变量管理器', 'Token 计数', '数据银行']) await page.getByRole('checkbox', { name: `固定 ${name}`, exact: true }).check();
@@ -139,7 +139,7 @@ try {
   await chooseLayout(page,'RP'); await settle();
   await page.evaluate(() => workbench.host.preference({ rpTopAuto: false })); await settle();
   assert.equal(await page.locator('.wb-left.is-open,.wb-right.is-open').count(), 0);
-  await role('输入回应').click(); await settle(); await openExport(); await waitResult(1);
+  await openExport(); await waitResult(1);
   assert.equal(await page.evaluate(() => __utilityNative.input === document.getElementById('send_textarea') && __utilityNative.chat === document.getElementById('chat')), true);
   assert.deepEqual(await page.evaluate(() => workbench.host.prefs().pinnedTools), pins);
   file = await downloadText(); assert.ok(file.text.length > 0);

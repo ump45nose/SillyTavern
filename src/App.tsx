@@ -157,7 +157,8 @@ export default function App({
     navigationShown = navigationVisible(s, hovered, sizes);
   const manager = addonManager(host);
   useEffect(() => () => manager.dispose(), [manager]);
-  const topAuto = !mobile && rp && !!prefs.rpTopAuto;
+  // Board "RpDesktop": the top bar stays out of the scene until hovered, unless the user pins it.
+  const topAuto = !mobile && rp && prefs.rpTopAuto !== false;
   const [topHot, setTopHot] = useState(false),
     [topFocus, setTopFocus] = useState(false),
     [layoutMenu, setLayoutMenu] = useState(false);

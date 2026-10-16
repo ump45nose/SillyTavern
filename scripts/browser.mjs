@@ -236,7 +236,10 @@ export async function openSettings(page, name) {
 
 /** Switches Noval / RP / 原生 through the segmented control and waits until it settles. */
 export async function chooseLayout(page, name) {
-    await page.getByRole('radiogroup', { name: '切换工作台', exact: true }).getByRole('radio', { name, exact: true }).click();
+    const group = page.getByRole('radiogroup', { name: '切换工作台', exact: true });
+    // In RP the switcher follows the auto-hidden header; hovering the top edge reveals it.
+    if (!(await group.isVisible())) { await page.mouse.move(page.viewportSize().width / 2, 4); await group.waitFor(); }
+    await group.getByRole('radio', { name, exact: true }).click();
     await page.waitForFunction(() => !document.querySelector('.wb-layout-controls[aria-busy="true"]'));
 }
 

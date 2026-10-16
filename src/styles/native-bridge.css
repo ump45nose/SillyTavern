@@ -2982,10 +2982,11 @@ body.wb-active.wb-rp {
   --wb-rp-chrome: 74px;
   --wb-rp-bottom: clamp(20px, 3vh, 40px);
   --wb-rp-deck: clamp(200px, 28vh, 360px);
-  --wb-rp-width: 0.88;
+  --wb-rp-width: 0.72;
   --wb-rp-text: 19px;
   --wb-rp-area: calc(100vw - var(--wb-left) - var(--wb-right));
-  --wb-rp-dialog-width: calc(var(--wb-rp-area) * var(--wb-rp-width));
+  /* Board "RpDesktop": 1080px at the default 72%; wider windows keep the line length. */
+  --wb-rp-dialog-width: min(calc(var(--wb-rp-area) * var(--wb-rp-width)), calc(1500px * var(--wb-rp-width)));
   --wb-rp-dialog-left: calc(var(--wb-left) + (var(--wb-rp-area) - var(--wb-rp-dialog-width)) / 2);
 }
 body.wb-rp.wb-rp-top-auto {
@@ -3124,9 +3125,9 @@ body.wb-active.wb-rp #sheld {
 }
 body.wb-active.wb-rp:not(.wb-rp-history) #chat {
   position: absolute;
-  inset: 0;
-  height: 100%;
-  padding: 34px 40px 60px !important;
+  inset: 0 0 66px;
+  height: auto;
+  padding: 34px 40px 8px !important;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -3214,6 +3215,87 @@ body.wb-rp.wb-rp-compose #form_sheld {
   visibility: visible;
   transform: translateX(0);
   pointer-events: auto;
+}
+/* Board "RpDesktop": while reading, the native form is the box's bottom row — the native menus
+   and Noval tools, then the field with the send key inside it — between the page dots and
+   "continue" (RPStage measures that slot into --wb-rp-field-left/right). */
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #form_sheld {
+  inset: auto var(--wb-rp-field-right, 140px) 14px var(--wb-rp-field-left, 120px);
+  width: auto;
+  height: 38px;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+}
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_form {
+  padding: 0 !important;
+}
+/* SillyTavern themes outline the form; on the dialogue pane the field draws its own edge. */
+body.wb-active.wb-rp #send_form {
+  outline: 0 !important;
+}
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #nonQRFormItems {
+  position: relative;
+  display: grid !important;
+  /* The tool column has a definite width so the composer can count how many tools fit. */
+  grid-template-columns: auto minmax(0, 300px) minmax(160px, 1fr);
+  grid-template-rows: 38px;
+  gap: 0 2px;
+  height: 38px;
+  align-items: center;
+}
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #leftSendForm {
+  grid-row: 1;
+  grid-column: 1;
+  width: auto !important;
+  height: 38px;
+}
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_textarea {
+  grid-row: 1;
+  grid-column: 3;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 8px 44px 8px 14px !important;
+  border-radius: 12px !important;
+  background: var(--wb-rp-field) !important;
+  box-shadow: inset 0 0 0 1px var(--wb-rp-line) !important;
+  color: var(--wb-rp-ink-1) !important;
+  font: 14px / 22px var(--wb-font-ui) !important;
+  overflow-y: auto;
+}
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_textarea:focus {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent) !important;
+}
+/* An absolutely placed grid item resolves against its grid area: the field's cell. */
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #rightSendForm {
+  grid-row: 1;
+  grid-column: 3;
+  justify-self: end;
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  right: 4px;
+  height: 30px;
+  margin: 0;
+}
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) :is(#send_but, #mes_stop) {
+  width: 30px !important;
+  min-width: 30px;
+  height: 30px !important;
+  line-height: 30px !important;
+  border-radius: 9px;
+  font-size: 15px;
+}
+body.wb-active.wb-rp:not(.wb-mobile) #send_but {
+  background: var(--wb-accent);
+}
+body.wb-active.wb-rp:not(.wb-mobile) #send_but :is(.wb-native-icon, .wb-native-icon *) {
+  color: var(--wb-rp-on-accent) !important;
+}
+body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_but .wb-send-icon {
+  width: 15px;
+  height: 15px;
 }
 body.wb-rp.wb-rp-expanded {
   --wb-rp-deck: clamp(260px, 48vh, 620px);
@@ -4134,7 +4216,7 @@ body.wb-mobile-rp:not(.wb-mobile-editor):has(.wb-mobile-replies) #chat {
 
 /* Board "Main": the send button keeps its place at the end of the tool row. SillyTavern hides it
    while no model is connected; on the desk it stays as a quiet, inert circle instead of vanishing. */
-body.wb-active:not(.wb-mobile):not(.wb-rp):not(.wb-image-input-mode) #send_but.displayNone {
+body.wb-active:not(.wb-mobile):not(.wb-image-input-mode) #send_but.displayNone {
   display: flex !important;
   align-items: center;
   justify-content: center;

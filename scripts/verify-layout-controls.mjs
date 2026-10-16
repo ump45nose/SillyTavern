@@ -57,21 +57,22 @@ try {
   await role("固定顶栏").click(); await page.mouse.move(740, 400); await settle();
   await page.mouse.move(740, 4); await settle();
   await page.locator(".wb-pill").first().click(); await page.mouse.move(750, 400); await settle();
-  assert.equal(await collapsed(), false); await page.keyboard.press("Escape"); await settle();
+  assert.equal(await collapsed(), false);
   assert.equal(await option("RP").getAttribute("aria-checked"), "true");
   assert.equal(await switcher().locator('[role="radio"] svg').count(), 3);
   assert.deepEqual(await switcher().locator('[role="radio"]').evaluateAll(ns => ns.map(n => n.tabIndex)), [-1, 0, -1]);
   await page.screenshot({ path:directory + "/rp-switcher.png" });
+  await page.keyboard.press("Escape"); await settle(); assert.equal(await collapsed(), true); assert.equal(await page.locator(".wb-layout-switcher").evaluate(n => getComputedStyle(n).visibility), "hidden");
   pass("an open resource popover keeps the floating header visible; every mode has an icon and one tab stop");
 
   await page.evaluate(() => { window.__denyLayout = workbench.guards.add(() => false); });
-  await option("Noval").click(); await settle();
+  await page.mouse.move(740, 4); await settle(); await option("Noval").click(); await settle();
   assert.equal(await page.evaluate(() => workbench.host.prefs().layout), "rp");
   assert.equal(await option("RP").getAttribute("aria-checked"), "true");
   await page.evaluate(() => window.__denyLayout()); await settle();
   pass("an editor's unsaved-change guard can cancel a layout switch");
 
-  await role("输入回应").click(); await page.locator("#send_textarea").fill("WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
+  await page.locator("#send_textarea").fill("WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
   await choose("Noval");
   assert.equal(await page.locator(".wb-reading-bar").count(), 1);
   assert.equal(await page.locator('.wb-reading-bar .lucide-theater').count(), 0);

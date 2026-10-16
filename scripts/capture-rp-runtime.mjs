@@ -31,7 +31,7 @@ try {
   });
   await page.waitForFunction(() => [...document.querySelectorAll(".wb-rp-stage img")].every(n => n.complete)); await settle();
   await page.screenshot({ path:`${dir}/native-stage-1496.png` });
-  await role("输入回应").click(); await settle(); await page.locator("#send_textarea").fill("我推开窗，朝港口望去。\n\n夜色还没有散尽，远处的灯火沿着河岸亮起。");
+  await page.locator("#send_textarea").fill("我推开窗，朝港口望去。\n\n夜色还没有散尽，远处的灯火沿着河岸亮起。");
   await page.screenshot({ path:`${dir}/native-input-1496.png` });
   await role("展开 RP 输入区").click(); await settle(); await page.screenshot({ path:`${dir}/native-expanded-1496.png` });
   await role("还原 RP 输入区").click(); await settle(); await role("上一段对白").click(); await settle();

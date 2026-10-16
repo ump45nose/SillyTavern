@@ -76,6 +76,7 @@ const paths = {
   drawer: "M4 7h16M4 12h10M4 17h16",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   native: "M3 4h18v16H3zM9 4v16",
+  layout: "M3 4h18v16H3zM3 14h18",
   newchat: "M20 11.5a8 8 0 0 1-11.8 7L3 20l1.5-5A8 8 0 1 1 20 11.5zM12 8.5v6M9 11.5h6",
   outline: "M4 5h7M8 12h7M8 19h7M4 5v14M4 12h4M4 19h4",
   pause: "M8 5v14M16 5v14",
@@ -147,6 +148,7 @@ export const MenuDrawer = drawn("drawer", paths.drawer);
 export const MessageSquarePlus = drawn("newchat", paths.newchat);
 export const MessagesSquare = drawn("reply", paths.reply);
 export const MoreHorizontal = drawn("more", paths.more);
+export const PanelBottom = drawn("layout", paths.layout);
 export const PanelsTopLeft = drawn("native", paths.native);
 export const Paperclip = drawn("clip", paths.clip);
 export const Pause = drawn("pause", paths.pause);

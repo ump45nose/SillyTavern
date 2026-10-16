@@ -59,10 +59,8 @@ try {
   };
   await capture("dialogue");
   assert.equal(await page.locator(".wb-rp-actor.is-speaking").count(), 1);
-  await role("输入回应").click();
   await page.locator("#send_textarea").fill("我接过信封，望向小径尽头的樱花。\n\n“明天这个时候，我们还在这里见面。”");
   await capture("input");
-  assert.equal(await page.locator(".wb-rp-user.is-speaking").count(), 1);
   await role("展开 RP 输入区").click(); await capture("expanded");
   await role("还原 RP 输入区").click();
   await role("隐藏界面").click(); await capture("stage-only");

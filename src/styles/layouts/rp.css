@@ -47,12 +47,35 @@
     --wb-rp-box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
   }
 
+  /* SillyTavern's "no blur" setting removes every backdrop filter; without the frost the panes
+     would show the sprites through them, so they turn nearly opaque instead. */
+  body.wb-active.wb-rp.no-blur {
+    --wb-rp-glass: rgb(255 253 248 / 92%);
+    --wb-rp-glass-soft: rgb(255 253 248 / 78%);
+    --wb-rp-box: rgb(255 253 248 / 95%);
+    --wb-rp-bar: rgb(250 249 245 / 95%);
+  }
+  :root[data-wb-theme="dark"] body.wb-active.wb-rp.no-blur {
+    --wb-rp-glass: rgb(30 26 22 / 90%);
+    --wb-rp-glass-soft: rgb(30 26 22 / 72%);
+    --wb-rp-box: rgb(26 22 19 / 93%);
+    --wb-rp-bar: rgb(27 25 22 / 94%);
+  }
+
   /* ── Top bar when pinned: frosted, one hairline under it ── */
   body.wb-active.wb-rp:not(.wb-mobile) .wb-top {
     background: var(--wb-rp-bar);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     box-shadow: 0 1px 0 var(--wb-rp-line);
+  }
+
+  /* The layout switcher belongs to the top bar: while the bar waits above the scene, so does it,
+     unless a keyboard switch into RP left focus on it. */
+  body.wb-active.wb-rp.wb-rp-top-collapsed .wb-layout-switcher:not(:focus-within) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   /* ── Scene card ── */
@@ -303,35 +326,16 @@
   .wb-rp-dots button:not([aria-current]):hover::before {
     background: color-mix(in srgb, var(--wb-accent) 55%, var(--wb-rp-dot));
   }
-  .wb-rp-reply-field {
+  .wb-rp-field-slot {
     flex: 1;
     min-width: 0;
-    height: 38px;
-    min-height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-    margin-left: 14px;
-    padding: 0 4px 0 14px;
-    border: 0;
-    border-radius: 12px;
-    background: var(--wb-rp-field);
-    box-shadow: inset 0 0 0 1px var(--wb-rp-line);
-    color: var(--wb-rp-ink-3);
-    font: inherit;
-    text-align: left;
-    cursor: text;
+    align-self: stretch;
   }
-  .wb-rp-reply-field span {
-    flex: 1;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .wb-rp-reply-field:is(:hover, :focus-visible) {
-    color: var(--wb-rp-ink-2);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent);
+  /* The composer's tool row joins the native form's single reading row (native-bridge.css). */
+  body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) .wb-composer-actions {
+    grid-row: 1;
+    grid-column: 2;
+    margin-right: 8px;
   }
   .wb-rp-next {
     flex: none;
@@ -354,26 +358,6 @@
     background: var(--wb-rp-field);
     color: var(--wb-rp-ink-1);
   }
-  .wb-rp-reply-send {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
-    background: var(--wb-accent);
-    color: var(--wb-rp-on-accent);
-  }
-  .wb-rp-deck.is-compact .wb-rp-reply-field span {
-    display: none;
-  }
-  .wb-rp-deck.is-compact .wb-rp-reply-field {
-    flex: none;
-    width: 38px;
-    justify-content: center;
-    padding: 0;
-  }
-
   /* ── History: the whole conversation on one centred pane ── */
   body.wb-active.wb-rp {
     --wb-rp-log-width: min(860px, calc(var(--wb-rp-area) - 48px));

@@ -24,6 +24,8 @@ const settings = (name) => async (page) => {
 };
 const layout = (mode) => async (page) => {
   await page.evaluate((mode) => workbench.host.preference({ layout: mode }), mode);
+  // RP keeps its top bar out of view until the pointer reaches the top edge.
+  await page.mouse.move(700, 420);
 };
 
 const dark = async (page) => {
@@ -124,7 +126,8 @@ export const states = [
   },
   { name: "shortcuts", viewport: desktop, steps: [text("快捷键")] },
   { name: "rp-stage", viewport: desktop, steps: [layout("rp")] },
-  { name: "rp-compose", viewport: desktop, steps: [layout("rp"), label("输入回应")] },
+  { name: "rp-compose", viewport: desktop, steps: [layout("rp"), label("展开 RP 输入区")] },
+  { name: "rp-pinned", viewport: desktop, steps: [layout("rp"), async (page) => { await page.mouse.move(748, 4); await page.waitForTimeout(250); }, label("固定顶栏")] },
   { name: "rp-history", viewport: desktop, steps: [layout("rp"), label("查看对话记录")] },
   { name: "rp-panel-world", viewport: desktop, steps: [layout("rp"), key("Alt+Shift+Digit3")] },
   { name: "rp-stage-dark", viewport: desktop, steps: [layout("rp"), dark] },

@@ -60,14 +60,14 @@ export function RPAppearance({ host }: { host: HostAdapter }) {
             </label>
             <label className="wb-field">
               <span>
-                对白区域宽度<output>{boundedPreference(prefs.rpDialogWidth, 88, 65, 94)}%</output>
+                对白区域宽度<output>{boundedPreference(prefs.rpDialogWidth, 72, 65, 94)}%</output>
               </span>
               <input
                 aria-label="RP 对白宽度"
                 type="range"
                 min="65"
                 max="94"
-                value={boundedPreference(prefs.rpDialogWidth, 88, 65, 94)}
+                value={boundedPreference(prefs.rpDialogWidth, 72, 65, 94)}
                 onChange={(e) => host.preference({ rpDialogWidth: Number(e.target.value) })}
               />
             </label>
@@ -87,7 +87,7 @@ export function RPAppearance({ host }: { host: HostAdapter }) {
             <label className="wb-check">
               <input
                 type="checkbox"
-                checked={!!prefs.rpTopAuto}
+                checked={prefs.rpTopAuto !== false}
                 onChange={(e) => host.preference({ rpTopAuto: e.target.checked })}
               />
               鼠标悬浮显示顶栏
