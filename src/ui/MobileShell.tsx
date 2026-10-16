@@ -18,6 +18,7 @@ import {
   MoreHorizontal,
   PanelsTopLeft,
   PencilLine,
+  ScanLine,
   Plus,
   Settings,
   Theater,
@@ -152,6 +153,12 @@ export function MobileShell({
       bus.on("mobile-editor-open", edit),
       bus.on("image-compose", image),
       bus.on("mobile-menu", () => setSheet("management")),
+      // A floor picked in the outline is also selected, so its tools are one tap away.
+      bus.on("floor-jump", (id) => {
+        const chat = document.getElementById("chat")!;
+        chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
+        chat.querySelector(`.mes[mesid="${id}"]`)?.classList.add("wb-mobile-actions");
+      }),
     ];
     return () => {
       input.removeEventListener("input", changed);
@@ -410,7 +417,7 @@ export function MobileShell({
     <>
       <header
         className="wb-mobile-header wb-ui"
-        inert={left || !!panel || !!sheet || editor}
+        inert={left || !!panel || !!sheet || editor || (focus && !rp)}
       >
         <button
           className="wb-mobile-nav"
@@ -458,7 +465,7 @@ export function MobileShell({
       {!rp && (
         <div
           className={`wb-mobile-config wb-ui ${collapsed ? "is-collapsed" : ""}`}
-          inert={left || !!panel || !!sheet || editor}
+          inert={left || !!panel || !!sheet || editor || focus}
         >
           <div hidden={collapsed}>{resources}</div>
           {collapsed && (
@@ -485,6 +492,12 @@ export function MobileShell({
             <ChevronDown size={15} />
           </button>
         </div>
+      )}
+      {!rp && focus && !editor && (
+        <button type="button" className="wb-mobile-focus-exit wb-ui" aria-label="退出专注" onClick={toggleFocus}>
+          <ScanLine size={15} />
+          退出专注
+        </button>
       )}
       {!rp &&
         createPortal(
@@ -593,6 +606,19 @@ export function MobileShell({
                   ))}
                 </div>
                 <div className="wb-mobile-sheet-list">
+                  {!rp && (
+                    <button
+                      aria-pressed={focus}
+                      onClick={() => {
+                        close();
+                        toggleFocus();
+                      }}
+                    >
+                      <ScanLine size={19} />
+                      专注模式
+                      <ChevronRight size={15} />
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       close();

@@ -674,9 +674,9 @@ export default function App({
         }
       />
       <aside
-        className={`wb-right ${shown && !focus ? "is-open" : ""}`}
-        inert={!shown || focus}
-        aria-hidden={!shown || focus}
+        className={`wb-right ${shown && (mobile || !focus) ? "is-open" : ""}`}
+        inert={!shown || (focus && !mobile)}
+        aria-hidden={!shown || (focus && !mobile)}
         aria-label="角色与资源"
         style={{ "--wb-panel-rail": `${railShown ? sizes.rail : 0}px` } as React.CSSProperties}
       >

@@ -3544,6 +3544,10 @@ body.wb-active.wb-mobile {
 body.wb-active.wb-mobile-rp {
   --wb-mobile-chrome: 64px;
 }
+/* Focus keeps a strip for "退出专注" only. */
+body.wb-active.wb-mobile.wb-focus:not(.wb-mobile-rp) {
+  --wb-mobile-chrome: 48px;
+}
 body.wb-active.wb-mobile #sheld {
   inset: auto 0 auto 0 !important;
   top: calc(
@@ -3674,6 +3678,12 @@ body.wb-mobile #chat .wb-image-message-button {
   min-height: 40px;
   align-items: center;
   justify-content: center;
+}
+/* The ellipsis is a font glyph: centre it on the same 40px square as the drawn icons. */
+body.wb-active.wb-mobile #chat .mes_buttons .extraMesButtonsHint {
+  padding: 0;
+  line-height: 40px;
+  text-align: center;
 }
 body.wb-active.wb-mobile #chat .swipe_left,
 body.wb-active.wb-mobile #chat .swipeRightBlock {

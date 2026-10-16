@@ -159,6 +159,8 @@ export const states = [
   { name: "m-novel-right", viewport: phone, mobile: true, steps: [label("打开角色与 Trace")] },
   { name: "m-novel-menu", viewport: phone, mobile: true, steps: [label("打开会话管理")] },
   { name: "m-novel-editor", viewport: phone, mobile: true, steps: [label("全屏编辑草稿")] },
+  { name: "m-novel-focus", viewport: phone, mobile: true, steps: [label("打开会话管理"), text("专注模式")] },
+  { name: "m-novel-floor", viewport: phone, mobile: true, steps: [label("打开大纲与导航"), tap(".wb-floor-list button")] },
   { name: "m-rp-home", viewport: phone, mobile: true, steps: [layout("rp")] },
   { name: "m-rp-tools", viewport: phone, mobile: true, steps: [layout("rp"), label("快进到你的回应"), label("打开输入工具")] },
   { name: "m-rp-hidden", viewport: phone, mobile: true, steps: [layout("rp"), label("隐藏界面")] },

@@ -352,15 +352,73 @@
   body.wb-mobile.wb-mobile-editor .wb-mobile-plus {
     display: none;
   }
-  /* The pull-up handle stays a touch target on the pill's top edge but draws nothing: the board's
-     composer is a clean pill, and ＋ › 全屏输入 offers the same editor. */
+  /* A short handle rides the pill's top edge: pull it up and the pill follows the finger, let go past
+     the threshold and the full editor rises (a tap opens it too). */
   body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) .wb-input-grip {
     margin: 0 auto;
     transform: translateY(-22px);
     background: transparent;
+    touch-action: none;
   }
   body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) .wb-input-grip span {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--wb-ink-3);
+    opacity: 0.45;
+    transition:
+      width 180ms var(--wb-ease-emphasized),
+      opacity 180ms;
+  }
+  body.wb-active.wb-mobile.wb-resizing .wb-input-grip span {
+    width: 52px;
+    opacity: 0.8;
+  }
+  body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) #send_form {
+    translate: 0 calc(-0.45 * var(--wb-grip-pull, 0px));
+    transition: translate 260ms var(--wb-ease-emphasized);
+  }
+  body.wb-active.wb-mobile.wb-resizing:not(.wb-mobile-rp) #send_form {
+    transition: none;
+  }
+
+  /* ── Focus (Noval): the header and quick config lift away, the reading takes the page and a quiet
+     "退出专注" sits where the title was ── */
+  body.wb-mobile:not(.wb-mobile-rp) .wb-mobile-config {
+    transition:
+      transform 260ms var(--wb-ease-emphasized),
+      opacity 200ms;
+  }
+  body.wb-mobile.wb-focus:not(.wb-mobile-rp) .wb-mobile-header {
+    transform: translateY(-110%);
+  }
+  body.wb-mobile.wb-focus:not(.wb-mobile-rp) .wb-mobile-config {
+    transform: translateY(-120px);
     opacity: 0;
+    pointer-events: none;
+  }
+  body.wb-mobile .wb-mobile-focus-exit {
+    position: fixed;
+    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 8px);
+    left: 50%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--wb-radius-pill);
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-2);
+    font: inherit;
+    font-size: 13px;
+    translate: -50% 0;
+    animation: wb-mobile-fade-in 220ms var(--wb-ease-emphasized) 80ms both;
+  }
+  body.wb-mobile .wb-mobile-focus-exit:active {
+    background: var(--wb-surface-3);
+    color: var(--wb-ink-1);
   }
 
   /* ── RP deck (RPStage): replies and tools above the box, the speaker's plate on its edge, page
