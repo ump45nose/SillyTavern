@@ -3704,6 +3704,10 @@ body.wb-active.wb-mobile #form_sheld {
   container-type: normal;
   z-index: 4;
 }
+/* The ⋯ session key (layouts/pwa.css) stands to the pill's left. */
+body.wb-active.wb-mobile:not(.wb-mobile-editor) #form_sheld {
+  padding-left: 68px !important;
+}
 /* Reading fades into the composer instead of meeting a rule. */
 body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) #form_sheld::before {
   content: "";
@@ -4047,7 +4051,10 @@ body.wb-mobile-rp #chat .edit_textarea {
 }
 /* The composer is one more frosted pill on the scene. */
 body.wb-active.wb-mobile.wb-mobile-rp #form_sheld {
-  padding: 10px 12px max(16px, var(--wb-safe-bottom)) !important;
+  padding: 10px 12px max(16px, var(--wb-safe-bottom)) 68px !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #form_sheld {
+  padding-left: 12px !important;
 }
 body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #send_form {
   padding: 5px !important;

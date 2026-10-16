@@ -236,33 +236,131 @@
     color: var(--wb-ink-2);
     white-space: nowrap;
   }
-  body.wb-mobile .wb-mobile-config:not(.is-collapsed) .wb-contexts {
-    padding-left: 4px;
-  }
-  /* Expanded, the four selectors scroll sideways at a readable width instead of squeezing to "g…". */
-  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-contexts {
+  /* Expanded: four equal tiles — icon and name, or the icon alone when the name does not fit
+     (ResourceControls measures). A tap opens that resource's chooser. */
+  body.wb-mobile .wb-mobile-config:not(.is-collapsed) {
+    padding: 4px;
     gap: 4px;
-    scroll-snap-type: x proximity;
+  }
+  body.wb-mobile .wb-mobile-config > div:not([hidden]) {
+    flex: 1;
+    min-width: 0;
+  }
+  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-contexts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+    padding: 0;
+    overflow: visible;
   }
   body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector {
-    flex: 0 0 auto;
-    min-width: 132px;
-    max-width: 190px;
-    height: 44px;
-    border-radius: 10px;
+    min-width: 0;
+    max-width: none;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
     background: var(--wb-surface-2);
-    scroll-snap-align: start;
+    box-shadow: none;
+  }
+  body.wb-mobile .wb-mobile-tool-config .wb-selector {
+    height: 44px;
   }
   body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector > .wb-selector-value {
     flex: 1;
     min-width: 0;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: var(--wb-ink-1);
     font-size: 13px;
   }
-  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector > .wb-selector-detail {
-    color: var(--wb-ink-3);
+  body.wb-mobile .wb-selector.is-iconic > .wb-selector-value {
+    justify-content: center;
   }
-  body.wb-mobile .wb-mobile-config:not(.is-collapsed) {
-    padding-left: 0;
+  body.wb-mobile .wb-selector .wb-value-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: clip;
+  }
+  /* Kept in the layout, out of sight, so the tile can still measure whether the name fits. */
+  body.wb-mobile .wb-selector.is-iconic .wb-value-text {
+    position: absolute;
+    width: max-content;
+    flex: none;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  body.wb-mobile .wb-selector-icon {
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: var(--wb-ink-2);
+  }
+  body.wb-mobile .wb-selector-icon .wb-dot {
+    position: absolute;
+    top: -2px;
+    right: -3px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--wb-ink-3);
+    box-shadow: 0 0 0 2px var(--wb-surface-2);
+  }
+  body.wb-mobile .wb-selector-icon .wb-dot.online {
+    background: var(--wb-success);
+  }
+  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector:is(.is-active, :has([aria-expanded="true"])) {
+    background: var(--wb-surface-3);
+  }
+  body.wb-mobile .wb-mobile-config:not(.is-collapsed) .wb-mobile-config-fold {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+
+  /* ── ⋯ session menu: a round key beside the composer, the pill's sibling ── */
+  body.wb-mobile .wb-mobile-management {
+    position: absolute;
+    left: 12px;
+    bottom: calc(max(22px, var(--wb-safe-bottom)) + 4px);
+    z-index: 1;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--wb-surface-1);
+    box-shadow:
+      var(--wb-shadow-2),
+      0 0 0 1px var(--wb-line-1);
+    color: var(--wb-ink-2);
+  }
+  body.wb-mobile.wb-mobile-editor .wb-mobile-management {
+    display: none;
+  }
+  body.wb-mobile-rp .wb-mobile-management {
+    bottom: calc(max(16px, var(--wb-safe-bottom)) + 2px);
+    background: var(--wb-m-box);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 0 0 1px var(--wb-m-line);
+    color: var(--wb-m-ink-1);
   }
 
   /* ── Composer chrome: ＋, and the handle that pulls the full editor up ── */

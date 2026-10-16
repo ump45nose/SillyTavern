@@ -521,23 +521,6 @@ export function MobileShell({
             <span className="wb-avatar-fallback">N</span>
           )}
         </button>
-        {rp && (
-          <button
-            className="wb-mobile-history"
-            aria-label={history ? "关闭对话记录" : "查看对话记录"}
-            aria-pressed={history}
-            onClick={() => setHistory(!history)}
-          >
-            <History size={20} />
-          </button>
-        )}
-        <button
-          className="wb-mobile-management"
-          aria-label="打开会话管理"
-          onClick={() => setSheet("management")}
-        >
-          <MoreHorizontal size={21} strokeWidth={2.6} />
-        </button>
       </header>
       {(left || panel) && (
         <>
@@ -599,6 +582,17 @@ export function MobileShell({
           </div>,
           document.getElementById("form_sheld")!,
         )}
+      {createPortal(
+        <button
+          type="button"
+          className="wb-mobile-management wb-ui"
+          aria-label="打开会话管理"
+          onClick={() => setSheet("management")}
+        >
+          <MoreHorizontal size={21} strokeWidth={2.6} />
+        </button>,
+        document.getElementById("form_sheld")!,
+      )}
       {createPortal(
         <button
           type="button"
