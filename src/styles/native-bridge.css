@@ -3535,6 +3535,8 @@ body.wb-active.wb-mobile {
   --wb-mobile-chrome: 110px;
   --wb-safe-top: env(safe-area-inset-top, 0px);
   --wb-safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Dialogue quotes stay in the reading ink, as on the boards. */
+  --SmartThemeQuoteColor: var(--wb-ink-1);
   width: 100%;
   overflow: hidden;
   overscroll-behavior: none;
