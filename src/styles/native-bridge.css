@@ -835,8 +835,13 @@ body.wb-active #send_form:focus-within {
   border-color: color-mix(in srgb, var(--wb-accent) 55%, var(--wb-line));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--wb-accent) 9%, transparent);
 }
+/* Scrollbars stay out of sight until something scrolls; useScrollbars marks the scrolling element
+   with .wb-scrolling for a moment after each scroll. */
 body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea) {
   scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea).wb-scrolling {
   scrollbar-color: color-mix(in srgb, var(--wb-muted) 36%, var(--wb-line)) transparent;
 }
 @supports selector(::-webkit-scrollbar) {
@@ -854,9 +859,12 @@ body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea) {
   }
   body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea)::-webkit-scrollbar-thumb {
     border-radius: 6px;
+    background: transparent;
+  }
+  body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea).wb-scrolling::-webkit-scrollbar-thumb {
     background: color-mix(in srgb, var(--wb-muted) 32%, var(--wb-line));
   }
-  body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea)::-webkit-scrollbar-thumb:hover {
+  body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea).wb-scrolling::-webkit-scrollbar-thumb:hover {
     background: color-mix(in srgb, var(--wb-muted) 62%, var(--wb-line));
   }
 }
@@ -3963,6 +3971,7 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #sheld {
   box-shadow: var(--wb-shadow-2) !important;
   /* The reading bar carries the upper half of the shadow. */
   clip-path: inset(0 -100vw -100vh -100vw);
+  transition: inset var(--wb-motion) var(--wb-ease-emphasized);
 }
 body.wb-active:not(.wb-rp):not(.wb-mobile) #form_sheld {
   position: relative;
@@ -3997,6 +4006,15 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #send_form:focus-within {
   box-shadow:
     var(--wb-shadow-2),
     0 0 0 1px color-mix(in srgb, var(--wb-accent) 38%, var(--wb-line-1)) !important;
+}
+/* Keyboard steps and the double-click reset glide; a drag follows the pointer directly. */
+body.wb-active:not(.wb-rp):not(.wb-mobile) #send_form {
+  transition:
+    height var(--wb-motion) var(--wb-ease-emphasized),
+    box-shadow 160ms;
+}
+body.wb-active.wb-resizing:not(.wb-rp):not(.wb-mobile) #send_form {
+  transition: box-shadow 160ms;
 }
 body.wb-active.wb-focus:not(.wb-rp):not(.wb-mobile) #send_form {
   max-width: 800px;

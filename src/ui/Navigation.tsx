@@ -23,6 +23,51 @@ type Section = "history" | "outline" | "floors";
 const RECENT_FLOORS = 5;
 
 /**
+ * The floor being read: RP's current line, else the turn at the upper third of #chat while it is
+ * scrolled away from the end. null means the latest floor.
+ */
+function useReadingFloor(active: boolean, count: number) {
+  const [floor, setFloor] = useState<number | null>(null);
+  useEffect(() => {
+    const chat = document.getElementById("chat");
+    if (!active || !chat) return;
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      const line = chat.querySelector(".mes.wb-rp-current");
+      if (document.body.classList.contains("wb-rp") && line) {
+        setFloor(Number(line.getAttribute("mesid")));
+        return;
+      }
+      if (chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 4) {
+        setFloor(null);
+        return;
+      }
+      const mark = chat.getBoundingClientRect().top + chat.clientHeight / 3;
+      let id: number | null = null;
+      for (const node of chat.querySelectorAll(".mes[mesid]")) {
+        if (node.getBoundingClientRect().top > mark) break;
+        id = Number(node.getAttribute("mesid"));
+      }
+      setFloor(id);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(read);
+    };
+    const classes = new MutationObserver(schedule);
+    classes.observe(chat, { subtree: true, attributeFilter: ["class"] });
+    chat.addEventListener("scroll", schedule, { passive: true });
+    read();
+    return () => {
+      cancelAnimationFrame(frame);
+      classes.disconnect();
+      chat.removeEventListener("scroll", schedule);
+    };
+  }, [active, count]);
+  return floor ?? count - 1;
+}
+
+/**
  * The left column of the desk: the open conversation on its own card, then three sections that
  * fold independently, and a short footer into settings. Everything else lives in the settings page.
  */
@@ -73,6 +118,7 @@ export function Navigation({
   }, [host, visible, hasChat, snap.chatName, snap.character?.id, snap.groupId, host.chatsVersion]);
   const others = (recent || []).filter((c) => String(c.file_name).replace(/\.jsonl$/, "") !== snap.chatName);
   const floors = allFloors ? messages : messages.slice(-RECENT_FLOORS);
+  const reading = useReadingFloor(visible && expanded.floors, messages.length);
   return (
     <aside
       className={`wb-left wb-nav ${visible ? "is-open" : ""}`}
@@ -188,8 +234,8 @@ export function Navigation({
             {floors.map((m) => (
               <li key={m.id}>
                 <button
-                  className={`wb-nav-row ${m.id === messages.length - 1 ? "is-current" : ""}`}
-                  aria-current={m.id === messages.length - 1 ? "true" : undefined}
+                  className={`wb-nav-row ${m.id === reading ? "is-current" : ""}`}
+                  aria-current={m.id === reading ? "true" : undefined}
                   onClick={() => run(() => host.jump(m.id))}
                 >
                   <span className="wb-floor-number">{m.id + 1}</span>

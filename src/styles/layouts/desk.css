@@ -71,9 +71,9 @@
     /* The sheet below carries the shadow's lower half; cut ours where they meet. */
     clip-path: inset(-48px -48px 0 -48px);
     transition:
-      top var(--wb-motion) ease,
-      left var(--wb-motion) ease,
-      right var(--wb-motion) ease;
+      top var(--wb-motion) var(--wb-ease-emphasized),
+      left var(--wb-motion) var(--wb-ease-emphasized),
+      right var(--wb-motion) var(--wb-ease-emphasized);
   }
   body.wb-active.wb-focus:not(.wb-rp):not(.wb-mobile) .wb-reading-bar {
     padding: 0 var(--wb-space-3) 0 28px;
@@ -88,6 +88,20 @@
     border: 0;
     background: transparent;
     overflow: hidden;
+    /* Slides and fades on the same curve as the sheet's edge, so the two move as one. */
+    transition:
+      transform var(--wb-motion) var(--wb-ease-emphasized),
+      opacity var(--wb-motion) var(--wb-ease-emphasized),
+      visibility var(--wb-motion),
+      background-color var(--wb-motion),
+      box-shadow var(--wb-motion);
+  }
+  /* A hover reveal lies over the sheet: the desk's own colour under it, a soft edge to the right. */
+  body.wb-active.wb-left-hover-open:not(.wb-mobile) .wb-left.wb-nav {
+    bottom: var(--wb-gutter);
+    border-radius: 0 var(--wb-radius-xl) var(--wb-radius-xl) 0;
+    background: var(--wb-surface-0);
+    box-shadow: var(--wb-shadow-3);
   }
 }
 
@@ -906,45 +920,27 @@
     background: var(--wb-line-strong, var(--wb-line));
   }
 
-  /* ── Edge controls (board "Main"): a small tab on the sheet's left edge, a light chevron on the
-     right. The buttons stay transparent lanes; the tab is drawn underneath. ── */
+  body.wb-active:not(.wb-mobile) .wb-edge-nav {
+    transition:
+      top var(--wb-motion) var(--wb-ease-emphasized),
+      left var(--wb-motion) var(--wb-ease-emphasized),
+      right var(--wb-motion) var(--wb-ease-emphasized),
+      opacity 160ms,
+      visibility 160ms;
+  }
+  /* ── Edge controls: a bare chevron on each side, no tab or shadow under it ── */
   body.wb-active:not(.wb-rp):not(.wb-mobile) .wb-edge-arrow {
-    position: relative;
-    isolation: isolate;
     display: grid;
     place-items: center;
     color: var(--wb-ink-3);
+    opacity: 1;
   }
   body.wb-active:not(.wb-rp):not(.wb-mobile) .wb-edge-arrow svg {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
     stroke-width: 1.8;
-  }
-  body.wb-active:not(.wb-rp):not(.wb-mobile) .wb-edge-left {
-    justify-items: start;
-    padding-left: 3px;
-  }
-  body.wb-active:not(.wb-rp):not(.wb-mobile) .wb-edge-left svg {
-    width: 12px;
-    height: 12px;
-    stroke-width: 2;
-  }
-  body.wb-active:not(.wb-rp):not(.wb-mobile) .wb-edge-left::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 2px;
-    z-index: -1;
-    width: 18px;
-    height: 52px;
-    border-radius: 0 8px 8px 0;
-    background: var(--wb-surface-2);
-    transition: background-color var(--wb-duration-fast);
   }
   body.wb-active:not(.wb-rp):not(.wb-mobile) .wb-edge-arrow:is(:hover, :focus-visible) {
     color: var(--wb-ink-1);
-  }
-  body.wb-active:not(.wb-rp):not(.wb-mobile) .wb-edge-left:is(:hover, :focus-visible)::before {
-    background: color-mix(in srgb, var(--wb-ink-1) 9%, var(--wb-surface-2));
   }
 }

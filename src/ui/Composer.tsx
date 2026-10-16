@@ -56,8 +56,25 @@ export function Composer({
       : id !== "wb:export" && (!nativeTools.has(id) || !!nativeTools.get(id)?.disabled);
   const [ratio, setRatio] = useState(Math.min(0.6, Math.max(0.2, host.prefs().inputRatio ?? 0.2)));
   const ratioRef = useRef(ratio),
-    drag = useRef<{ y: number; ratio: number; height: number } | null>(null);
-  ratioRef.current = ratio;
+    drag = useRef<{ y: number; ratio: number; height: number; pinned: boolean } | null>(null),
+    frame = useRef(0);
+  if (!drag.current) ratioRef.current = ratio;
+  // While dragging, the height goes straight to the CSS variable once per frame; React state and
+  // the saved preference follow on release. Reading at the end keeps the end in view.
+  const paint = (next: number) => {
+    ratioRef.current = next;
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      const area = document.getElementById("sheld")!,
+        chat = document.getElementById("chat");
+      document.body.style.setProperty(
+        "--wb-composer-height",
+        `${Math.max(COMPOSER_MIN, area.clientHeight * ratioRef.current)}px`,
+      );
+      if (chat && drag.current?.pinned) chat.scrollTop = chat.scrollHeight;
+    });
+  };
   useEffect(() => {
     const cleanup: (() => void)[] = [];
     for (const [id, kind, label] of [
@@ -146,6 +163,7 @@ export function Composer({
     if (!drag.current) return;
     drag.current = null;
     document.body.classList.remove("wb-resizing");
+    setRatio(ratioRef.current);
     host.preference({ inputRatio: ratioRef.current });
   };
   const nativeIcon = (id: string, icon: React.ReactNode) => {
@@ -181,18 +199,20 @@ export function Composer({
               if (e.button !== 0) return;
               e.preventDefault();
               e.currentTarget.setPointerCapture(e.pointerId);
-              const height = document.getElementById("sheld")!.clientHeight;
+              const height = document.getElementById("sheld")!.clientHeight,
+                chat = document.getElementById("chat");
               drag.current = {
                 y: e.clientY,
                 ratio: document.getElementById("send_form")!.getBoundingClientRect().height / height,
                 height,
+                pinned: !!chat && chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 4,
               };
               if (!mobile) document.body.classList.add("wb-resizing");
             }}
             onPointerMove={(e) => {
               const start = drag.current;
               if (start && !mobile)
-                setRatio(Math.min(0.6, Math.max(0.2, start.ratio + (start.y - e.clientY) / start.height)));
+                paint(Math.min(0.6, Math.max(0.2, start.ratio + (start.y - e.clientY) / start.height)));
             }}
             onPointerUp={(e) => {
               if (mobile) {

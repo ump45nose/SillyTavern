@@ -41,6 +41,7 @@ import { ClickFeedback, usePresence } from "./ui/Motion";
 import { Header } from "./ui/Header";
 import { Composer } from "./ui/Composer";
 import { useSidebarHover } from "./ui/useSidebarHover";
+import { useScrollbars } from "./ui/useScrollbars";
 import { Navigation } from "./ui/Navigation";
 import { ComposerPopovers, type ComposerPopup } from "./ui/ComposerPopovers";
 import { ReadingPresentation, ReadingSettings } from "./ui/Reading";
@@ -142,6 +143,7 @@ export default function App({
   const sizes = useMemo(readSizes, [width]);
   const leftShown = leftVisible(s, sizes);
   const edgeHover = !mobile && prefs.edgeHover !== false;
+  useScrollbars();
   const hover = useSidebarHover(
     edgeHover && !focus && !workspace && !deep && !help && !document.querySelector("dialog[open]"),
     leftShown,
