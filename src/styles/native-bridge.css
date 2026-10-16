@@ -1183,6 +1183,31 @@ body.wb-active #chat .wb-reading-icon {
     background-color 180ms,
     color 180ms;
 }
+/* Message actions: native glyph buttons, icon buttons and add-on slots share one 30px square. */
+body.wb-active:not(.wb-mobile) #chat .mes_buttons {
+  align-items: center;
+}
+body.wb-active:not(.wb-mobile) #chat .mes_buttons > :is(.mes_button, .wb-image-slot),
+body.wb-active:not(.wb-mobile) #chat .mes_buttons .wb-image-message-button {
+  box-sizing: border-box;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  margin: 0;
+  line-height: 30px;
+  text-align: center;
+}
+body.wb-active:not(.wb-mobile) #chat .mes_buttons .wb-image-message-button {
+  display: grid;
+  place-items: center;
+}
+body.wb-active:not(.wb-mobile) #chat .mes_buttons :is(.extraMesButtonsHint, .wb-image-message-button) {
+  padding: 0;
+}
+body.wb-active:not(.wb-mobile) #chat .mes_buttons .wb-image-message-button svg {
+  width: 17px;
+  height: 17px;
+}
 body.wb-active #chat .wb-reading-icon::before {
   display: none !important;
 }
