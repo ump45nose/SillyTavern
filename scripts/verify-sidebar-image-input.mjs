@@ -7,10 +7,11 @@ try{
  const test=await session(browser);page=test.page;
  await page.route('**/api/settings/save',r=>r.fulfill({json:{}}));
  await page.route('**/api/chats/save',r=>r.fulfill({json:{result:'ok'}}));
- await page.route('**/api/settings/get',async r=>{const response=await r.fetch(),data=await response.json(),s=JSON.parse(data.settings);s.extension_settings.workbench??={};Object.assign(s.extension_settings.workbench,{layout:'novel',left:true,addons:{outline:true,'image-gen':true,'record-export':true}});data.settings=JSON.stringify(s);await r.fulfill({response,json:data});});
+ await page.route('**/api/settings/get',async r=>{const response=await r.fetch(),data=await response.json(),s=JSON.parse(data.settings);s.active_character=null;s.active_group=null;s.extension_settings.workbench??={};Object.assign(s.extension_settings.workbench,{layout:'novel',left:true,addons:{outline:true,'image-gen':true,'record-export':true}});data.settings=JSON.stringify(s);await r.fulfill({response,json:data});});
  await page.setViewportSize({width:1496,height:817});await ready(page,urls.validation);await page.waitForFunction(()=>window.workbench?.mounted&&workbench.metrics.workbenchReadyMs);
- // Image results persist into the open chat, so do not rely on whichever chat the shared account last left active.
- await createCharacter(page);await page.waitForFunction(()=>!!SillyTavern.getContext().getCurrentChatId());
+ // Start on the welcome screen: its floors have no chat file to hold image results, so they get no image action.
+ await page.locator('#chat>.mes .mes_edit').first().waitFor({state:'attached'});assert.equal(await page.evaluate(()=>SillyTavern.getContext().getCurrentChatId()),undefined);assert.equal(await page.locator('.wb-image-message-button').count(),0);
+ await createCharacter(page);await page.waitForFunction(()=>!!SillyTavern.getContext().getCurrentChatId());await page.locator('.wb-image-message-button').first().waitFor({state:'attached'});
  const button=name=>page.getByRole('button',{name,exact:true}),wait=()=>page.waitForTimeout(350),pass=s=>{report.checks.push(s);console.log('PASS',s);};
  const sections=['history','outline','floors'];
  const state=()=>page.locator('.wb-nav-section').evaluateAll(ns=>ns.map(n=>{const b=n.querySelector('.wb-nav-toggle'),c=n.querySelector('.wb-fold-body');return {id:n.id,expanded:b.getAttribute('aria-expanded'),inert:c.inert};}));

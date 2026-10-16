@@ -61,8 +61,9 @@ export function beginImage(host: HostAdapter, id: number) {
 }
 /** Decorate native pencil rows; never recreate native messages, controls or media. */
 export function MessageImageControls({ host }: { host: HostAdapter }) {
-  useHostSlices(host, withoutChat);
-  const enabled = addonEnabled(host.prefs(), "image-gen"),
+  const snap = useHostSlices(host, withoutChat);
+  // Results persist into chat metadata, so the welcome screen (no chat file) gets no image action.
+  const enabled = addonEnabled(host.prefs(), "image-gen") && !!snap.chatName,
     [slots, setSlots] = useState<
       {
         slot: HTMLElement;

@@ -535,7 +535,7 @@ export function RPStage({
                 >
                   <PencilLine size={16} />
                 </button>
-                {addonEnabled(prefs, "image-gen") && (
+                {addonEnabled(prefs, "image-gen") && !!snap.chatName && (
                   <button
                     className="wb-rp-tool"
                     aria-label="为当前对白生图"
