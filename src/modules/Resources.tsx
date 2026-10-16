@@ -27,7 +27,7 @@ import { Check, Fold, SaveBar, Switch, useDraft } from "../ui/ResourceControls";
 import { actionLabels } from "../host/labels";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
-import { guards } from "../host/bus";
+import { bus, guards } from "../host/bus";
 export const labels: Record<Resource, string> = {
   connection: "连接",
   preset: "预设",
@@ -751,6 +751,16 @@ const sampling = [
   "reasoning_effort",
 ];
 const roleNames: Record<string, string> = { system: "系统", user: "用户", assistant: "助手" };
+const triggerNames = [
+  ["normal", "普通"],
+  ["continue", "继续"],
+  ["impersonate", "AI 帮答"],
+  ["swipe", "滑动"],
+  ["regenerate", "重新生成"],
+  ["quiet", "静默"],
+] as const;
+/** The prompt a click on the parameters page asks the prompts tab to open. */
+let studioFocus = "";
 const shown = (value: unknown) =>
   typeof value === "number" ? String(value) : typeof value === "boolean" ? (value ? "开" : "关") : "已改";
 function PresetEditor({
@@ -778,8 +788,12 @@ function PresetEditor({
   const running = !!host.livePreset(id),
     pending = running ? host.presetChanges(id).length > 0 : false;
   const { draft, change } = edit,
-    [entry, setEntry] = useState(""),
-    [editorOpen, setEditorOpen] = useState(!!deep && view === "prompts"),
+    [entry, setEntry] = useState(() => {
+      const focus = studioFocus;
+      studioFocus = "";
+      return focus;
+    }),
+    [editorOpen, setEditorOpen] = useState(false),
     [scope, setScope] = useState(0),
     [pinsOpen, setPinsOpen] = useState(false),
     [dragging, setDragging] = useState<number | null>(null),
@@ -878,11 +892,13 @@ function PresetEditor({
   const parameters = Object.keys(draft).filter(
     (k) => ["number", "boolean"].includes(typeof draft[k]) || k === "reasoning_effort",
   );
-  // The settings page lays parameters and prompt order side by side (board WsPreset).
-  const desk = !!deep && view !== "prompts";
+  // The settings page lays parameters and prompt order side by side (board WsPreset); the
+  // prompts tab is the list beside one open prompt.
+  const desk = !!deep && view !== "prompts",
+    studio = !!deep && view === "prompts";
   const promptTokens = useTokenCounts(
     host,
-    desk
+    deep
       ? prompts
           .filter((p) => !p.marker)
           .map((p) => [p.identifier, String(p.content ?? "")] as [string, string])
@@ -927,7 +943,7 @@ function PresetEditor({
       {rows.map((item, i) => {
         const p = prompts.find((p) => p.identifier === item.identifier),
           name = p?.name || item.identifier,
-          active = editorOpen && selected?.identifier === item.identifier;
+          active = (studio || editorOpen) && selected?.identifier === item.identifier;
         return (
           <li
             className={`wb-prompt ${active ? "is-active" : ""} ${item.enabled === false ? "is-off" : ""} ${p?.marker ? "is-marker" : ""} ${dragging === i ? "is-dragging" : ""}`}
@@ -961,7 +977,11 @@ function PresetEditor({
               aria-label={`编辑提示词 ${name}`}
               aria-expanded={active}
               onClick={() => {
-                if (active) setEditorOpen(false);
+                if (desk) {
+                  studioFocus = item.identifier;
+                  bus.emit("settings-group", { group: "提示词" });
+                } else if (studio) setEntry(item.identifier);
+                else if (active) setEditorOpen(false);
                 else {
                   setEntry(item.identifier);
                   setEditorOpen(true);
@@ -973,7 +993,7 @@ function PresetEditor({
             <span className="wb-prompt-role">
               {p?.marker ? "标记" : roleNames[p?.role || "system"] || p?.role}
             </span>
-            {desk && (
+            {deep && (
               <span className="wb-prompt-tokens">
                 {p?.marker ? "—" : (promptTokens[item.identifier] ?? "")}
               </span>
@@ -983,6 +1003,119 @@ function PresetEditor({
       })}
     </ul>
   );
+  const remove = () => {
+    if (confirm("删除这个提示词？")) {
+      const keep = (p: Data) => p.identifier !== selected.identifier;
+      apply("prompts", (edit.base.prompts || []).filter(keep), prompts.filter(keep));
+      setOrder(order.filter((p) => p.identifier !== selected.identifier));
+      setEntry("");
+    }
+  };
+  const heading = selected && (
+    <div className="wb-editor-heading">
+      <input
+        aria-label="提示词名称"
+        value={selected.name || ""}
+        onChange={(e) => updatePrompt({ name: e.target.value })}
+      />
+      <Select
+        aria-label="提示词角色"
+        value={selected.role || "system"}
+        onChange={(e) => updatePrompt({ role: e.target.value })}
+      >
+        <option>system</option>
+        <option>user</option>
+        <option>assistant</option>
+      </Select>
+      {[-1, 1].map((dir) => (
+        <IconButton
+          key={dir}
+          title={dir < 0 ? "上移提示词" : "下移提示词"}
+          disabled={
+            !order.length ||
+            order.findIndex((p) => p.identifier === selected.identifier) + dir < 0 ||
+            order.findIndex((p) => p.identifier === selected.identifier) + dir >= order.length
+          }
+          onClick={() => {
+            const next = clone(order),
+              i = next.findIndex((p) => p.identifier === selected.identifier);
+            [next[i], next[i + dir]] = [next[i + dir], next[i]];
+            setOrder(next);
+          }}
+        >
+          {dir < 0 ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
+        </IconButton>
+      ))}
+    </div>
+  );
+  const body = (
+    <textarea
+      aria-label="提示词正文"
+      className="wb-prompt-body"
+      value={selected?.content || ""}
+      onChange={(e) => updatePrompt({ content: e.target.value })}
+    />
+  );
+  const triggers: string[] = selected?.injection_trigger || [];
+  /** Where and when a prompt goes: list order or a chat depth, and the generation types it joins. */
+  const injection = selected && !selected.marker && (
+    <div className="wb-prompt-inject">
+      <div className="wb-prompt-inject-row">
+        <Field label="提示词注入位置">
+          <Select
+            value={selected.injection_position ?? 0}
+            onChange={(e) => updatePrompt({ injection_position: Number(e.target.value) })}
+          >
+            <option value={0}>按列表顺序</option>
+            <option value={1}>指定聊天深度</option>
+          </Select>
+        </Field>
+        {selected.injection_position === 1 && (
+          <>
+            <Field label="提示词深度">
+              <input
+                type="number"
+                min={0}
+                value={selected.injection_depth ?? 4}
+                onChange={(e) => updatePrompt({ injection_depth: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="提示词顺序">
+              <input
+                type="number"
+                value={selected.injection_order ?? 100}
+                onChange={(e) => updatePrompt({ injection_order: Number(e.target.value) })}
+              />
+            </Field>
+          </>
+        )}
+        <Check
+          label="禁止角色覆盖"
+          checked={!!selected.forbid_overrides}
+          onChange={(v) => updatePrompt({ forbid_overrides: v })}
+        />
+      </div>
+      <div className="wb-prompt-triggers" role="group" aria-label="生成类型">
+        <span>生成类型</span>
+        {triggerNames.map(([value, label]) => (
+          <button
+            key={value}
+            aria-pressed={triggers.includes(value)}
+            onClick={() =>
+              updatePrompt({
+                injection_trigger: triggers.includes(value)
+                  ? triggers.filter((t) => t !== value)
+                  : [...triggers, value],
+              })
+            }
+          >
+            {label}
+          </button>
+        ))}
+        <small>{triggers.length ? "" : "未选择时全部生效"}</small>
+      </div>
+    </div>
+  );
   const promptSheet = selected ? (
     <div className={`wb-fold-body wb-prompt-sheet ${editorOpen ? "is-open" : ""}`} inert={!editorOpen}>
       <div>
@@ -990,63 +1123,153 @@ function PresetEditor({
           <IconButton title="收起提示词编辑" onClick={() => setEditorOpen(false)}>
             <X size={15} />
           </IconButton>
-          <div className="wb-editor-heading">
-            <input
-              aria-label="提示词名称"
-              value={selected.name || ""}
-              onChange={(e) => updatePrompt({ name: e.target.value })}
-            />
-            <Select
-              aria-label="提示词角色"
-              value={selected.role || "system"}
-              onChange={(e) => updatePrompt({ role: e.target.value })}
-            >
-              <option>system</option>
-              <option>user</option>
-              <option>assistant</option>
-            </Select>
-            {[-1, 1].map((dir) => (
-              <IconButton
-                key={dir}
-                title={dir < 0 ? "上移提示词" : "下移提示词"}
-                disabled={
-                  !order.length ||
-                  order.findIndex((p) => p.identifier === selected.identifier) + dir < 0 ||
-                  order.findIndex((p) => p.identifier === selected.identifier) + dir >= order.length
-                }
-                onClick={() => {
-                  const next = clone(order),
-                    i = next.findIndex((p) => p.identifier === selected.identifier);
-                  [next[i], next[i + dir]] = [next[i + dir], next[i]];
-                  setOrder(next);
-                }}
-              >
-                {dir < 0 ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
-              </IconButton>
-            ))}
-          </div>
-
-          {selected.marker ? (
-            <p className="wb-note">此项由酒馆动态组装，可在上方控制启用与顺序。</p>
-          ) : (
-            <Field label="提示词正文">
-              <textarea
-                rows={4}
-                value={selected.content || ""}
-                onChange={(e) => updatePrompt({ content: e.target.value })}
-              />
-            </Field>
-          )}
+          {heading}
+          {selected.marker ? <p className="wb-note">此项由酒馆动态组装，可在上方控制启用与顺序。</p> : body}
         </section>
       </div>
     </div>
   ) : (
     <Empty>此类预设没有提示词子条目</Empty>
   );
+  const json = (
+    <Field label="预设 JSON">
+      <textarea
+        className="wb-code"
+        value={advanced || JSON.stringify(draft, null, 2)}
+        onChange={(e) => {
+          setAdvanced(e.target.value);
+          try {
+            const value = JSON.parse(e.target.value);
+            validatePreset(value);
+            edit.setDraft(value);
+            setAdvanced("");
+          } catch {
+            /* retain invalid input */
+          }
+        }}
+      />
+    </Field>
+  );
+  const bindingChecks = (
+    <>
+      {(["connection", "model"] as const).map((scope) => (
+        <Check
+          key={scope}
+          label={`绑定当前${scope === "connection" ? "连接" : "模型"}`}
+          disabled={scope === "connection" && !host.snapshot().current.connection}
+          checked={host.prefs().bindings[host.bindingKey(scope)] === id}
+          onChange={(v) => {
+            const bindings = { ...host.prefs().bindings };
+            if (v) bindings[host.bindingKey(scope)] = id;
+            else delete bindings[host.bindingKey(scope)];
+            host.preference({ bindings });
+          }}
+        />
+      ))}
+    </>
+  );
   return (
-    <fieldset disabled={task.busy} className={`wb-preset-editor ${desk ? "is-desk" : ""}`}>
+    <fieldset
+      disabled={task.busy}
+      className={`wb-preset-editor ${desk ? "is-desk" : ""} ${studio ? "is-studio" : ""}`}
+    >
       <Notice error={task.error} />
-      {!desk && (
+      {desk ? (
+        <>
+          <div className="wb-preset-desk">
+            <section className="wb-preset-params" aria-label="采样参数">
+              <h3>采样参数</h3>
+              {sampling.filter((k) => k in draft).map(field)}
+              {always.filter((k) => k in draft).map(field)}
+            </section>
+            <section className="wb-preset-order">
+              {promptHead}
+              {promptList}
+            </section>
+          </div>
+          <section className="wb-preset-file" aria-label="预设文件">
+            <h3>预设文件</h3>
+            <div className="wb-preset-file-row">
+              {bindingChecks}
+              <span className="wb-grow" />
+              <button
+                onClick={() => {
+                  const name = prompt("副本名称", `${id} 副本`);
+                  if (name)
+                    task.run(async () => {
+                      const next = await host.createPreset(name, draft);
+                      edit.saved(draft);
+                      onSelect(next);
+                    });
+                }}
+              >
+                <Copy size={15} />
+                另存为
+              </button>
+              <button
+                onClick={() =>
+                  host.download(
+                    new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" }),
+                    `${id}.json`,
+                  )
+                }
+              >
+                <Download size={15} />
+                导出
+              </button>
+              <label className="wb-upload-button">
+                <Upload size={15} />
+                导入到草稿
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file)
+                      task.run(async () => {
+                        const value = JSON.parse(await file.text());
+                        validatePreset(value);
+                        edit.setDraft(value);
+                      });
+                  }}
+                />
+              </label>
+            </div>
+            <Fold title="编辑 JSON" initial={!!advanced}>
+              {json}
+            </Fold>
+          </section>
+        </>
+      ) : studio ? (
+        <div className="wb-prompt-studio">
+          <section className="wb-prompt-studio-list">
+            {promptHead}
+            {promptList}
+          </section>
+          {selected ? (
+            <section className="wb-prompt-studio-editor" aria-label="编辑提示词">
+              {heading}
+              {selected.marker ? (
+                <p className="wb-note">此项由酒馆动态组装，只能调整启用与顺序。</p>
+              ) : (
+                <>
+                  {injection}
+                  {body}
+                  <footer>
+                    <span>{promptTokens[selected.identifier] ?? "—"} tokens</span>
+                    <button className="wb-link is-danger" onClick={remove}>
+                      <Trash2 size={14} />
+                      删除提示词
+                    </button>
+                  </footer>
+                </>
+              )}
+            </section>
+          ) : (
+            <Empty>此类预设没有提示词子条目</Empty>
+          )}
+        </div>
+      ) : (
         <>
           <section className="wb-preset-card" aria-label="常用参数">
             {always.map(field)}
@@ -1081,223 +1304,111 @@ function PresetEditor({
               </div>
             </div>
           </div>
-        </>
-      )}
-      {desk ? (
-        <div className="wb-preset-desk">
-          <section className="wb-preset-params" aria-label="采样参数">
-            <h3>采样参数</h3>
-            {sampling.filter((k) => k in draft).map(field)}
-            {always.filter((k) => k in draft).map(field)}
-            <Fold title="当前后端的其他参数">
-              {parameters.filter((k) => !sampling.includes(k) && !always.includes(k)).map(field)}
-            </Fold>
-          </section>
-          <section className="wb-preset-order">
-            {promptHead}
-            {promptList}
-            <div className={`wb-preset-more ${editorOpen ? "is-editor-open" : ""}`}>{promptSheet}</div>
-          </section>
-        </div>
-      ) : (
-        <>
           {promptHead}
           {promptList}
+          <div className={`wb-preset-more ${editorOpen ? "is-editor-open" : ""}`}>
+            {promptSheet}
+            <Fold title="更多预设设置">
+              {injection && <Fold title="注入与触发">{injection}</Fold>}
+              {selected && !selected.marker && (
+                <button className="wb-link" onClick={remove}>
+                  <Trash2 size={14} />
+                  删除提示词
+                </button>
+              )}
+              <Fold title="其他生成参数">
+                {parameters.filter((k) => !pins.includes(k) && !always.includes(k)).map(field)}
+              </Fold>
+              <Fold title="提示格式">
+                {[
+                  ["impersonation_prompt", "AI 帮答指令"],
+                  ["new_chat_prompt", "新对话提示"],
+                  ["new_group_chat_prompt", "新群聊提示"],
+                  ["new_example_chat_prompt", "对话示例提示"],
+                  ["continue_nudge_prompt", "续写提示"],
+                  ["send_if_empty", "空输入替代文本"],
+                  ["wi_format", "世界书格式"],
+                  ["scenario_format", "场景格式"],
+                  ["personality_format", "性格格式"],
+                ]
+                  .filter(([key]) => key in draft)
+                  .map(([key, label]) => (
+                    <Field key={key} label={label}>
+                      <textarea value={draft[key] || ""} onChange={(e) => change(key, e.target.value)} />
+                    </Field>
+                  ))}
+              </Fold>
+              <Fold title="模型 / 连接绑定">{bindingChecks}</Fold>
+              <Fold title="文件与高级编辑">
+                <div className="wb-persona-actions">
+                  <button
+                    onClick={() => {
+                      const name = prompt("新预设名称");
+                      if (name) task.run(async () => onSelect(await host.createPreset(name)));
+                    }}
+                  >
+                    <Plus size={15} />
+                    新建预设
+                  </button>
+                  <button
+                    onClick={() => {
+                      const name = prompt("副本名称", `${id} 副本`);
+                      if (name)
+                        task.run(async () => {
+                          const next = await host.createPreset(name, draft);
+                          edit.saved(draft);
+                          onSelect(next);
+                        });
+                    }}
+                  >
+                    <Copy size={15} />
+                    另存为
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`删除预设「${id}」？`))
+                        task.run(async () => {
+                          await host.deletePreset(id);
+                          onSelect(host.snapshot().current.preset);
+                        });
+                    }}
+                  >
+                    <Trash2 size={15} />
+                    删除预设
+                  </button>
+                </div>
+                <button
+                  onClick={() =>
+                    host.download(
+                      new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" }),
+                      `${id}.json`,
+                    )
+                  }
+                >
+                  <Download size={15} />
+                  导出预设
+                </button>
+                <Field label="导入预设到草稿">
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file)
+                        task.run(async () => {
+                          const value = JSON.parse(await file.text());
+                          validatePreset(value);
+                          edit.setDraft(value);
+                        });
+                    }}
+                  />
+                </Field>
+                {json}
+              </Fold>
+            </Fold>
+          </div>
         </>
       )}
-      <div className={`wb-preset-more ${editorOpen ? "is-editor-open" : ""}`}>
-        {!desk && promptSheet}
-        <Fold title="更多预设设置" initial={!!deep}>
-          {" "}
-          {selected && !selected.marker && (
-            <Fold title="注入与触发">
-              <Field label="提示词注入位置">
-                <Select
-                  value={selected.injection_position ?? 0}
-                  onChange={(e) => updatePrompt({ injection_position: Number(e.target.value) })}
-                >
-                  <option value={0}>按列表顺序</option>
-                  <option value={1}>指定聊天深度</option>
-                </Select>
-              </Field>
-              <div className="wb-form-pair">
-                <Field label="提示词深度">
-                  <input
-                    type="number"
-                    min={0}
-                    value={selected.injection_depth ?? 4}
-                    onChange={(e) => updatePrompt({ injection_depth: Number(e.target.value) })}
-                  />
-                </Field>
-                <Field label="提示词顺序">
-                  <input
-                    type="number"
-                    value={selected.injection_order ?? 100}
-                    onChange={(e) => updatePrompt({ injection_order: Number(e.target.value) })}
-                  />
-                </Field>
-              </div>
-              <Check
-                label="禁止角色覆盖"
-                checked={!!selected.forbid_overrides}
-                onChange={(v) => updatePrompt({ forbid_overrides: v })}
-              />
-              <Field label="生成类型（每行一个，留空为全部）">
-                <textarea
-                  value={(selected.injection_trigger || []).join("\n")}
-                  placeholder="normal / continue / regenerate / impersonate"
-                  onChange={(e) =>
-                    updatePrompt({
-                      injection_trigger: e.target.value
-                        .split("\n")
-                        .map((v) => v.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
-              </Field>
-            </Fold>
-          )}
-          {selected && !selected.marker && (
-            <button
-              className="wb-link"
-              onClick={() => {
-                if (confirm("删除这个提示词？")) {
-                  const keep = (p: Data) => p.identifier !== selected.identifier;
-                  apply("prompts", (edit.base.prompts || []).filter(keep), prompts.filter(keep));
-                  setOrder(order.filter((p) => p.identifier !== selected.identifier));
-                  setEntry("");
-                }
-              }}
-            >
-              <Trash2 size={14} />
-              删除提示词
-            </button>
-          )}
-          {!desk && (
-            <Fold title="其他生成参数">
-              {parameters.filter((k) => !pins.includes(k) && !always.includes(k)).map(field)}
-            </Fold>
-          )}
-          <Fold title="提示格式">
-            {[
-              ["impersonation_prompt", "AI 帮答指令"],
-              ["new_chat_prompt", "新对话提示"],
-              ["new_group_chat_prompt", "新群聊提示"],
-              ["new_example_chat_prompt", "对话示例提示"],
-              ["continue_nudge_prompt", "续写提示"],
-              ["send_if_empty", "空输入替代文本"],
-              ["wi_format", "世界书格式"],
-              ["scenario_format", "场景格式"],
-              ["personality_format", "性格格式"],
-            ]
-              .filter(([key]) => key in draft)
-              .map(([key, label]) => (
-                <Field key={key} label={label}>
-                  <textarea value={draft[key] || ""} onChange={(e) => change(key, e.target.value)} />
-                </Field>
-              ))}
-          </Fold>
-          <Fold title="模型 / 连接绑定">
-            {(["connection", "model"] as const).map((scope) => (
-              <Check
-                key={scope}
-                label={`绑定当前${scope === "connection" ? "连接" : "模型"}`}
-                disabled={scope === "connection" && !host.snapshot().current.connection}
-                checked={host.prefs().bindings[host.bindingKey(scope)] === id}
-                onChange={(v) => {
-                  const bindings = { ...host.prefs().bindings };
-                  if (v) bindings[host.bindingKey(scope)] = id;
-                  else delete bindings[host.bindingKey(scope)];
-                  host.preference({ bindings });
-                }}
-              />
-            ))}
-          </Fold>
-          <Fold title="文件与高级编辑" initial={!!deep}>
-            <div className="wb-persona-actions">
-              <button
-                onClick={() => {
-                  const name = prompt("新预设名称");
-                  if (name) task.run(async () => onSelect(await host.createPreset(name)));
-                }}
-              >
-                <Plus size={15} />
-                新建预设
-              </button>
-              <button
-                onClick={() => {
-                  const name = prompt("副本名称", `${id} 副本`);
-                  if (name)
-                    task.run(async () => {
-                      const next = await host.createPreset(name, draft);
-                      edit.saved(draft);
-                      onSelect(next);
-                    });
-                }}
-              >
-                <Copy size={15} />
-                另存为
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm(`删除预设「${id}」？`))
-                    task.run(async () => {
-                      await host.deletePreset(id);
-                      onSelect(host.snapshot().current.preset);
-                    });
-                }}
-              >
-                <Trash2 size={15} />
-                删除预设
-              </button>
-            </div>
-            <button
-              onClick={() =>
-                host.download(
-                  new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" }),
-                  `${id}.json`,
-                )
-              }
-            >
-              <Download size={15} />
-              导出预设
-            </button>
-            <Field label="导入预设到草稿">
-              <input
-                type="file"
-                accept=".json,application/json"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file)
-                    task.run(async () => {
-                      const value = JSON.parse(await file.text());
-                      validatePreset(value);
-                      edit.setDraft(value);
-                    });
-                }}
-              />
-            </Field>
-            <Field label="预设 JSON">
-              <textarea
-                className="wb-code"
-                value={advanced || JSON.stringify(draft, null, 2)}
-                onChange={(e) => {
-                  setAdvanced(e.target.value);
-                  try {
-                    const value = JSON.parse(e.target.value);
-                    validatePreset(value);
-                    edit.setDraft(value);
-                    setAdvanced("");
-                  } catch {
-                    /* retain invalid input */
-                  }
-                }}
-              />
-            </Field>
-          </Fold>
-        </Fold>
-      </div>
       <SaveBar
         dirty={edit.dirty || !!advanced}
         busy={task.busy}

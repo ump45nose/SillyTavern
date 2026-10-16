@@ -27,6 +27,7 @@
     place-items: center;
     width: 32px;
     height: 32px;
+    position: relative;
     overflow: hidden;
     border-radius: 50%;
     background: var(--wb-surface-2);
@@ -34,6 +35,8 @@
     font-size: 13px;
   }
   .wb-persona-row-avatar img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -104,6 +107,7 @@
     place-items: center;
     width: 100px;
     height: 100px;
+    position: relative;
     overflow: hidden;
     border-radius: 50%;
     background: var(--wb-surface-1);
@@ -114,6 +118,8 @@
     font-size: 32px;
   }
   .wb-persona-face img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;

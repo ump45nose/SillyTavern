@@ -2032,7 +2032,6 @@ body.wb-active .wb-component-settings .wb-native-settings-slot .title_restorable
   background: transparent !important;
   background-image: none !important;
   border: 0 !important;
-  border-bottom: 1px solid var(--wb-line) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   min-height: 32px;
@@ -2315,6 +2314,71 @@ body.wb-active
     #openai_settings
   ).wb-component-grid:not([style*="display: none"]):not([style*="display:none"]):not([hidden]) {
   display: grid !important;
+}
+
+/* Preset · 高级参数: the preset list, samplers and prompt list live on the first two tabs. */
+body.wb-active
+  .wb-component-settings.page-generation
+  :is(
+    #lm_button_panel_pin_div,
+    #clickSlidersTips,
+    .topRightInset,
+    #respective-presets-block,
+    .range-block:has(
+      #openai_max_context,
+      #openai_max_tokens,
+      #n_openai,
+      #stream_toggle,
+      #temp_openai,
+      #freq_pen_openai,
+      #pres_pen_openai,
+      #top_p_openai,
+      #top_k_openai,
+      #top_a_openai,
+      #min_p_openai,
+      #repetition_penalty_openai,
+      #seed_openai,
+      #openai_show_thoughts,
+      #completion_prompt_manager
+    ),
+    #range_block_openai > hr,
+    .inline-drawer:has(#main_prompt_quick_edit_textarea)
+  ) {
+  display: none !important;
+}
+
+/* What remains reads as tiles: one quiet card per option, drawers full width. */
+body.wb-active
+  .wb-component-settings.page-generation
+  :is(#range_block_openai, #openai_settings > .wb-component-grid) {
+  gap: 12px !important;
+  margin-bottom: 12px;
+}
+body.wb-active
+  .wb-component-settings.page-generation
+  :is(
+    :is(#range_block_openai, #openai_settings > .wb-component-grid)
+      > :is(.range-block, .inline-drawer, .flex-container),
+    #openai_settings > .range-block
+  ) {
+  align-self: stretch;
+  justify-content: flex-start !important;
+  align-content: flex-start;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  border: 0 !important;
+  border-radius: 12px;
+  background: var(--wb-surface-2);
+  text-align: left;
+}
+
+body.wb-active
+  .wb-component-settings.page-generation
+  :is(#range_block_openai, #openai_settings > .wb-component-grid)
+  > .inline-drawer
+  > .inline-drawer-header {
+  border-bottom: 0 !important;
 }
 
 /* ── from polish.css ── */
@@ -4052,4 +4116,54 @@ body.wb-active:not(.wb-mobile):not(.wb-rp):not(.wb-image-input-mode) #send_but.d
   opacity: 0.35;
   cursor: default;
   pointer-events: none;
+}
+
+/* Settings page skeleton for leased native forms: quiet section titles, each control grid and
+   drawer on its own card, the same cards the designed pages use. */
+body.wb-active .wb-component-settings .wb-native-settings-slot :is(h3, h4, #user-settings-block h4) {
+  margin: 18px 0 8px;
+  padding: 0 2px;
+  border: 0;
+  color: var(--wb-ink-3);
+  font: 600 12px/1.6 system-ui;
+}
+body.wb-active .wb-component-settings .wb-native-settings-slot hr {
+  display: none;
+}
+body.wb-active
+  .wb-component-settings:not(.page-generation)
+  .wb-native-settings-slot
+  .wb-component-grid:not(.wb-component-grid .wb-component-grid) {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--wb-surface-2);
+}
+body.wb-active
+  .wb-component-settings
+  .wb-native-settings-slot
+  .inline-drawer:not(.inline-drawer .inline-drawer) {
+  margin: 0 0 10px;
+  padding: 0 16px;
+  border: 0 !important;
+  border-radius: 14px;
+  background: var(--wb-surface-2);
+}
+body.wb-active
+  .wb-component-settings:not(.page-generation)
+  .wb-native-settings-slot
+  .wb-component-grid
+  .inline-drawer:not(.inline-drawer .inline-drawer) {
+  margin: 0;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--wb-surface-1);
+}
+body.wb-active
+  .wb-component-settings
+  .wb-native-settings-slot
+  .inline-drawer:not(.inline-drawer .inline-drawer)
+  > .inline-drawer-header {
+  min-height: 44px;
+  border: 0 !important;
 }

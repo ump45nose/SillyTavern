@@ -242,6 +242,7 @@ try {
   await page.keyboard.press("Alt+Shift+Digit2");
   await page.locator(".wb-resources").waitFor();
   await page.getByRole("button", { name: "独立深度编辑", exact: true }).click();
+  await page.getByRole("button", { name: "编辑 JSON", exact: true }).click();
   await page.getByLabel("预设 JSON").waitFor();
   // 0.4 embeds native advanced settings in the editor itself; the old "原生高级设置" detour
   // (host.native, NativeLink) was removed after phase C.
