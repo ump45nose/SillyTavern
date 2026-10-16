@@ -699,6 +699,120 @@
     display: none;
   }
 
+  /* ── Motion: drawers and sheets follow the finger and settle with one curve; the scrim fades with
+     them; presses answer at once and selections pop in. Reduced motion turns all of it off. ── */
+  body.wb-mobile :is(.wb-left, .wb-right) {
+    transition:
+      transform 300ms var(--wb-ease-emphasized),
+      visibility 300ms;
+    touch-action: pan-y;
+  }
+  body.wb-mobile .wb-left.is-dragging {
+    transform: translateX(calc(var(--wb-drawer-x, 0px) - 100%));
+    transition: none;
+  }
+  body.wb-mobile .wb-right.is-dragging {
+    transform: translateX(calc(100% - var(--wb-drawer-x, 0px)));
+    transition: none;
+  }
+  body.wb-mobile :is(#chat, .wb-mobile-shade) {
+    touch-action: pan-y;
+  }
+  body.wb-mobile-rp:not(.wb-mobile-editor) {
+    touch-action: pan-y;
+  }
+  body.wb-mobile .wb-mobile-shade {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms var(--wb-ease-emphasized);
+  }
+  body.wb-mobile .wb-mobile-shade.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  body.wb-mobile.wb-drawer-dragging .wb-mobile-shade {
+    opacity: var(--wb-drawer-progress, 0);
+    transition: none;
+  }
+  body.wb-mobile :is(.wb-mobile-drawer-title, .wb-mobile-drawer-close) {
+    animation: wb-mobile-fade-in 200ms ease 60ms both;
+  }
+  body.wb-mobile .wb-mobile-sheet {
+    translate: 0 var(--wb-sheet-pull, 0px);
+    transition: translate 260ms var(--wb-ease-emphasized);
+  }
+  body.wb-mobile .wb-mobile-sheet.is-dragging {
+    transition: none;
+  }
+  body.wb-mobile :is(.wb-mobile-sheet-grip, .wb-mobile-sheet > header) {
+    touch-action: none;
+  }
+  body.wb-mobile
+    :is(
+      .wb-mobile-header button,
+      .wb-mobile-management,
+      .wb-mobile-plus,
+      .wb-mobile-config button,
+      .wb-mobile-focus-exit,
+      .wb-mobile-drawer-close,
+      .wb-mobile-sheet button,
+      .wb-left button,
+      .wb-right .wb-panel-tabs button
+    ) {
+    transition:
+      scale 140ms var(--wb-ease-emphasized),
+      background-color 180ms,
+      color 180ms,
+      box-shadow 180ms;
+  }
+  body.wb-mobile
+    :is(
+      .wb-mobile-header button,
+      .wb-mobile-management,
+      .wb-mobile-plus,
+      #send_but,
+      .wb-mobile-config .wb-selector-value,
+      .wb-mobile-focus-exit,
+      .wb-mobile-drawer-close,
+      .wb-mobile-sheet > header button,
+      .wb-mobile-mode-row button,
+      .wb-mobile-tool-grid button,
+      .wb-left .wb-nav-icon,
+      .wb-left .wb-nav-foot,
+      .wb-rp-deck button
+    ):active:not(:disabled) {
+    scale: 0.93;
+  }
+  body.wb-mobile
+    :is(.wb-mobile-sheet-list > button, .wb-mobile-summary, .wb-left :is(.wb-nav-row, .wb-nav-toggle)):active:not(
+      :disabled
+    ) {
+    scale: 0.98;
+    background: var(--wb-surface-2);
+  }
+  body.wb-mobile .wb-mobile-config :is(.wb-contexts, .wb-mobile-summary) {
+    animation: wb-mobile-fade-in 200ms ease both;
+  }
+  body.wb-mobile .wb-mobile-config-fold svg {
+    transition: transform 240ms var(--wb-ease-emphasized);
+  }
+  body.wb-mobile .wb-mobile-resource-popup .wb-popover {
+    animation: wb-mobile-pop-in 220ms var(--wb-ease-emphasized) both;
+  }
+  body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes.wb-mobile-actions .mes_buttons {
+    animation: wb-mobile-pop-in 180ms var(--wb-ease-emphasized) both;
+  }
+  body.wb-active.wb-mobile:not(.wb-mobile-rp) #chat .mes .mes_block {
+    transition: outline-color 200ms;
+  }
+  @keyframes wb-mobile-pop-in {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+      scale: 0.96;
+    }
+  }
+
   /* ── Bottom sheets: grab handle, a caption, the layout switch in a well, rows in one card ── */
   body.wb-mobile .wb-mobile-sheet {
     padding-top: 8px;

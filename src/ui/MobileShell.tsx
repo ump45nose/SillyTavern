@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
   ArrowLeft,
@@ -227,73 +227,29 @@ export function MobileShell({
       if (previous?.isConnected && previous.tagName !== "TEXTAREA") previous.focus({ preventScroll: true });
     };
   }, [left, panel, !!sheet]);
-  // Sideways swipes open the drawers: anywhere in Noval's reading, and on RP's scene (the dialogue
-  // box turns pages with the same gesture, so it is left to RPStage).
+  // RP: a long press on the latest reply opens its actions (the dialogue box itself turns pages).
   useEffect(() => {
-    const chat = document.getElementById("chat")!,
-      surface = rp ? document.body : chat;
-    let start: { x: number; y: number; target: Element; pointer: number } | null = null,
-      press: ReturnType<typeof setTimeout> | undefined;
+    const chat = document.getElementById("chat")!;
+    let press: ReturnType<typeof setTimeout> | undefined, origin: { x: number; y: number } | null = null;
     const cancel = () => {
       clearTimeout(press);
       press = undefined;
+      origin = null;
     };
     const down = (e: PointerEvent) => {
-      const selection = getSelection(),
-        anchor =
-          selection?.anchorNode instanceof Element
-            ? selection.anchorNode
-            : selection?.anchorNode?.parentElement;
-      if (
-        e.button !== 0 ||
-        e.pointerType !== "touch" ||
-        (e.target as Element).closest(interactive) ||
-        (selection?.toString() && anchor?.closest("#chat"))
-      )
+      if (!rp || e.button !== 0 || e.pointerType !== "touch") return;
+      const message = (e.target as Element).closest<HTMLElement>(".mes");
+      if (!message || message !== chat.querySelector(".mes:last-child") || message.getAttribute("is_user") === "true")
         return;
-      const target = e.target as Element;
-      if (rp && target.closest(".wb-ui,#form_sheld,.wb-mobile-header")) return;
-      if (!rp || !target.closest("#sheld"))
-        start = { x: e.clientX, y: e.clientY, target, pointer: e.pointerId };
-      if (rp) {
-        const message = target.closest<HTMLElement>(".mes");
-        const last = chat.querySelector(".mes:last-child");
-        if (message && message === last && message.getAttribute("is_user") !== "true")
-          press = setTimeout(() => {
-            setSheet(message);
-            start = null;
-          }, 550);
-      }
+      origin = { x: e.clientX, y: e.clientY };
+      press = setTimeout(() => {
+        cancel();
+        setSheet(message);
+      }, 550);
     };
     const move = (e: PointerEvent) => {
-      if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancel();
+      if (origin && Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > 10) cancel();
     };
-    const up = (e: PointerEvent) => {
-      cancel();
-      const gesture = start;
-      start = null;
-      if (
-        !gesture ||
-        latest.current.editor ||
-        latest.current.sheet ||
-        latest.current.left ||
-        latest.current.panel
-      )
-        return;
-      const dx = e.clientX - gesture.x,
-        dy = e.clientY - gesture.y;
-      if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.7) {
-        dx > 0 ? toggleLeft() : goPanel("character");
-      }
-    };
-    const stopped = () => {
-      cancel();
-      start = null;
-    };
-    surface.addEventListener("pointerdown", down);
-    surface.addEventListener("pointermove", move);
-    surface.addEventListener("pointerup", up);
-    surface.addEventListener("pointercancel", stopped);
     const context = (e: MouseEvent) => {
       if (!rp) return;
       const message = (e.target as Element).closest<HTMLElement>(".mes");
@@ -302,25 +258,152 @@ export function MobileShell({
         setSheet(message);
       }
     };
-    chat.addEventListener("contextmenu", context);
-    // Native swipe events normally change reply candidates; the approved PWA gesture opens drawers instead.
+    // Native swipe events normally change reply candidates; on the phone a sideways drag moves the drawers.
     const nativeSwipe = (e: Event) => {
       if ((e.target as Element)?.closest("#chat") && !(e.target as Element).closest(interactive))
         e.stopImmediatePropagation();
     };
+    chat.addEventListener("pointerdown", down);
+    chat.addEventListener("pointermove", move);
+    chat.addEventListener("pointerup", cancel);
+    chat.addEventListener("pointercancel", cancel);
+    chat.addEventListener("contextmenu", context);
     document.addEventListener("swiped-left", nativeSwipe, true);
     document.addEventListener("swiped-right", nativeSwipe, true);
     return () => {
       cancel();
-      surface.removeEventListener("pointerdown", down);
-      surface.removeEventListener("pointermove", move);
-      surface.removeEventListener("pointerup", up);
-      surface.removeEventListener("pointercancel", stopped);
+      chat.removeEventListener("pointerdown", down);
+      chat.removeEventListener("pointermove", move);
+      chat.removeEventListener("pointerup", cancel);
+      chat.removeEventListener("pointercancel", cancel);
       chat.removeEventListener("contextmenu", context);
       document.removeEventListener("swiped-left", nativeSwipe, true);
       document.removeEventListener("swiped-right", nativeSwipe, true);
     };
-  }, [rp, toggleLeft, goPanel]);
+  }, [rp]);
+  // Drawers follow the finger. A sideways drag on the reading (RP: the scene around the dialogue box)
+  // pulls the outline out from the left or the panel from the right; a drag on an open drawer or its
+  // shade pushes it back. On release, a flick or more than 40% shown decides.
+  useEffect(() => {
+    type Drag = {
+      x: number;
+      y: number;
+      t: number;
+      pointer: number;
+      target: Element;
+      opening: boolean;
+      side?: "left" | "right";
+      node?: HTMLElement;
+      width?: number;
+      shown?: number;
+      previous: { x: number; t: number };
+      last: { x: number; t: number };
+    };
+    let drag: Drag | null = null;
+    const body = document.body;
+    const release = (node?: HTMLElement) => {
+      node?.classList.remove("is-dragging");
+      node?.style.removeProperty("--wb-drawer-x");
+      body.classList.remove("wb-drawer-dragging");
+      body.style.removeProperty("--wb-drawer-progress");
+    };
+    const down = (e: PointerEvent) => {
+      if (e.button !== 0 || e.pointerType !== "touch") return;
+      const target = e.target as Element,
+        state = latest.current;
+      if (state.editor || state.sheet) return;
+      const open = state.left || !!state.panel;
+      if (open) {
+        if (!target.closest(".wb-left,.wb-right,.wb-mobile-shade")) return;
+        if (target.closest("input,textarea,select,[contenteditable=true],.wb-panel-tabs,.wb-mobile-resource-popup"))
+          return;
+      } else {
+        // Selecting text in the reading is not a swipe.
+        const selection = getSelection(),
+          anchor = selection?.anchorNode,
+          inReading = (anchor instanceof Element ? anchor : anchor?.parentElement)?.closest("#chat");
+        if (target.closest(interactive) || (selection?.toString() && inReading)) return;
+        if (rp ? target.closest(".wb-ui,#sheld,.wb-mobile-header") : !target.closest("#chat")) return;
+      }
+      const at = { x: e.clientX, t: e.timeStamp };
+      drag = {
+        x: e.clientX,
+        y: e.clientY,
+        t: e.timeStamp,
+        pointer: e.pointerId,
+        target,
+        opening: !open,
+        side: open ? (state.left ? "left" : "right") : undefined,
+        previous: at,
+        last: at,
+      };
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointer) return;
+      const dx = e.clientX - drag.x,
+        dy = e.clientY - drag.y;
+      if (!drag.node) {
+        if (Math.hypot(dx, dy) < 10) return;
+        if (Math.abs(dx) < Math.abs(dy) * 1.2) {
+          drag = null;
+          return;
+        }
+        drag.side ??= dx > 0 ? "left" : "right";
+        drag.node = document.querySelector<HTMLElement>(drag.side === "left" ? ".wb-left" : ".wb-right")!;
+        drag.width = drag.node.offsetWidth;
+        drag.node.classList.add("is-dragging");
+        body.classList.add("wb-drawer-dragging");
+      }
+      const toward = drag.side === "left" ? dx : -dx,
+        shown = Math.min(drag.width!, Math.max(0, drag.opening ? toward : drag.width! + toward));
+      drag.shown = shown;
+      drag.previous = drag.last;
+      drag.last = { x: e.clientX, t: e.timeStamp };
+      drag.node.style.setProperty("--wb-drawer-x", `${shown}px`);
+      body.style.setProperty("--wb-drawer-progress", String(shown / drag.width!));
+    };
+    const up = (e: PointerEvent) => {
+      const current = drag;
+      drag = null;
+      if (!current?.node || e.pointerId !== current.pointer) return;
+      const sign = current.side === "left" ? 1 : -1,
+        speed = ((current.last.x - current.previous.x) * sign) / Math.max(1, current.last.t - current.previous.t),
+        travel = (e.clientX - current.x) * sign,
+        quick = e.timeStamp - current.t < 300 && Math.abs(travel) > 40,
+        flick = speed > 0.35 ? true : speed < -0.35 ? false : quick ? travel > 0 : null,
+        open = flick ?? current.shown! > current.width! * 0.4;
+      // The new state and the drag styles leave in one frame, so the slide continues from the finger.
+      flushSync(() => {
+        if (open && current.opening) current.side === "left" ? toggleLeft() : goPanel("character");
+        if (!open && !current.opening) closeDrawers();
+      });
+      release(current.node);
+      // A drag that began on a row or the shade must not also click it.
+      const swallow = (click: Event) => {
+        document.removeEventListener("click", swallow, true);
+        if (!current.target.contains(click.target as Node)) return;
+        click.stopPropagation();
+        click.preventDefault();
+      };
+      document.addEventListener("click", swallow, true);
+      setTimeout(() => document.removeEventListener("click", swallow, true), 300);
+    };
+    const cancel = () => {
+      release(drag?.node);
+      drag = null;
+    };
+    document.addEventListener("pointerdown", down);
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", cancel);
+    return () => {
+      cancel();
+      document.removeEventListener("pointerdown", down);
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
+    };
+  }, [rp, toggleLeft, goPanel, closeDrawers]);
   // Phones have no hover: a tap on a Novel message shows its tools, a second tap or another message hides them.
   useEffect(() => {
     if (rp) return;
@@ -339,33 +422,48 @@ export function MobileShell({
       chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
     };
   }, [rp]);
+  // A sheet follows its handle down; past a third of its height or on a flick it closes, otherwise
+  // it settles back.
   useEffect(() => {
-    if (!left && !panel) return;
-    const drawer = document.querySelector<HTMLElement>(left ? ".wb-left" : ".wb-right")!;
-    let start: { x: number; y: number } | null = null;
+    const node = sheetRef.current;
+    if (!node || presence.exiting) return;
+    let drag: { y: number; pointer: number; dy: number; previous: { y: number; t: number }; last: { y: number; t: number } } | null =
+      null;
     const down = (e: PointerEvent) => {
-      if (e.pointerType === "touch" && !(e.target as Element).closest(interactive))
-        start = { x: e.clientX, y: e.clientY };
+      if (e.button !== 0 || !(e.target as Element).closest(".wb-mobile-sheet-grip,.wb-mobile-sheet > header"))
+        return;
+      if ((e.target as Element).closest("button")) return;
+      const at = { y: e.clientY, t: e.timeStamp };
+      drag = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
+      node.classList.add("is-dragging");
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointer) return;
+      drag.dy = Math.max(0, e.clientY - drag.y);
+      drag.previous = drag.last;
+      drag.last = { y: e.clientY, t: e.timeStamp };
+      node.style.setProperty("--wb-sheet-pull", `${drag.dy}px`);
     };
     const up = (e: PointerEvent) => {
-      if (!start) return;
-      const dx = e.clientX - start.x,
-        dy = e.clientY - start.y;
-      start = null;
-      if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.7 && (left ? dx < 0 : dx > 0)) closeDrawers();
+      const current = drag;
+      drag = null;
+      if (!current || e.pointerId !== current.pointer) return;
+      const speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+      node.classList.remove("is-dragging");
+      if (speed > 0.5 || current.dy > node.offsetHeight / 3) close();
+      else node.style.removeProperty("--wb-sheet-pull");
     };
-    const cancel = () => {
-      start = null;
-    };
-    drawer.addEventListener("pointerdown", down);
-    drawer.addEventListener("pointerup", up);
-    drawer.addEventListener("pointercancel", cancel);
+    node.addEventListener("pointerdown", down);
+    node.addEventListener("pointermove", move);
+    node.addEventListener("pointerup", up);
+    node.addEventListener("pointercancel", up);
     return () => {
-      drawer.removeEventListener("pointerdown", down);
-      drawer.removeEventListener("pointerup", up);
-      drawer.removeEventListener("pointercancel", cancel);
+      node.removeEventListener("pointerdown", down);
+      node.removeEventListener("pointermove", move);
+      node.removeEventListener("pointerup", up);
+      node.removeEventListener("pointercancel", up);
     };
-  }, [left, panel, closeDrawers]);
+  }, [presence.value, presence.exiting]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape" && editor) {
@@ -453,9 +551,15 @@ export function MobileShell({
           )}
         </button>
       </header>
+      <button
+        className={`wb-mobile-shade ${left || panel ? "is-open" : ""}`}
+        aria-label="收起边栏"
+        aria-hidden={!(left || panel)}
+        tabIndex={left || panel ? 0 : -1}
+        onClick={closeDrawers}
+      />
       {(left || panel) && (
         <>
-          <button className="wb-mobile-shade" aria-label="收起边栏" onClick={closeDrawers} />
           {left && <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>}
           <button className="wb-mobile-drawer-close wb-ui" aria-label="关闭边栏" onClick={closeDrawers}>
             <X size={20} />
