@@ -184,7 +184,9 @@ export function MobileShell({
     if (!target) return;
     const previous = document.activeElement as HTMLElement,
       frame = requestAnimationFrame(() => {
-        const close = document.querySelector<HTMLElement>(left ? ".wb-mobile-drawer-close" : ".wb-panel-close");
+        const close = document.querySelector<HTMLElement>(
+          left ? ".wb-mobile-drawer-close" : ".wb-panel-close",
+        );
         (sheet ? sheetRef.current?.querySelector<HTMLElement>("button") : close)?.focus({
           preventScroll: true,
         });
@@ -243,7 +245,8 @@ export function MobileShell({
   // RP: a long press on the latest reply opens its actions (the dialogue box itself turns pages).
   useEffect(() => {
     const chat = document.getElementById("chat")!;
-    let press: ReturnType<typeof setTimeout> | undefined, origin: { x: number; y: number } | null = null;
+    let press: ReturnType<typeof setTimeout> | undefined,
+      origin: { x: number; y: number } | null = null;
     const cancel = () => {
       clearTimeout(press);
       press = undefined;
@@ -252,7 +255,11 @@ export function MobileShell({
     const down = (e: PointerEvent) => {
       if (!rp || e.button !== 0 || e.pointerType !== "touch") return;
       const message = (e.target as Element).closest<HTMLElement>(".mes");
-      if (!message || message !== chat.querySelector(".mes:last-child") || message.getAttribute("is_user") === "true")
+      if (
+        !message ||
+        message !== chat.querySelector(".mes:last-child") ||
+        message.getAttribute("is_user") === "true"
+      )
         return;
       origin = { x: e.clientX, y: e.clientY };
       press = setTimeout(() => {
@@ -328,7 +335,11 @@ export function MobileShell({
       const open = state.left || !!state.panel;
       if (open) {
         if (!target.closest(".wb-left,.wb-right,.wb-mobile-shade")) return;
-        if (target.closest("input,textarea,select,[contenteditable=true],.wb-panel-tabs,.wb-mobile-resource-popup"))
+        if (
+          target.closest(
+            "input,textarea,select,[contenteditable=true],.wb-panel-tabs,.wb-mobile-resource-popup",
+          )
+        )
           return;
       } else {
         // Selecting text in the reading is not a swipe.
@@ -380,7 +391,8 @@ export function MobileShell({
       drag = null;
       if (!current?.node || e.pointerId !== current.pointer) return;
       const sign = current.side === "left" ? 1 : -1,
-        speed = ((current.last.x - current.previous.x) * sign) / Math.max(1, current.last.t - current.previous.t),
+        speed =
+          ((current.last.x - current.previous.x) * sign) / Math.max(1, current.last.t - current.previous.t),
         travel = (e.clientX - current.x) * sign,
         quick = e.timeStamp - current.t < 300 && Math.abs(travel) > 40,
         flick = speed > 0.35 ? true : speed < -0.35 ? false : quick ? travel > 0 : null,
@@ -440,8 +452,13 @@ export function MobileShell({
   useEffect(() => {
     const node = sheetRef.current;
     if (!node || presence.exiting) return;
-    let drag: { y: number; pointer: number; dy: number; previous: { y: number; t: number }; last: { y: number; t: number } } | null =
-      null;
+    let drag: {
+      y: number;
+      pointer: number;
+      dy: number;
+      previous: { y: number; t: number };
+      last: { y: number; t: number };
+    } | null = null;
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || !(e.target as Element).closest(".wb-mobile-sheet-grip,.wb-mobile-sheet > header"))
         return;
@@ -612,7 +629,12 @@ export function MobileShell({
         </div>
       )}
       {!rp && focus && !editor && (
-        <button type="button" className="wb-mobile-focus-exit wb-ui" aria-label="退出专注" onClick={toggleFocus}>
+        <button
+          type="button"
+          className="wb-mobile-focus-exit wb-ui"
+          aria-label="退出专注"
+          onClick={toggleFocus}
+        >
           <ScanLine size={15} />
           退出专注
         </button>

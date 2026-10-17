@@ -167,6 +167,13 @@ export const states = [
   })),
   { name: "m-novel-menu", viewport: phone, mobile: true, steps: [label("打开会话管理")] },
   { name: "m-novel-editor", viewport: phone, mobile: true, steps: [label("全屏编辑草稿")] },
+  { name: "m-settings", viewport: phone, mobile: true, steps: [label("打开会话管理"), text("用户设置")] },
+  ...["外观与阅读", "参数与预设", "API 与连接管理", "全部角色", "身份编辑"].map((group, i) => ({
+    name: `m-settings-${i + 1}`,
+    viewport: phone,
+    mobile: true,
+    steps: [label("打开会话管理"), text("用户设置"), text(group)],
+  })),
   { name: "m-novel-focus", viewport: phone, mobile: true, steps: [label("打开会话管理"), text("专注模式")] },
   { name: "m-novel-floor", viewport: phone, mobile: true, steps: [label("打开大纲与导航"), tap(".wb-floor-list button")] },
   { name: "m-rp-home", viewport: phone, mobile: true, steps: [layout("rp")] },

@@ -812,6 +812,7 @@ export default function App({
             initial={workspacePresence.value.initial}
             exiting={workspacePresence.exiting}
             onClose={() => dispatch({ type: "close-settings" })}
+            mobile={mobile}
           />
         </Suspense>
       )}
