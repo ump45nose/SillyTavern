@@ -320,12 +320,18 @@ export function MobileShell({
       last: { x: number; t: number };
     };
     let drag: Drag | null = null;
-    const body = document.body;
+    // Drag state lives in data attributes and inline styles on the drawer and its shade only: class
+    // writes wake SillyTavern's keyboard observer, and anything on <body> restyles the whole page.
+    const shade = () => document.querySelector<HTMLElement>(".wb-mobile-shade");
     const release = (node?: HTMLElement) => {
-      node?.classList.remove("is-dragging");
-      node?.style.removeProperty("--wb-drawer-x");
-      body.classList.remove("wb-drawer-dragging");
-      body.style.removeProperty("--wb-drawer-progress");
+      if (!node) return;
+      delete node.dataset.wbDrag;
+      node.style.removeProperty("--wb-drawer-x");
+      const veil = shade();
+      if (veil) {
+        delete veil.dataset.wbDrag;
+        veil.style.removeProperty("opacity");
+      }
     };
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || e.pointerType !== "touch") return;
@@ -375,8 +381,9 @@ export function MobileShell({
         drag.side ??= dx > 0 ? "left" : "right";
         drag.node = document.querySelector<HTMLElement>(drag.side === "left" ? ".wb-left" : ".wb-right")!;
         drag.width = drag.node.offsetWidth;
-        drag.node.classList.add("is-dragging");
-        body.classList.add("wb-drawer-dragging");
+        drag.node.dataset.wbDrag = "";
+        const veil = shade();
+        if (veil) veil.dataset.wbDrag = "";
       }
       const toward = drag.side === "left" ? dx : -dx,
         shown = Math.min(drag.width!, Math.max(0, drag.opening ? toward : drag.width! + toward));
@@ -384,7 +391,7 @@ export function MobileShell({
       drag.previous = drag.last;
       drag.last = { x: e.clientX, t: e.timeStamp };
       drag.node.style.setProperty("--wb-drawer-x", `${shown}px`);
-      body.style.setProperty("--wb-drawer-progress", String(shown / drag.width!));
+      shade()?.style.setProperty("opacity", String(shown / drag.width!));
     };
     const up = (e: PointerEvent) => {
       const current = drag;
@@ -465,7 +472,7 @@ export function MobileShell({
       if ((e.target as Element).closest("button")) return;
       const at = { y: e.clientY, t: e.timeStamp };
       drag = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
-      node.classList.add("is-dragging");
+      node.dataset.wbDrag = "";
     };
     const move = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.pointer) return;
@@ -479,7 +486,7 @@ export function MobileShell({
       drag = null;
       if (!current || e.pointerId !== current.pointer) return;
       const speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
-      node.classList.remove("is-dragging");
+      delete node.dataset.wbDrag;
       if (speed > 0.5 || current.dy > node.offsetHeight / 3) close();
       else node.style.removeProperty("--wb-sheet-pull");
     };
@@ -592,7 +599,11 @@ export function MobileShell({
       {left && (
         <>
           <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>
-          <button className="wb-mobile-drawer-close wb-ui" aria-label="关闭边栏" onClick={closeDrawers}>
+          <button
+            className="wb-mobile-drawer-close is-left wb-ui"
+            aria-label="关闭边栏"
+            onClick={closeDrawers}
+          >
             <X size={20} />
           </button>
         </>

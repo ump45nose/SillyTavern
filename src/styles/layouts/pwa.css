@@ -736,7 +736,7 @@
     background: transparent;
     color: var(--wb-ink-2);
   }
-  body.wb-mobile.wb-left-open .wb-mobile-drawer-close {
+  body.wb-mobile .wb-mobile-drawer-close.is-left {
     top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 12px);
     left: calc(min(84vw, 330px) - 54px);
   }
@@ -830,11 +830,11 @@
       visibility 300ms;
     touch-action: pan-y;
   }
-  body.wb-mobile .wb-left.is-dragging {
+  body.wb-mobile .wb-left[data-wb-drag] {
     transform: translateX(calc(var(--wb-drawer-x, 0px) - 100%));
     transition: none;
   }
-  body.wb-mobile .wb-right.is-dragging {
+  body.wb-mobile .wb-right[data-wb-drag] {
     transform: translateX(calc(100% - var(--wb-drawer-x, 0px)));
     transition: none;
   }
@@ -853,8 +853,7 @@
     opacity: 1;
     pointer-events: auto;
   }
-  body.wb-mobile.wb-drawer-dragging .wb-mobile-shade {
-    opacity: var(--wb-drawer-progress, 0);
+  body.wb-mobile .wb-mobile-shade[data-wb-drag] {
     transition: none;
   }
   body.wb-mobile :is(.wb-mobile-drawer-title, .wb-mobile-drawer-close) {
@@ -864,7 +863,7 @@
     translate: 0 var(--wb-sheet-pull, 0px);
     transition: translate 260ms var(--wb-ease-emphasized);
   }
-  body.wb-mobile .wb-mobile-sheet.is-dragging {
+  body.wb-mobile .wb-mobile-sheet[data-wb-drag] {
     transition: none;
   }
   body.wb-mobile :is(.wb-mobile-sheet-grip, .wb-mobile-sheet > header) {

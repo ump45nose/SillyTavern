@@ -157,7 +157,14 @@ const iconMap: Record<string, any> = {
   mes_edit_cancel: X,
 };
 /** Only add siblings and presentation classes; native text/media/iframe nodes remain owned by ST. */
-export function ReadingPresentation({ host, chatStyle = false }: { host: HostAdapter; chatStyle?: boolean }) {
+/** Memoised: it follows its own host slices, so a parent re-render (a drawer opening) has nothing to add. */
+export const ReadingPresentation = React.memo(function ReadingPresentation({
+  host,
+  chatStyle = false,
+}: {
+  host: HostAdapter;
+  chatStyle?: boolean;
+}) {
   const folds = useRef(new Map<HTMLElement, boolean>()),
     animations = useRef(new Map<HTMLElement, Animation>());
   const controls = useRef(
@@ -369,9 +376,10 @@ export function ReadingPresentation({ host, chatStyle = false }: { host: HostAda
           control.tabIndex = 0;
           control.setAttribute("aria-label", control.title || name.replace(/^mes_edit_/, ""));
         }
-        control.classList.add("wb-reading-icon");
+        // Render runs often; an unconditional add still writes the attribute and wakes SillyTavern's observer.
+        if (!control.classList.contains("wb-reading-icon")) control.classList.add("wb-reading-icon");
         output.push(createPortal(<Icon size={17} aria-hidden="true" />, control, id + ":" + name));
       }
   }
   return <>{output}</>;
-}
+});
