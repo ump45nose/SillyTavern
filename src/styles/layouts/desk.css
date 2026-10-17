@@ -212,6 +212,45 @@
     display: flex;
     flex: none;
     color: var(--wb-ink-3);
+    transition: color var(--wb-duration-fast);
+  }
+  .wb-pill-icon > svg {
+    position: relative;
+  }
+  /* The icon's own press target (.wb-pill-go) lies over it; its hover tints a square behind the icon. */
+  .wb-pill-icon::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 8px;
+    background: transparent;
+    transition: background var(--wb-duration-fast);
+  }
+  .wb-pill-slot:has(.wb-pill-go:is(:hover, :focus-visible)) .wb-pill-icon {
+    color: var(--wb-ink-1);
+  }
+  .wb-pill-slot:has(.wb-pill-go:is(:hover, :focus-visible)) .wb-pill-icon::before {
+    background: var(--wb-hover);
+  }
+  .wb-ui .wb-pill-go {
+    position: absolute;
+    z-index: 1;
+    top: 4px;
+    left: 6px;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+    cursor: pointer;
+  }
+  .wb-ui .wb-pill-go:focus-visible {
+    outline: 2px solid var(--wb-ring);
+    outline-offset: 0;
   }
   .wb-pill-dot {
     position: absolute;

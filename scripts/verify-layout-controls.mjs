@@ -72,6 +72,7 @@ try {
   await page.evaluate(() => window.__denyLayout()); await settle();
   pass("an editor's unsaved-change guard can cancel a layout switch");
 
+  await role("快进到你的回应").click(); await settle();
   await page.locator("#send_textarea").fill("WB_LAYOUT_DRAFT **Markdown**\n{{char}}");
   await choose("Noval");
   assert.equal(await page.locator(".wb-reading-bar").count(), 1);

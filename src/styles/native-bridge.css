@@ -559,7 +559,11 @@ body.wb-active
         .wb-reading-bar,
         .wb-panel-head,
         .wb-character-hero,
-        .wb-rail-row
+        .wb-rail-row,
+        .wb-edge-nav,
+        .wb-rp-corner,
+        .wb-rp-visibility,
+        .wb-rp-scene
       )
       *
   ),
@@ -574,7 +578,11 @@ body.wb-active
         .wb-reading-bar,
         .wb-panel-head,
         .wb-character-hero,
-        .wb-rail-row
+        .wb-rail-row,
+        .wb-edge-nav,
+        .wb-rp-corner,
+        .wb-rp-visibility,
+        .wb-rp-scene
       )
       *
   ),
@@ -1184,10 +1192,14 @@ body.wb-active #chat .wb-reading-icon {
     color 180ms;
 }
 /* Message actions: native glyph buttons, icon buttons and add-on slots share one 30px square. */
-body.wb-active:not(.wb-mobile) #chat .mes_buttons {
+body.wb-active:not(.wb-mobile) #chat :is(.mes_buttons, .mes_buttons .extraMesButtons) {
   align-items: center;
+  gap: 4px;
 }
-body.wb-active:not(.wb-mobile) #chat .mes_buttons > :is(.mes_button, .wb-image-slot),
+body.wb-active:not(.wb-mobile) #chat .mes_buttons .extraMesButtons {
+  padding: 0;
+}
+body.wb-active:not(.wb-mobile) #chat .mes_buttons :is(.mes_button, .wb-image-slot),
 body.wb-active:not(.wb-mobile) #chat .mes_buttons .wb-image-message-button {
   box-sizing: border-box;
   width: 30px;
@@ -1207,6 +1219,23 @@ body.wb-active:not(.wb-mobile) #chat .mes_buttons :is(.extraMesButtonsHint, .wb-
 body.wb-active:not(.wb-mobile) #chat .mes_buttons .wb-image-message-button svg {
   width: 17px;
   height: 17px;
+}
+/* Actions without a workbench icon (other extensions) keep their glyph, centred in the same square. */
+body.wb-active:not(.wb-mobile) #chat .mes_buttons .mes_button:not(.wb-reading-icon) {
+  padding: 0 !important;
+  border-radius: 6px;
+  color: var(--wb-control-ink);
+  font-size: 15px;
+  transition:
+    background-color 180ms,
+    color 180ms;
+}
+/* One hover for every action in the row. */
+body.wb-active:not(.wb-mobile) #chat .mes_buttons :is(.mes_button, .wb-image-message-button):is(:hover, :focus-visible) {
+  background: var(--wb-selected) !important;
+  color: var(--wb-accent) !important;
+  opacity: 1;
+  transform: none;
 }
 body.wb-active #chat .wb-reading-icon::before {
   display: none !important;
@@ -2913,15 +2942,19 @@ body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat .swipes-counter {
 
 /* ── Desk reading (board "Main"): one centred measure, no rules between turns, the user's
    turns as soft cards. Desktop Noval only; RP history and the PWA keep their own layouts. ── */
+body.wb-active:not(.wb-rp):not(.wb-mobile) #chat {
+  /* 左右留白 sets the measure: the default 64px is the board's 44em, each step moves both sides. */
+  --wb-reading-measure: calc(var(--wb-reading-size, 17px) * 44 + (64px - var(--wb-reading-inset, 64px)) * 3);
+}
 body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes {
-  max-width: calc(var(--wb-reading-size, 17px) * 44);
+  max-width: var(--wb-reading-measure);
   margin: 0 auto 6px !important;
   padding: 8px 0 18px !important;
   border-bottom: 0 !important;
 }
 /* The card sits on the text column (the turn's 32px gutters), not on the turn's outer edge. */
 body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .mes[is_user="true"] {
-  max-width: calc(var(--wb-reading-size, 17px) * 44 - 64px);
+  max-width: calc(var(--wb-reading-measure) - 64px);
   margin: 14px auto 6px !important;
   padding: 10px 18px 16px !important;
   border-radius: 14px !important;
@@ -2980,14 +3013,17 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #chat .wb-reading-meta > b {
 body.wb-active.wb-rp {
   --wb-header: 74px;
   --wb-rp-chrome: 74px;
-  --wb-rp-bottom: clamp(20px, 3vh, 40px);
-  --wb-rp-deck: clamp(200px, 28vh, 360px);
+  /* RP home v2: the dialogue is a gradient band along the bottom of the stage, its text in a
+     centred column (the RP dialogue width setting). */
+  --wb-rp-bottom: 0px;
+  --wb-rp-deck: clamp(252px, 35vh, 360px);
   --wb-rp-width: 0.72;
   --wb-rp-text: 19px;
   --wb-rp-area: calc(100vw - var(--wb-left) - var(--wb-right));
   /* Board "RpDesktop": 1080px at the default 72%; wider windows keep the line length. */
   --wb-rp-dialog-width: min(calc(var(--wb-rp-area) * var(--wb-rp-width)), calc(1500px * var(--wb-rp-width)));
   --wb-rp-dialog-left: calc(var(--wb-left) + (var(--wb-rp-area) - var(--wb-rp-dialog-width)) / 2);
+  --wb-rp-inset: max(40px, calc((var(--wb-rp-area) - var(--wb-rp-dialog-width)) / 2));
 }
 body.wb-rp.wb-rp-top-auto {
   --wb-rp-chrome: 0px;
@@ -3016,6 +3052,27 @@ body.wb-rp :is(#expression-wrapper, #visual-novel-wrapper) {
   inset: 0;
   background:
     linear-gradient(to bottom, transparent 52%, var(--wb-rp-scrim, #39362c38)), var(--wb-rp-tint, transparent);
+}
+/* Desktop: the band carries the bottom; a soft vignette along the top and beside each column edge
+   lets the caption, corner icons and edge arrows (light, drawn on the picture) read on any scene,
+   with or without the host's shadow and blur settings. */
+body.wb-rp:not(.wb-mobile) .wb-rp-atmosphere {
+  background:
+    linear-gradient(to bottom, rgb(14 10 7 / 34%) 0, rgb(14 10 7 / 12%) 90px, transparent 170px),
+    linear-gradient(
+      to right,
+      transparent var(--wb-left),
+      rgb(14 10 7 / 26%) var(--wb-left),
+      transparent calc(var(--wb-left) + 96px)
+    ),
+    linear-gradient(
+      to left,
+      transparent var(--wb-right),
+      rgb(14 10 7 / 26%) var(--wb-right),
+      transparent calc(var(--wb-right) + 96px)
+    ),
+    var(--wb-rp-tint, transparent);
+  transition: background 220ms;
 }
 .wb-rp-actor,
 .wb-rp-user {
@@ -3100,38 +3157,41 @@ body.wb-rp.wb-rp-history .wb-rp-user {
   letter-spacing: 0.06em;
   background: linear-gradient(transparent, rgb(30 24 18 / 62%));
 }
-body.wb-active.wb-rp #sheld {
-  inset: auto auto var(--wb-rp-bottom) var(--wb-rp-dialog-left) !important;
-  width: var(--wb-rp-dialog-width) !important;
+body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #sheld {
+  inset: auto var(--wb-right) 0 var(--wb-left) !important;
+  width: auto !important;
   height: var(--wb-rp-deck) !important;
   min-height: 0;
   display: block !important;
-  background: var(--wb-rp-box) !important;
-  backdrop-filter: blur(22px) saturate(1.1);
-  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  background: linear-gradient(
+    to top,
+    var(--wb-rp-band-1) 0%,
+    var(--wb-rp-band-1) 52%,
+    var(--wb-rp-band-2) 76%,
+    transparent 100%
+  ) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 0 !important;
-  border-radius: 18px !important;
-  box-shadow:
-    var(--wb-rp-box-shadow),
-    inset 0 0 0 1px var(--wb-rp-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   overflow: hidden;
   transition:
     left 220ms,
-    width 220ms,
-    height 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
+    right 220ms,
+    height 280ms cubic-bezier(0.22, 0.8, 0.3, 1),
     opacity 160ms,
     visibility 160ms;
   z-index: 2;
 }
-body.wb-active.wb-rp:not(.wb-rp-history) #chat {
+body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat {
   position: absolute;
-  inset: 0 0 66px;
+  inset: 64px var(--wb-rp-inset) 58px;
+  width: auto !important;
   height: auto;
-  padding: 34px 40px 8px !important;
+  padding: 0 !important;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  overflow: auto;
   transition:
     opacity 160ms,
     transform 200ms,
@@ -3163,13 +3223,47 @@ body.wb-active.wb-rp:not(.wb-rp-history) #chat .mes_text {
   font: var(--wb-rp-text) / 1.85 var(--wb-rp-font, serif) !important;
   letter-spacing: 0.02em;
   color: var(--wb-rp-ink-1) !important;
+  margin: 0 !important;
   padding: 0 !important;
 }
 body.wb-rp:not(.wb-rp-history) #chat .mes_text p {
   margin: 0 0 0.65em;
 }
-body.wb-rp:not(.wb-rp-history) #chat .wb-rp-part:not(.wb-rp-part-active) {
-  display: none !important;
+/* Paging (RPStage): the current message's block is laid out in columns one page wide and turned
+   with scrollLeft, so lines never split and nothing scrolls inside the box. Media stay whole and
+   no taller than a page. Editing returns to a plain block. */
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat {
+  overflow: hidden !important;
+}
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat > .mes.wb-rp-current {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat .wb-rp-current .mes_block {
+  display: block !important;
+  height: 100%;
+  overflow: hidden;
+  column-width: var(--wb-rp-column, auto);
+  column-gap: var(--wb-rp-gap, normal);
+  column-fill: auto;
+}
+/* A page fills to its last whole line instead of pushing paragraph ends over. */
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat .wb-rp-current .mes_block * {
+  orphans: 1;
+  widows: 1;
+}
+body:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history)
+  #chat
+  .wb-rp-current
+  .mes_block
+  :is(img, video, iframe, pre, table, details, .mes_img_container, .mes_file_container) {
+  break-inside: avoid;
+  max-height: var(--wb-rp-page, none);
+}
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+  column-width: auto;
+  overflow: auto;
 }
 body.wb-active.wb-rp #form_sheld {
   position: absolute;
@@ -3188,6 +3282,15 @@ body.wb-active.wb-rp #form_sheld {
     transform 240ms cubic-bezier(0.22, 0.8, 0.3, 1),
     visibility 160ms;
 }
+/* Replying: the band grows and its text column becomes the native input. */
+body.wb-active.wb-rp.wb-rp-compose:not(.wb-mobile) {
+  --wb-rp-deck: clamp(300px, 42vh, 440px);
+}
+body.wb-active.wb-rp:not(.wb-mobile) #form_sheld {
+  inset: 70px var(--wb-rp-inset) 12px;
+  width: auto;
+  height: auto;
+}
 body.wb-active.wb-rp #send_form {
   height: 100% !important;
   min-height: 0 !important;
@@ -3197,9 +3300,15 @@ body.wb-active.wb-rp #send_form {
   box-shadow: none !important;
   background: transparent !important;
 }
+body.wb-active.wb-rp:not(.wb-mobile) #send_form {
+  padding: 0 !important;
+}
 body.wb-rp #send_textarea {
   font: var(--wb-rp-text) / 1.8 var(--wb-rp-font, serif) !important;
   padding: 4px 8px !important;
+}
+body.wb-rp:not(.wb-mobile) #send_textarea {
+  padding: 4px 0 !important;
 }
 body.wb-rp #nonQRFormItems {
   height: 100%;
@@ -3213,79 +3322,10 @@ body.wb-rp.wb-rp-compose #chat {
 body.wb-rp.wb-rp-compose #form_sheld {
   opacity: 1;
   visibility: visible;
+  /* Visible at once on entry so the reply key can focus the input. */
+  transition-duration: 160ms, 240ms, 0s;
   transform: translateX(0);
   pointer-events: auto;
-}
-/* Board "RpDesktop": while reading, the native form is the box's bottom row — the native menus
-   and Noval tools, then the field with the send key inside it — between the page dots and
-   "continue" (RPStage measures that slot into --wb-rp-field-left/right). */
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #form_sheld {
-  inset: auto var(--wb-rp-field-right, 140px) 14px var(--wb-rp-field-left, 120px);
-  width: auto;
-  height: 38px;
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-  pointer-events: auto;
-}
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_form {
-  padding: 0 !important;
-}
-/* SillyTavern themes outline the form; on the dialogue pane the field draws its own edge. */
-body.wb-active.wb-rp #send_form {
-  outline: 0 !important;
-}
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #nonQRFormItems {
-  position: relative;
-  display: grid !important;
-  /* The tool column has a definite width so the composer can count how many tools fit. */
-  grid-template-columns: auto minmax(0, 300px) minmax(160px, 1fr);
-  grid-template-rows: 38px;
-  gap: 0 2px;
-  height: 38px;
-  align-items: center;
-}
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #leftSendForm {
-  grid-row: 1;
-  grid-column: 1;
-  width: auto !important;
-  height: 38px;
-}
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_textarea {
-  grid-row: 1;
-  grid-column: 3;
-  height: 38px !important;
-  min-height: 38px !important;
-  padding: 8px 44px 8px 14px !important;
-  border-radius: 12px !important;
-  background: var(--wb-rp-field) !important;
-  box-shadow: inset 0 0 0 1px var(--wb-rp-line) !important;
-  color: var(--wb-rp-ink-1) !important;
-  font: 14px / 22px var(--wb-font-ui) !important;
-  overflow-y: auto;
-}
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_textarea:focus {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent) !important;
-}
-/* An absolutely placed grid item resolves against its grid area: the field's cell. */
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #rightSendForm {
-  grid-row: 1;
-  grid-column: 3;
-  justify-self: end;
-  position: absolute;
-  z-index: 1;
-  top: 4px;
-  right: 4px;
-  height: 30px;
-  margin: 0;
-}
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) :is(#send_but, #mes_stop) {
-  width: 30px !important;
-  min-width: 30px;
-  height: 30px !important;
-  line-height: 30px !important;
-  border-radius: 9px;
-  font-size: 15px;
 }
 body.wb-active.wb-rp:not(.wb-mobile) #send_but {
   background: var(--wb-accent);
@@ -3293,12 +3333,8 @@ body.wb-active.wb-rp:not(.wb-mobile) #send_but {
 body.wb-active.wb-rp:not(.wb-mobile) #send_but :is(.wb-native-icon, .wb-native-icon *) {
   color: var(--wb-rp-on-accent) !important;
 }
-body.wb-active.wb-rp:not(.wb-rp-compose):not(.wb-rp-history) #send_but .wb-send-icon {
-  width: 15px;
-  height: 15px;
-}
-body.wb-rp.wb-rp-expanded {
-  --wb-rp-deck: clamp(260px, 48vh, 620px);
+body.wb-active.wb-rp.wb-rp-compose.wb-rp-expanded {
+  --wb-rp-deck: clamp(360px, 74vh, 900px);
 }
 body.wb-rp:not(.wb-rp-history) .edit_textarea {
   min-height: 90px;
@@ -4120,9 +4156,6 @@ body.wb-mobile-rp #chat .mes_text :is(q, em, i) {
 body.wb-mobile-rp:not(.wb-rp-history) #chat .mes_text p {
   margin: 0 0 0.6em;
 }
-body.wb-mobile-rp:not(.wb-rp-history) #chat .wb-rp-part:not(.wb-rp-part-active) {
-  display: none !important;
-}
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) .ch_name {
   display: flex !important;
   justify-content: flex-end;
@@ -4167,6 +4200,8 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history) #chat {
 body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history):not(.wb-mobile-editor) #form_sheld {
   opacity: 1;
   visibility: visible;
+  /* Visible at once on entry so the reply key can focus the input. */
+  transition-duration: 160ms, 240ms, 0s;
   pointer-events: auto;
   transform: none;
 }

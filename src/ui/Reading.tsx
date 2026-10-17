@@ -13,6 +13,7 @@ import {
   GitBranch,
   Languages,
   Lightbulb,
+  Paintbrush,
   Paperclip,
   PencilLine,
   Type,
@@ -148,6 +149,8 @@ const iconMap: Record<string, any> = {
   mes_embed: Paperclip,
   mes_create_bookmark: Flag,
   mes_create_branch: GitBranch,
+  // Image generation's own message action (Stable Diffusion extension).
+  sd_message_gen: Paintbrush,
   mes_edit_done: Check,
   mes_edit_copy: Copy,
   mes_edit_add_reasoning: Lightbulb,
