@@ -170,8 +170,9 @@
     box-shadow: var(--wb-shadow-1);
     color: var(--wb-ink-1);
   }
-  body.wb-mobile-editor .wb-mobile-config {
-    display: none;
+  /* The editor page rises over the header and quick config; they leave once it covers them. */
+  body.wb-mobile[data-wb-covered] :is(.wb-mobile-header, .wb-mobile-config) {
+    visibility: hidden;
   }
   body.wb-mobile .wb-mobile-summary {
     gap: 8px;
@@ -349,37 +350,59 @@
     background: var(--wb-rp-field);
     color: var(--wb-rp-ink-1);
   }
-  body.wb-mobile.wb-mobile-editor .wb-mobile-plus {
-    display: none;
-  }
-  /* A short handle rides the pill's top edge: pull it up and the pill follows the finger, let go past
-     the threshold and the full editor rises (a tap opens it too). */
-  body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) .wb-input-grip {
-    margin: 0 auto;
-    transform: translateY(-22px);
-    background: transparent;
+
+  /* ── Noval editor page (native-bridge.css lays out the page; this is its bar) ──
+     A grabber over one row: fold-down key, the title centred, the count. The whole bar pulls the
+     page back down into the pill. */
+  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading {
+    position: relative;
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) 56px;
+    align-items: center;
+    flex: none;
+    height: 60px;
+    padding: 10px 0 0;
+    border: 0;
     touch-action: none;
+    cursor: grab;
   }
-  body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) .wb-input-grip span {
+  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
     width: 36px;
     height: 4px;
+    margin-left: -18px;
     border-radius: 2px;
-    background: var(--wb-ink-3);
-    opacity: 0.45;
-    transition:
-      width 180ms var(--wb-ease-emphasized),
-      opacity 180ms;
+    background: var(--wb-line-1);
   }
-  body.wb-active.wb-mobile.wb-resizing .wb-input-grip span {
-    width: 52px;
-    opacity: 0.8;
+  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading > button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 14px;
+    color: var(--wb-ink-2);
   }
-  body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) #send_form {
-    translate: 0 calc(-0.45 * var(--wb-grip-pull, 0px));
-    transition: translate 260ms var(--wb-ease-emphasized);
+  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading strong {
+    font: 600 15px/1.3 var(--wb-font-reading);
+    text-align: center;
+    color: var(--wb-ink-1);
   }
-  body.wb-active.wb-mobile.wb-resizing:not(.wb-mobile-rp) #send_form {
-    transition: none;
+  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading small {
+    justify-self: end;
+    padding-right: 16px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--wb-ink-3);
+  }
+  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-management {
+    display: none;
+  }
+  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-plus {
+    grid-row: 2;
   }
 
   /* ── Focus (Noval): the header and quick config lift away, the reading takes the page and a quiet

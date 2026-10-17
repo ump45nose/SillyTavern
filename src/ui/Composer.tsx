@@ -7,7 +7,6 @@ import { composerTools, toolIcon } from "./ToolIcon";
 import { useTools } from "./useTools";
 import type { ComposerPopup } from "./ComposerPopovers";
 import type { HostAdapter } from "../host/adapter";
-import { bus } from "../host/bus";
 /** Decorate native controls in-place: event handlers, selection and plugin nodes stay owned by ST. */
 /** The composer card's smallest height: grip, two lines of text and the tool row (board "Main"). */
 const COMPOSER_MIN = 124;
@@ -159,12 +158,6 @@ export function Composer({
       `${Math.max(COMPOSER_MIN, document.getElementById("sheld")!.clientHeight * ratio)}px`,
     );
   }, [ratio]);
-  // Phone: the handle only pulls the pill up; letting go far enough opens the full editor.
-  const release = () => {
-    drag.current = null;
-    document.body.classList.remove("wb-resizing");
-    document.body.style.removeProperty("--wb-grip-pull");
-  };
   const finish = () => {
     if (!drag.current) return;
     drag.current = null;
@@ -189,76 +182,64 @@ export function Composer({
       )}
       {createPortal(
         <>
-          <button
-            className="wb-input-grip"
-            role={mobile ? undefined : "separator"}
-            aria-label={mobile ? "全屏编辑草稿" : "调整输入框高度"}
-            aria-orientation={mobile ? undefined : "horizontal"}
-            aria-valuemin={mobile ? undefined : 20}
-            aria-valuemax={mobile ? undefined : 60}
-            aria-valuenow={mobile ? undefined : Math.round(ratio * 100)}
-            title={mobile ? "上拉或点击，全屏编辑" : "上拉增加输入高度 · 双击恢复"}
-            onClick={() => {
-              if (mobile) bus.emit("mobile-editor-open");
-            }}
-            onPointerDown={(e) => {
-              if (e.button !== 0) return;
-              e.preventDefault();
-              e.currentTarget.setPointerCapture(e.pointerId);
-              const height = document.getElementById("sheld")!.clientHeight,
-                chat = document.getElementById("chat");
-              drag.current = {
-                y: e.clientY,
-                ratio: document.getElementById("send_form")!.getBoundingClientRect().height / height,
-                height,
-                pinned: !!chat && chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 4,
-              };
-              document.body.classList.add("wb-resizing");
-            }}
-            onPointerMove={(e) => {
-              const start = drag.current;
-              if (start && !mobile)
-                paint(Math.min(0.6, Math.max(0.2, start.ratio + (start.y - e.clientY) / start.height)));
-              // Phone: the pill follows the finger up until it lets go into the full editor.
-              if (start && mobile)
-                document.body.style.setProperty(
-                  "--wb-grip-pull",
-                  `${Math.min(120, Math.max(0, start.y - e.clientY))}px`,
-                );
-            }}
-            onPointerUp={(e) => {
-              if (!mobile) return finish();
-              const open = !!drag.current && drag.current.y - e.clientY > 35;
-              release();
-              if (open) bus.emit("mobile-editor-open");
-            }}
-            onPointerCancel={() => (mobile ? release() : finish())}
-            onLostPointerCapture={() => (mobile ? release() : finish())}
-            onDoubleClick={() => {
-              setRatio(0.2);
-              host.preference({ inputRatio: 0.2 });
-            }}
-            onKeyDown={(e) => {
-              if (mobile) return;
-              const value =
-                e.key === "ArrowUp"
-                  ? ratio + 0.025
-                  : e.key === "ArrowDown"
-                    ? ratio - 0.025
-                    : e.key === "Home"
-                      ? 0.2
-                      : e.key === "End"
-                        ? 0.6
-                        : null;
-              if (value === null) return;
-              e.preventDefault();
-              const next = Math.min(0.6, Math.max(0.2, value));
-              setRatio(next);
-              host.preference({ inputRatio: next });
-            }}
-          >
-            <span />
-          </button>
+          {/* Phones pull the pill itself up into the full editor (MobileShell). */}
+          {!mobile && (
+            <button
+              className="wb-input-grip"
+              role="separator"
+              aria-label="调整输入框高度"
+              aria-orientation="horizontal"
+              aria-valuemin={20}
+              aria-valuemax={60}
+              aria-valuenow={Math.round(ratio * 100)}
+              title="上拉增加输入高度 · 双击恢复"
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                const height = document.getElementById("sheld")!.clientHeight,
+                  chat = document.getElementById("chat");
+                drag.current = {
+                  y: e.clientY,
+                  ratio: document.getElementById("send_form")!.getBoundingClientRect().height / height,
+                  height,
+                  pinned: !!chat && chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 4,
+                };
+                document.body.classList.add("wb-resizing");
+              }}
+              onPointerMove={(e) => {
+                const start = drag.current;
+                if (start)
+                  paint(Math.min(0.6, Math.max(0.2, start.ratio + (start.y - e.clientY) / start.height)));
+              }}
+              onPointerUp={finish}
+              onPointerCancel={finish}
+              onLostPointerCapture={finish}
+              onDoubleClick={() => {
+                setRatio(0.2);
+                host.preference({ inputRatio: 0.2 });
+              }}
+              onKeyDown={(e) => {
+                const value =
+                  e.key === "ArrowUp"
+                    ? ratio + 0.025
+                    : e.key === "ArrowDown"
+                      ? ratio - 0.025
+                      : e.key === "Home"
+                        ? 0.2
+                        : e.key === "End"
+                          ? 0.6
+                          : null;
+                if (value === null) return;
+                e.preventDefault();
+                const next = Math.min(0.6, Math.max(0.2, value));
+                setRatio(next);
+                host.preference({ inputRatio: next });
+              }}
+            >
+              <span />
+            </button>
+          )}
           <div className="wb-composer-actions" ref={actionRow}>
             {visible.map((tool) => {
               const Icon = toolIcon(tool.id, tool.label);
