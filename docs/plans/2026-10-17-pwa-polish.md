@@ -50,3 +50,26 @@
 - `node scripts/verify-all.mjs`：除基础 `verify`（需 32011，固定失败）外全部通过，含 `verify:pwa`（15 项）、`verify:rp`、`verify:utilities`。
 - `verify:pwa` 新增覆盖：专注模式、上拉手柄进入全屏输入、点按/抽屉跳转选中楼层、抽屉跟手拖动与回弹、遮罩拖动收起、面板手柄下拉关闭、右栏单行标签与 320px 不越界、设置页两级导航与 320px 不越界。
 - 未实测：真机触摸手感、iOS Safari 键盘与安全区（只在 Chromium 手机视口与模拟 visualViewport 下验证）。
+
+## 第二轮（2026-10-17，PC 转达的用户反馈）
+
+分工：PC 负责 `src/ui/RPStage.tsx`、`src/ui/Header.tsx`；本分支只改移动端 CSS / MobileShell / Composer 的手机分支。
+
+本轮先做（已提交）：
+
+- 1 左栏展开大纲：折叠体不再出现短暂滚动条（7da0609）。
+- 6 手机抽屉开合卡顿：抽屉状态不再写 `<body>` class（SillyTavern 的 keyboard.js 会对每次 class 写入重扫全页），拖动状态用 data 属性（a65c299）。
+- 5 Noval 全屏输入：去掉可见手柄，输入框本身上拉、卡片跟手长高；松手后由原 `#form_sheld` 脱离文档流成为整页，用 Web Animations 从输入框矩形形变到全屏（同一个 textarea）；整页重做（抓手栏、收起键、居中标题与字数、阅读字体正文、底部 ＋ 与发送）；下拉抓手栏把整页拖回，正文在后面可见（20b5bc0）。
+- 2（Noval 部分）⋯ 移到顶栏左上 ☰ 旁；会话管理改为挂在顶部的面板，下拉顶栏跟手拉出，底边抓手上推收起（5142bcc）。
+
+关键决定：
+
+- Noval 不再给 `<body>` 加 `wb-mobile-editor`（只 RP 保留）；整页状态在 `#form_sheld[data-wb-page]`、`#sheld[data-wb-rise]`（移动中压过顶栏）、`body[data-wb-covered]`（盖满后隐藏底下内容）。
+- `.wb-ui` 节点有 `all: revert-layer` 隔离，只能用分层 CSS（pwa.css）定样式；原生节点在 native-bridge.css。
+
+待 PC 的 RP/Header 提交落地后再做：2（RP：眼睛错位、透明度、⋯ 位置）、3（RP 左右点击翻页、回应控件、上拉全屏）、4（Noval 顶部 4 个资源只显示图标、点按进入右栏对应页）。
+
+验证（本轮）：
+
+- 4× CPU 节流下最差帧：抽屉开合约 33–58ms（原 100ms+）；输入框 → 整页开/合 34ms / 33ms（原 125ms / 91ms）。
+- `verify:pwa` 更新：输入框上拉跟手并进入整页、整页下拉跟手（后方正文可见）并收回、草稿与节点不变；下拉顶栏拉出会话管理、顶部悬挂、抓手上推收起；抽屉开合不写 body class。
