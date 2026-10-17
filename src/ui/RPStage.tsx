@@ -10,7 +10,6 @@ import {
   MapPin,
   Maximize2,
   Minimize2,
-  MoreHorizontal,
   PanelBottom,
   Pause,
   PencilLine,
@@ -443,7 +442,7 @@ export function RPStage({
     const timer = setTimeout(() => turnNow.current(1), Math.min(9000, Math.max(2600, 1800 + chars * 45)));
     return () => clearTimeout(timer);
   }, [auto, block, page, pageCount, atEnd, isHidden, current?.editing, snap.busy, paging.node]);
-  // A press on the text turns the page, as in a visual novel (on a phone the left third turns back).
+  // A press on the text turns the page, as in a visual novel (on a phone the left half turns back).
   useEffect(() => {
     if (!block) return;
     const chat = document.getElementById("chat")!;
@@ -459,7 +458,7 @@ export function RPStage({
       )
         return;
       const rect = chat.getBoundingClientRect();
-      turnNow.current(mobile && e.clientX < rect.left + rect.width / 3 ? -1 : 1);
+      turnNow.current(mobile && e.clientX < rect.left + rect.width / 2 ? -1 : 1);
     };
     chat.addEventListener("click", press);
     return () => chat.removeEventListener("click", press);
@@ -608,11 +607,7 @@ export function RPStage({
                   <X size={16} />
                 </button>
               </>
-            ) : mobile ? (
-              <button className="wb-rp-tool" aria-label="打开会话管理" onClick={() => bus.emit("mobile-menu")}>
-                <MoreHorizontal size={18} strokeWidth={2.6} />
-              </button>
-            ) : (
+            ) : mobile ? null : (
               <>
                 <button
                   className="wb-rp-tool"

@@ -30,6 +30,11 @@
     width: 44px;
     justify-content: center;
   }
+  /* RP draws the header on the picture: its glyphs take the on-scene colour. This sits in the same
+     layer as the important control-ink rule for icons, which it has to outrank. */
+  body.wb-active.wb-mobile-rp .wb-mobile-header :is(svg, svg *) {
+    color: var(--wb-rp-on-scene) !important;
+  }
   .wb-mobile-header .wb-mobile-person {
     flex: 1;
     min-width: 0;

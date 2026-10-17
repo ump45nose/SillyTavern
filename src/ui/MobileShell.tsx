@@ -853,16 +853,14 @@ export function MobileShell({
         >
           <MenuDrawer size={21} />
         </button>
-        {!rp && (
-          <button
-            className="wb-mobile-management"
-            aria-label="打开会话管理"
-            aria-expanded={sheet === "management"}
-            onClick={() => setSheet("management")}
-          >
-            <MoreHorizontal size={21} strokeWidth={2.4} />
-          </button>
-        )}
+        <button
+          className="wb-mobile-management"
+          aria-label="打开会话管理"
+          aria-expanded={sheet === "management"}
+          onClick={() => setSheet("management")}
+        >
+          <MoreHorizontal size={21} strokeWidth={2.4} />
+        </button>
         <div className="wb-mobile-title">
           <strong>{title}</strong>
           <small>{subtitle}</small>

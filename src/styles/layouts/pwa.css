@@ -69,15 +69,13 @@
     font-size: 12px;
     color: var(--wb-ink-3);
   }
-  body.wb-mobile .wb-mobile-header .wb-mobile-person {
-    flex: none;
-  }
   body.wb-mobile:not(.wb-mobile-rp) .wb-mobile-header {
     display: grid;
     grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px;
     touch-action: none;
   }
-  body.wb-mobile:not(.wb-mobile-rp) .wb-mobile-header .wb-mobile-person {
+  /* The eye (RP) or the face (Noval) keeps the last column whatever else is shown. */
+  body.wb-mobile .wb-mobile-header .wb-mobile-person {
     grid-column: 5;
   }
   /* The paper continues behind the quick-config card; the page never shows the desk between them. */
@@ -114,53 +112,62 @@
     transform: translateX(-50%);
   }
 
-  /* RP: the same row as frosted tiles on the scene — menu, the scene's place and time, show/hide. */
+  /* RP: nothing frames the scene. The same five columns as Noval (menu, ⋯, the place and time,
+     the eye) drawn straight on the picture in light glyphs with a soft shadow, over a faint scrim
+     at the top edge so they read on a bright scene. */
   body.wb-mobile-rp .wb-mobile-header {
-    top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 12px);
-    left: 10px;
-    right: 10px;
-    height: 44px;
-    align-items: stretch;
-    gap: 6px;
-    padding: 0;
-    background: transparent;
-    color: var(--wb-rp-ink-1);
+    top: var(--wb-mobile-top, 0px);
+    left: 0;
+    right: 0;
+    height: calc(var(--wb-safe-top) + 64px);
+    display: grid;
+    grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px;
+    align-items: center;
+    gap: 2px;
+    padding: var(--wb-safe-top) 8px 0;
+    border: 0;
+    background: linear-gradient(to bottom, rgb(20 14 10 / 30%), rgb(20 14 10 / 12%) 60%, transparent);
+    color: var(--wb-rp-on-scene);
     z-index: 7;
+    transition: background-color 180ms;
   }
-  body.wb-mobile-rp .wb-mobile-header > button,
-  body.wb-mobile-rp .wb-mobile-title {
+  body.wb-mobile-rp .wb-mobile-header > button {
+    width: 44px;
     height: 44px;
     min-height: 44px;
-    border-radius: 14px;
-    background: var(--wb-rp-glass);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
-    box-shadow: 0 0 0 1px var(--wb-rp-line);
+    border-radius: 50%;
+    background: transparent;
+    filter: var(--wb-rp-on-scene-shadow);
     transition:
       opacity 180ms,
       visibility 180ms,
       background-color 160ms;
   }
+  body.wb-mobile-rp .wb-mobile-header > button:active {
+    background: rgb(255 255 255 / 16%);
+  }
   body.wb-mobile-rp .wb-mobile-title {
-    align-items: flex-start;
-    padding: 0 12px;
-    text-align: left;
+    text-shadow: var(--wb-rp-on-scene-text);
+    transition:
+      opacity 180ms,
+      visibility 180ms;
   }
   body.wb-mobile-rp .wb-mobile-title strong {
-    font: 500 13px/1.3 var(--wb-font-ui);
+    font: 600 15px/1.3 var(--wb-font-reading);
+    letter-spacing: 0.04em;
   }
   body.wb-mobile-rp .wb-mobile-title small {
     font-size: 11px;
-    color: var(--wb-rp-ink-3);
+    color: inherit;
+    opacity: 0.82;
   }
-  /* Hidden interface: only the eye stays, a quieter pane, to bring everything back. */
+  /* Hidden interface: the scrim goes and only the eye stays, in its own place, to bring it back. */
+  body.wb-mobile-rp.wb-focus .wb-mobile-header {
+    background: transparent;
+  }
   body.wb-mobile-rp.wb-focus .wb-mobile-header > :not(.wb-mobile-person) {
     opacity: 0;
     visibility: hidden;
-  }
-  body.wb-mobile-rp.wb-focus .wb-mobile-person {
-    margin-left: auto;
-    background: color-mix(in srgb, var(--wb-rp-glass) 60%, transparent);
   }
 
   /* ── Quick configuration: one raised card under the header — status, then the resource keys ── */
@@ -444,8 +451,9 @@
     color: var(--wb-ink-1);
   }
 
-  /* ── RP deck (RPStage): replies and tools above the box, the speaker's plate on its edge, page
-     dots and "continue" along its foot ── */
+  /* ── RP deck (RPStage) over the band: suggested replies float just above it, the speaker's name
+     where the band turns solid, the page marks and the reply key along its foot. The text itself
+     turns the page (left half back, right half forward), so the arrows stay off the phone. ── */
   body.wb-mobile-rp .wb-rp-deck {
     top: calc(var(--wb-rp-box-top) - var(--wb-rp-bar-height) - var(--wb-rp-bar-gap));
     bottom: auto;
@@ -468,39 +476,42 @@
     right: 0;
     height: var(--wb-rp-bar-height);
     align-items: flex-end;
+    padding: 0 16px;
     overflow-x: auto;
     scrollbar-width: none;
     pointer-events: auto;
   }
   body.wb-mobile-rp .wb-rp-replies button {
-    height: 36px;
-    min-height: 36px;
+    height: 34px;
+    min-height: 34px;
     max-width: 70vw;
     padding: 0 14px;
-    border-radius: 18px;
+    border-radius: 17px;
     background: var(--wb-rp-glass);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: inset 0 0 0 1px var(--wb-rp-line);
     font-size: 13px;
   }
-  /* The speaker's chip and the ⋯ menu sit on the box's top edge. */
   body.wb-mobile-rp .wb-rp-head {
-    top: calc(var(--wb-rp-bar-height) + var(--wb-rp-bar-gap) - 16px);
-    left: 14px;
-    right: 14px;
-    height: 32px;
+    top: calc(var(--wb-rp-bar-height) + var(--wb-rp-bar-gap) + var(--wb-rp-text-top) - 44px);
+    left: 22px;
+    right: 10px;
+    height: 34px;
+  }
+  /* The speaker: the accent stroke and the name, as on the desktop band. */
+  body.wb-mobile-rp .wb-rp-plate strong {
+    font-size: 16px;
+    letter-spacing: 0.1em;
   }
   body.wb-mobile-rp .wb-rp-tools {
     opacity: 1;
-    padding: 3px;
-    border-radius: 18px;
-    background: var(--wb-rp-glass);
   }
   body.wb-mobile-rp .wb-rp-tool {
-    width: 32px;
-    height: 30px;
-    min-height: 30px;
-    border-radius: 15px;
+    width: 36px;
+    height: 34px;
+    min-height: 34px;
+    border-radius: 17px;
     color: var(--wb-rp-ink-1);
   }
   body.wb-mobile-rp .wb-rp-tool.is-labelled {
@@ -508,55 +519,39 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 0 12px 0 9px;
+    padding: 0 12px 0 8px;
+    background: var(--wb-rp-field);
     font: 500 13px/1 var(--wb-font-ui);
-  }
-  body.wb-mobile-rp .wb-rp-plate {
-    height: 32px;
-    gap: 8px;
-    padding: 0 14px 0 3px;
-    border-radius: 16px;
-    background: var(--wb-rp-plate);
-    box-shadow: var(--wb-rp-plate-shadow);
-    color: var(--wb-rp-plate-ink);
-  }
-  body.wb-mobile-rp .wb-rp-plate::before {
-    display: none;
-  }
-  body.wb-mobile-rp .wb-rp-plate img {
-    display: block;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  body.wb-mobile-rp .wb-rp-plate strong {
-    font: 600 14px/1 var(--wb-font-ui);
-    letter-spacing: 0;
   }
   body.wb-mobile-rp .wb-rp-foot {
     left: 0;
     right: 0;
     bottom: 0;
-    height: 48px;
-    gap: 6px;
-    padding: 0 6px 6px 18px;
+    height: var(--wb-rp-foot);
+    gap: 0;
+    padding: 0 10px max(4px, var(--wb-safe-bottom)) 16px;
+  }
+  body.wb-mobile-rp .wb-rp-foot > .wb-rp-tool {
+    display: none;
   }
   body.wb-mobile-rp .wb-rp-dots button {
-    width: 11px;
-    height: 36px;
-    min-height: 36px;
+    width: 14px;
+    height: 40px;
+    min-height: 40px;
   }
   body.wb-mobile-rp .wb-rp-dots button[aria-current="true"] {
-    width: 21px;
+    width: 26px;
   }
   body.wb-mobile-rp .wb-rp-dots button[aria-current="true"]::before {
-    width: 16px;
+    width: 18px;
   }
   body.wb-mobile-rp .wb-rp-reply {
     height: 36px;
     min-height: 36px;
-    padding: 0 6px 0 10px;
+    margin-left: auto;
+    padding: 0 14px 0 11px;
+    border-radius: 18px;
+    background: var(--wb-rp-field);
     font-size: 13px;
   }
   /* The log's head rides on top of the history pane (native-bridge.css). */
@@ -942,9 +937,7 @@
     scale: 0.93;
   }
   body.wb-mobile
-    :is(.wb-mobile-sheet-list > button, .wb-left :is(.wb-nav-row, .wb-nav-toggle)):active:not(
-      :disabled
-    ) {
+    :is(.wb-mobile-sheet-list > button, .wb-left :is(.wb-nav-row, .wb-nav-toggle)):active:not(:disabled) {
     scale: 0.98;
     background: var(--wb-surface-2);
   }
