@@ -658,8 +658,9 @@ export function MobileShell({
       chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
     };
   }, [rp]);
-  // A sheet follows its handle down; past a third of its height or on a flick it closes, otherwise
-  // it settles back.
+  // A sheet follows its handle away from its edge (down for the bottom sheets, up for the session
+  // menu that hangs from the top); past a third of its height or on a flick it closes, otherwise it
+  // settles back.
   useEffect(() => {
     const node = sheetRef.current;
     if (!node || presence.exiting) return;
@@ -678,9 +679,10 @@ export function MobileShell({
       drag = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
       node.dataset.wbDrag = "";
     };
+    const top = node.classList.contains("is-management");
     const move = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.pointer) return;
-      drag.dy = Math.max(0, e.clientY - drag.y);
+      drag.dy = top ? Math.min(0, e.clientY - drag.y) : Math.max(0, e.clientY - drag.y);
       drag.previous = drag.last;
       drag.last = { y: e.clientY, t: e.timeStamp };
       node.style.setProperty("--wb-sheet-pull", `${drag.dy}px`);
@@ -689,9 +691,11 @@ export function MobileShell({
       const current = drag;
       drag = null;
       if (!current || e.pointerId !== current.pointer) return;
-      const speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+      const speed =
+        ((current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t)) *
+        (top ? -1 : 1);
       delete node.dataset.wbDrag;
-      if (speed > 0.5 || current.dy > node.offsetHeight / 3) close();
+      if (speed > 0.5 || Math.abs(current.dy) > node.offsetHeight / 3) close();
       else node.style.removeProperty("--wb-sheet-pull");
     };
     node.addEventListener("pointerdown", down);
@@ -705,6 +709,84 @@ export function MobileShell({
       node.removeEventListener("pointercancel", up);
     };
   }, [presence.value, presence.exiting]);
+  // Noval: pulling the header down draws the session menu down with the finger. Once the menu is
+  // up the header is inert, so the drag is followed on the document.
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    if (rp || !header) return;
+    const veil = () => document.querySelector<HTMLElement>(".wb-mobile-sheet-shade");
+    let drag: {
+      y: number;
+      pointer: number;
+      dy: number;
+      height: number;
+      started: boolean;
+      previous: { y: number; t: number };
+      last: { y: number; t: number };
+    } | null = null;
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointer) return;
+      const dy = e.clientY - drag.y;
+      if (!drag.started) {
+        if (Math.abs(dy) < 8) return;
+        if (dy < 0) return end();
+        drag.started = true;
+        flushSync(() => setSheet("management"));
+        const node = sheetRef.current!;
+        node.dataset.wbDrag = "";
+        node.style.setProperty("animation", "none");
+        veil()?.style.setProperty("animation", "none");
+        drag.height = node.offsetHeight;
+      }
+      drag.dy = Math.min(drag.height, Math.max(0, dy));
+      drag.previous = drag.last;
+      drag.last = { y: e.clientY, t: e.timeStamp };
+      sheetRef.current!.style.setProperty("--wb-sheet-pull", `${drag.dy - drag.height}px`);
+      veil()?.style.setProperty("opacity", String(drag.dy / drag.height));
+    };
+    const up = (e: PointerEvent) => {
+      const current = drag;
+      end();
+      if (!current?.started || e.pointerId !== current.pointer) return;
+      const node = sheetRef.current!,
+        speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+      delete node.dataset.wbDrag;
+      if (e.type === "pointerup" && (speed > 0.45 || (speed > -0.45 && current.dy > current.height * 0.35))) {
+        node.style.removeProperty("--wb-sheet-pull");
+        veil()?.style.setProperty("transition", "opacity 260ms");
+        veil()?.style.setProperty("opacity", "1");
+      } else close();
+    };
+    const end = () => {
+      drag = null;
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", up);
+    };
+    const down = (e: PointerEvent) => {
+      const state = latest.current;
+      if (e.button !== 0 || e.pointerType === "mouse" || (e.target as Element).closest("button")) return;
+      if (state.sheet || state.left || state.panel || state.editor) return;
+      const at = { y: e.clientY, t: e.timeStamp };
+      drag = { y: e.clientY, pointer: e.pointerId, dy: 0, height: 0, started: false, previous: at, last: at };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", up);
+    };
+    header.addEventListener("pointerdown", down);
+    return () => {
+      end();
+      header.removeEventListener("pointerdown", down);
+    };
+  }, [rp]);
+  // A sheet that was drawn by the finger hands its motion back to the exit animation.
+  useLayoutEffect(() => {
+    if (!presence.exiting) return;
+    sheetRef.current?.style.removeProperty("animation");
+    const shade = document.querySelector<HTMLElement>(".wb-mobile-sheet-shade");
+    for (const name of ["animation", "opacity", "transition"]) shade?.style.removeProperty(name);
+  }, [presence.exiting]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape" && editor) {
@@ -755,6 +837,7 @@ export function MobileShell({
   return (
     <>
       <header
+        ref={headerRef}
         className="wb-mobile-header wb-ui"
         inert={left || !!panel || !!sheet || editor || (focus && !rp)}
       >
@@ -766,6 +849,16 @@ export function MobileShell({
         >
           <MenuDrawer size={21} />
         </button>
+        {!rp && (
+          <button
+            className="wb-mobile-management"
+            aria-label="打开会话管理"
+            aria-expanded={sheet === "management"}
+            onClick={() => setSheet("management")}
+          >
+            <MoreHorizontal size={21} strokeWidth={2.4} />
+          </button>
+        )}
         <div className="wb-mobile-title">
           <strong>{title}</strong>
           <small>{subtitle}</small>
@@ -854,18 +947,6 @@ export function MobileShell({
           退出专注
         </button>
       )}
-      {!rp &&
-        createPortal(
-          <button
-            type="button"
-            className="wb-mobile-management wb-ui"
-            aria-label="打开会话管理"
-            onClick={() => setSheet("management")}
-          >
-            <MoreHorizontal size={21} strokeWidth={2.6} />
-          </button>,
-          document.getElementById("form_sheld")!,
-        )}
       {createPortal(
         <button
           type="button"

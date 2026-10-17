@@ -30,7 +30,8 @@
     --wb-m-scrim: rgb(0 0 0 / 50%);
   }
 
-  /* ── Header: menu · title · person (the title is truly centred; ⋯ lives by the composer) ── */
+  /* ── Header: menu and ⋯ · title · person. The title is truly centred; pulling the header down
+     brings the session menu down from the top. ── */
   body.wb-mobile .wb-mobile-header {
     gap: 2px;
     padding: 6px 4px 0;
@@ -70,6 +71,14 @@
   }
   body.wb-mobile .wb-mobile-header .wb-mobile-person {
     flex: none;
+  }
+  body.wb-mobile:not(.wb-mobile-rp) .wb-mobile-header {
+    display: grid;
+    grid-template-columns: 44px 44px minmax(0, 1fr) 44px 44px;
+    touch-action: none;
+  }
+  body.wb-mobile:not(.wb-mobile-rp) .wb-mobile-header .wb-mobile-person {
+    grid-column: 5;
   }
   /* The paper continues behind the quick-config card; the page never shows the desk between them. */
   body.wb-mobile:not(.wb-mobile-rp) .wb-mobile-header::after {
@@ -311,30 +320,6 @@
     padding: 0;
   }
 
-  /* ── ⋯ session menu: a round key beside the composer, the pill's sibling ── */
-  body.wb-mobile .wb-mobile-management {
-    position: absolute;
-    left: 12px;
-    bottom: calc(max(22px, var(--wb-safe-bottom)) + 4px);
-    z-index: 1;
-    width: 48px;
-    height: 48px;
-    min-height: 48px;
-    display: grid;
-    place-items: center;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: var(--wb-surface-1);
-    box-shadow:
-      var(--wb-shadow-2),
-      0 0 0 1px var(--wb-line-1);
-    color: var(--wb-ink-2);
-  }
-  body.wb-mobile.wb-mobile-editor .wb-mobile-management {
-    display: none;
-  }
-
   /* ── Composer chrome: ＋, and the handle that pulls the full editor up ── */
   body.wb-mobile .wb-mobile-plus {
     grid-row: 1;
@@ -397,9 +382,6 @@
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: var(--wb-ink-3);
-  }
-  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-management {
-    display: none;
   }
   body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-plus {
     grid-row: 2;
@@ -988,10 +970,28 @@
     border-radius: 12px;
     color: var(--wb-ink-2);
   }
-  /* The session menu names itself by its caption; its close button rides beside the grip. */
+  /* The session menu hangs from the top of the window: it slides down over the header (or follows
+     a pull on it) and its grip, on the bottom edge, pushes it back up. It names itself by its
+     caption; the close key sits at its top right. */
+  body.wb-mobile .wb-mobile-sheet.is-management {
+    top: var(--wb-mobile-top, 0px);
+    bottom: auto;
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--wb-safe-top) + 16px) 16px 6px;
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 12px 40px rgb(0 0 0 / 18%);
+    animation-name: wb-mobile-topsheet-in;
+  }
+  body.wb-mobile .wb-mobile-sheet.is-management[data-wb-exiting="true"] {
+    animation-name: wb-mobile-topsheet-out;
+  }
+  body.wb-mobile .wb-mobile-sheet.is-management > * {
+    flex: none;
+  }
   body.wb-mobile .wb-mobile-sheet.is-management > header {
     position: absolute;
-    top: 6px;
+    top: calc(var(--wb-safe-top) + 4px);
     right: 8px;
     margin: 0;
   }
@@ -1004,7 +1004,19 @@
     white-space: nowrap;
   }
   body.wb-mobile .wb-mobile-sheet.is-management .wb-mobile-sheet-grip {
-    margin-bottom: 14px;
+    order: 1;
+    flex: none;
+    margin: 12px auto 4px;
+  }
+  @keyframes wb-mobile-topsheet-in {
+    from {
+      transform: translateY(-100%);
+    }
+  }
+  @keyframes wb-mobile-topsheet-out {
+    to {
+      transform: translateY(-100%);
+    }
   }
   body.wb-mobile .wb-mobile-sheet-caption {
     display: block;

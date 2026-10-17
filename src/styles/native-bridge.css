@@ -3714,11 +3714,6 @@ body.wb-active.wb-mobile #form_sheld {
   container-type: normal;
   z-index: 4;
 }
-/* The ⋯ session key (layouts/pwa.css) stands to the pill's left. */
-body.wb-active.wb-mobile:not(.wb-mobile-editor) #form_sheld,
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld:where(:not([data-wb-page])) {
-  padding-left: 68px !important;
-}
 /* Reading fades into the composer instead of meeting a rule. */
 body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld:where(:not([data-wb-page]))::before {
   content: "";
