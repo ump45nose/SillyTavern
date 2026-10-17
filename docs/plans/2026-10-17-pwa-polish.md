@@ -43,3 +43,10 @@
 - [x] 6 右栏
 - [x] 9 + 10 RP
 - [x] 11 设置页
+
+## 验证记录（2026-10-17）
+
+- `npm run check`、`npm test`（64/64）、`npm run build` 通过。
+- `node scripts/verify-all.mjs`：除基础 `verify`（需 32011，固定失败）外全部通过，含 `verify:pwa`（15 项）、`verify:rp`、`verify:utilities`。
+- `verify:pwa` 新增覆盖：专注模式、上拉手柄进入全屏输入、点按/抽屉跳转选中楼层、抽屉跟手拖动与回弹、遮罩拖动收起、面板手柄下拉关闭、右栏单行标签与 320px 不越界、设置页两级导航与 320px 不越界。
+- 未实测：真机触摸手感、iOS Safari 键盘与安全区（只在 Chromium 手机视口与模拟 visualViewport 下验证）。
