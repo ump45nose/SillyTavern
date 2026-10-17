@@ -794,8 +794,12 @@
     min-height: 44px;
   }
   /* Touch-height rows need the whole list; the drawer scrolls, so the desk's 170px cap is lifted. */
+  /* The drawer itself scrolls, so a section never becomes a scroll box of its own — not even while
+     its height animates open, which used to flash a scrollbar. */
+  body.wb-mobile .wb-left .wb-fold-body > div,
   body.wb-mobile .wb-left .wb-fold-body.is-open > div {
     max-height: none;
+    overflow: clip;
   }
   body.wb-mobile .wb-left .wb-nav-footer {
     display: grid;
