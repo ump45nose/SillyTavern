@@ -3,7 +3,7 @@ import { session, ready, urls } from "../browser.mjs";
 
 const desktop = { width: 1496, height: 817 };
 const compact = { width: 1366, height: 768 };
-const phone = { width: 390, height: 844 };
+const phone = { width: Number(process.env.WB_PHONE_WIDTH || 390), height: 844 };
 
 const key = (combo) => async (page) => {
   await page.keyboard.press(combo);
@@ -157,6 +157,14 @@ export const states = [
   { name: "m-novel-home", viewport: phone, mobile: true, steps: [] },
   { name: "m-novel-left", viewport: phone, mobile: true, steps: [label("打开大纲与导航")] },
   { name: "m-novel-right", viewport: phone, mobile: true, steps: [label("打开角色与 Trace")] },
+  { name: "m-panel-image-config", viewport: phone, mobile: true, steps: [label("打开角色与 Trace"), tap('.wb-right .wb-panel-tab[aria-label="生图"]'), label("生图完整配置")] },
+  { name: "m-panel-image-scene", viewport: phone, mobile: true, steps: [label("打开角色与 Trace"), tap('.wb-right .wb-panel-tab[aria-label="生图"]'), text("场景来源 · 已排除思考块")] },
+  ...["世界书", "预设", "连接", "用户设定", "Trace", "记录导出", "大纲", "生图"].map((tab, i) => ({
+    name: `m-panel-${i + 1}`,
+    viewport: phone,
+    mobile: true,
+    steps: [label("打开角色与 Trace"), tap(`.wb-right .wb-panel-tab[aria-label="${tab}"]`)],
+  })),
   { name: "m-novel-menu", viewport: phone, mobile: true, steps: [label("打开会话管理")] },
   { name: "m-novel-editor", viewport: phone, mobile: true, steps: [label("全屏编辑草稿")] },
   { name: "m-novel-focus", viewport: phone, mobile: true, steps: [label("打开会话管理"), text("专注模式")] },

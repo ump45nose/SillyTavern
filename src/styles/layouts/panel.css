@@ -138,16 +138,19 @@
     min-width: 0;
     background: var(--wb-surface-1);
   }
-  /* PWA drawer: the drawer has its own close button; tabs keep touch-sized targets. */
+  /* PWA drawer: one row — the tabs scroll under a soft edge, close stays at the end; touch-sized. */
   body.wb-mobile .wb-panel-head {
     height: auto;
-    min-height: 52px;
-    padding: 6px 10px;
+    min-height: 56px;
+    padding: 6px 6px 6px 10px;
+    border-bottom: 0;
   }
   body.wb-mobile .wb-panel-head .wb-panel-tabs {
+    flex: 1;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
   }
   body.wb-mobile .wb-panel-tab {
     height: 40px;
@@ -155,6 +158,9 @@
     justify-content: center;
   }
   body.wb-mobile .wb-panel-close {
-    display: none;
+    width: 44px;
+    height: 44px;
+    margin-left: 2px;
+    border-radius: 12px;
   }
 }

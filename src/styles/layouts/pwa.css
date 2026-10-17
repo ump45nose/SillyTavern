@@ -597,7 +597,126 @@
     box-shadow: 12px 0 40px rgb(0 0 0 / 16%);
   }
   body.wb-mobile .wb-right {
+    padding-top: var(--wb-safe-top);
     background: var(--wb-m-paper);
+  }
+  body.wb-mobile .wb-right .wb-panel-content {
+    background: var(--wb-m-paper);
+    animation: wb-mobile-fade-in 180ms ease both;
+  }
+  /* Character page: one scrolling page — the card, its fields and the actions on equal footing, then
+     every character as a touch list ending in 新建. Import, groups and the library live in settings. */
+  body.wb-mobile .wb-right .wb-character-panel {
+    display: block;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(16px, var(--wb-safe-bottom));
+  }
+  body.wb-mobile .wb-right .wb-character-hero {
+    height: 196px;
+    margin: 4px 0 0;
+    border-radius: 18px;
+  }
+  body.wb-mobile .wb-right .wb-character-hero-tool {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    border-radius: 10px;
+  }
+  body.wb-mobile .wb-right .wb-character-fields {
+    margin: 14px 0 0;
+    border-radius: 12px;
+    background: var(--wb-surface-2);
+  }
+  body.wb-mobile .wb-right .wb-character-fields button {
+    height: 36px;
+    min-height: 36px;
+    border-radius: 9px;
+    font-size: 14px;
+  }
+  body.wb-mobile .wb-right .wb-character-text {
+    flex: none;
+    min-height: 112px;
+    max-height: 42vh;
+    margin: 10px 0 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+  body.wb-mobile .wb-right .wb-character-world {
+    margin: 12px 0 0;
+    font-size: 13px;
+  }
+  body.wb-mobile .wb-right .wb-character-actions {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin: 14px 0 0;
+    padding: 0;
+    border: 0;
+  }
+  body.wb-mobile .wb-right .wb-character-actions button {
+    justify-content: center;
+    height: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+  body.wb-mobile .wb-right .wb-character-actions .wb-character-start.is-current {
+    display: none;
+  }
+  body.wb-mobile .wb-right .wb-character-actions .wb-character-quiet {
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-1);
+  }
+  body.wb-mobile .wb-right .wb-character-actions .wb-character-edit {
+    margin-left: 0;
+  }
+  body.wb-mobile .wb-right .wb-character-nav.is-inline {
+    width: auto;
+    height: auto;
+    max-height: none;
+    margin-top: 22px;
+    padding: 0;
+    gap: 8px;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-search {
+    height: 44px;
+    border-radius: 12px;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-search input {
+    font-size: 16px;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-scroll {
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-open {
+    min-height: 56px;
+    gap: 12px;
+    padding: 6px 10px;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-name {
+    font-size: 15px;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-tool {
+    display: none;
+  }
+  body.wb-mobile .wb-right .wb-character-nav .wb-rail-new {
+    justify-content: center;
+    height: 48px;
+    min-height: 48px;
+    border-radius: 12px;
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-1);
+    font-size: 14px;
   }
   body.wb-mobile .wb-mobile-drawer-title {
     position: fixed;

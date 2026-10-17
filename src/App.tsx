@@ -1,5 +1,6 @@
 import React, {
   Suspense,
+  startTransition,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -367,7 +368,9 @@ export default function App({
   }, []);
   useEffect(() => {
     if (shown) {
-      setRenderedPanel(shown);
+      // Switching tabs: the tab answers at once and the next panel mounts without blocking that paint.
+      if (renderedPanel) startTransition(() => setRenderedPanel(shown));
+      else setRenderedPanel(shown);
       return;
     }
     const timer = setTimeout(() => setRenderedPanel(null), 220);

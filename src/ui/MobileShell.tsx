@@ -35,7 +35,7 @@ import type { ComposerPopup } from "./ComposerPopovers";
 import { ResourceControls } from "./Header";
 import { ReadingSettings } from "./Reading";
 import { composerTools, toolIcon } from "./ToolIcon";
-import { usePresence } from "./Motion";
+import { motionAllowed, usePresence } from "./Motion";
 import { bus } from "../host/bus";
 
 type Sheet = "management" | "tools" | HTMLElement | null;
@@ -184,7 +184,7 @@ export function MobileShell({
     if (!target) return;
     const previous = document.activeElement as HTMLElement,
       frame = requestAnimationFrame(() => {
-        const close = document.querySelector<HTMLElement>(".wb-mobile-drawer-close");
+        const close = document.querySelector<HTMLElement>(left ? ".wb-mobile-drawer-close" : ".wb-panel-close");
         (sheet ? sheetRef.current?.querySelector<HTMLElement>("button") : close)?.focus({
           preventScroll: true,
         });
@@ -227,6 +227,19 @@ export function MobileShell({
       if (previous?.isConnected && previous.tagName !== "TEXTAREA") previous.focus({ preventScroll: true });
     };
   }, [left, panel, !!sheet]);
+  // The panel's tab row scrolls; keep the open tab in view.
+  useEffect(() => {
+    if (!panel) return;
+    const frame = requestAnimationFrame(() => {
+      const tab = document.querySelector<HTMLElement>(".wb-right .wb-panel-tab.is-active"),
+        row = tab?.parentElement;
+      row?.scrollTo({
+        left: tab!.offsetLeft - row.offsetLeft - (row.clientWidth - tab!.offsetWidth) / 2,
+        behavior: motionAllowed() ? "smooth" : "auto",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [panel]);
   // RP: a long press on the latest reply opens its actions (the dialogue box itself turns pages).
   useEffect(() => {
     const chat = document.getElementById("chat")!;
@@ -558,9 +571,10 @@ export function MobileShell({
         tabIndex={left || panel ? 0 : -1}
         onClick={closeDrawers}
       />
-      {(left || panel) && (
+      {/* The panel closes from the end of its own tab row. */}
+      {left && (
         <>
-          {left && <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>}
+          <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>
           <button className="wb-mobile-drawer-close wb-ui" aria-label="关闭边栏" onClick={closeDrawers}>
             <X size={20} />
           </button>
