@@ -23,7 +23,7 @@ try {
   const settingsGroup = async group => { await ensureLeft(); await openSettings(page, '用户设置'); await page.getByRole('navigation', { name: '设置分组' }).getByRole('button', { name: group, exact: true }).click(); };
   const tool = id => page.locator(`.wb-composer-actions [data-wb-tool="${id}"]`);
   const exportPanel = page.getByRole('region', { name: '聊天记录分析与导出' });
-  const openExport = async () => { if (await tool('wb:export').count()) await tool('wb:export').click(); else { await role('更多工具').click(); await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '记录导出', exact: true }).click(); } await page.waitForSelector('.wb-export-workspace'); };
+  const openExport = async () => { if (await role('快进到你的回应').count()) { await role('快进到你的回应').click(); await settle(); } if (await tool('wb:export').count()) await tool('wb:export').click(); else { await role('更多工具').click(); await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '记录导出', exact: true }).click(); } await page.waitForSelector('.wb-export-workspace'); };
   const waitResult = async count => { await page.waitForFunction(count => { const footer = document.querySelector('.wb-export-footer'); return footer?.querySelector('.wb-primary:not(:disabled)') && footer.querySelector('.wb-export-totals').textContent.startsWith(`${count} 层`); }, count); };
   const structure = async () => exportPanel.getByRole('button', { name: /^XML 结构/ }).click();
   const preview = async () => exportPanel.getByRole('button', { name: /^结果预览/ }).click();

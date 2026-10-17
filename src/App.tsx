@@ -143,7 +143,8 @@ export default function App({
   const { panel, chooser, focusId, deep, focus, popup, workspace, help, railOpen, tabsOpen } = s;
   const sizes = useMemo(readSizes, [width]);
   const leftShown = leftVisible(s, sizes);
-  const edgeHover = !mobile && prefs.edgeHover !== false;
+  // RP has no hover preview: an edge arrow opens or folds its column and the stage moves with it.
+  const edgeHover = !mobile && !rp && prefs.edgeHover !== false;
   useScrollbars();
   const hover = useSidebarHover(
     edgeHover && !focus && !workspace && !deep && !help && !document.querySelector("dialog[open]"),
@@ -648,12 +649,13 @@ export default function App({
           >
             {navigationShown ? <ChevronLeft size={28} /> : <ChevronRight size={28} />}
           </button>
-          {/* A pinned panel closes from its own header; the arrow stays for opening and hover-pinning. */}
-          {!panel && (
+          {/* A pinned panel closes from its own header; the arrow stays for opening and hover-pinning.
+              In RP it stays beside the open panel too, the one key for both directions. */}
+          {(!panel || rp) && (
             <button
               className="wb-edge-arrow wb-edge-right"
-              aria-label={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
-              title={hover.right && !panel ? "固定右边栏" : panel ? "关闭右栏" : "角色与资源侧栏"}
+              aria-label={hover.right && !panel ? "固定右边栏" : panel ? "收纳右边栏" : "角色与资源侧栏"}
+              title={hover.right && !panel ? "固定右边栏" : panel ? "收纳右边栏" : "角色与资源侧栏"}
               aria-expanded={!!shown}
               {...ownClick(toggleRight)}
             >

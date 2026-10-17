@@ -426,6 +426,10 @@
   body.wb-mobile-rp .wb-rp-deck {
     top: calc(var(--wb-rp-box-top) - var(--wb-rp-bar-height) - var(--wb-rp-bar-gap));
     bottom: auto;
+    left: var(--wb-rp-dialog-left);
+    right: auto;
+    width: var(--wb-rp-dialog-width);
+    height: calc(var(--wb-rp-deck) + var(--wb-rp-bar-height) + var(--wb-rp-bar-gap));
     transition:
       top 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
       height 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
@@ -435,12 +439,12 @@
   body.wb-mobile-rp.wb-rp-pulling .wb-rp-deck {
     transition: none;
   }
-  body.wb-mobile-rp .wb-rp-deck-bar {
-    align-items: center;
-    gap: 8px;
-  }
   body.wb-mobile-rp .wb-rp-replies {
-    flex: 1;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--wb-rp-bar-height);
+    align-items: flex-end;
     overflow-x: auto;
     scrollbar-width: none;
     pointer-events: auto;
@@ -456,7 +460,15 @@
     backdrop-filter: blur(14px);
     font-size: 13px;
   }
+  /* The speaker's chip and the ⋯ menu sit on the box's top edge. */
+  body.wb-mobile-rp .wb-rp-head {
+    top: calc(var(--wb-rp-bar-height) + var(--wb-rp-bar-gap) - 16px);
+    left: 14px;
+    right: 14px;
+    height: 32px;
+  }
   body.wb-mobile-rp .wb-rp-tools {
+    opacity: 1;
     padding: 3px;
     border-radius: 18px;
     background: var(--wb-rp-glass);
@@ -477,24 +489,32 @@
     font: 500 13px/1 var(--wb-font-ui);
   }
   body.wb-mobile-rp .wb-rp-plate {
-    left: 14px;
-    bottom: calc(var(--wb-rp-deck) - 16px);
-    max-width: calc(100% - 28px);
     height: 32px;
     gap: 8px;
     padding: 0 14px 0 3px;
     border-radius: 16px;
+    background: var(--wb-rp-plate);
     box-shadow: var(--wb-rp-plate-shadow);
+    color: var(--wb-rp-plate-ink);
+  }
+  body.wb-mobile-rp .wb-rp-plate::before {
+    display: none;
   }
   body.wb-mobile-rp .wb-rp-plate img {
+    display: block;
     width: 26px;
     height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
   }
   body.wb-mobile-rp .wb-rp-plate strong {
     font: 600 14px/1 var(--wb-font-ui);
     letter-spacing: 0;
   }
   body.wb-mobile-rp .wb-rp-foot {
+    left: 0;
+    right: 0;
+    bottom: 0;
     height: 48px;
     gap: 6px;
     padding: 0 6px 6px 18px;
@@ -510,18 +530,11 @@
   body.wb-mobile-rp .wb-rp-dots button[aria-current="true"]::before {
     width: 16px;
   }
-  body.wb-mobile-rp .wb-rp-next {
-    margin-left: auto;
+  body.wb-mobile-rp .wb-rp-reply {
     height: 36px;
     min-height: 36px;
-    gap: 4px;
     padding: 0 6px 0 10px;
-    border-radius: 10px;
-    color: var(--wb-rp-ink-2);
     font-size: 13px;
-  }
-  body.wb-mobile-rp .wb-rp-field-slot {
-    display: none;
   }
   /* The log's head rides on top of the history pane (native-bridge.css). */
   body.wb-mobile-rp .wb-rp-log-head {

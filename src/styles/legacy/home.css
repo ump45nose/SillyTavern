@@ -89,7 +89,11 @@
           .wb-reading-bar,
           .wb-panel-head,
           .wb-character-hero,
-          .wb-rail-row
+          .wb-rail-row,
+          .wb-edge-nav,
+          .wb-rp-corner,
+          .wb-rp-visibility,
+          .wb-rp-scene
         )
         *
     ),
@@ -104,7 +108,11 @@
           .wb-reading-bar,
           .wb-panel-head,
           .wb-character-hero,
-          .wb-rail-row
+          .wb-rail-row,
+          .wb-edge-nav,
+          .wb-rp-corner,
+          .wb-rp-visibility,
+          .wb-rp-scene
         )
         *
     ) {
@@ -121,7 +129,11 @@
           .wb-reading-bar,
           .wb-panel-head,
           .wb-character-hero,
-          .wb-rail-row
+          .wb-rail-row,
+          .wb-edge-nav,
+          .wb-rp-corner,
+          .wb-rp-visibility,
+          .wb-rp-scene
         )
         *
     ),
@@ -137,7 +149,11 @@
           .wb-reading-bar,
           .wb-panel-head,
           .wb-character-hero,
-          .wb-rail-row
+          .wb-rail-row,
+          .wb-edge-nav,
+          .wb-rp-corner,
+          .wb-rp-visibility,
+          .wb-rp-scene
         )
         *
     ) {

@@ -1,25 +1,27 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight,
   Check,
   ChevronLeft,
   ChevronRight,
   CloudSun,
+  FastForward,
   History,
   MapPin,
   Maximize2,
   Minimize2,
   MoreHorizontal,
   PanelBottom,
+  Pause,
   PencilLine,
+  Play,
   RotateCcw,
   Square,
   X,
   ImagePlus,
 } from "./icons";
 import type { HostAdapter } from "../host/adapter";
-import { boundedPreference, dialoguePages } from "../host/rp";
+import { boundedPreference } from "../host/rp";
 import { useHostSlices } from "./common";
 import { ReadingPresentation } from "./Reading";
 import { beginImage } from "./AddonControls";
@@ -34,41 +36,22 @@ type Message = {
   id: number;
   name: string;
   user: boolean;
-  parts: HTMLElement[];
-  pages: number[][];
   editing: boolean;
 };
 type Cursor = { id: number; page: number; compose: boolean };
 
 /** Keep native message, media, iframe, textarea and event-handler identities intact. */
-function useNativeDialogue(host: HostAdapter, capacity: number) {
+function useNativeDialogue(host: HostAdapter) {
   const [messages, setMessages] = useState<Message[]>([]);
   useLayoutEffect(() => {
     const chat = document.getElementById("chat")!;
     const read = (node: HTMLElement): Message => {
-      const id = Number(node.getAttribute("mesid")),
-        text = node.querySelector<HTMLElement>(".mes_text");
-      // Mixed text/HTML and nested plugin output stay together as a single scrollable page.
-      const mixed = [...(text?.childNodes || [])].some(
-        (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
-      );
-      const parts = mixed ? [] : ([...(text?.children || [])] as HTMLElement[]);
-      const pages = dialoguePages(
-        parts.map((part) => ({
-          length: part.textContent?.length || 1,
-          atomic:
-            part.matches("iframe,pre,table,img,video,audio,svg,canvas") ||
-            !!part.querySelector("iframe,pre,table,img,video,audio,canvas"),
-        })),
-        capacity,
-      );
+      const id = Number(node.getAttribute("mesid"));
       return {
         node,
         id,
         name: host.slice("chat")[id]?.name || node.querySelector(".name_text")?.textContent || "",
         user: node.getAttribute("is_user") === "true",
-        parts,
-        pages,
         editing: !!node.querySelector(".edit_textarea"),
       };
     };
@@ -81,9 +64,12 @@ function useNativeDialogue(host: HostAdapter, capacity: number) {
         setMessages((prev) => prev.map((m) => (change.content.has(m.id) ? read(m.node) : m)));
     });
     return off;
-  }, [host, capacity]);
+  }, [host]);
   return messages;
 }
+
+/** Space between the columns a message is laid out in; one column is one page. */
+const PAGE_GAP = 48;
 
 export function RPStage({
   host,
@@ -107,27 +93,7 @@ export function RPStage({
     prefs = host.prefs();
   const textSize = boundedPreference(prefs.rpTextSize, 19, 14, 26),
     dialogWidth = boundedPreference(prefs.rpDialogWidth, 72, 65, 94);
-  const [height, setHeight] = useState(innerHeight);
-  useEffect(() => {
-    const resize = () => setHeight(innerHeight);
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
-  // A page is what fits the dialogue box: its line length times its lines (phone box: a quarter of
-  // the screen between 180 and 260px, less the plate row and the foot; text 17px at 1.8).
-  const capacity = mobile
-    ? Math.max(
-        48,
-        Math.round(((width - 60) / 17) * Math.max(2, Math.floor((Math.min(260, Math.max(180, height * 0.25)) - 78) / 30.6))),
-      )
-    : Math.max(
-        120,
-        Math.round(
-          (((width * dialogWidth) / 100 - 56) / textSize) *
-            Math.max(2, (Math.min(360, Math.max(180, height * 0.25)) - 50) / (textSize * 1.9)),
-        ),
-      );
-  const messages = useNativeDialogue(host, capacity),
+  const messages = useNativeDialogue(host),
     [cursor, setCursor] = useState<Cursor>({ id: -1, page: -1, compose: false });
   const inertBefore = useRef<{ sheld: boolean; form: boolean } | null>(null);
   const beforeImage = useRef<Cursor | null>(null),
@@ -136,21 +102,20 @@ export function RPStage({
   const [history, setHistory] = useState(false),
     [expanded, setExpanded] = useState(false),
     [mediaRevision, setMediaRevision] = useState(0);
-  const [scroll, setScroll] = useState({ overflow: false, scrolled: false, end: true });
-  const originals = useRef(new Map<HTMLElement, { inert: boolean; aria: string | null }>()),
-    partsSeen = useRef(new Set<HTMLElement>());
-  const live = useRef(true),
+  // The current message is laid out in page-wide columns; this is how many it took.
+  const [paging, setPaging] = useState<{ node: HTMLElement | null; count: number }>({ node: null, count: 1 }),
+    [auto, setAuto] = useState(false);
+  const originals = useRef(new Map<HTMLElement, { inert: boolean; aria: string | null }>());
+  const focusInput = useRef(false),
+    live = useRef(true),
     lastChat = useRef(snap.chatName),
     lastCount = useRef(0),
     lastTurn = useRef(""),
     animation = useRef<Animation | null>(null);
   const current = messages.find((m) => m.id === cursor.id) || messages.at(-1);
-  const page = current
-    ? Math.min(
-        current.pages.length - 1,
-        Math.max(0, cursor.page < 0 ? current.pages.length - 1 : cursor.page),
-      )
-    : 0;
+  const pageCount = current && paging.node === current.node ? paging.count : 1,
+    page = Math.min(pageCount - 1, Math.max(0, cursor.page < 0 ? pageCount - 1 : cursor.page)),
+    atEnd = !current || (current === messages.at(-1) && page === pageCount - 1);
   const compose = cursor.compose || !current,
     presentation = host.rpPresentation(current?.user ? undefined : current?.name);
   void mediaRevision;
@@ -170,8 +135,6 @@ export function RPStage({
       return;
     }
     const newest = messages.at(-1)!;
-    // Sending from the reading row returns the stage to the live end of the conversation.
-    if (newest.user && messages.length > lastCount.current && lastCount.current) live.current = true;
     if (live.current && newest.id !== cursor.id && (messages.length !== lastCount.current || cursor.id < 0))
       setCursor({ id: newest.id, page: 0, compose: false });
     lastCount.current = messages.length;
@@ -212,6 +175,8 @@ export function RPStage({
     if (inertBefore.current?.sheld !== isHidden) sheld.inert = isHidden;
     if (inertBefore.current?.form !== (history || isHidden)) form.inert = history || isHidden;
     inertBefore.current = { sheld: isHidden, form: history || isHidden };
+    if (focusInput.current && compose && !history) document.getElementById("send_textarea")?.focus();
+    focusInput.current = false;
     document.body.style.setProperty("--wb-rp-text", textSize + "px");
     document.body.style.setProperty("--wb-rp-width", String(dialogWidth / 100));
     document.body.style.setProperty(
@@ -234,11 +199,6 @@ export function RPStage({
       message.node.classList.toggle("wb-rp-current", message === current);
       message.node.inert = !visible;
       message.node.setAttribute("aria-hidden", String(!visible));
-      message.parts.forEach((part, index) => {
-        partsSeen.current.add(part);
-        part.classList.add("wb-rp-part");
-        part.classList.toggle("wb-rp-part-active", message.pages[page]?.includes(index) || false);
-      });
     }
     for (const [node, previous] of originals.current)
       if (!node.isConnected) {
@@ -249,18 +209,11 @@ export function RPStage({
         node.classList.remove("wb-rp-current");
         originals.current.delete(node);
       }
-    for (const part of partsSeen.current)
-      if (!part.isConnected) {
-        part.classList.remove("wb-rp-part", "wb-rp-part-active");
-        partsSeen.current.delete(part);
-      }
     const turn = `${current?.id}:${page}:${compose}:${history}`;
     if (turn !== lastTurn.current) {
       lastTurn.current = turn;
-      const text = current?.node.querySelector<HTMLElement>(".mes_text");
+      const text = current?.node.querySelector<HTMLElement>(".mes_block");
       if (text && !history && !compose) {
-        text.scrollTop = 0;
-        sheld.querySelector("#chat")!.scrollTop = 0;
         animation.current?.cancel();
         if (motionAllowed())
           animation.current = text.animate(
@@ -295,68 +248,58 @@ export function RPStage({
           : node.setAttribute("aria-hidden", previous.aria);
         node.classList.remove("wb-rp-current");
       });
-      partsSeen.current.forEach((part) => part.classList.remove("wb-rp-part", "wb-rp-part-active"));
       document.getElementById("sheld")!.inert = false;
       document.getElementById("form_sheld")!.inert = false;
       document.body.classList.remove("wb-rp-compose", "wb-rp-expanded", "wb-rp-history");
-      for (const name of ["text", "width", "sprite", "font", "field-left", "field-right"])
+      for (const name of ["text", "width", "sprite", "font"])
         document.body.style.removeProperty("--wb-rp-" + name);
     },
     [],
   );
-  useEffect(() => {
-    const chat = document.getElementById("chat")!,
-      text = current?.node.querySelector<HTMLElement>(".mes_text");
+  // Pages are columns of the native message block: lines never split, nothing scrolls inside the
+  // box, and media stay in one column. Measured again when the text, its size or the box change.
+  const block = !history && !compose && !current?.editing ? current?.node.querySelector<HTMLElement>(".mes_block") : null;
+  useLayoutEffect(() => {
+    if (!block || !current) return;
+    const node = current.node;
     const measure = () => {
-      const next = {
-        overflow: chat.scrollHeight > chat.clientHeight + 2,
-        scrolled: chat.scrollTop > 2,
-        end: chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 2,
-      };
-      setScroll((old) =>
-        old.overflow === next.overflow && old.scrolled === next.scrolled && old.end === next.end ? old : next,
-      );
+      block.style.setProperty("--wb-rp-column", block.clientWidth + "px");
+      block.style.setProperty("--wb-rp-gap", PAGE_GAP + "px");
+      block.style.setProperty("--wb-rp-page", block.clientHeight + "px");
+      const count = Math.max(1, Math.round((block.scrollWidth + PAGE_GAP) / (block.clientWidth + PAGE_GAP)));
+      setPaging((old) => (old.node === node && old.count === count ? old : { node, count }));
     };
     measure();
-    chat.addEventListener("scroll", measure, { passive: true });
     const observer = new ResizeObserver(measure);
-    observer.observe(chat);
-    if (text) observer.observe(text);
+    observer.observe(block);
+    block.addEventListener("load", measure, true);
     return () => {
       observer.disconnect();
-      chat.removeEventListener("scroll", measure);
+      block.removeEventListener("load", measure, true);
+      block.style.removeProperty("--wb-rp-column");
+      block.style.removeProperty("--wb-rp-gap");
+      block.style.removeProperty("--wb-rp-page");
+      block.scrollLeft = 0;
     };
-  }, [current?.node, page, compose, history]);
+  }, [block, current, textSize, dialogWidth, prefs.readingFont]);
+  useLayoutEffect(() => {
+    if (block) block.scrollLeft = page * (block.clientWidth + PAGE_GAP);
+  }, [block, page, pageCount]);
   const turn = (delta: number) => {
     if (current?.editing) return;
     if (compose) {
-      setCursor({ id: current?.id ?? -1, page: -1, compose: false });
+      if (delta < 0) leaveCompose();
       return;
     }
     if (!current) return;
-    const chat = document.getElementById("chat")!;
-    if (
-      (delta > 0 && chat.scrollTop + chat.clientHeight < chat.scrollHeight - 2) ||
-      (delta < 0 && chat.scrollTop > 2)
-    ) {
-      chat.scrollBy({
-        top: delta * Math.max(80, chat.clientHeight - 36),
-        behavior: motionAllowed() ? "smooth" : "instant",
-      });
-      return;
-    }
     live.current = false;
     const index = messages.indexOf(current),
       nextPage = page + delta;
-    if (nextPage >= 0 && nextPage < current.pages.length)
-      setCursor({ id: current.id, page: nextPage, compose: false });
+    if (nextPage >= 0 && nextPage < pageCount) setCursor({ id: current.id, page: nextPage, compose: false });
     else if (delta < 0 && index > 0) setCursor({ id: messages[index - 1].id, page: -1, compose: false });
     else if (delta > 0 && index < messages.length - 1)
       setCursor({ id: messages[index + 1].id, page: 0, compose: false });
-    else if (delta > 0) {
-      live.current = true;
-      reply();
-    }
+    else if (delta > 0) reply();
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -371,7 +314,10 @@ export function RPStage({
         document.querySelector("dialog[open],.wb-popover,[role=listbox]")
       )
         return;
-      if ((e.target as Element)?.closest("input,textarea,select,button,[contenteditable=true]")) return;
+      // Buttons elsewhere may own arrow keys (menus, radio groups); the deck's own keys page on.
+      const target = e.target as Element | null;
+      if (target?.closest("input,textarea,select,[contenteditable=true]") || (target?.closest("button") && !target.closest(".wb-rp-deck")))
+        return;
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault();
         turn(e.key === "ArrowLeft" ? -1 : 1);
@@ -466,32 +412,59 @@ export function RPStage({
   const enterCompose = () => {
     if (current?.editing) return;
     live.current = true;
+    setAuto(false);
     setHistory(false);
     setCursor({ id: current?.id ?? -1, page: -1, compose: true });
   };
-  /** The native input lives in the dialogue box's bottom row; replying is focusing it. On a phone the
-      box itself turns into the input. */
-  const reply = () => {
-    if (mobile) enterCompose();
-    requestAnimationFrame(() => document.getElementById("send_textarea")?.focus());
+  const leaveCompose = () => {
+    setExpanded(false);
+    setCursor({ id: current?.id ?? -1, page: -1, compose: false });
   };
-  // The foot leaves a slot between the page dots and "continue"; the native form row fills it.
-  const slot = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    const node = slot.current;
-    if (!node) return;
-    const place = () => {
-      const deck = node.closest(".wb-rp-deck")!.getBoundingClientRect(),
-        rect = node.getBoundingClientRect();
-      document.body.style.setProperty("--wb-rp-field-left", Math.round(rect.left - deck.left) + "px");
-      document.body.style.setProperty("--wb-rp-field-right", Math.round(deck.right - rect.right) + "px");
+  /** Reading shows no input: replying turns the dialogue band into the native input. */
+  const reply = () => {
+    focusInput.current = true;
+    enterCompose();
+  };
+  /** Jump to the newest line of the conversation and follow it again. */
+  const skip = () => {
+    live.current = true;
+    setCursor({ id: messages.at(-1)?.id ?? -1, page: -1, compose: false });
+  };
+  // Auto play turns pages after a reading pause sized to the page; it stops at the newest line,
+  // and waits there while a reply is still streaming in.
+  useEffect(() => {
+    // Wait for the new message's pages to be measured before deciding it is the end.
+    if (!auto || !block || isHidden || current?.editing || paging.node !== current?.node) return;
+    if (atEnd) {
+      if (!snap.busy) setAuto(false);
+      return;
+    }
+    const chars = (block.textContent?.length || 0) / pageCount;
+    const timer = setTimeout(() => turnNow.current(1), Math.min(9000, Math.max(2600, 1800 + chars * 45)));
+    return () => clearTimeout(timer);
+  }, [auto, block, page, pageCount, atEnd, isHidden, current?.editing, snap.busy, paging.node]);
+  // A press on the text turns the page, as in a visual novel (on a phone the left third turns back).
+  useEffect(() => {
+    if (!block) return;
+    const chat = document.getElementById("chat")!;
+    const press = (e: MouseEvent) => {
+      if (
+        // Native actions the deck triggers are scripted clicks bubbling out of the message.
+        !e.isTrusted ||
+        e.button !== 0 ||
+        !getSelection()?.isCollapsed ||
+        (e.target as Element).closest(
+          "a,button,[role=button],.mes_button,.mes_buttons,.mes_edit_buttons,input,textarea,select,summary,iframe,video,audio,img,[contenteditable=true]",
+        )
+      )
+        return;
+      const rect = chat.getBoundingClientRect();
+      turnNow.current(mobile && e.clientX < rect.left + rect.width / 3 ? -1 : 1);
     };
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(node);
-    return () => observer.disconnect();
-  });
-  const visibleDots = current?.pages.map((_, i) => i).filter((i) => Math.abs(i - page) <= 3) || [];
+    chat.addEventListener("click", press);
+    return () => chat.removeEventListener("click", press);
+  }, [block, mobile]);
+  const visibleDots = Array.from({ length: pageCount }, (_, i) => i).filter((i) => Math.abs(i - page) <= 3);
   const replies = [...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(
     0,
     3,
@@ -552,79 +525,36 @@ export function RPStage({
       )}
       <section
         ref={deck}
-        className={`wb-rp-deck ${mobile ? "is-mobile" : width < 800 ? "is-compact" : ""} ${compose ? "is-compose" : ""} ${isHidden || history ? "is-hidden" : ""}`}
+        className={`wb-rp-deck ${mobile ? "is-mobile" : width < 800 ? "is-compact" : ""} ${compose ? "is-compose" : current?.editing ? "is-editing" : ""} ${isHidden || history ? "is-hidden" : ""}`}
         inert={isHidden || history}
         aria-label="RP 对白与输入"
       >
-        <div className="wb-rp-deck-bar">
-          {!expanded && !!replies.length && (
-            <div className="wb-rp-replies" role="group" aria-label="建议回应">
-              {replies.map((qr) => (
-                <button
-                  key={qr.key}
-                  title={qr.message}
-                  disabled={snap.busy}
-                  onClick={() => {
-                    host.setInput(qr.message || "");
-                    reply();
-                  }}
-                >
-                  {qr.label || qr.message?.slice(0, 45)}
-                </button>
-              ))}
-            </div>
-          )}
-          {mobile ? (
-            <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
-              {host.isGenerating() && (
-                <button
-                  className="wb-rp-tool"
-                  aria-label="停止生成"
-                  onClick={() => run(() => host.click("#mes_stop"))}
-                >
-                  <Square size={16} />
-                </button>
-              )}
-              {compose ? (
-                <button
-                  className="wb-rp-tool is-labelled"
-                  aria-label="返回对白"
-                  disabled={!current}
-                  onClick={() => setCursor({ id: current?.id ?? -1, page: -1, compose: false })}
-                >
-                  <ChevronLeft size={16} />
-                  对白
-                </button>
-              ) : (
-                <button
-                  className="wb-rp-tool is-labelled"
-                  aria-label="快进到你的回应"
-                  disabled={!!current?.editing}
-                  onClick={reply}
-                >
-                  <PencilLine size={15} />
-                  回应
-                </button>
-              )}
+        {!expanded && !!replies.length && (
+          <div className="wb-rp-replies" role="group" aria-label="建议回应">
+            {replies.map((qr) => (
               <button
-                className="wb-rp-tool"
-                aria-label="打开会话管理"
-                onClick={() => bus.emit("mobile-menu")}
+                key={qr.key}
+                title={qr.message}
+                disabled={snap.busy}
+                onClick={() => {
+                  host.setInput(qr.message || "");
+                  reply();
+                }}
               >
-                <MoreHorizontal size={18} strokeWidth={2.6} />
+                {qr.label || qr.message?.slice(0, 45)}
               </button>
-            </div>
-          ) : (
+            ))}
+          </div>
+        )}
+        {/* The name on the left; the quick menu on the right, faint until the pointer reaches it. */}
+        <div className="wb-rp-head">
+          <div className="wb-rp-plate">
+            {(compose || current?.user ? presentation.userPortrait : presentation.portrait) && (
+              <img src={compose || current?.user ? presentation.userPortrait : presentation.portrait} alt="" />
+            )}
+            <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
+          </div>
           <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
-            <button
-              className="wb-rp-tool"
-              aria-label="切换阅读布局"
-              title="切换阅读布局"
-              onClick={readingLayout}
-            >
-              <PanelBottom size={16} />
-            </button>
-            <RPAppearance host={host} />
             {host.isGenerating() && (
               <button
                 className="wb-rp-tool"
@@ -635,7 +565,31 @@ export function RPStage({
                 <Square size={16} />
               </button>
             )}
-            {current?.editing ? (
+            {compose ? (
+              <>
+                <button
+                  className="wb-rp-tool is-labelled"
+                  aria-label="返回对白"
+                  title="返回对白"
+                  disabled={!current}
+                  onClick={leaveCompose}
+                >
+                  <ChevronLeft size={16} />
+                  对白
+                </button>
+                {!mobile && (
+                  <button
+                    className="wb-rp-tool"
+                    aria-label={expanded ? "还原 RP 输入区" : "展开 RP 输入区"}
+                    title={expanded ? "还原输入区" : "展开输入区"}
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded(!expanded)}
+                  >
+                    {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                  </button>
+                )}
+              </>
+            ) : current?.editing ? (
               <>
                 <button
                   className="wb-rp-tool"
@@ -654,8 +608,32 @@ export function RPStage({
                   <X size={16} />
                 </button>
               </>
+            ) : mobile ? (
+              <button className="wb-rp-tool" aria-label="打开会话管理" onClick={() => bus.emit("mobile-menu")}>
+                <MoreHorizontal size={18} strokeWidth={2.6} />
+              </button>
             ) : (
               <>
+                <button
+                  className="wb-rp-tool"
+                  aria-label={auto ? "停止自动播放" : "自动播放"}
+                  title={auto ? "停止自动播放" : "自动播放"}
+                  aria-pressed={auto}
+                  disabled={!auto && atEnd}
+                  onClick={() => setAuto(!auto)}
+                >
+                  {auto ? <Pause size={16} /> : <Play size={16} />}
+                </button>
+                <button
+                  className="wb-rp-tool"
+                  aria-label="快进到最新对白"
+                  title="快进到最新对白"
+                  disabled={atEnd}
+                  onClick={skip}
+                >
+                  <FastForward size={16} />
+                </button>
+                <span className="wb-rp-tools-rule" aria-hidden="true" />
                 <button
                   className="wb-rp-tool"
                   aria-label={`${actionLabels.regenerate}当前回复`}
@@ -669,7 +647,7 @@ export function RPStage({
                   className="wb-rp-tool"
                   aria-label="编辑当前对白"
                   title="编辑当前对白"
-                  disabled={snap.busy || !current || compose}
+                  disabled={snap.busy || !current}
                   onClick={() => nativeAction(".mes_edit")}
                 >
                   <PencilLine size={16} />
@@ -679,65 +657,38 @@ export function RPStage({
                     className="wb-rp-tool"
                     aria-label="为当前对白生图"
                     title="为当前对白生图"
-                    disabled={snap.busy || !current || compose}
+                    disabled={snap.busy || !current}
                     onClick={() => beginImage(host, current!.id)}
                   >
                     <ImagePlus size={16} />
                   </button>
                 )}
+                <span className="wb-rp-tools-rule" aria-hidden="true" />
+                <RPAppearance host={host} />
+                <button
+                  className="wb-rp-tool"
+                  aria-label="切换阅读布局"
+                  title="切换阅读布局"
+                  onClick={readingLayout}
+                >
+                  <PanelBottom size={16} />
+                </button>
               </>
             )}
-            <button
-              className="wb-rp-tool"
-              aria-label={compose ? "还原 RP 输入区" : "展开 RP 输入区"}
-              title={compose ? "还原输入区" : "展开输入区"}
-              aria-expanded={compose}
-              disabled={!current || !!current.editing}
-              onClick={() => {
-                if (compose) {
-                  setExpanded(false);
-                  setCursor({ id: current?.id ?? -1, page: -1, compose: false });
-                } else {
-                  enterCompose();
-                  setExpanded(true);
-                }
-              }}
-            >
-              {compose ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
+          </div>
+        </div>
+        {/* Turning pages: back, the page marks, forward (past the last page is your reply). */}
+        {!compose && !current?.editing && (
+          <div className="wb-rp-foot">
             <button
               className="wb-rp-tool"
               aria-label="上一段对白"
               title="上一段对白"
-              disabled={
-                (!compose && current === messages[0] && page === 0 && !scroll.scrolled) ||
-                !current ||
-                current.editing
-              }
+              disabled={!current || current.editing || (current === messages[0] && page === 0)}
               onClick={() => turn(-1)}
             >
               <ChevronLeft size={16} />
             </button>
-            <button
-              className="wb-rp-tool"
-              aria-label="下一段对白或输入"
-              title="下一段对白或输入"
-              disabled={compose || !!current?.editing}
-              onClick={() => turn(1)}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-          )}
-        </div>
-        <div className="wb-rp-plate">
-          {(compose || current?.user ? presentation.userPortrait : presentation.portrait) && (
-            <img src={compose || current?.user ? presentation.userPortrait : presentation.portrait} alt="" />
-          )}
-          <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
-        </div>
-        {!compose && (
-          <div className="wb-rp-foot">
             <div className="wb-rp-dots">
               {visibleDots.map((index) => (
                 <button
@@ -752,15 +703,19 @@ export function RPStage({
                 />
               ))}
             </div>
-            <span className="wb-rp-field-slot" ref={slot} />
+            <button
+              className="wb-rp-tool"
+              aria-label="下一段对白或输入"
+              title={atEnd ? "轮到你回应" : "下一段对白"}
+              disabled={!!current?.editing}
+              onClick={() => turn(1)}
+            >
+              <ChevronRight size={16} />
+            </button>
             {!current?.editing && (
-              <button className="wb-rp-next" onClick={() => turn(1)}>
-                {!scroll.end
-                  ? "继续阅读"
-                  : page + 1 === current?.pages.length && current === messages.at(-1)
-                    ? "轮到你回应"
-                    : "下一段"}
-                <ArrowRight size={14} />
+              <button className="wb-rp-reply" aria-label="快进到你的回应" title="直接回应" onClick={reply}>
+                <PencilLine size={15} />
+                回应
               </button>
             )}
           </div>
@@ -774,8 +729,7 @@ export function RPStage({
           aria-pressed={history}
           onClick={() => setHistory(!history)}
         >
-          <History size={16} aria-hidden="true" />
-          {history ? "对白" : "记录"}
+          <History size={18} aria-hidden="true" />
         </button>
       )}
       {history && (
