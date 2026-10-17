@@ -3535,12 +3535,18 @@ body.wb-active.wb-mobile {
   --wb-mobile-chrome: 110px;
   --wb-safe-top: env(safe-area-inset-top, 0px);
   --wb-safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Dialogue quotes stay in the reading ink, as on the boards. */
+  --SmartThemeQuoteColor: var(--wb-ink-1);
   width: 100%;
   overflow: hidden;
   overscroll-behavior: none;
 }
 body.wb-active.wb-mobile-rp {
   --wb-mobile-chrome: 64px;
+}
+/* Focus keeps a strip for "退出专注" only. */
+body.wb-active.wb-mobile.wb-focus:not(.wb-mobile-rp) {
+  --wb-mobile-chrome: 48px;
 }
 body.wb-active.wb-mobile #sheld {
   inset: auto 0 auto 0 !important;
@@ -3673,6 +3679,12 @@ body.wb-mobile #chat .wb-image-message-button {
   align-items: center;
   justify-content: center;
 }
+/* The ellipsis is a font glyph: centre it on the same 40px square as the drawn icons. */
+body.wb-active.wb-mobile #chat .mes_buttons .extraMesButtonsHint {
+  padding: 0;
+  line-height: 40px;
+  text-align: center;
+}
 body.wb-active.wb-mobile #chat .swipe_left,
 body.wb-active.wb-mobile #chat .swipeRightBlock {
   bottom: -6px;
@@ -3701,6 +3713,10 @@ body.wb-active.wb-mobile #form_sheld {
   background: var(--wb-m-paper) !important;
   container-type: normal;
   z-index: 4;
+}
+/* The ⋯ session key (layouts/pwa.css) stands to the pill's left. */
+body.wb-active.wb-mobile:not(.wb-mobile-editor) #form_sheld {
+  padding-left: 68px !important;
 }
 /* Reading fades into the composer instead of meeting a rule. */
 body.wb-active.wb-mobile:not(.wb-mobile-rp):not(.wb-mobile-editor) #form_sheld::before {
@@ -3841,65 +3857,331 @@ body.wb-active.wb-mobile.wb-mobile-editor :is(#leftSendForm, .wb-composer-action
   grid-row: 2;
 }
 
-/* ── RP: the scene is the page. Native backgrounds show and the stage holds one frosted line of
-   dialogue, the newest message, so the figure stays in view. 查看对话记录 (wb-mobile-history) turns
-   the chat into the full log over a dimmed scene. Header drag or the eye lowers the dialogue. ── */
-body.wb-mobile-keyboard.wb-mobile-rp {
-  --wb-mobile-lower: 0px !important;
-}
-body.wb-mobile-keyboard .wb-mobile-scene {
-  visibility: hidden;
-}
-body.wb-mobile-rp {
+/* ── RP (board "RpPwa"): the scene is the page. RPStage, shared with the desk, shows one page of one
+   message in a frosted box above the bottom edge. Reading has no input field: 回应, or "轮到你回应"
+   on the last page, turns the box itself into the input (wb-rp-compose). Pulling the box up past
+   the end of its text opens the log (wb-rp-history). Panes hang from the top of the visible
+   viewport (SillyTavern's translateZ on <html>, which is 0px tall here, would pin anything placed
+   by `bottom` to the page top), so the box rides up with the keyboard while the scene keeps the
+   large viewport and nothing shrinks. ── */
+body.wb-active.wb-mobile-rp {
+  --wb-rp-ink-1: #2f2c27;
+  --wb-rp-ink-2: #5f574b;
+  --wb-rp-ink-3: #7a7266;
+  --wb-rp-line: rgb(60 45 30 / 10%);
+  --wb-rp-glass: rgb(255 253 248 / 76%);
+  --wb-rp-box: rgb(255 253 248 / 88%);
+  --wb-rp-field: rgb(60 45 30 / 6%);
+  --wb-rp-plate: #2f2c27;
+  --wb-rp-plate-ink: #fffefa;
+  --wb-rp-dot: rgb(60 45 30 / 22%);
+  --wb-rp-on-accent: #fffefa;
+  --wb-rp-tint: rgb(255 250 240 / 6%);
+  --wb-rp-scrim: rgb(250 246 238 / 50%);
+  --wb-rp-shadow: 0 8px 24px rgb(52 41 30 / 12%);
+  --wb-rp-plate-shadow: 0 1px 2px rgb(52 41 30 / 8%);
+  --wb-rp-chrome: 0px;
+  --wb-rp-bottom: max(14px, var(--wb-safe-bottom));
+  /* Where the box's top edge sits: the visible viewport's bottom, less the margin and the box. */
+  --wb-rp-box-top: calc(
+    var(--wb-mobile-top, 0px) + var(--wb-mobile-height, 100dvh) - var(--wb-rp-bottom) - var(--wb-rp-deck)
+  );
+  /* Pulling the box up (RPStage writes a negative --wb-rp-pull) stretches it with the finger. */
+  --wb-rp-deck: calc(clamp(180px, 25lvh, 260px) + max(0px, -1 * var(--wb-rp-pull, 0px)));
+  --wb-rp-dialog-left: 12px;
+  --wb-rp-dialog-width: calc(100vw - 24px);
+  --wb-rp-bar-height: 36px;
+  --wb-rp-bar-gap: 28px;
   --wb-reading-size: 17px;
   --wb-reading-leading: 1.8;
+}
+:root[data-wb-theme="dark"] body.wb-active.wb-mobile-rp {
+  --wb-rp-ink-1: #f3eee5;
+  --wb-rp-ink-2: #d2c8b8;
+  --wb-rp-ink-3: #a89e8f;
+  --wb-rp-line: rgb(255 255 255 / 10%);
+  --wb-rp-glass: rgb(30 26 22 / 58%);
+  --wb-rp-box: rgb(26 22 19 / 76%);
+  --wb-rp-field: rgb(255 255 255 / 8%);
+  --wb-rp-plate: #f3eee5;
+  --wb-rp-plate-ink: #2a2420;
+  --wb-rp-dot: rgb(255 255 255 / 30%);
+  --wb-rp-on-accent: #1b1916;
+  --wb-rp-tint: rgb(20 14 10 / 18%);
+  --wb-rp-scrim: rgb(16 12 9 / 60%);
+  --wb-rp-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+  --wb-rp-plate-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+}
+body.wb-active.wb-mobile-rp.no-blur {
+  --wb-rp-glass: rgb(255 253 248 / 92%);
+  --wb-rp-box: rgb(255 253 248 / 95%);
+}
+:root[data-wb-theme="dark"] body.wb-active.wb-mobile-rp.no-blur {
+  --wb-rp-glass: rgb(30 26 22 / 90%);
+  --wb-rp-box: rgb(26 22 19 / 93%);
 }
 body.wb-active.wb-mobile-rp :is(#bg1, #bg_custom) {
   opacity: 1 !important;
 }
-body.wb-mobile .wb-mobile-scene {
-  width: 100vw;
-  height: 100dvh;
+body.wb-mobile-rp :is(#expression-wrapper, #visual-novel-wrapper) {
+  opacity: 0 !important;
   pointer-events: none !important;
 }
-body.wb-mobile-dragging #sheld {
+/* The scene is sized by the large viewport: a keyboard or a collapsing toolbar never rescales it. */
+body.wb-mobile-rp .wb-rp-stage {
+  inset: 0 0 auto;
+  height: 100lvh;
+}
+body.wb-mobile-rp .wb-rp-atmosphere {
+  background:
+    linear-gradient(to bottom, transparent calc(100% - 420px), var(--wb-rp-scrim) calc(100% - 190px)),
+    var(--wb-rp-tint);
+}
+body.wb-mobile-rp .wb-rp-actor {
+  left: 50%;
+}
+body.wb-mobile-rp .wb-rp-stage .is-sprite {
+  bottom: 17lvh;
+  height: 71lvh;
+  max-width: 100vw;
+}
+body.wb-mobile-rp .wb-rp-stage .is-portrait {
+  top: calc(var(--wb-safe-top) + 84px);
+  height: min(300px, 38lvh);
+  width: min(220px, 58vw);
+}
+body.wb-active.wb-mobile.wb-mobile-rp #sheld {
+  inset: var(--wb-rp-box-top) 12px auto 12px !important;
+  top: var(--wb-rp-box-top) !important;
+  width: auto !important;
+  height: var(--wb-rp-deck) !important;
+  display: block !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--wb-rp-box) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    var(--wb-rp-shadow),
+    0 0 0 1px var(--wb-rp-line) !important;
+  overflow: hidden;
+  z-index: 2;
+  transition:
+    height 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
+    top 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
+    border-radius 260ms,
+    opacity 180ms,
+    visibility 180ms;
+}
+body.wb-mobile-rp.wb-rp-pulling #sheld {
   transition: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #sheld,
-body.wb-active.wb-mobile.wb-mobile-rp #form_sheld {
-  background: transparent !important;
+body.wb-mobile-rp.wb-focus #sheld {
+  opacity: 0;
+  visibility: hidden;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #chat {
-  display: flex !important;
-  flex-direction: column;
-  padding: 0 12px 6px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-history) #chat > .mes:has(~ .mes) {
-  display: none !important;
-}
-/* The line sits on the composer; a long reply scrolls inside its own box. */
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-history) #chat > .mes:not(:has(~ .mes)) {
-  margin-top: auto !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-history) #chat > .mes:not(:has(~ .mes)) .mes_text {
-  max-height: calc(var(--wb-mobile-height, 100dvh) * 0.32);
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history):not(.wb-mobile-editor) #chat {
+  position: absolute;
+  inset: 0 0 48px;
+  height: auto;
+  display: block !important;
+  padding: 28px 18px 4px !important;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  transition:
+    opacity 160ms,
+    transform 220ms cubic-bezier(0.22, 0.8, 0.3, 1),
+    visibility 160ms;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-history #chat > .mes:first-of-type {
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history)
+  :is(#chat > .mes:not(.wb-rp-current), #chat > #show_more_messages) {
+  display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .mes {
+  display: block !important;
+  width: 100%;
+  max-width: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .mes_block {
+  padding: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+body.wb-mobile-rp:not(.wb-rp-history)
+  #chat
+  .mes:not(:has(.edit_textarea))
+  :is(.mesAvatarWrapper, .ch_name, .mes_buttons) {
+  display: none !important;
+}
+body.wb-mobile-rp:not(.wb-rp-history) #chat .mes:has(.edit_textarea) .mesAvatarWrapper {
+  display: none !important;
+}
+body.wb-mobile-rp #chat .mes :is(.wb-user-heading, .swipe_left, .swipeRightBlock, .swipe_right, .swipes-counter) {
+  display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--wb-rp-ink-1) !important;
+  font: 17px / 1.8 var(--wb-font-reading) !important;
+  letter-spacing: 0.01em;
+}
+body.wb-mobile-rp #chat .mes_text :is(q, em, i) {
+  color: inherit;
+}
+body.wb-mobile-rp:not(.wb-rp-history) #chat .mes_text p {
+  margin: 0 0 0.6em;
+}
+body.wb-mobile-rp:not(.wb-rp-history) #chat .wb-rp-part:not(.wb-rp-part-active) {
+  display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) .ch_name {
+  display: flex !important;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) :is(.name_text, .timestamp, .wb-reading-meta) {
+  display: none !important;
+}
+body.wb-mobile-rp #chat .mes:has(.edit_textarea) .mes_buttons {
+  display: flex !important;
+}
+body.wb-mobile-rp #chat .edit_textarea {
+  min-height: 120px;
+  width: 100%;
+  font: 16px / 1.7 var(--wb-font-reading);
+  color: var(--wb-rp-ink-1);
+}
+
+/* Compose: the box is the input — the field fills it, ＋ and send on its bottom row. */
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #form_sheld {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100%;
+  padding: 0 !important;
+  background: transparent !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(16px);
+  transition:
+    opacity 160ms,
+    transform 240ms cubic-bezier(0.22, 0.8, 0.3, 1),
+    visibility 160ms;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history) #chat {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-14px);
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history):not(.wb-mobile-editor) #form_sheld {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #send_form {
+  height: 100% !important;
+  padding: 30px 10px 10px 14px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor):not(.wb-image-input-mode) #nonQRFormItems {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) 44px;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor):not(.wb-image-input-mode) #send_textarea {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  align-self: stretch;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 0 4px !important;
+  field-sizing: fixed;
+  color: var(--wb-rp-ink-1) !important;
+  font: 17px / 1.8 var(--wb-font-reading) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #send_textarea::placeholder {
+  color: var(--wb-rp-ink-3);
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor):not(.wb-image-input-mode) #rightSendForm {
+  grid-row: 2;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #send_but {
+  background: var(--wb-accent) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp #send_but :is(.wb-native-icon, .wb-native-icon *) {
+  color: var(--wb-rp-on-accent) !important;
+}
+body.wb-mobile-rp :is(#leftSendForm, .wb-composer-actions, .wb-input-grip) {
+  display: none !important;
+}
+/* The full-screen editor is fixed to the window, so the box lets go of its frost and frame first
+   (a backdrop filter would make it the editor's containing block). */
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #sheld {
+  inset: var(--wb-mobile-top, 0px) 0 auto 0 !important;
+  top: var(--wb-mobile-top, 0px) !important;
+  height: var(--wb-mobile-height, 100dvh) !important;
+  border-radius: 0 !important;
+  background: var(--wb-surface-0) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #chat {
+  display: none !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_form {
+  background: var(--wb-surface-0) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_textarea {
+  color: var(--wb-ink-1) !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #nonQRFormItems {
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #rightSendForm {
+  grid-column: 3;
+}
+
+/* History (board "RpHistory" on a phone): one frosted pane from under the header to the bottom,
+   each line its own box with the speaker's plate; the user's lines mirror to the right. */
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #sheld {
+  inset: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 66px) 0 auto 0 !important;
+  top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 66px) !important;
+  height: calc(var(--wb-mobile-height, 100dvh) - var(--wb-safe-top) - 66px) !important;
+  border-radius: 22px 22px 0 0 !important;
+  transform: translateY(max(0px, var(--wb-rp-pull, 0px)));
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat {
+  position: absolute;
+  inset: 56px 0 0;
+  height: auto;
+  display: flex !important;
+  flex-direction: column;
+  padding: 16px 12px max(24px, var(--wb-safe-bottom)) !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat > .mes:first-of-type {
   margin-top: auto !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-history:not(.wb-mobile-editor) #sheld {
-  background: var(--wb-m-log) !important;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+body.wb-mobile-rp.wb-rp-history #form_sheld {
+  display: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-history:not(.wb-mobile-editor) #chat {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 36px);
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes {
   position: relative;
   display: block !important;
   width: 100%;
@@ -3909,31 +4191,20 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
-  color: var(--wb-m-ink-1);
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_block {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes_block {
   min-width: 0;
   width: auto;
   max-width: none;
-  padding: 24px 18px 14px !important;
-  border-radius: 20px;
-  background: var(--wb-m-box);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  box-shadow:
-    var(--wb-m-shadow),
-    0 0 0 1px var(--wb-m-line);
+  padding: 24px 16px 12px !important;
+  border-radius: 18px;
+  background: var(--wb-rp-field);
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
-  margin: 0 !important;
-  color: var(--wb-m-ink-1) !important;
-  font-family: var(--wb-font-reading) !important;
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes_text {
+  font-size: 16px !important;
+  line-height: 1.75 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text :is(q, em, i) {
-  color: inherit;
-}
-/* The speaker's name plate sits on the top edge of the box, the avatar inset at its start. */
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not(:has(.edit_textarea)) .ch_name {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes:not(:has(.edit_textarea)) .ch_name {
   position: absolute !important;
   top: -16px;
   left: 14px;
@@ -3946,17 +4217,17 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:not(:has(.edit_textarea)) .ch_n
   max-width: calc(100% - 28px);
   padding: 0 14px 0 34px !important;
   border-radius: 16px;
-  background: var(--wb-m-plate);
-  color: var(--wb-m-plate-ink);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
+  background: var(--wb-rp-plate);
+  color: var(--wb-rp-plate-ink);
+  box-shadow: var(--wb-rp-plate-shadow);
   font: 600 14px/1 var(--wb-font-ui);
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .ch_name div {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .ch_name div {
   flex: none !important;
   width: auto !important;
   min-width: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .ch_name .name_text {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .ch_name .name_text {
   display: block !important;
   color: inherit !important;
   font: inherit;
@@ -3964,116 +4235,61 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .ch_name .name_text {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-body.wb-active.wb-mobile.wb-mobile-rp
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history
   #chat
   .mes:not(:has(.edit_textarea))
   .ch_name
   :is(.timestamp, .wb-reading-meta, .mes_ghost, .mes_buttons) {
   display: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper {
   position: absolute;
   top: -13px;
   left: 17px;
   z-index: 2;
   display: block !important;
-  --wb-m-avatar: 26px;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper {
-  width: var(--wb-m-avatar, 28px) !important;
+  width: 26px !important;
   min-width: 0 !important;
-  height: var(--wb-m-avatar, 28px) !important;
+  height: 26px !important;
   min-height: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper > .avatar {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper > .avatar {
   display: block !important;
-  width: var(--wb-m-avatar, 28px) !important;
-  height: var(--wb-m-avatar, 28px) !important;
+  width: 26px !important;
+  height: 26px !important;
   margin: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes .mesAvatarWrapper > .avatar img {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper > .avatar img {
   display: block;
-  width: var(--wb-m-avatar, 28px) !important;
-  height: var(--wb-m-avatar, 28px) !important;
+  width: 26px !important;
+  height: 26px !important;
   min-width: 0 !important;
   border-radius: 50%;
   object-fit: cover;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mesAvatarWrapper > :not(.avatar) {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mesAvatarWrapper > :not(.avatar) {
   display: none !important;
 }
-/* The user's lines mirror the speaker's: the same box, tinted with the accent, the plate on the right.
-   The row stays a reversed flex row so the avatar keeps its place for native layouts. */
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] {
+/* The row stays a reversed flex row so the avatar keeps its place for native layouts. */
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"] {
   display: flex !important;
   flex-direction: row-reverse;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mes_block {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"] .mes_block {
   flex: 1;
-  background: var(--wb-m-box-user);
+  background: color-mix(in srgb, var(--wb-accent) 12%, var(--wb-rp-field));
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"]:not(:has(.edit_textarea)) .ch_name {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"]:not(:has(.edit_textarea)) .ch_name {
   left: auto !important;
   right: 14px !important;
   padding: 0 34px 0 14px !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes[is_user="true"] .mesAvatarWrapper {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"] .mesAvatarWrapper {
   left: auto;
   right: 17px;
 }
-body.wb-mobile-rp
-  #chat
-  .mes
-  :is(.wb-user-heading, .swipe_left, .swipeRightBlock, .swipe_right, .swipes-counter) {
+body.wb-mobile-rp.wb-rp-history #chat .mes:not(:has(.edit_textarea)) .mes_buttons {
   display: none !important;
-}
-body.wb-mobile-rp #chat .mes:not(:has(.edit_textarea)) .mes_buttons {
-  display: none !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) .ch_name {
-  display: flex !important;
-  margin-bottom: 8px;
-}
-body.wb-mobile-rp #chat .mes:has(.edit_textarea) .mes_buttons {
-  display: flex !important;
-}
-body.wb-mobile-rp #chat .edit_textarea {
-  min-height: 160px;
-  width: 100%;
-  font-size: 16px;
-  color: var(--wb-m-ink-1);
-}
-/* The composer is one more frosted pill on the scene. */
-body.wb-active.wb-mobile.wb-mobile-rp #form_sheld {
-  padding: 10px 12px max(16px, var(--wb-safe-bottom)) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #send_form {
-  padding: 5px !important;
-  background: var(--wb-m-box) !important;
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 0 0 1px var(--wb-m-line) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #send_textarea {
-  color: var(--wb-m-ink-1) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp #send_textarea::placeholder {
-  color: var(--wb-m-ink-3);
-}
-body.wb-mobile-rp :is(#leftSendForm, .wb-composer-actions, .wb-input-grip) {
-  display: none !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_form {
-  background: var(--wb-m-paper) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_textarea {
-  color: var(--wb-ink-1) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #nonQRFormItems {
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #rightSendForm {
-  grid-column: 3;
 }
 
 /* ── Manual image mode stays inside the native composer, including reference uploads ── */
@@ -4207,11 +4423,6 @@ body.wb-active:not(.wb-rp):not(.wb-mobile) #send_textarea {
 :is(#wb-root, #wb-layout-root, .wb-ui, #wb-x#wb-x#wb-x#wb-x#wb-x)
   *:not(.wb-native-embedded, .wb-native-embedded *) {
   all: revert-layer;
-}
-
-/* PWA RP: the reply chips float over the stage foot, so the chat keeps room for them. */
-body.wb-mobile-rp:not(.wb-mobile-editor):has(.wb-mobile-replies) #chat {
-  padding-bottom: 48px !important;
 }
 
 /* Board "Main": the send button keeps its place at the end of the tool row. SillyTavern hides it

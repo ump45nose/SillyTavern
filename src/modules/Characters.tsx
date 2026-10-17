@@ -224,7 +224,7 @@ function CharacterPanel({ host, onManage }: { host: HostAdapter; onManage?: (gro
           </p>
           <footer className="wb-character-actions">
             <button
-              className="wb-character-start"
+              className={`wb-character-start ${item.active ? "is-current" : ""}`}
               disabled={task.busy || !!item.active}
               onClick={() => task.run(() => host.selectCharacter(item.id))}
             >

@@ -781,7 +781,7 @@ export function ReadingForm({ host }: { host: HostAdapter }) {
               onChange={(v) => host.preference({ userCollapsed: v })}
             />
           </div>
-          <div className="wb-reading-row">
+          <div className="wb-reading-row is-pointer-only">
             <span>
               边缘悬停展开侧栏
               <small>鼠标停在窗口左右边缘时临时展开收起的侧栏</small>

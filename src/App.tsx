@@ -1,5 +1,6 @@
 import React, {
   Suspense,
+  startTransition,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -367,7 +368,9 @@ export default function App({
   }, []);
   useEffect(() => {
     if (shown) {
-      setRenderedPanel(shown);
+      // Switching tabs: the tab answers at once and the next panel mounts without blocking that paint.
+      if (renderedPanel) startTransition(() => setRenderedPanel(shown));
+      else setRenderedPanel(shown);
       return;
     }
     const timer = setTimeout(() => setRenderedPanel(null), 220);
@@ -509,6 +512,8 @@ export default function App({
           select={(kind, id, enabled) => {
             void task.run(() => (kind === "world" ? host.toggleBook(id, enabled) : host.select(kind, id)));
           }}
+          focus={focus}
+          toggleFocus={toggleFocus}
         />
       )}
       {!mobile && (
@@ -672,9 +677,9 @@ export default function App({
         }
       />
       <aside
-        className={`wb-right ${shown && !focus ? "is-open" : ""}`}
-        inert={!shown || focus}
-        aria-hidden={!shown || focus}
+        className={`wb-right ${shown && (mobile || !focus) ? "is-open" : ""}`}
+        inert={!shown || (focus && !mobile)}
+        aria-hidden={!shown || (focus && !mobile)}
         aria-label="角色与资源"
         style={{ "--wb-panel-rail": `${railShown ? sizes.rail : 0}px` } as React.CSSProperties}
       >
@@ -774,17 +779,18 @@ export default function App({
           </IconButton>
         </div>
       )}
-      {rp && !mobile ? (
+      {rp ? (
         <RPStage
           host={host}
           hidden={focus}
-          blocked={width <= 1100 && !!(navigationShown || shown)}
-          width={stageWidth(s, hovered, sizes)}
+          blocked={!mobile && width <= 1100 && !!(navigationShown || shown)}
+          width={mobile ? width : stageWidth(s, hovered, sizes)}
           readingLayout={() => onLayout("novel")}
           run={task.run}
+          mobile={mobile}
         />
       ) : (
-        <ReadingPresentation host={host} chatStyle={mobile && rp} />
+        <ReadingPresentation host={host} />
       )}
       {popupPresence.value && (
         <ComposerPopovers
@@ -806,6 +812,7 @@ export default function App({
             initial={workspacePresence.value.initial}
             exiting={workspacePresence.exiting}
             onClose={() => dispatch({ type: "close-settings" })}
+            mobile={mobile}
           />
         </Suspense>
       )}

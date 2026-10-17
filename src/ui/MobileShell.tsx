@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
   ArrowLeft,
@@ -10,14 +10,15 @@ import {
   Copy,
   Expand,
   Eye,
+  EyeOff,
   Folder,
-  History,
   ImagePlus,
   Menu,
   MenuDrawer,
   MoreHorizontal,
   PanelsTopLeft,
   PencilLine,
+  ScanLine,
   Plus,
   Settings,
   Theater,
@@ -34,7 +35,7 @@ import type { ComposerPopup } from "./ComposerPopovers";
 import { ResourceControls } from "./Header";
 import { ReadingSettings } from "./Reading";
 import { composerTools, toolIcon } from "./ToolIcon";
-import { usePresence } from "./Motion";
+import { motionAllowed, usePresence } from "./Motion";
 import { bus } from "../host/bus";
 
 type Sheet = "management" | "tools" | HTMLElement | null;
@@ -56,6 +57,8 @@ export function MobileShell({
   activate,
   next,
   select,
+  focus,
+  toggleFocus,
 }: {
   host: HostAdapter;
   snap: HostSnapshot;
@@ -73,25 +76,20 @@ export function MobileShell({
   activate: (id: string, anchor: HTMLElement) => void;
   next: (kind: Resource) => unknown;
   select: (kind: Resource, id: string, on: boolean) => void;
+  /** Focus mode: Noval keeps only the reading and the composer; RP hides every pane. */
+  focus: boolean;
+  toggleFocus: () => void;
 }) {
   const [sheet, setSheet] = useState<Sheet>(null),
     [editor, setEditor] = useState(false),
     [collapsed, setCollapsed] = useState(true),
-    [lower, setLower] = useState(0),
-    [history, setHistory] = useState(false),
-    [length, setLength] = useState(0),
-    [mediaVersion, setMediaVersion] = useState(0);
+    [length, setLength] = useState(0);
   const presence = usePresence(sheet),
     sheetRef = useRef<HTMLDivElement>(null),
-    header = useRef<HTMLElement>(null),
     input = document.getElementById("send_textarea") as HTMLTextAreaElement,
     form = document.getElementById("send_form")!,
     items = document.getElementById("nonQRFormItems")!;
-  const drag = useRef<{ pointer: number; y: number; lower: number; next: number; moved: boolean } | null>(
-      null,
-    ),
-    skipClick = useRef(0),
-    latest = useRef({ left, panel, editor, sheet });
+  const latest = useRef({ left, panel, editor, sheet });
   latest.current = { left, panel, editor, sheet };
   const close = () => {
       setSheet(null);
@@ -102,11 +100,6 @@ export function MobileShell({
       setChooser(null);
       setEditor(value);
     };
-  const stageLimit = () =>
-    Math.max(
-      0,
-      Math.min((visualViewport?.height ?? innerHeight) * 0.48, (visualViewport?.height ?? innerHeight) - 280),
-    );
   const presentation = host.rpPresentation();
   // Novel names the story; RP names the scene, falling back to the story when the card has none.
   const scene = (key: string) => {
@@ -128,9 +121,6 @@ export function MobileShell({
     ]
       .filter(Boolean)
       .join(" · ");
-  const replies = rp
-    ? ([...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(0, 3) as any[])
-    : [];
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-mobile-busy", snap.busy);
     document.body.classList.toggle("wb-mobile-offline", !snap.online);
@@ -139,29 +129,13 @@ export function MobileShell({
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-mobile-editor", editor);
     document.body.classList.toggle("wb-mobile-tools", sheet === "tools");
-    document.body.classList.toggle("wb-mobile-lowered", lower > 0);
-    document.body.classList.toggle("wb-mobile-history", rp && history);
-    document.body.style.setProperty("--wb-mobile-lower", `${editor ? 0 : lower}px`);
     return () => {
-      document.body.classList.remove(
-        "wb-mobile-editor",
-        "wb-mobile-tools",
-        "wb-mobile-lowered",
-        "wb-mobile-history",
-      );
-      document.body.style.removeProperty("--wb-mobile-lower");
+      document.body.classList.remove("wb-mobile-editor", "wb-mobile-tools");
     };
-  }, [editor, sheet, lower, history, rp]);
-  // The log opens at its newest line, like the stage it replaces.
-  useLayoutEffect(() => {
-    const chat = document.getElementById("chat");
-    chat?.scrollTo({ top: chat.scrollHeight, behavior: "instant" });
-  }, [history]);
+  }, [editor, sheet]);
   useEffect(() => {
     setSheet(null);
     setEditor(false);
-    setLower(0);
-    setHistory(false);
   }, [rp, snap.chatName, snap.character?.id]);
   useEffect(() => {
     const changed = () => {
@@ -175,24 +149,22 @@ export function MobileShell({
         setEditor(false);
         closeDrawers();
       };
-    const off = [bus.on("mobile-editor-open", edit), bus.on("image-compose", image)];
-    const nativeEdit = (e: Event) => {
-      if ((e.target as Element)?.closest(".mes_edit")) setLower(0);
-    };
-    document.getElementById("chat")?.addEventListener("click", nativeEdit);
+    const off = [
+      bus.on("mobile-editor-open", edit),
+      bus.on("image-compose", image),
+      bus.on("mobile-menu", () => setSheet("management")),
+      // A floor picked in the outline is also selected, so its tools are one tap away.
+      bus.on("floor-jump", (id) => {
+        const chat = document.getElementById("chat")!;
+        chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
+        chat.querySelector(`.mes[mesid="${id}"]`)?.classList.add("wb-mobile-actions");
+      }),
+    ];
     return () => {
       input.removeEventListener("input", changed);
       off.forEach((f) => f());
-      document.getElementById("chat")?.removeEventListener("click", nativeEdit);
     };
   }, []);
-  useEffect(() => {
-    const resize = () => setLower((value) => Math.min(value, stageLimit()));
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
-  // The live expression remains owned by its native extension; only its URL is presented here.
-  useEffect(() => host.media.subscribe(() => setMediaVersion((v) => v + 1)), [host]);
   useLayoutEffect(() => {
     const chat = document.getElementById("sheld")!,
       previous = chat.inert;
@@ -212,7 +184,9 @@ export function MobileShell({
     if (!target) return;
     const previous = document.activeElement as HTMLElement,
       frame = requestAnimationFrame(() => {
-        const close = document.querySelector<HTMLElement>(".wb-mobile-drawer-close");
+        const close = document.querySelector<HTMLElement>(
+          left ? ".wb-mobile-drawer-close" : ".wb-panel-close",
+        );
         (sheet ? sheetRef.current?.querySelector<HTMLElement>("button") : close)?.focus({
           preventScroll: true,
         });
@@ -255,67 +229,47 @@ export function MobileShell({
       if (previous?.isConnected && previous.tagName !== "TEXTAREA") previous.focus({ preventScroll: true });
     };
   }, [left, panel, !!sheet]);
+  // The panel's tab row scrolls; keep the open tab in view.
+  useEffect(() => {
+    if (!panel) return;
+    const frame = requestAnimationFrame(() => {
+      const tab = document.querySelector<HTMLElement>(".wb-right .wb-panel-tab.is-active"),
+        row = tab?.parentElement;
+      row?.scrollTo({
+        left: tab!.offsetLeft - row.offsetLeft - (row.clientWidth - tab!.offsetWidth) / 2,
+        behavior: motionAllowed() ? "smooth" : "auto",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [panel]);
+  // RP: a long press on the latest reply opens its actions (the dialogue box itself turns pages).
   useEffect(() => {
     const chat = document.getElementById("chat")!;
-    let start: { x: number; y: number; target: Element; pointer: number } | null = null,
-      press: ReturnType<typeof setTimeout> | undefined;
+    let press: ReturnType<typeof setTimeout> | undefined,
+      origin: { x: number; y: number } | null = null;
     const cancel = () => {
       clearTimeout(press);
       press = undefined;
+      origin = null;
     };
     const down = (e: PointerEvent) => {
-      const selection = getSelection(),
-        anchor =
-          selection?.anchorNode instanceof Element
-            ? selection.anchorNode
-            : selection?.anchorNode?.parentElement;
+      if (!rp || e.button !== 0 || e.pointerType !== "touch") return;
+      const message = (e.target as Element).closest<HTMLElement>(".mes");
       if (
-        e.button !== 0 ||
-        e.pointerType !== "touch" ||
-        (e.target as Element).closest(interactive) ||
-        (selection?.toString() && anchor?.closest("#chat"))
+        !message ||
+        message !== chat.querySelector(".mes:last-child") ||
+        message.getAttribute("is_user") === "true"
       )
         return;
-      start = { x: e.clientX, y: e.clientY, target: e.target as Element, pointer: e.pointerId };
-      if (rp) {
-        const message = (e.target as Element).closest<HTMLElement>(".mes");
-        const last = chat.querySelector(".mes:last-child");
-        if (message && message === last && message.getAttribute("is_user") !== "true")
-          press = setTimeout(() => {
-            setSheet(message);
-            start = null;
-          }, 550);
-      }
+      origin = { x: e.clientX, y: e.clientY };
+      press = setTimeout(() => {
+        cancel();
+        setSheet(message);
+      }, 550);
     };
     const move = (e: PointerEvent) => {
-      if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancel();
+      if (origin && Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > 10) cancel();
     };
-    const up = (e: PointerEvent) => {
-      cancel();
-      const gesture = start;
-      start = null;
-      if (
-        !gesture ||
-        latest.current.editor ||
-        latest.current.sheet ||
-        latest.current.left ||
-        latest.current.panel
-      )
-        return;
-      const dx = e.clientX - gesture.x,
-        dy = e.clientY - gesture.y;
-      if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.7) {
-        dx > 0 ? toggleLeft() : goPanel("character");
-      }
-    };
-    const stopped = () => {
-      cancel();
-      start = null;
-    };
-    chat.addEventListener("pointerdown", down);
-    chat.addEventListener("pointermove", move);
-    chat.addEventListener("pointerup", up);
-    chat.addEventListener("pointercancel", stopped);
     const context = (e: MouseEvent) => {
       if (!rp) return;
       const message = (e.target as Element).closest<HTMLElement>(".mes");
@@ -324,25 +278,157 @@ export function MobileShell({
         setSheet(message);
       }
     };
-    chat.addEventListener("contextmenu", context);
-    // Native swipe events normally change reply candidates; the approved PWA gesture opens drawers instead.
+    // Native swipe events normally change reply candidates; on the phone a sideways drag moves the drawers.
     const nativeSwipe = (e: Event) => {
       if ((e.target as Element)?.closest("#chat") && !(e.target as Element).closest(interactive))
         e.stopImmediatePropagation();
     };
+    chat.addEventListener("pointerdown", down);
+    chat.addEventListener("pointermove", move);
+    chat.addEventListener("pointerup", cancel);
+    chat.addEventListener("pointercancel", cancel);
+    chat.addEventListener("contextmenu", context);
     document.addEventListener("swiped-left", nativeSwipe, true);
     document.addEventListener("swiped-right", nativeSwipe, true);
     return () => {
       cancel();
       chat.removeEventListener("pointerdown", down);
       chat.removeEventListener("pointermove", move);
-      chat.removeEventListener("pointerup", up);
-      chat.removeEventListener("pointercancel", stopped);
+      chat.removeEventListener("pointerup", cancel);
+      chat.removeEventListener("pointercancel", cancel);
       chat.removeEventListener("contextmenu", context);
       document.removeEventListener("swiped-left", nativeSwipe, true);
       document.removeEventListener("swiped-right", nativeSwipe, true);
     };
-  }, [rp, toggleLeft, goPanel]);
+  }, [rp]);
+  // Drawers follow the finger. A sideways drag on the reading (RP: the scene around the dialogue box)
+  // pulls the outline out from the left or the panel from the right; a drag on an open drawer or its
+  // shade pushes it back. On release, a flick or more than 40% shown decides.
+  useEffect(() => {
+    type Drag = {
+      x: number;
+      y: number;
+      t: number;
+      pointer: number;
+      target: Element;
+      opening: boolean;
+      side?: "left" | "right";
+      node?: HTMLElement;
+      width?: number;
+      shown?: number;
+      previous: { x: number; t: number };
+      last: { x: number; t: number };
+    };
+    let drag: Drag | null = null;
+    const body = document.body;
+    const release = (node?: HTMLElement) => {
+      node?.classList.remove("is-dragging");
+      node?.style.removeProperty("--wb-drawer-x");
+      body.classList.remove("wb-drawer-dragging");
+      body.style.removeProperty("--wb-drawer-progress");
+    };
+    const down = (e: PointerEvent) => {
+      if (e.button !== 0 || e.pointerType !== "touch") return;
+      const target = e.target as Element,
+        state = latest.current;
+      if (state.editor || state.sheet) return;
+      const open = state.left || !!state.panel;
+      if (open) {
+        if (!target.closest(".wb-left,.wb-right,.wb-mobile-shade")) return;
+        if (
+          target.closest(
+            "input,textarea,select,[contenteditable=true],.wb-panel-tabs,.wb-mobile-resource-popup",
+          )
+        )
+          return;
+      } else {
+        // Selecting text in the reading is not a swipe.
+        const selection = getSelection(),
+          anchor = selection?.anchorNode,
+          inReading = (anchor instanceof Element ? anchor : anchor?.parentElement)?.closest("#chat");
+        if (target.closest(interactive) || (selection?.toString() && inReading)) return;
+        if (rp ? target.closest(".wb-ui,#sheld,.wb-mobile-header") : !target.closest("#chat")) return;
+      }
+      const at = { x: e.clientX, t: e.timeStamp };
+      drag = {
+        x: e.clientX,
+        y: e.clientY,
+        t: e.timeStamp,
+        pointer: e.pointerId,
+        target,
+        opening: !open,
+        side: open ? (state.left ? "left" : "right") : undefined,
+        previous: at,
+        last: at,
+      };
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointer) return;
+      const dx = e.clientX - drag.x,
+        dy = e.clientY - drag.y;
+      if (!drag.node) {
+        if (Math.hypot(dx, dy) < 10) return;
+        if (Math.abs(dx) < Math.abs(dy) * 1.2) {
+          drag = null;
+          return;
+        }
+        drag.side ??= dx > 0 ? "left" : "right";
+        drag.node = document.querySelector<HTMLElement>(drag.side === "left" ? ".wb-left" : ".wb-right")!;
+        drag.width = drag.node.offsetWidth;
+        drag.node.classList.add("is-dragging");
+        body.classList.add("wb-drawer-dragging");
+      }
+      const toward = drag.side === "left" ? dx : -dx,
+        shown = Math.min(drag.width!, Math.max(0, drag.opening ? toward : drag.width! + toward));
+      drag.shown = shown;
+      drag.previous = drag.last;
+      drag.last = { x: e.clientX, t: e.timeStamp };
+      drag.node.style.setProperty("--wb-drawer-x", `${shown}px`);
+      body.style.setProperty("--wb-drawer-progress", String(shown / drag.width!));
+    };
+    const up = (e: PointerEvent) => {
+      const current = drag;
+      drag = null;
+      if (!current?.node || e.pointerId !== current.pointer) return;
+      const sign = current.side === "left" ? 1 : -1,
+        speed =
+          ((current.last.x - current.previous.x) * sign) / Math.max(1, current.last.t - current.previous.t),
+        travel = (e.clientX - current.x) * sign,
+        quick = e.timeStamp - current.t < 300 && Math.abs(travel) > 40,
+        flick = speed > 0.35 ? true : speed < -0.35 ? false : quick ? travel > 0 : null,
+        open = flick ?? current.shown! > current.width! * 0.4;
+      // The new state and the drag styles leave in one frame, so the slide continues from the finger.
+      flushSync(() => {
+        if (open && current.opening) current.side === "left" ? toggleLeft() : goPanel("character");
+        if (!open && !current.opening) closeDrawers();
+      });
+      release(current.node);
+      // A drag that began on a row or the shade must not also click it.
+      const swallow = (click: Event) => {
+        document.removeEventListener("click", swallow, true);
+        if (!current.target.contains(click.target as Node)) return;
+        click.stopPropagation();
+        click.preventDefault();
+      };
+      document.addEventListener("click", swallow, true);
+      setTimeout(() => document.removeEventListener("click", swallow, true), 300);
+    };
+    const cancel = () => {
+      release(drag?.node);
+      drag = null;
+    };
+    document.addEventListener("pointerdown", down);
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", cancel);
+    return () => {
+      cancel();
+      document.removeEventListener("pointerdown", down);
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", cancel);
+    };
+  }, [rp, toggleLeft, goPanel, closeDrawers]);
   // Phones have no hover: a tap on a Novel message shows its tools, a second tap or another message hides them.
   useEffect(() => {
     if (rp) return;
@@ -361,33 +447,53 @@ export function MobileShell({
       chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
     };
   }, [rp]);
+  // A sheet follows its handle down; past a third of its height or on a flick it closes, otherwise
+  // it settles back.
   useEffect(() => {
-    if (!left && !panel) return;
-    const drawer = document.querySelector<HTMLElement>(left ? ".wb-left" : ".wb-right")!;
-    let start: { x: number; y: number } | null = null;
+    const node = sheetRef.current;
+    if (!node || presence.exiting) return;
+    let drag: {
+      y: number;
+      pointer: number;
+      dy: number;
+      previous: { y: number; t: number };
+      last: { y: number; t: number };
+    } | null = null;
     const down = (e: PointerEvent) => {
-      if (e.pointerType === "touch" && !(e.target as Element).closest(interactive))
-        start = { x: e.clientX, y: e.clientY };
+      if (e.button !== 0 || !(e.target as Element).closest(".wb-mobile-sheet-grip,.wb-mobile-sheet > header"))
+        return;
+      if ((e.target as Element).closest("button")) return;
+      const at = { y: e.clientY, t: e.timeStamp };
+      drag = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
+      node.classList.add("is-dragging");
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointer) return;
+      drag.dy = Math.max(0, e.clientY - drag.y);
+      drag.previous = drag.last;
+      drag.last = { y: e.clientY, t: e.timeStamp };
+      node.style.setProperty("--wb-sheet-pull", `${drag.dy}px`);
     };
     const up = (e: PointerEvent) => {
-      if (!start) return;
-      const dx = e.clientX - start.x,
-        dy = e.clientY - start.y;
-      start = null;
-      if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.7 && (left ? dx < 0 : dx > 0)) closeDrawers();
+      const current = drag;
+      drag = null;
+      if (!current || e.pointerId !== current.pointer) return;
+      const speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+      node.classList.remove("is-dragging");
+      if (speed > 0.5 || current.dy > node.offsetHeight / 3) close();
+      else node.style.removeProperty("--wb-sheet-pull");
     };
-    const cancel = () => {
-      start = null;
-    };
-    drawer.addEventListener("pointerdown", down);
-    drawer.addEventListener("pointerup", up);
-    drawer.addEventListener("pointercancel", cancel);
+    node.addEventListener("pointerdown", down);
+    node.addEventListener("pointermove", move);
+    node.addEventListener("pointerup", up);
+    node.addEventListener("pointercancel", up);
     return () => {
-      drawer.removeEventListener("pointerdown", down);
-      drawer.removeEventListener("pointerup", up);
-      drawer.removeEventListener("pointercancel", cancel);
+      node.removeEventListener("pointerdown", down);
+      node.removeEventListener("pointermove", move);
+      node.removeEventListener("pointerup", up);
+      node.removeEventListener("pointercancel", up);
     };
-  }, [left, panel, closeDrawers]);
+  }, [presence.value, presence.exiting]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape" && editor) {
@@ -437,55 +543,9 @@ export function MobileShell({
       : id !== "wb:export" && (!resolveTool(id) || !!resolveTool(id)?.disabled);
   return (
     <>
-      {rp &&
-        createPortal(
-          <div className="wb-mobile-scene" aria-hidden={lower === 0} data-revision={mediaVersion}>
-            {presentation.sprite || presentation.portrait ? (
-              <img src={presentation.sprite || presentation.portrait} alt={presentation.name} />
-            ) : (
-              <div className="wb-mobile-no-portrait">选择角色后展示立绘</div>
-            )}
-          </div>,
-          document.body,
-        )}
       <header
-        ref={header}
         className="wb-mobile-header wb-ui"
-        style={{ transform: `translateY(${editor ? 0 : lower}px)` }}
-        inert={left || !!panel || !!sheet || editor}
-        onPointerDown={(e) => {
-          if (!rp || e.button !== 0 || (e.target as Element).closest(".wb-mobile-nav,.wb-mobile-management"))
-            return;
-          ((e.target as Element).closest("button") ?? e.currentTarget).setPointerCapture(e.pointerId);
-          drag.current = { pointer: e.pointerId, y: e.clientY, lower, next: lower, moved: false };
-        }}
-        onPointerMove={(e) => {
-          const start = drag.current;
-          if (!start || start.pointer !== e.pointerId) return;
-          const dy = e.clientY - start.y;
-          if (Math.abs(dy) > 7) {
-            if (!start.moved) e.currentTarget.setPointerCapture(e.pointerId);
-            start.moved = true;
-            document.body.classList.add("wb-mobile-dragging");
-            start.next = Math.max(0, Math.min(stageLimit(), start.lower + dy));
-            setLower(start.next);
-          }
-        }}
-        onPointerUp={(e) => {
-          const start = drag.current;
-          if (!start || start.pointer !== e.pointerId) return;
-          drag.current = null;
-          document.body.classList.remove("wb-mobile-dragging");
-          if (start.moved) {
-            skipClick.current = Date.now() + 250;
-            setLower(start.next > stageLimit() * 0.28 ? stageLimit() : 0);
-          }
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-          document.body.classList.remove("wb-mobile-dragging");
-          setLower(lower > stageLimit() * 0.5 ? stageLimit() : 0);
-        }}
+        inert={left || !!panel || !!sheet || editor || (focus && !rp)}
       >
         <button
           className="wb-mobile-nav"
@@ -501,18 +561,17 @@ export function MobileShell({
         </div>
         <button
           className="wb-mobile-person"
-          aria-label={rp ? "展开或收起立绘" : "打开角色与 Trace"}
-          aria-expanded={rp ? lower > 0 : !!panel}
-          onClick={() => {
-            if (Date.now() < skipClick.current) {
-              skipClick.current = 0;
-              return;
-            }
-            rp ? setLower(lower ? 0 : stageLimit()) : goPanel("character");
-          }}
+          aria-label={rp ? (focus ? "显示界面" : "隐藏界面") : "打开角色与 Trace"}
+          aria-pressed={rp ? focus : undefined}
+          aria-expanded={rp ? undefined : !!panel}
+          onClick={() => (rp ? toggleFocus() : goPanel("character"))}
         >
           {rp ? (
-            <Eye size={20} />
+            focus ? (
+              <Eye size={20} />
+            ) : (
+              <EyeOff size={20} />
+            )
           ) : snap.character?.image ? (
             <span className="wb-mobile-face">
               <img src={snap.character.image} alt="" />
@@ -521,28 +580,18 @@ export function MobileShell({
             <span className="wb-avatar-fallback">N</span>
           )}
         </button>
-        {rp && (
-          <button
-            className="wb-mobile-history"
-            aria-label={history ? "关闭对话记录" : "查看对话记录"}
-            aria-pressed={history}
-            onClick={() => setHistory(!history)}
-          >
-            <History size={20} />
-          </button>
-        )}
-        <button
-          className="wb-mobile-management"
-          aria-label="打开会话管理"
-          onClick={() => setSheet("management")}
-        >
-          <MoreHorizontal size={21} strokeWidth={2.6} />
-        </button>
       </header>
-      {(left || panel) && (
+      <button
+        className={`wb-mobile-shade ${left || panel ? "is-open" : ""}`}
+        aria-label="收起边栏"
+        aria-hidden={!(left || panel)}
+        tabIndex={left || panel ? 0 : -1}
+        onClick={closeDrawers}
+      />
+      {/* The panel closes from the end of its own tab row. */}
+      {left && (
         <>
-          <button className="wb-mobile-shade" aria-label="收起边栏" onClick={closeDrawers} />
-          {left && <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>}
+          <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>
           <button className="wb-mobile-drawer-close wb-ui" aria-label="关闭边栏" onClick={closeDrawers}>
             <X size={20} />
           </button>
@@ -551,7 +600,7 @@ export function MobileShell({
       {!rp && (
         <div
           className={`wb-mobile-config wb-ui ${collapsed ? "is-collapsed" : ""}`}
-          inert={left || !!panel || !!sheet || editor}
+          inert={left || !!panel || !!sheet || editor || focus}
         >
           <div hidden={collapsed}>{resources}</div>
           {collapsed && (
@@ -579,24 +628,27 @@ export function MobileShell({
           </button>
         </div>
       )}
-      {rp &&
-        !!replies.length &&
+      {!rp && focus && !editor && (
+        <button
+          type="button"
+          className="wb-mobile-focus-exit wb-ui"
+          aria-label="退出专注"
+          onClick={toggleFocus}
+        >
+          <ScanLine size={15} />
+          退出专注
+        </button>
+      )}
+      {!rp &&
         createPortal(
-          <div className="wb-mobile-replies wb-ui" role="group" aria-label="建议回应">
-            {replies.map((qr) => (
-              <button
-                key={qr.key}
-                title={qr.message}
-                disabled={snap.busy}
-                onClick={() => {
-                  host.setInput(qr.message || "");
-                  input.focus({ preventScroll: true });
-                }}
-              >
-                {qr.label || qr.message?.slice(0, 45)}
-              </button>
-            ))}
-          </div>,
+          <button
+            type="button"
+            className="wb-mobile-management wb-ui"
+            aria-label="打开会话管理"
+            onClick={() => setSheet("management")}
+          >
+            <MoreHorizontal size={21} strokeWidth={2.6} />
+          </button>,
           document.getElementById("form_sheld")!,
         )}
       {createPortal(
@@ -694,6 +746,19 @@ export function MobileShell({
                   ))}
                 </div>
                 <div className="wb-mobile-sheet-list">
+                  {!rp && (
+                    <button
+                      aria-pressed={focus}
+                      onClick={() => {
+                        close();
+                        toggleFocus();
+                      }}
+                    >
+                      <ScanLine size={19} />
+                      专注模式
+                      <ChevronRight size={15} />
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       close();

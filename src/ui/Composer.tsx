@@ -159,6 +159,12 @@ export function Composer({
       `${Math.max(COMPOSER_MIN, document.getElementById("sheld")!.clientHeight * ratio)}px`,
     );
   }, [ratio]);
+  // Phone: the handle only pulls the pill up; letting go far enough opens the full editor.
+  const release = () => {
+    drag.current = null;
+    document.body.classList.remove("wb-resizing");
+    document.body.style.removeProperty("--wb-grip-pull");
+  };
   const finish = () => {
     if (!drag.current) return;
     drag.current = null;
@@ -207,27 +213,27 @@ export function Composer({
                 height,
                 pinned: !!chat && chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 4,
               };
-              if (!mobile) document.body.classList.add("wb-resizing");
+              document.body.classList.add("wb-resizing");
             }}
             onPointerMove={(e) => {
               const start = drag.current;
               if (start && !mobile)
                 paint(Math.min(0.6, Math.max(0.2, start.ratio + (start.y - e.clientY) / start.height)));
+              // Phone: the pill follows the finger up until it lets go into the full editor.
+              if (start && mobile)
+                document.body.style.setProperty(
+                  "--wb-grip-pull",
+                  `${Math.min(120, Math.max(0, start.y - e.clientY))}px`,
+                );
             }}
             onPointerUp={(e) => {
-              if (mobile) {
-                if (drag.current && drag.current.y - e.clientY > 35) bus.emit("mobile-editor-open");
-                drag.current = null;
-              } else finish();
+              if (!mobile) return finish();
+              const open = !!drag.current && drag.current.y - e.clientY > 35;
+              release();
+              if (open) bus.emit("mobile-editor-open");
             }}
-            onPointerCancel={() => {
-              if (mobile) drag.current = null;
-              else finish();
-            }}
-            onLostPointerCapture={() => {
-              if (mobile) drag.current = null;
-              else finish();
-            }}
+            onPointerCancel={() => (mobile ? release() : finish())}
+            onLostPointerCapture={() => (mobile ? release() : finish())}
             onDoubleClick={() => {
               setRatio(0.2);
               host.preference({ inputRatio: 0.2 });

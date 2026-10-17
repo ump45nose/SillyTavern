@@ -486,4 +486,23 @@
     padding: 0 16px;
     gap: 6px;
   }
+  /* Phone: the totals take their own line; the three actions share the row at touch height. */
+  body.wb-mobile .wb-export-footer {
+    display: grid;
+    grid-template-columns: auto 92px minmax(0, 1fr);
+    row-gap: 8px;
+    padding: 10px 12px max(12px, var(--wb-safe-bottom));
+  }
+  body.wb-mobile .wb-export-totals {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    gap: 8px;
+  }
+  body.wb-mobile .wb-export-footer :is(.wb-export-backup, .wb-select-trigger, .wb-primary) {
+    height: 44px;
+    min-height: 44px;
+  }
+  body.wb-mobile .wb-export-footer .wb-primary {
+    justify-content: center;
+  }
 }

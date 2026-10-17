@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import {
   BookMarked,
   Activity,
@@ -274,12 +274,31 @@ export function ResourceControls({
   "snap" | "panel" | "chooser" | "setChooser" | "goPanel" | "next" | "select" | "model"
 > & { mobile?: boolean }) {
   const presence = usePresence(chooser);
+  // Phone tiles share the card's width equally; a name that does not fit leaves just the icon.
+  const row = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = row.current;
+    if (!mobile || !node) return;
+    const fit = () => {
+      for (const tile of node.querySelectorAll<HTMLElement>(".wb-selector")) {
+        const text = tile.querySelector<HTMLElement>(".wb-value-text"),
+          icon = tile.querySelector<HTMLElement>(".wb-selector-icon");
+        if (!text || !icon) continue;
+        const room = tile.clientWidth - 20 - icon.offsetWidth - 6;
+        tile.classList.toggle("is-iconic", text.scrollWidth > room);
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(node);
+    return () => observer.disconnect();
+  });
   const overlay = (children: React.ReactNode) =>
     mobile
       ? createPortal(<div className="wb-ui wb-mobile-resource-popup">{children}</div>, document.body)
       : children;
   return (
-    <div className="wb-contexts">
+    <div className="wb-contexts" ref={row}>
       {(Object.keys(resourceLabels) as Resource[]).map((kind) => {
         const items = snap.resources[kind],
           selected = items.find((x) => x.id === snap.current[kind]);
@@ -288,34 +307,46 @@ export function ResourceControls({
         const count = kind === "world" ? items.filter((x) => x.active).length : 0;
         return (
           <div className={`wb-selector ${panel === kind || chooser === kind ? "is-active" : ""}`} key={kind}>
-            <button
-              className="wb-selector-detail"
-              title={`${resourceLabels[kind]}详情`}
-              aria-label={`${resourceLabels[kind]}详情`}
-              onClick={() => goPanel(kind)}
-            >
-              {Icon ? <Icon size={17} /> : <span className={`wb-dot ${snap.online ? "online" : ""}`} />}
-            </button>
+            {!mobile && (
+              <button
+                className="wb-selector-detail"
+                title={`${resourceLabels[kind]}详情`}
+                aria-label={`${resourceLabels[kind]}详情`}
+                onClick={() => goPanel(kind)}
+              >
+                {Icon ? <Icon size={17} /> : <span className={`wb-dot ${snap.online ? "online" : ""}`} />}
+              </button>
+            )}
+            {/* A phone tile is one tap target: icon and name open the chooser, whose rows lead on to details. */}
             <button
               className="wb-selector-value"
               title={`${resourceLabels[kind]}：${value}`}
+              aria-label={mobile ? `${resourceLabels[kind]}：${value}${count > 1 ? ` 等 ${count} 本` : ""}` : undefined}
               aria-expanded={chooser === kind}
               aria-controls={`wb-choices-${kind}`}
               onClick={() => setChooser(chooser === kind ? null : kind)}
             >
+              {mobile && (
+                <span className="wb-selector-icon" aria-hidden="true">
+                  {React.createElement(pillIcons[kind], { size: 17 })}
+                  {kind === "connection" && <i className={`wb-dot ${snap.online ? "online" : ""}`} />}
+                </span>
+              )}
               <span key={value + count} className="wb-value-text">
                 {value}
                 {count > 1 ? ` +${count - 1}` : ""}
               </span>
-              <ChevronDown size={13} />
+              {!mobile && <ChevronDown size={13} />}
             </button>
-            <IconButton
-              title={`下一个${resourceLabels[kind]}`}
-              disabled={snap.busy}
-              onClick={() => next(kind)}
-            >
-              <ChevronRight size={16} />
-            </IconButton>
+            {!mobile && (
+              <IconButton
+                title={`下一个${resourceLabels[kind]}`}
+                disabled={snap.busy}
+                onClick={() => next(kind)}
+              >
+                <ChevronRight size={16} />
+              </IconButton>
+            )}
             {presence.value === kind &&
               overlay(
                 <>

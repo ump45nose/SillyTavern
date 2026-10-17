@@ -116,7 +116,8 @@ const pinnedRail = (s: LayoutState) => !!s.panel && !unrailed.includes(s.panel) 
 
 /** Whether the pinned left sidebar is on screen: it gives way to panels when the reading column would get too narrow. */
 export function leftVisible(s: LayoutState, sizes: Sizes) {
-  if (!s.left || s.focus) return false;
+  // A phone's focus only hides the chrome; its drawers still slide over the page.
+  if (!s.left || (s.focus && !s.env.mobile)) return false;
   if (!s.panel) return true;
   if (s.env.mobile) return false;
   const reading = s.env.width - sizes.left - sizes.right - (pinnedRail(s) ? sizes.rail : 0);
@@ -145,7 +146,7 @@ export function bodyClasses(s: LayoutState, hover: Hover, sizes: Sizes): Record<
     "wb-left-open": visible,
     "wb-left-hover-open": hover.left && !visible,
     "wb-right-hover-open": hover.right && !s.panel,
-    "wb-right-open": !!s.panel && !s.focus,
+    "wb-right-open": !!s.panel && (!s.focus || mobile),
     "wb-focus": s.focus,
     "wb-rail-open": railVisible(s, hover) && !!s.panel,
     "wb-mobile": mobile,

@@ -101,7 +101,7 @@ export const chatMethods = {
       await new Promise((r) => setTimeout(r, 20));
       node = document.querySelector(selector);
     }
-    if (this.prefs().layout === "rp" && !document.body.classList.contains("wb-mobile")) {
+    if (this.prefs().layout === "rp") {
       bus.emit("rp-jump", id);
       return;
     }
@@ -113,6 +113,7 @@ export const chatMethods = {
           ? "auto"
           : "smooth",
     });
+    bus.emit("floor-jump", id);
   },
   async renameChat(this: HostAdapter, name: string, next: string) {
     if (this.isBusy()) throw new Error("生成中不能重命名聊天。");
