@@ -169,7 +169,7 @@ export const states = [
     steps: [label("打开角色与 Trace"), tap(`.wb-right .wb-panel-tab[aria-label="${tab}"]`)],
   })),
   { name: "m-novel-menu", viewport: phone, mobile: true, steps: [label("打开会话管理")] },
-  { name: "m-novel-editor", viewport: phone, mobile: true, steps: [label("全屏编辑草稿")] },
+  { name: "m-novel-editor", viewport: phone, mobile: true, steps: [label("打开输入工具"), text("全屏输入")] },
   { name: "m-settings", viewport: phone, mobile: true, steps: [label("打开会话管理"), text("用户设置")] },
   ...["外观与阅读", "参数与预设", "API 与连接管理", "全部角色", "身份编辑"].map((group, i) => ({
     name: `m-settings-${i + 1}`,
@@ -187,9 +187,17 @@ export const states = [
   { name: "m-rp-history", viewport: phone, mobile: true, steps: [layout("rp"), swipe("#sheld", 0, -160)] },
   { name: "m-novel-dark", viewport: phone, mobile: true, steps: [dark] },
   { name: "m-novel-tools", viewport: phone, mobile: true, steps: [label("打开输入工具")] },
-  { name: "m-novel-config", viewport: phone, mobile: true, steps: [label("展开快捷配置")] },
+  {
+    name: "m-novel-config",
+    viewport: phone,
+    mobile: true,
+    steps: [(page) => page.getByRole("group", { name: "快捷配置" }).getByRole("button").nth(1).click()],
+  },
   { name: "m-novel-actions", viewport: phone, mobile: true, steps: [tap('#chat .mes[is_user="false"] .mes_text')] },
 ];
+// The fixture keeps the last layout chosen; phone states other than RP start from Noval.
+for (const state of states)
+  if (state.mobile && !state.name.startsWith("m-rp")) state.steps.unshift(layout("novel"));
 
 /** Opens a fresh session, drives it into `state`, then hands the page to `inspect`. */
 export async function visit(browser, state, inspect) {

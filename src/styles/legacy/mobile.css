@@ -127,43 +127,6 @@
   body.wb-mobile .wb-selector-detail svg {
     width: 15px;
   }
-  body.wb-mobile .wb-mobile-summary {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    justify-content: flex-start;
-    gap: 8px;
-    height: 44px;
-    padding: 0 8px;
-    font-size: 12px;
-    border: 0;
-    background: transparent;
-  }
-  .wb-mobile-summary > span {
-    min-width: 0;
-    max-width: 55%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .wb-mobile-summary small {
-    color: var(--wb-muted);
-    font-size: 11px;
-  }
-  .wb-mobile-config .wb-mobile-config-fold {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    border: 0;
-    padding: 0;
-    background: transparent;
-  }
-  .wb-mobile-config-fold svg {
-    transition: transform 180ms;
-  }
-  .wb-mobile-config-fold[aria-expanded="true"] svg {
-    transform: rotate(180deg);
-  }
   body.wb-active.wb-mobile #wb-layout-root {
     display: none;
   }

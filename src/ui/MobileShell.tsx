@@ -3,6 +3,7 @@ import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
   ArrowLeft,
+  BookMarked,
   BookOpen,
   ChevronDown,
   ChevronLeft,
@@ -18,10 +19,13 @@ import {
   MoreHorizontal,
   PanelsTopLeft,
   PencilLine,
+  Plug,
   ScanLine,
   Plus,
   Settings,
+  SlidersHorizontal,
   Theater,
+  UserRound,
   Users,
   WandSparkles,
   X,
@@ -32,13 +36,14 @@ import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Panel, Resource, SettingsPage } from "../host/types";
 import type { LayoutMode } from "./LayoutSwitcher";
 import type { ComposerPopup } from "./ComposerPopovers";
-import { ResourceControls } from "./Header";
+import { ResourceControls, resourceLabels } from "./Header";
 import { ReadingSettings } from "./Reading";
 import { composerTools, toolIcon } from "./ToolIcon";
 import { motionAllowed, usePresence } from "./Motion";
 import { bus } from "../host/bus";
 
 type Sheet = "management" | "tools" | HTMLElement | null;
+const resourceIcons = { connection: Plug, preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
 const interactive = "button,input,textarea,select,a,[contenteditable=true],iframe,video";
 export function MobileShell({
   host,
@@ -82,7 +87,6 @@ export function MobileShell({
 }) {
   const [sheet, setSheet] = useState<Sheet>(null),
     [editor, setEditor] = useState(false),
-    [collapsed, setCollapsed] = useState(true),
     [length, setLength] = useState(0);
   const presence = usePresence(sheet),
     sheetRef = useRef<HTMLDivElement>(null),
@@ -905,35 +909,42 @@ export function MobileShell({
           </button>
         </>
       )}
+      {/* Noval's quick configuration: what is connected, then one key per resource into its
+          right-panel page (switching happens there). */}
       {!rp && (
-        <div
-          className={`wb-mobile-config wb-ui ${collapsed ? "is-collapsed" : ""}`}
-          inert={left || !!panel || !!sheet || editor || focus}
-        >
-          <div hidden={collapsed}>{resources}</div>
-          {collapsed && (
-            <button className="wb-mobile-summary" onClick={() => setCollapsed(false)}>
-              <i className={`wb-dot ${snap.online ? "online" : ""}`} />
-              <span>
-                {snap.resources.connection.find((x) => x.id === snap.current.connection)?.name ||
-                  host.model() ||
-                  "未连接"}
-              </span>
-              {!!summary && <small>· {summary}</small>}
-            </button>
-          )}
-          <button
-            className="wb-mobile-config-fold"
-            aria-label={collapsed ? "展开快捷配置" : "收起快捷配置"}
-            aria-expanded={!collapsed}
-            onClick={() => {
-              setCollapsed(!collapsed);
-              setChooser(null);
-            }}
-          >
-            {collapsed && <span>快捷配置</span>}
-            <ChevronDown size={15} />
-          </button>
+        <div className="wb-mobile-config wb-ui" inert={left || !!panel || !!sheet || editor || focus}>
+          <span className="wb-mobile-status">
+            <i className={`wb-dot ${snap.online ? "online" : ""}`} />
+            <strong>
+              {snap.resources.connection.find((x) => x.id === snap.current.connection)?.name ||
+                host.model() ||
+                "未连接"}
+            </strong>
+            {!!summary && <small>{summary}</small>}
+          </span>
+          <div className="wb-mobile-keys" role="group" aria-label="快捷配置">
+            {(Object.keys(resourceLabels) as Resource[]).map((kind) => {
+              const Icon = resourceIcons[kind],
+                value =
+                  snap.resources[kind].find((x) => x.id === snap.current[kind])?.name ||
+                  (kind === "connection" ? host.model() : "未选择"),
+                count = kind === "world" ? worlds.length : 0;
+              return (
+                <button
+                  key={kind}
+                  aria-label={`${resourceLabels[kind]}：${kind === "world" ? `${count} 本已启用` : value}`}
+                  aria-pressed={panel === kind}
+                  onClick={() => {
+                    close();
+                    goPanel(kind);
+                  }}
+                >
+                  <Icon size={19} />
+                  {count > 0 && <b>{count}</b>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
       {!rp && focus && !editor && (
