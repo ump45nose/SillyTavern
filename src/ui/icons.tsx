@@ -201,6 +201,7 @@ export const FolderPlus = thin("FolderPlus", Lucide.FolderPlus);
 export const GitBranch = thin("GitBranch", Lucide.GitBranch);
 export const Images = thin("Images", Lucide.Images);
 export const Languages = thin("Languages", Lucide.Languages);
+export const Paintbrush = thin("Paintbrush", Lucide.Paintbrush);
 export const Lightbulb = thin("Lightbulb", Lucide.Lightbulb);
 export const Link = thin("Link", Lucide.Link);
 export const ListMinus = thin("ListMinus", Lucide.ListMinus);

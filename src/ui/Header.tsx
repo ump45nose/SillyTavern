@@ -196,6 +196,17 @@ function ResourcePills({
               {count > 1 && <span className="wb-pill-extra">+{count - 1}</span>}
               <ChevronDown size={14} className="wb-pill-caret" />
             </button>
+            {/* The icon is its own target: one press opens (or closes) this resource's tab in the right panel. */}
+            <button
+              className="wb-pill-go"
+              aria-label={`${panel === kind ? "关闭" : "打开"}${resourceLabels[kind]}面板`}
+              title={`${panel === kind ? "关闭" : "打开"}${resourceLabels[kind]}面板`}
+              aria-pressed={panel === kind}
+              onClick={() => {
+                setChooser(null);
+                goPanel(panel === kind ? null : kind);
+              }}
+            />
             {open && (
               <div
                 className="wb-pill-pop"
