@@ -258,7 +258,8 @@ export function RPStage({
   );
   // Pages are columns of the native message block: lines never split, nothing scrolls inside the
   // box, and media stay in one column. Measured again when the text, its size or the box change.
-  const block = !history && !compose && !current?.editing ? current?.node.querySelector<HTMLElement>(".mes_block") : null;
+  const block =
+    !history && !compose && !current?.editing ? current?.node.querySelector<HTMLElement>(".mes_block") : null;
   useLayoutEffect(() => {
     if (!block || !current) return;
     const node = current.node;
@@ -316,7 +317,10 @@ export function RPStage({
         return;
       // Buttons elsewhere may own arrow keys (menus, radio groups); the deck's own keys page on.
       const target = e.target as Element | null;
-      if (target?.closest("input,textarea,select,[contenteditable=true]") || (target?.closest("button") && !target.closest(".wb-rp-deck")))
+      if (
+        target?.closest("input,textarea,select,[contenteditable=true]") ||
+        (target?.closest("button") && !target.closest(".wb-rp-deck"))
+      )
         return;
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault();
@@ -352,7 +356,10 @@ export function RPStage({
     };
     const down = (e: TouchEvent) => {
       start = null;
-      if (e.touches.length !== 1 || (e.target as Element).closest("button,a,input,textarea,select,iframe,video"))
+      if (
+        e.touches.length !== 1 ||
+        (e.target as Element).closest("button,a,input,textarea,select,iframe,video")
+      )
         return;
       const t = e.touches[0];
       start = {
@@ -461,9 +468,159 @@ export function RPStage({
       const rect = chat.getBoundingClientRect();
       turnNow.current(mobile && e.clientX < rect.left + rect.width / 3 ? -1 : 1);
     };
+    // The wheel over the text turns pages too: one turn per gesture, however many events it sends.
+    let travel = 0,
+      quietUntil = 0,
+      lastTurn = 0;
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const now = performance.now(),
+        delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX,
+        direction = Math.sign(delta);
+      // A gesture's trailing events keep the wheel quiet; turning the other way starts a new one.
+      if (now < quietUntil && direction === lastTurn) {
+        quietUntil = now + 160;
+        return;
+      }
+      if (direction !== Math.sign(travel)) travel = 0;
+      travel += delta;
+      if (Math.abs(travel) < 40) return;
+      turnNow.current(direction);
+      lastTurn = direction;
+      travel = 0;
+      quietUntil = now + 260;
+    };
     chat.addEventListener("click", press);
-    return () => chat.removeEventListener("click", press);
+    if (!mobile) chat.addEventListener("wheel", wheel, { passive: false });
+    return () => {
+      chat.removeEventListener("click", press);
+      chat.removeEventListener("wheel", wheel);
+    };
   }, [block, mobile]);
+  const tools = (
+    <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
+      {host.isGenerating() && (
+        <button
+          className="wb-rp-tool"
+          aria-label="停止生成"
+          title="停止生成"
+          onClick={() => run(() => host.click("#mes_stop"))}
+        >
+          <Square size={16} />
+        </button>
+      )}
+      {compose ? (
+        <>
+          <button
+            className="wb-rp-tool is-labelled"
+            aria-label="返回对白"
+            title="返回对白"
+            disabled={!current}
+            onClick={leaveCompose}
+          >
+            <ChevronLeft size={16} />
+            对白
+          </button>
+          {!mobile && (
+            <button
+              className="wb-rp-tool"
+              aria-label={expanded ? "还原 RP 输入区" : "展开 RP 输入区"}
+              title={expanded ? "还原输入区" : "展开输入区"}
+              aria-expanded={expanded}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          )}
+        </>
+      ) : current?.editing ? (
+        <>
+          <button
+            className="wb-rp-tool"
+            aria-label="保存对白编辑"
+            title="保存对白编辑"
+            onClick={() => nativeAction(".mes_edit_done")}
+          >
+            <Check size={16} />
+          </button>
+          <button
+            className="wb-rp-tool"
+            aria-label="取消对白编辑"
+            title="取消对白编辑"
+            onClick={() => nativeAction(".mes_edit_cancel")}
+          >
+            <X size={16} />
+          </button>
+        </>
+      ) : mobile ? (
+        <button className="wb-rp-tool" aria-label="打开会话管理" onClick={() => bus.emit("mobile-menu")}>
+          <MoreHorizontal size={18} strokeWidth={2.6} />
+        </button>
+      ) : (
+        <>
+          <button
+            className="wb-rp-tool"
+            aria-label={auto ? "停止自动播放" : "自动播放"}
+            title={auto ? "停止自动播放" : "自动播放"}
+            aria-pressed={auto}
+            disabled={!auto && atEnd}
+            onClick={() => setAuto(!auto)}
+          >
+            {auto ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+          <button
+            className="wb-rp-tool"
+            aria-label="快进到最新对白"
+            title="快进到最新对白"
+            disabled={atEnd}
+            onClick={skip}
+          >
+            <FastForward size={16} />
+          </button>
+          <span className="wb-rp-tools-rule" aria-hidden="true" />
+          <button
+            className="wb-rp-tool"
+            aria-label={`${actionLabels.regenerate}当前回复`}
+            title={`${actionLabels.regenerate}当前回复`}
+            disabled={snap.busy || !current || current.user || current.id !== snap.messages.length - 1}
+            onClick={() => run(() => host.click("#option_regenerate"))}
+          >
+            <RotateCcw size={16} />
+          </button>
+          <button
+            className="wb-rp-tool"
+            aria-label="编辑当前对白"
+            title="编辑当前对白"
+            disabled={snap.busy || !current}
+            onClick={() => nativeAction(".mes_edit")}
+          >
+            <PencilLine size={16} />
+          </button>
+          {addonEnabled(prefs, "image-gen") && !!snap.chatName && (
+            <button
+              className="wb-rp-tool"
+              aria-label="为当前对白生图"
+              title="为当前对白生图"
+              disabled={snap.busy || !current}
+              onClick={() => beginImage(host, current!.id)}
+            >
+              <ImagePlus size={16} />
+            </button>
+          )}
+          <span className="wb-rp-tools-rule" aria-hidden="true" />
+          <RPAppearance host={host} />
+          <button
+            className="wb-rp-tool"
+            aria-label="切换阅读布局"
+            title="切换阅读布局"
+            onClick={readingLayout}
+          >
+            <PanelBottom size={16} />
+          </button>
+        </>
+      )}
+    </div>
+  );
   const visibleDots = Array.from({ length: pageCount }, (_, i) => i).filter((i) => Math.abs(i - page) <= 3);
   const replies = [...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(
     0,
@@ -472,7 +629,8 @@ export function RPStage({
   const scene = presentation.scene,
     sceneValue = (key: string) =>
       typeof scene[key] === "string" || typeof scene[key] === "number" ? String(scene[key]) : "";
-  const sceneHidden = isHidden || width < 1000 || (expanded && compose) || (history && width < 1400);
+  const sendRow = document.getElementById("rightSendForm");
+  const sceneHidden = isHidden || width < 1000 || (expanded && compose) || history;
   return (
     <>
       {createPortal(
@@ -486,42 +644,43 @@ export function RPStage({
               <span>{presentation.name}</span>
             </div>
           )}
-          {!mobile && (presentation.userSprite || (prefs.rpShowPortraits !== false && presentation.userPortrait)) && (
-            <div
-              className={`wb-rp-user ${presentation.userSprite ? "is-sprite" : "is-portrait"} ${current?.user || compose ? "is-speaking" : "is-listening"}`}
-            >
-              <img src={presentation.userSprite || presentation.userPortrait} alt={presentation.userName} />
-              <span>{presentation.userName}</span>
-            </div>
-          )}
+          {!mobile &&
+            (presentation.userSprite || (prefs.rpShowPortraits !== false && presentation.userPortrait)) && (
+              <div
+                className={`wb-rp-user ${presentation.userSprite ? "is-sprite" : "is-portrait"} ${current?.user || compose ? "is-speaking" : "is-listening"}`}
+              >
+                <img src={presentation.userSprite || presentation.userPortrait} alt={presentation.userName} />
+                <span>{presentation.userName}</span>
+              </div>
+            )}
         </div>,
         document.body,
       )}
       {/* Board "RpDesktop": glass cards over the scene; the native message is the dialogue box itself. */}
       {!mobile && (
-      <aside
-        className={`wb-rp-scene ${sceneHidden ? "is-hidden" : ""}`}
-        inert={sceneHidden}
-        aria-label="当前场景信息"
-      >
-        <div className="wb-rp-scene-head">
-          <strong>{sceneValue("day") ? "DAY " + sceneValue("day") : "当前对话"}</strong>
+        <aside
+          className={`wb-rp-scene ${sceneHidden ? "is-hidden" : ""}`}
+          inert={sceneHidden}
+          aria-label="当前场景信息"
+        >
+          <div className="wb-rp-scene-head">
+            <strong>{sceneValue("day") ? "DAY " + sceneValue("day") : "当前对话"}</strong>
+            <span>
+              {sceneValue("time") ||
+                host.messageTime(snap.messages.find((m) => m.id === current?.id)?.send_date)}
+            </span>
+          </div>
           <span>
-            {sceneValue("time") ||
-              host.messageTime(snap.messages.find((m) => m.id === current?.id)?.send_date)}
+            <MapPin size={14} aria-hidden="true" />
+            {sceneValue("location") || snap.groupName || snap.character?.name || "等待故事开始"}
           </span>
-        </div>
-        <span>
-          <MapPin size={14} aria-hidden="true" />
-          {sceneValue("location") || snap.groupName || snap.character?.name || "等待故事开始"}
-        </span>
-        {sceneValue("weather") && (
-          <span>
-            <CloudSun size={14} aria-hidden="true" />
-            {sceneValue("weather")}
-          </span>
-        )}
-      </aside>
+          {sceneValue("weather") && (
+            <span>
+              <CloudSun size={14} aria-hidden="true" />
+              {sceneValue("weather")}
+            </span>
+          )}
+        </aside>
       )}
       <section
         ref={deck}
@@ -546,172 +705,59 @@ export function RPStage({
             ))}
           </div>
         )}
-        {/* The name on the left; the quick menu on the right, faint until the pointer reaches it. */}
+        {/* The speaker's name heads the band; every control rides its bottom line. */}
         <div className="wb-rp-head">
           <div className="wb-rp-plate">
             {(compose || current?.user ? presentation.userPortrait : presentation.portrait) && (
-              <img src={compose || current?.user ? presentation.userPortrait : presentation.portrait} alt="" />
+              <img
+                src={compose || current?.user ? presentation.userPortrait : presentation.portrait}
+                alt=""
+              />
             )}
             <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
           </div>
-          <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
-            {host.isGenerating() && (
-              <button
-                className="wb-rp-tool"
-                aria-label="停止生成"
-                title="停止生成"
-                onClick={() => run(() => host.click("#mes_stop"))}
-              >
-                <Square size={16} />
-              </button>
-            )}
-            {compose ? (
+          {mobile && tools}
+        </div>
+        {/* Turning pages: back, the page marks, forward (past the last page is your reply), then the
+            quick menu and the reply key. Editing keeps only its own keys; composing moves them into
+            the input's tool row, just before send. */}
+        {!compose && (
+          <div className="wb-rp-foot">
+            {!current?.editing && (
               <>
                 <button
-                  className="wb-rp-tool is-labelled"
-                  aria-label="返回对白"
-                  title="返回对白"
-                  disabled={!current}
-                  onClick={leaveCompose}
+                  className="wb-rp-tool"
+                  aria-label="上一段对白"
+                  title="上一段对白"
+                  disabled={!current || (current === messages[0] && page === 0)}
+                  onClick={() => turn(-1)}
                 >
                   <ChevronLeft size={16} />
-                  对白
                 </button>
-                {!mobile && (
-                  <button
-                    className="wb-rp-tool"
-                    aria-label={expanded ? "还原 RP 输入区" : "展开 RP 输入区"}
-                    title={expanded ? "还原输入区" : "展开输入区"}
-                    aria-expanded={expanded}
-                    onClick={() => setExpanded(!expanded)}
-                  >
-                    {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                  </button>
-                )}
-              </>
-            ) : current?.editing ? (
-              <>
+                <div className="wb-rp-dots">
+                  {visibleDots.map((index) => (
+                    <button
+                      key={index}
+                      aria-label={`对白第 ${index + 1} 段`}
+                      aria-current={index === page ? "true" : undefined}
+                      onClick={() => {
+                        live.current = false;
+                        setCursor({ id: current!.id, page: index, compose: false });
+                      }}
+                    />
+                  ))}
+                </div>
                 <button
                   className="wb-rp-tool"
-                  aria-label="保存对白编辑"
-                  title="保存对白编辑"
-                  onClick={() => nativeAction(".mes_edit_done")}
+                  aria-label="下一段对白或输入"
+                  title={atEnd ? "轮到你回应" : "下一段对白"}
+                  onClick={() => turn(1)}
                 >
-                  <Check size={16} />
-                </button>
-                <button
-                  className="wb-rp-tool"
-                  aria-label="取消对白编辑"
-                  title="取消对白编辑"
-                  onClick={() => nativeAction(".mes_edit_cancel")}
-                >
-                  <X size={16} />
-                </button>
-              </>
-            ) : mobile ? (
-              <button className="wb-rp-tool" aria-label="打开会话管理" onClick={() => bus.emit("mobile-menu")}>
-                <MoreHorizontal size={18} strokeWidth={2.6} />
-              </button>
-            ) : (
-              <>
-                <button
-                  className="wb-rp-tool"
-                  aria-label={auto ? "停止自动播放" : "自动播放"}
-                  title={auto ? "停止自动播放" : "自动播放"}
-                  aria-pressed={auto}
-                  disabled={!auto && atEnd}
-                  onClick={() => setAuto(!auto)}
-                >
-                  {auto ? <Pause size={16} /> : <Play size={16} />}
-                </button>
-                <button
-                  className="wb-rp-tool"
-                  aria-label="快进到最新对白"
-                  title="快进到最新对白"
-                  disabled={atEnd}
-                  onClick={skip}
-                >
-                  <FastForward size={16} />
-                </button>
-                <span className="wb-rp-tools-rule" aria-hidden="true" />
-                <button
-                  className="wb-rp-tool"
-                  aria-label={`${actionLabels.regenerate}当前回复`}
-                  title={`${actionLabels.regenerate}当前回复`}
-                  disabled={snap.busy || !current || current.user || current.id !== snap.messages.length - 1}
-                  onClick={() => run(() => host.click("#option_regenerate"))}
-                >
-                  <RotateCcw size={16} />
-                </button>
-                <button
-                  className="wb-rp-tool"
-                  aria-label="编辑当前对白"
-                  title="编辑当前对白"
-                  disabled={snap.busy || !current}
-                  onClick={() => nativeAction(".mes_edit")}
-                >
-                  <PencilLine size={16} />
-                </button>
-                {addonEnabled(prefs, "image-gen") && !!snap.chatName && (
-                  <button
-                    className="wb-rp-tool"
-                    aria-label="为当前对白生图"
-                    title="为当前对白生图"
-                    disabled={snap.busy || !current}
-                    onClick={() => beginImage(host, current!.id)}
-                  >
-                    <ImagePlus size={16} />
-                  </button>
-                )}
-                <span className="wb-rp-tools-rule" aria-hidden="true" />
-                <RPAppearance host={host} />
-                <button
-                  className="wb-rp-tool"
-                  aria-label="切换阅读布局"
-                  title="切换阅读布局"
-                  onClick={readingLayout}
-                >
-                  <PanelBottom size={16} />
+                  <ChevronRight size={16} />
                 </button>
               </>
             )}
-          </div>
-        </div>
-        {/* Turning pages: back, the page marks, forward (past the last page is your reply). */}
-        {!compose && !current?.editing && (
-          <div className="wb-rp-foot">
-            <button
-              className="wb-rp-tool"
-              aria-label="上一段对白"
-              title="上一段对白"
-              disabled={!current || current.editing || (current === messages[0] && page === 0)}
-              onClick={() => turn(-1)}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <div className="wb-rp-dots">
-              {visibleDots.map((index) => (
-                <button
-                  key={index}
-                  aria-label={`对白第 ${index + 1} 段`}
-                  aria-current={index === page ? "true" : undefined}
-                  disabled={!!current?.editing}
-                  onClick={() => {
-                    live.current = false;
-                    setCursor({ id: current!.id, page: index, compose: false });
-                  }}
-                />
-              ))}
-            </div>
-            <button
-              className="wb-rp-tool"
-              aria-label="下一段对白或输入"
-              title={atEnd ? "轮到你回应" : "下一段对白"}
-              disabled={!!current?.editing}
-              onClick={() => turn(1)}
-            >
-              <ChevronRight size={16} />
-            </button>
+            {!mobile && tools}
             {!current?.editing && (
               <button className="wb-rp-reply" aria-label="快进到你的回应" title="直接回应" onClick={reply}>
                 <PencilLine size={15} />
@@ -720,6 +766,7 @@ export function RPStage({
             )}
           </div>
         )}
+        {compose && !mobile && sendRow && createPortal(tools, sendRow)}
       </section>
       {!isHidden && !mobile && (
         <button

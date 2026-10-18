@@ -93,11 +93,14 @@ try {
   assert.equal(step.left, step.width + 48, JSON.stringify(step)); assert.equal(await role("对白第 2 段").getAttribute("aria-current"), "true");
   assert.equal(await page.locator(".wb-rp-current").getAttribute("mesid"), id); assert.equal(await unscrolled(), true);
   await page.keyboard.press("ArrowLeft"); await settle(); assert.equal(await block.evaluate(n => n.scrollLeft), 0);
+  const over = await page.locator("#chat .wb-rp-current .mes_text").boundingBox(); await page.mouse.move(over.x + 40, over.y + 20);
+  await page.mouse.wheel(0, 120); await settle(); assert.equal(await role("对白第 2 段").getAttribute("aria-current"), "true");
+  await page.mouse.wheel(0, -120); await settle(); assert.equal(await role("对白第 1 段").getAttribute("aria-current"), "true"); assert.equal(await page.evaluate(() => scrollY), 0);
   await page.locator("#chat .wb-rp-current .mes_text").click({ position: { x: 40, y: 20 } }); await settle(); assert.equal(await role("对白第 2 段").getAttribute("aria-current"), "true");
   await role(`对白第 ${pages} 段`).click(); await settle(); await role("下一段对白或输入").click(); await settle();
   assert.equal(await has("wb-rp-compose"), true); await role("返回对白").click(); await settle();
   assert.equal(await role(`对白第 ${pages} 段`).getAttribute("aria-current"), "true");
-  pass("long messages page by lines without scrollbars; keys, clicks and dots turn pages and the last page continues into input", { pages, step });
+  pass("long messages page by lines without scrollbars; keys, the wheel, clicks and dots turn pages and the last page continues into input", { pages, step });
   await role("编辑当前对白").click(); const editor = page.locator(".wb-rp-current .edit_textarea"); await editor.waitFor();
   assert.match(await editor.inputValue(), /WB_RP_FIRST/); await editor.fill("WB_RP_EDIT **native Markdown**"); await role("保存对白编辑").click(); await editor.waitFor({ state: "detached" });
   assert.equal(await page.evaluate(() => SillyTavern.getContext().chat.at(-1).mes), "WB_RP_EDIT **native Markdown**");
@@ -140,9 +143,9 @@ try {
   await role("展开左边栏").click(); await openResource(page,'世界书详情'); await settle();
   const compact = await page.evaluate(() => {
     const r = s => document.querySelector(s).getBoundingClientRect().toJSON();
-    return { left: r(".wb-left"), right: r("#wb-resource-rail"), plate: r(".wb-rp-plate"), tools: r(".wb-rp-tools"), foot: r(".wb-rp-foot"), text: r("#chat") };
+    return { left: r(".wb-left"), right: r("#wb-resource-rail"), plate: r(".wb-rp-plate"), tools: r(".wb-rp-tools"), dots: r(".wb-rp-dots"), reply: r(".wb-rp-reply"), foot: r(".wb-rp-foot"), text: r("#chat") };
   });
-  assert(compact.plate.bottom <= compact.text.top + 1 && compact.tools.bottom <= compact.text.top + 1 && compact.tools.left >= compact.plate.right && compact.foot.top >= compact.text.bottom - 1 && compact.text.left >= compact.left.right && compact.tools.right <= compact.right.left, JSON.stringify(compact));
+  assert(compact.plate.bottom <= compact.text.top + 1 && compact.foot.top >= compact.text.bottom - 1 && compact.tools.top >= compact.foot.top - 1 && compact.tools.left >= compact.dots.right && compact.reply.left >= compact.tools.right && compact.text.left >= compact.left.right && compact.foot.right <= compact.right.left, JSON.stringify(compact));
   await role("关闭右栏").click(); await role("收纳左边栏").click(); await settle();
   pass("both panels can open together without dialogue controls overlapping the speaker", compact);
   await withReducedMotion(page, async () => assert.equal(await css("#sheld", "transitionDuration"), "0s")); pass("reduced motion is honored and the account preference restored");

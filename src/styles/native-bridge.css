@@ -1231,7 +1231,10 @@ body.wb-active:not(.wb-mobile) #chat .mes_buttons .mes_button:not(.wb-reading-ic
     color 180ms;
 }
 /* One hover for every action in the row. */
-body.wb-active:not(.wb-mobile) #chat .mes_buttons :is(.mes_button, .wb-image-message-button):is(:hover, :focus-visible) {
+body.wb-active:not(.wb-mobile)
+  #chat
+  .mes_buttons
+  :is(.mes_button, .wb-image-message-button):is(:hover, :focus-visible) {
   background: var(--wb-selected) !important;
   color: var(--wb-accent) !important;
   opacity: 1;
@@ -3053,26 +3056,13 @@ body.wb-rp :is(#expression-wrapper, #visual-novel-wrapper) {
   background:
     linear-gradient(to bottom, transparent 52%, var(--wb-rp-scrim, #39362c38)), var(--wb-rp-tint, transparent);
 }
-/* Desktop: the band carries the bottom; a soft vignette along the top and beside each column edge
-   lets the caption, corner icons and edge arrows (light, drawn on the picture) read on any scene,
-   with or without the host's shadow and blur settings. */
+/* Desktop: the band carries the bottom; one soft vignette along the top lets the caption and corner
+   icons (light, drawn on the picture) read on any scene, with or without the host's shadow and blur
+   settings. The sides stay open: nothing frames the picture. */
 body.wb-rp:not(.wb-mobile) .wb-rp-atmosphere {
   background:
     linear-gradient(to bottom, rgb(14 10 7 / 34%) 0, rgb(14 10 7 / 12%) 90px, transparent 170px),
-    linear-gradient(
-      to right,
-      transparent var(--wb-left),
-      rgb(14 10 7 / 26%) var(--wb-left),
-      transparent calc(var(--wb-left) + 96px)
-    ),
-    linear-gradient(
-      to left,
-      transparent var(--wb-right),
-      rgb(14 10 7 / 26%) var(--wb-right),
-      transparent calc(var(--wb-right) + 96px)
-    ),
     var(--wb-rp-tint, transparent);
-  transition: background 220ms;
 }
 .wb-rp-actor,
 .wb-rp-user {
@@ -3157,8 +3147,10 @@ body.wb-rp.wb-rp-history .wb-rp-user {
   letter-spacing: 0.06em;
   background: linear-gradient(transparent, rgb(30 24 18 / 62%));
 }
+/* The band runs the whole window width, under the columns, so it never ends in an edge beside
+   them; its text column follows the space between them. */
 body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #sheld {
-  inset: auto var(--wb-right) 0 var(--wb-left) !important;
+  inset: auto 0 0 0 !important;
   width: auto !important;
   height: var(--wb-rp-deck) !important;
   min-height: 0;
@@ -3177,8 +3169,6 @@ body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #sheld {
   box-shadow: none !important;
   overflow: hidden;
   transition:
-    left 220ms,
-    right 220ms,
     height 280ms cubic-bezier(0.22, 0.8, 0.3, 1),
     opacity 160ms,
     visibility 160ms;
@@ -3186,13 +3176,15 @@ body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #sheld {
 }
 body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat {
   position: absolute;
-  inset: 64px var(--wb-rp-inset) 58px;
+  inset: 64px calc(var(--wb-right) + var(--wb-rp-inset)) 58px calc(var(--wb-left) + var(--wb-rp-inset));
   width: auto !important;
   height: auto;
   padding: 0 !important;
   display: flex;
   flex-direction: column;
   transition:
+    left 220ms,
+    right 220ms,
     opacity 160ms,
     transform 200ms,
     visibility 160ms;
@@ -3261,7 +3253,10 @@ body:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history)
   break-inside: avoid;
   max-height: var(--wb-rp-page, none);
 }
-body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history)
+  #chat
+  .wb-rp-current:has(.edit_textarea)
+  .mes_block {
   column-width: auto;
   overflow: auto;
 }
@@ -3286,8 +3281,22 @@ body.wb-active.wb-rp #form_sheld {
 body.wb-active.wb-rp.wb-rp-compose:not(.wb-mobile) {
   --wb-rp-deck: clamp(300px, 42vh, 440px);
 }
+/* The field sits on solid band; only the strip above the name fades into the picture. */
+body.wb-active.wb-rp.wb-rp-compose:not(.wb-mobile):not(.wb-rp-history) #sheld {
+  background: linear-gradient(
+    to top,
+    var(--wb-rp-band-1) 0,
+    var(--wb-rp-band-1) calc(100% - 90px),
+    var(--wb-rp-band-2) calc(100% - 44px),
+    transparent 100%
+  ) !important;
+}
+/* Composing: the text column becomes one soft field — the draft on top, the tool row along its
+   foot with the RP keys and send at its end. The field's padding keeps the draft on the reading
+   column's edges. */
 body.wb-active.wb-rp:not(.wb-mobile) #form_sheld {
-  inset: 70px var(--wb-rp-inset) 12px;
+  inset: 60px calc(var(--wb-right) + var(--wb-rp-inset) - 20px) 14px
+    calc(var(--wb-left) + var(--wb-rp-inset) - 20px);
   width: auto;
   height: auto;
 }
@@ -3301,14 +3310,29 @@ body.wb-active.wb-rp #send_form {
   background: transparent !important;
 }
 body.wb-active.wb-rp:not(.wb-mobile) #send_form {
-  padding: 0 !important;
+  padding: 16px 20px 10px !important;
+  border-radius: 18px !important;
+  background: var(--wb-rp-compose-field) !important;
+  box-shadow: inset 0 0 0 1px var(--wb-rp-line) !important;
+  outline: none !important;
+  transition: box-shadow 160ms;
+}
+body.wb-active.wb-rp:not(.wb-mobile) #send_form:focus-within {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--wb-accent) 10%, transparent) !important;
 }
 body.wb-rp #send_textarea {
   font: var(--wb-rp-text) / 1.8 var(--wb-rp-font, serif) !important;
   padding: 4px 8px !important;
 }
 body.wb-rp:not(.wb-mobile) #send_textarea {
-  padding: 4px 0 !important;
+  padding: 0 !important;
+  color: var(--wb-rp-ink-1) !important;
+  caret-color: var(--wb-accent);
+}
+body.wb-rp:not(.wb-mobile) #send_textarea::placeholder {
+  color: var(--wb-rp-ink-3);
 }
 body.wb-rp #nonQRFormItems {
   height: 100%;
@@ -3342,106 +3366,127 @@ body.wb-rp:not(.wb-rp-history) .edit_textarea {
   font: var(--wb-rp-text) / 1.8 var(--wb-rp-font, serif);
   resize: vertical;
 }
-/* History: the log continues the centred pane under .wb-rp-log-head (layouts/rp.css). */
+/* History, board "RpHistory" v2 — a visual-novel backlog: the band rises over the whole stage,
+   and the conversation reads down one centred column, each speaker's name in a narrow column to
+   the left of their lines. The line you came from carries the accent stroke. */
 body.wb-active.wb-rp.wb-rp-history #sheld {
-  inset: calc(var(--wb-rp-chrome) + 76px) auto 24px var(--wb-rp-log-left) !important;
-  width: var(--wb-rp-log-width) !important;
+  inset: 0 !important;
+  width: auto !important;
   height: auto !important;
-  border-radius: 0 0 18px 18px !important;
-  display: flex !important;
-  background: var(--wb-rp-box) !important;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 24px 60px rgb(0 0 0 / 30%),
-    inset 0 0 0 1px var(--wb-rp-line) !important;
+  display: block !important;
+  border-radius: 0 !important;
+  background: linear-gradient(to bottom, var(--wb-rp-band-2) 0, var(--wb-rp-band-1) 180px) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none !important;
 }
 body.wb-rp.wb-rp-history #chat {
-  height: 100%;
+  position: absolute;
+  inset: calc(var(--wb-rp-chrome) + 92px) var(--wb-right) 0 var(--wb-left);
+  width: auto !important;
+  height: auto;
   overflow-y: auto;
-  padding: 16px 28px 20px !important;
+  padding: 18px calc((var(--wb-rp-area) - var(--wb-rp-log-width)) / 2) 64px !important;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
 }
-/* Board "RpHistory": a compact log — avatar, speaker and floor, then the line in the reading face.
-   Overrides the Noval reading styles (floating names, tinted user boxes) for this view only. */
 body.wb-active.wb-rp.wb-rp-history #chat .mes {
-  display: flex !important;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 0 !important;
-  margin: 0 0 18px !important;
+  position: relative;
+  box-sizing: border-box;
+  width: auto;
+  max-width: none;
+  display: block !important;
+  padding: 0 0 0 calc(var(--wb-rp-log-name) + 32px) !important;
+  margin: 0 0 30px !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: none !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .mesAvatarWrapper {
-  display: block !important;
-  flex: none;
-  width: 36px;
-  padding: 0;
+body.wb-active.wb-rp.wb-rp-history #chat .mes.wb-rp-current::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: calc(var(--wb-rp-log-name) + 14px);
+  width: 2px;
+  border-radius: 1px;
+  background: var(--wb-accent);
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .mesAvatarWrapper > :not(.avatar) {
+body.wb-active.wb-rp.wb-rp-history #chat .mes .mesAvatarWrapper {
   display: none !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .avatar {
-  display: block !important;
-  width: 36px !important;
-  height: 36px !important;
-  margin: 0 !important;
-}
-body.wb-active.wb-rp.wb-rp-history #chat .mes .avatar img {
-  width: 36px !important;
-  height: 36px !important;
-  max-width: none !important;
-  max-height: none !important;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: center 18%;
-}
 body.wb-active.wb-rp.wb-rp-history #chat .mes .mes_block {
-  flex: 1;
   min-width: 0;
   padding: 0 !important;
 }
+/* The name row spans the entry so its actions can sit at the far end; only its pieces take pointers. */
 body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name {
-  position: static;
-  inset: auto;
-  display: flex !important;
-  align-items: baseline;
-  height: auto;
+  position: absolute;
+  top: 3px;
+  left: 0;
+  right: 0;
+  display: block !important;
+  height: 0;
   min-height: 0;
-  margin: 0 0 2px !important;
-  font: 13px / 1.5 var(--wb-font-ui);
-}
-body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name .mes_buttons {
-  height: 20px;
-  align-self: center;
-}
-body.wb-active.wb-rp.wb-rp-history #chat .mes .wb-reading-time {
-  opacity: 0;
-  transition: opacity 180ms;
-}
-body.wb-active.wb-rp.wb-rp-history #chat .mes:is(:hover, :focus-within) .wb-reading-time {
-  opacity: 1;
+  margin: 0 !important;
+  pointer-events: none;
 }
 body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name > .flex1 {
+  width: var(--wb-rp-log-name);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   min-height: 0;
-  align-items: baseline;
-  gap: 8px;
+  text-align: right;
+  pointer-events: auto;
 }
 body.wb-active.wb-rp.wb-rp-history #chat .mes .name_text {
-  display: inline !important;
-  font-weight: 600;
-  color: var(--wb-accent);
+  display: block !important;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--wb-accent-text, var(--wb-accent));
+  font: 600 15px / 1.5 var(--wb-rp-font, var(--wb-font-reading));
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 body.wb-active.wb-rp.wb-rp-history #chat .mes[is_user="true"] .name_text {
   color: var(--wb-rp-ink-2);
 }
 body.wb-active.wb-rp.wb-rp-history #chat .mes .wb-reading-meta {
+  display: flex;
+  gap: 6px;
   opacity: 1;
-  font: 12px / 1.5 var(--wb-font-ui);
-  font-variant-numeric: tabular-nums;
   color: var(--wb-rp-ink-3);
+  font: 11.5px / 1.5 var(--wb-font-ui);
+  font-variant-numeric: tabular-nums;
+}
+body.wb-active.wb-rp.wb-rp-history #chat .mes .wb-reading-meta > b,
+body.wb-active.wb-rp.wb-rp-history #chat .mes :is(.timestamp, .wb-reading-time),
+body.wb-rp.wb-rp-history #chat .mes .wb-user-heading {
+  display: none !important;
+}
+/* Message actions surface at the line's top-right only while it is pointed at. */
+body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name .mes_buttons {
+  position: absolute;
+  top: -10px;
+  right: 0;
+  height: auto;
+  padding: 2px;
+  pointer-events: auto;
+  border-radius: 10px;
+  background: var(--wb-rp-band-1);
+  box-shadow: 0 0 0 1px var(--wb-rp-line);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 160ms,
+    visibility 160ms;
+}
+body.wb-active.wb-rp.wb-rp-history #chat .mes:is(:hover, :focus-within) .ch_name .mes_buttons {
+  opacity: 1;
+  visibility: visible;
 }
 body.wb-active.wb-rp.wb-rp-history
   #chat
@@ -3452,14 +3497,15 @@ body.wb-active.wb-rp.wb-rp-history
 }
 body.wb-active.wb-rp.wb-rp-history #chat .mes .mes_text {
   padding: 0 !important;
-  font: 16px / 1.8 var(--wb-rp-font, var(--wb-font-reading)) !important;
+  font: 17px / 1.9 var(--wb-rp-font, var(--wb-font-reading)) !important;
+  letter-spacing: 0.02em;
   color: var(--wb-rp-ink-1) !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .mes_text p {
-  margin: 0 0 0.4em;
+body.wb-active.wb-rp.wb-rp-history #chat .mes[is_user="true"] .mes_text {
+  color: var(--wb-rp-ink-2) !important;
 }
-body.wb-rp.wb-rp-history #chat .mes .wb-user-heading {
-  display: none !important;
+body.wb-active.wb-rp.wb-rp-history #chat .mes .mes_text p {
+  margin: 0 0 0.5em;
 }
 body.wb-rp.wb-rp-history #form_sheld {
   display: none;
@@ -4058,7 +4104,10 @@ body.wb-mobile-rp:not(.wb-rp-history)
 body.wb-mobile-rp:not(.wb-rp-history) #chat .mes:has(.edit_textarea) .mesAvatarWrapper {
   display: none !important;
 }
-body.wb-mobile-rp #chat .mes :is(.wb-user-heading, .swipe_left, .swipeRightBlock, .swipe_right, .swipes-counter) {
+body.wb-mobile-rp
+  #chat
+  .mes
+  :is(.wb-user-heading, .swipe_left, .swipeRightBlock, .swipe_right, .swipes-counter) {
   display: none !important;
 }
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
@@ -4079,7 +4128,10 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) .ch_name {
   justify-content: flex-end;
   margin-bottom: 8px;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) :is(.name_text, .timestamp, .wb-reading-meta) {
+body.wb-active.wb-mobile.wb-mobile-rp
+  #chat
+  .mes:has(.edit_textarea)
+  :is(.name_text, .timestamp, .wb-reading-meta) {
   display: none !important;
 }
 body.wb-mobile-rp #chat .mes:has(.edit_textarea) .mes_buttons {
@@ -4314,7 +4366,10 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"] .
   flex: 1;
   background: color-mix(in srgb, var(--wb-accent) 12%, var(--wb-rp-field));
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"]:not(:has(.edit_textarea)) .ch_name {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history
+  #chat
+  .mes[is_user="true"]:not(:has(.edit_textarea))
+  .ch_name {
   left: auto !important;
   right: 14px !important;
   padding: 0 34px 0 14px !important;

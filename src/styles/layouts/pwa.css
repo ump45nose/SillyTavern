@@ -300,7 +300,9 @@
   body.wb-mobile .wb-selector-icon .wb-dot.online {
     background: var(--wb-success);
   }
-  body.wb-mobile :is(.wb-mobile-config, .wb-mobile-tool-config) .wb-selector:is(.is-active, :has([aria-expanded="true"])) {
+  body.wb-mobile
+    :is(.wb-mobile-config, .wb-mobile-tool-config)
+    .wb-selector:is(.is-active, :has([aria-expanded="true"])) {
     background: var(--wb-surface-3);
   }
   body.wb-mobile .wb-mobile-config:not(.is-collapsed) .wb-mobile-config-fold {
@@ -531,6 +533,7 @@
     width: 16px;
   }
   body.wb-mobile-rp .wb-rp-reply {
+    margin-left: auto;
     height: 36px;
     min-height: 36px;
     padding: 0 6px 0 10px;
@@ -916,9 +919,11 @@
     scale: 0.93;
   }
   body.wb-mobile
-    :is(.wb-mobile-sheet-list > button, .wb-mobile-summary, .wb-left :is(.wb-nav-row, .wb-nav-toggle)):active:not(
-      :disabled
-    ) {
+    :is(
+      .wb-mobile-sheet-list > button,
+      .wb-mobile-summary,
+      .wb-left :is(.wb-nav-row, .wb-nav-toggle)
+    ):active:not(:disabled) {
     scale: 0.98;
     background: var(--wb-surface-2);
   }

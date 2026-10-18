@@ -26,7 +26,8 @@
     --wb-rp-box-shadow: 0 24px 60px rgb(0 0 0 / 22%);
     --wb-rp-band-1: rgb(251 248 242 / 93%);
     --wb-rp-band-2: rgb(251 248 242 / 72%);
-    --wb-rp-faint: 0.45;
+    --wb-rp-faint: 0.62;
+    --wb-rp-compose-field: rgb(255 253 248 / 72%);
     /* What is drawn straight on the picture: light glyphs with a dark shadow read on any scene. */
     --wb-rp-on-scene: #fffaf2;
     --wb-rp-on-scene-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 55%)) drop-shadow(0 0 8px rgb(0 0 0 / 28%));
@@ -53,6 +54,7 @@
     --wb-rp-box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
     --wb-rp-band-1: rgb(22 19 16 / 90%);
     --wb-rp-band-2: rgb(22 19 16 / 66%);
+    --wb-rp-compose-field: rgb(255 255 255 / 6%);
   }
 
   /* SillyTavern's "no blur" setting removes every backdrop filter; without the frost the panes
@@ -211,6 +213,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    pointer-events: none;
   }
   /* The speaker: a short accent stroke and the name, no plate. */
   .wb-rp-plate {
@@ -240,9 +243,10 @@
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  /* Quick menu: bare icons, faint until the pointer or focus reaches them. */
+  /* Quick menu: bare icons on the band's bottom line, quiet until the pointer or focus reaches them. */
   .wb-rp-tools {
     flex: none;
+    margin-left: auto;
     display: flex;
     align-items: center;
     gap: 2px;
@@ -307,6 +311,17 @@
     align-items: center;
     gap: 2px;
   }
+  /* Composing, the keys sit in the native input's right-hand row, ahead of anything the host puts
+     there and of send. */
+  #rightSendForm > .wb-rp-tools {
+    order: -1;
+    /* SillyTavern sizes every block in this row as one icon. */
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    margin: 0 6px 0 0;
+    opacity: 1;
+  }
   .wb-rp-dots {
     flex: none;
     display: flex;
@@ -354,7 +369,7 @@
     gap: 6px;
     height: 32px;
     min-height: 32px;
-    margin-left: auto;
+    margin-left: 6px;
     padding: 0 12px 0 10px;
     border: 0;
     border-radius: 10px;
@@ -369,38 +384,34 @@
   .wb-rp-reply:is(:hover, :focus-visible) {
     background: var(--wb-rp-field);
   }
-  /* ── History: the whole conversation on one centred pane ── */
+  /* ── History: a backlog over the whole stage (native-bridge.css draws the wash and entries);
+     its title and the way back head the same centred column ── */
   body.wb-active.wb-rp {
-    --wb-rp-log-width: min(860px, calc(var(--wb-rp-area) - 48px));
-    --wb-rp-log-left: calc(var(--wb-left) + (var(--wb-rp-area) - var(--wb-rp-log-width)) / 2);
+    /* Clear of the corner keys on each side (they reach 128px in from the stage's right edge). */
+    --wb-rp-log-width: min(860px, calc(var(--wb-rp-area) - 280px));
+    --wb-rp-log-name: 120px;
   }
-  .wb-rp-log-head {
+  body.wb-rp:not(.wb-mobile) .wb-rp-log-head {
     position: fixed;
-    top: calc(var(--wb-rp-chrome) + 20px);
-    left: var(--wb-rp-log-left);
+    top: calc(var(--wb-rp-chrome) + 30px);
+    left: calc(var(--wb-left) + (var(--wb-rp-area) - var(--wb-rp-log-width)) / 2);
     z-index: 6;
     width: var(--wb-rp-log-width);
-    height: 56px;
+    height: 44px;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 16px 0 28px;
-    border-radius: 18px 18px 0 0;
-    background: var(--wb-rp-box);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    box-shadow:
-      inset 0 0 0 1px var(--wb-rp-line),
-      inset 0 -1px 0 var(--wb-rp-line);
+    align-items: baseline;
+    gap: 14px;
+    padding-left: calc(var(--wb-rp-log-name) + 32px);
     color: var(--wb-rp-ink-1);
     font: var(--wb-text-sm) / 1.45 var(--wb-font-ui);
+    transition: left 220ms;
   }
-  .wb-rp-log-head h2 {
+  body.wb-rp:not(.wb-mobile) .wb-rp-log-head h2 {
     margin: 0;
-    font-size: 15px;
-    font-weight: 600;
+    font: 600 22px / 44px var(--wb-rp-font, var(--wb-font-reading));
+    letter-spacing: 0.16em;
   }
-  .wb-rp-log-head small {
+  body.wb-rp:not(.wb-mobile) .wb-rp-log-head small {
     min-width: 0;
     overflow: hidden;
     color: var(--wb-rp-ink-3);
@@ -408,8 +419,9 @@
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .wb-rp-log-head button {
+  body.wb-rp:not(.wb-mobile) .wb-rp-log-head button {
     flex: none;
+    align-self: center;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -419,18 +431,28 @@
     padding: 0 14px 0 10px;
     border: 0;
     border-radius: 10px;
-    background: var(--wb-rp-field);
-    box-shadow: none;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--wb-rp-line);
     color: var(--wb-rp-ink-1);
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--wb-duration-fast);
   }
-  .wb-rp-log-head button:is(:hover, :focus-visible) {
-    background: color-mix(in srgb, var(--wb-rp-ink-1) 12%, transparent);
+  body.wb-rp:not(.wb-mobile) .wb-rp-log-head button:is(:hover, :focus-visible) {
+    background: var(--wb-rp-field);
   }
   body.wb-rp.wb-focus .wb-rp-log-head {
     opacity: 0;
     visibility: hidden;
+  }
+  /* Over the backlog's wash the corner keys and edge arrows take the band's ink. */
+  body.wb-rp.wb-rp-history:not(.wb-mobile) :is(.wb-rp-corner, .wb-rp-visibility, .wb-edge-arrow) {
+    color: var(--wb-rp-ink-2) !important;
+    filter: none;
+  }
+  body.wb-rp.wb-rp-history:not(.wb-mobile) :is(.wb-rp-corner, .wb-rp-visibility):is(:hover, :focus-visible),
+  body.wb-rp.wb-rp-history:not(.wb-mobile) .wb-rp-corner[aria-pressed="true"] {
+    background: var(--wb-rp-field);
   }
 
   /* ── Top-right corner: history and show/hide, icons only, faint until reached ── */
