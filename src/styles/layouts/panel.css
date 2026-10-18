@@ -29,10 +29,6 @@
   body.wb-active:not(.wb-mobile) .wb-right.is-open {
     transform: none;
   }
-  /* With the RP top bar folded away the eye button still floats at the top right; stay below it. */
-  body.wb-active.wb-rp:not(.wb-mobile) .wb-right {
-    top: max(calc(var(--wb-rp-chrome) + var(--wb-gutter)), 64px);
-  }
   /* The rail now lives inside the card, beside the panel. */
   body.wb-active:not(.wb-mobile) .wb-right .wb-resource-rail {
     position: relative;

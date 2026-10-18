@@ -3031,7 +3031,8 @@ body.wb-active.wb-rp {
 body.wb-rp.wb-rp-top-auto {
   --wb-rp-chrome: 0px;
 }
-body.wb-rp.wb-focus {
+/* Side panels lie over the stage (layouts/rp.css), so it keeps the whole window. */
+body.wb-active.wb-rp:not(.wb-mobile) {
   --wb-left: 0px;
   --wb-right: 0px;
 }
@@ -3277,12 +3278,12 @@ body.wb-active.wb-rp #form_sheld {
     transform 240ms cubic-bezier(0.22, 0.8, 0.3, 1),
     visibility 160ms;
 }
-/* Replying: the band grows and its text column becomes the native input. */
-body.wb-active.wb-rp.wb-rp-compose:not(.wb-mobile) {
+/* Replying or editing: the band grows and its text column becomes a field. */
+body.wb-active.wb-rp:is(.wb-rp-compose, .wb-rp-editing):not(.wb-mobile) {
   --wb-rp-deck: clamp(300px, 42vh, 440px);
 }
 /* The field sits on solid band; only the strip above the name fades into the picture. */
-body.wb-active.wb-rp.wb-rp-compose:not(.wb-mobile):not(.wb-rp-history) #sheld {
+body.wb-active.wb-rp:is(.wb-rp-compose, .wb-rp-editing):not(.wb-mobile):not(.wb-rp-history) #sheld {
   background: linear-gradient(
     to top,
     var(--wb-rp-band-1) 0,
@@ -3360,11 +3361,48 @@ body.wb-active.wb-rp:not(.wb-mobile) #send_but :is(.wb-native-icon, .wb-native-i
 body.wb-active.wb-rp.wb-rp-compose.wb-rp-expanded {
   --wb-rp-deck: clamp(360px, 74vh, 900px);
 }
-body.wb-rp:not(.wb-rp-history) .edit_textarea {
-  min-height: 90px;
-  max-height: calc(var(--wb-rp-deck) - 54px);
-  font: var(--wb-rp-text) / 1.8 var(--wb-rp-font, serif);
-  resize: vertical;
+/* Editing a line: the same soft field as replying, filling the text column (its padding keeps
+   the words on the column's edges), with save and cancel on the band's bottom line. */
+body.wb-active.wb-rp.wb-rp-editing:not(.wb-mobile) #chat {
+  overflow: visible !important;
+}
+body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+  display: flex !important;
+  flex-direction: column;
+  overflow: visible;
+}
+body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  overflow: visible !important;
+}
+body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .edit_textarea {
+  flex: 1 1 auto;
+  width: calc(100% + 40px) !important;
+  height: auto !important;
+  min-height: 0;
+  max-height: none;
+  margin: 0 -20px !important;
+  padding: 14px 20px !important;
+  border: 0 !important;
+  border-radius: 18px;
+  background: var(--wb-rp-compose-field) !important;
+  box-shadow: inset 0 0 0 1px var(--wb-rp-line) !important;
+  color: var(--wb-rp-ink-1) !important;
+  caret-color: var(--wb-accent);
+  font: var(--wb-rp-text) / 1.85 var(--wb-rp-font, serif) !important;
+  letter-spacing: 0.02em;
+  resize: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wb-rp-dot) transparent;
+  transition: box-shadow 160ms;
+}
+body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .edit_textarea:focus {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--wb-accent) 10%, transparent) !important;
 }
 /* History, board "RpHistory" v2 — a visual-novel backlog: the band rises over the whole stage,
    and the conversation reads down one centred column, each speaker's name in a narrow column to

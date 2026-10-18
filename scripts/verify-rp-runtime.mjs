@@ -102,9 +102,14 @@ try {
   assert.equal(await role(`对白第 ${pages} 段`).getAttribute("aria-current"), "true");
   pass("long messages page by lines without scrollbars; keys, the wheel, clicks and dots turn pages and the last page continues into input", { pages, step });
   await role("编辑当前对白").click(); const editor = page.locator(".wb-rp-current .edit_textarea"); await editor.waitFor();
-  assert.match(await editor.inputValue(), /WB_RP_FIRST/); await editor.fill("WB_RP_EDIT **native Markdown**"); await role("保存对白编辑").click(); await editor.waitFor({ state: "detached" });
+  assert.match(await editor.inputValue(), /WB_RP_FIRST/);
+  // The wheel over the field scrolls the draft; it never turns the page out of editing.
+  await editor.fill("WB_RP_EDIT_LONG\n\n".repeat(80)); await editor.hover(); await page.mouse.wheel(0, 300); await settle();
+  assert((await editor.evaluate(n => n.scrollTop)) > 0); assert.equal(await editor.isVisible(), true);
+  assert.equal(await page.evaluate(() => { const t = document.querySelector(".wb-rp-current .edit_textarea").getBoundingClientRect(), c = document.getElementById("chat").getBoundingClientRect(); return document.body.classList.contains("wb-rp-editing") && t.left < c.left && t.right > c.right; }), true);
+  await editor.fill("WB_RP_EDIT **native Markdown**"); await role("保存对白编辑").click(); await editor.waitFor({ state: "detached" });
   assert.equal(await page.evaluate(() => SillyTavern.getContext().chat.at(-1).mes), "WB_RP_EDIT **native Markdown**");
-  pass("edit and save use native message controls and preserve raw Markdown");
+  pass("editing fills the column with one field the wheel scrolls; save uses native controls and preserves raw Markdown");
 
   await page.evaluate(async () => { await TavernHelper.createChatMessages([{ role: "user", message: '```html\n<!doctype html><html><body><button id="rp-frame-button" onclick="document.body.dataset.count=String(Number(document.body.dataset.count||0)+1)">RP iframe</button></body></html>\n```' }]); });
   await page.waitForFunction(() => document.querySelector(".wb-rp-current iframe"));
@@ -143,11 +148,13 @@ try {
   await role("展开左边栏").click(); await openResource(page,'世界书详情'); await settle();
   const compact = await page.evaluate(() => {
     const r = s => document.querySelector(s).getBoundingClientRect().toJSON();
-    return { left: r(".wb-left"), right: r("#wb-resource-rail"), plate: r(".wb-rp-plate"), tools: r(".wb-rp-tools"), dots: r(".wb-rp-dots"), reply: r(".wb-rp-reply"), foot: r(".wb-rp-foot"), text: r("#chat") };
+    const left = r(".wb-left"), right = r(".wb-right"), hit = (box) => document.elementFromPoint(box.left + box.width / 2, box.bottom - 40);
+    return { width: innerWidth, band: r("#sheld"), leftOnTop: !!hit(left)?.closest(".wb-left"), rightOnTop: !!hit(right)?.closest(".wb-right"), plate: r(".wb-rp-plate"), tools: r(".wb-rp-tools"), dots: r(".wb-rp-dots"), reply: r(".wb-rp-reply"), foot: r(".wb-rp-foot"), text: r("#chat") };
   });
-  assert(compact.plate.bottom <= compact.text.top + 1 && compact.foot.top >= compact.text.bottom - 1 && compact.tools.top >= compact.foot.top - 1 && compact.tools.left >= compact.dots.right && compact.reply.left >= compact.tools.right && compact.text.left >= compact.left.right && compact.foot.right <= compact.right.left, JSON.stringify(compact));
+  // The panels lie over the stage: the band keeps the whole window and both cards sit above it.
+  assert(compact.band.left <= 1 && compact.band.right >= compact.width - 1 && compact.leftOnTop && compact.rightOnTop && compact.plate.bottom <= compact.text.top + 1 && compact.foot.top >= compact.text.bottom - 1 && compact.tools.top >= compact.foot.top - 1 && compact.tools.left >= compact.dots.right && compact.reply.left >= compact.tools.right, JSON.stringify(compact));
   await role("关闭右栏").click(); await role("收纳左边栏").click(); await settle();
-  pass("both panels can open together without dialogue controls overlapping the speaker", compact);
+  pass("both panels open together over a stage that keeps the whole window; dialogue controls stay in order", compact);
   await withReducedMotion(page, async () => assert.equal(await css("#sheld", "transitionDuration"), "0s")); pass("reduced motion is honored and the account preference restored");
   await role("切换阅读布局").click(); await settle(); assert.equal(await has("wb-rp"), false); assert.equal(await page.locator(".wb-reading-bar").count(), 1);
   assert.equal(await page.evaluate(() => __rpNative.chat === document.getElementById("chat") && __rpNative.input === document.getElementById("send_textarea")), true);
