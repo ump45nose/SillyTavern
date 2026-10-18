@@ -732,12 +732,12 @@ export function MobileShell({
       node.removeEventListener("pointercancel", up);
     };
   }, [presence.value, presence.exiting]);
-  // Noval: pulling the header down draws the session menu down with the finger. Once the menu is
+  // Pulling the header down draws the session menu down with the finger. Once the menu is
   // up the header is inert, so the drag is followed on the document.
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const header = headerRef.current;
-    if (rp || !header) return;
+    if (!header) return;
     const veil = () => document.querySelector<HTMLElement>(".wb-mobile-sheet-shade");
     let drag: {
       y: number;
@@ -772,6 +772,7 @@ export function MobileShell({
       const current = drag;
       end();
       if (!current?.started || e.pointerId !== current.pointer) return;
+      dragged = e.timeStamp;
       const node = sheetRef.current!,
         speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
       delete node.dataset.wbDrag;
@@ -789,20 +790,29 @@ export function MobileShell({
     };
     const down = (e: PointerEvent) => {
       const state = latest.current;
-      if (e.button !== 0 || e.pointerType === "mouse" || (e.target as Element).closest("button")) return;
+      if (e.button !== 0 || e.pointerType === "mouse") return;
+      if ((e.target as Element).closest("button:not(.wb-mobile-title)")) return;
       if (state.sheet || state.left || state.panel || state.editor) return;
+      if (document.body.classList.contains("wb-focus")) return;
       const at = { y: e.clientY, t: e.timeStamp };
       drag = { y: e.clientY, pointer: e.pointerId, dy: 0, height: 0, started: false, previous: at, last: at };
       document.addEventListener("pointermove", move);
       document.addEventListener("pointerup", up);
       document.addEventListener("pointercancel", up);
     };
+    // A drag that started on RP's title is not also a tap on it.
+    let dragged = -Infinity;
+    const swallow = (e: MouseEvent) => {
+      if (e.timeStamp - dragged < 400) e.stopPropagation();
+    };
     header.addEventListener("pointerdown", down);
+    header.addEventListener("click", swallow, true);
     return () => {
       end();
       header.removeEventListener("pointerdown", down);
+      header.removeEventListener("click", swallow, true);
     };
-  }, [rp]);
+  }, []);
   // A sheet that was drawn by the finger hands its motion back to the exit animation.
   useLayoutEffect(() => {
     if (!presence.exiting) return;
@@ -872,18 +882,33 @@ export function MobileShell({
         >
           <MenuDrawer size={21} />
         </button>
-        <button
-          className="wb-mobile-management"
-          aria-label="打开会话管理"
-          aria-expanded={sheet === "management"}
-          onClick={() => setSheet("management")}
-        >
-          <MoreHorizontal size={21} strokeWidth={2.4} />
-        </button>
-        <div className="wb-mobile-title">
-          <strong>{title}</strong>
-          <small>{subtitle}</small>
-        </div>
+        {/* RP: the scene's name is the way to the session menu (as is pulling the header down). */}
+        {rp ? (
+          <button
+            className="wb-mobile-title"
+            aria-label="打开会话管理"
+            aria-expanded={sheet === "management"}
+            onClick={() => setSheet("management")}
+          >
+            <strong>{title}</strong>
+            <small>{subtitle}</small>
+          </button>
+        ) : (
+          <>
+            <button
+              className="wb-mobile-management"
+              aria-label="打开会话管理"
+              aria-expanded={sheet === "management"}
+              onClick={() => setSheet("management")}
+            >
+              <MoreHorizontal size={21} strokeWidth={2.4} />
+            </button>
+            <div className="wb-mobile-title">
+              <strong>{title}</strong>
+              <small>{subtitle}</small>
+            </div>
+          </>
+        )}
         <button
           className="wb-mobile-person"
           aria-label={rp ? (focus ? "显示界面" : "隐藏界面") : "打开角色与 Trace"}
