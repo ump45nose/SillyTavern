@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
-  ArrowLeft,
+  BookMarked,
   BookOpen,
   ChevronDown,
   ChevronLeft,
@@ -18,10 +18,13 @@ import {
   MoreHorizontal,
   PanelsTopLeft,
   PencilLine,
+  Plug,
   ScanLine,
   Plus,
   Settings,
+  SlidersHorizontal,
   Theater,
+  UserRound,
   Users,
   WandSparkles,
   X,
@@ -32,13 +35,14 @@ import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Panel, Resource, SettingsPage } from "../host/types";
 import type { LayoutMode } from "./LayoutSwitcher";
 import type { ComposerPopup } from "./ComposerPopovers";
-import { ResourceControls } from "./Header";
+import { ResourceControls, resourceLabels } from "./Header";
 import { ReadingSettings } from "./Reading";
 import { composerTools, toolIcon } from "./ToolIcon";
 import { motionAllowed, usePresence } from "./Motion";
 import { bus } from "../host/bus";
 
 type Sheet = "management" | "tools" | HTMLElement | null;
+const resourceIcons = { connection: Plug, preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
 const interactive = "button,input,textarea,select,a,[contenteditable=true],iframe,video";
 export function MobileShell({
   host,
@@ -82,12 +86,13 @@ export function MobileShell({
 }) {
   const [sheet, setSheet] = useState<Sheet>(null),
     [editor, setEditor] = useState(false),
-    [collapsed, setCollapsed] = useState(true),
     [length, setLength] = useState(0);
   const presence = usePresence(sheet),
     sheetRef = useRef<HTMLDivElement>(null),
     input = document.getElementById("send_textarea") as HTMLTextAreaElement,
     form = document.getElementById("send_form")!,
+    dock = document.getElementById("form_sheld")!,
+    stage = document.getElementById("sheld")!,
     items = document.getElementById("nonQRFormItems")!;
   const latest = useRef({ left, panel, editor, sheet });
   latest.current = { left, panel, editor, sheet };
@@ -100,6 +105,123 @@ export function MobileShell({
       setChooser(null);
       setEditor(value);
     };
+  // The pill (Noval) or the compose band (RP) grows into the full-screen editor and shrinks back
+  // into it. The page is the native #form_sheld let out of the flow ([data-wb-page]); Noval's #chat
+  // keeps its place with a margin where the pill was. While the page moves, #sheld[data-wb-rise] lifts it over the header; once it
+  // covers the window, body[data-wb-covered] hides what is underneath. The morph is a Web Animation
+  // of the page's offset and clip from the pill's rectangle: no class changes mid-motion, and the
+  // textarea stays the same node.
+  const motion = useRef<Animation[]>([]),
+    pull = useRef<{
+      y: number;
+      pointer: number;
+      dy: number;
+      previous: { y: number; t: number };
+      last: { y: number; t: number };
+    } | null>(null);
+  const settle = () => {
+    motion.current.forEach((a) => a.cancel());
+    motion.current = [];
+  };
+  const moving = (on: boolean) => {
+    if (on) {
+      stage.dataset.wbRise = "";
+      delete document.body.dataset.wbCovered;
+    } else {
+      delete stage.dataset.wbRise;
+      document.body.dataset.wbCovered = "";
+    }
+  };
+  const letGo = () => {
+    settle();
+    delete dock.dataset.wbPage;
+    delete stage.dataset.wbRise;
+    delete document.body.dataset.wbCovered;
+    dock.style.removeProperty("translate");
+    document.getElementById("chat")!.style.removeProperty("margin-bottom");
+  };
+  // RP's band fades in over its first rows; the page grows from, and folds back to, where it is solid.
+  const bandFade = rp ? 40 : 0;
+  const pillShape = (page: DOMRect, pill: DOMRect, top = pill.top + bandFade) => ({
+    translate: `0 ${top - page.top}px`,
+    clipPath: `inset(0px ${page.right - pill.right}px ${page.height - (pill.bottom - top)}px ${pill.left - page.left}px round 24px)`,
+  });
+  const openPage = (rise = 0) => {
+    if (latest.current.editor) return;
+    settle();
+    const pill = form.getBoundingClientRect(),
+      duration = motionAllowed() ? 340 : 0;
+    delete dock.dataset.wbDrag;
+    dock.style.removeProperty("--wb-rise");
+    dock.style.removeProperty("--wb-rise-fade");
+    if (!rp) document.getElementById("chat")!.style.setProperty("margin-bottom", `${dock.offsetHeight}px`);
+    dock.dataset.wbPage = "";
+    moving(true);
+    const page = dock.getBoundingClientRect(),
+      grow = dock.animate(
+        [
+          pillShape(page, pill, pill.top + bandFade - rise),
+          { translate: "0 0", clipPath: "inset(0px round 0px)" },
+        ],
+        { duration, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+      );
+    motion.current = [
+      grow,
+      form.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: duration * 0.6,
+        delay: duration * 0.3,
+        easing: "ease-out",
+        fill: "backwards",
+      }),
+    ];
+    grow.finished.then(
+      () => moving(false),
+      () => {},
+    );
+    flushSync(() => setEditing(true));
+  };
+  const closePage = (from = 0) => {
+    if (!latest.current.editor) return;
+    settle();
+    dock.style.removeProperty("translate");
+    // The pill's place is measured with the page back in the flow for a moment; the reading's
+    // scroll is put back, as the shorter chat may have clamped it.
+    const chat = document.getElementById("chat")!,
+      page = dock.getBoundingClientRect(),
+      margin = chat.style.getPropertyValue("margin-bottom"),
+      scroll = chat.scrollTop;
+    delete dock.dataset.wbPage;
+    chat.style.removeProperty("margin-bottom");
+    const pill = form.getBoundingClientRect(),
+      duration = motionAllowed() ? 300 : 0;
+    chat.style.setProperty("margin-bottom", margin);
+    chat.scrollTo({ top: scroll, behavior: "instant" });
+    dock.dataset.wbPage = "";
+    moving(true);
+    const shrink = dock.animate(
+      [{ translate: `0 ${from}px`, clipPath: "inset(0px round 0px)" }, pillShape(page, pill)],
+      { duration, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" },
+    );
+    motion.current = [
+      shrink,
+      form.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: duration * 0.45,
+        easing: "ease-in",
+        fill: "forwards",
+      }),
+    ];
+    shrink.finished.then(
+      () => {
+        letGo();
+        motion.current = [
+          form.animate([{ opacity: 0 }, { opacity: 1 }], { duration: duration * 0.5, easing: "ease-out" }),
+        ];
+      },
+      () => {},
+    );
+    flushSync(() => setEditing(false));
+  };
+  const edit = (value: boolean) => (value ? openPage() : closePage());
   const presentation = host.rpPresentation();
   // Novel names the story; RP names the scene, falling back to the story when the card has none.
   const scene = (key: string) => {
@@ -127,30 +249,29 @@ export function MobileShell({
     return () => document.body.classList.remove("wb-mobile-busy", "wb-mobile-offline");
   }, [snap.busy, snap.online]);
   useLayoutEffect(() => {
-    document.body.classList.toggle("wb-mobile-editor", editor);
+    // The editor page keys off its own attributes (a class on <body> stalls its first frame).
     document.body.classList.toggle("wb-mobile-tools", sheet === "tools");
-    return () => {
-      document.body.classList.remove("wb-mobile-editor", "wb-mobile-tools");
-    };
-  }, [editor, sheet]);
+  }, [sheet]);
+  useLayoutEffect(() => () => document.body.classList.remove("wb-mobile-tools"), []);
   useEffect(() => {
     setSheet(null);
     setEditor(false);
+    letGo();
   }, [rp, snap.chatName, snap.character?.id]);
   useEffect(() => {
+    // A draft taller than the pill scrolls under the finger; a short one lets the pill be pulled up.
     const changed = () => {
       setLength(input.value.length);
+      input.toggleAttribute("data-wb-overflow", input.scrollHeight > input.clientHeight + 1);
     };
     changed();
     input.addEventListener("input", changed);
-    const edit = () => setEditing(true),
-      image = () => {
-        setSheet(null);
-        setEditor(false);
-        closeDrawers();
-      };
+    const image = () => {
+      setSheet(null);
+      setEditor(false);
+      closeDrawers();
+    };
     const off = [
-      bus.on("mobile-editor-open", edit),
       bus.on("image-compose", image),
       bus.on("mobile-menu", () => setSheet("management")),
       // A floor picked in the outline is also selected, so its tools are one tap away.
@@ -162,9 +283,115 @@ export function MobileShell({
     ];
     return () => {
       input.removeEventListener("input", changed);
+      input.removeAttribute("data-wb-overflow");
       off.forEach((f) => f());
     };
   }, []);
+  // The page lets go of the native nodes whenever the editor closes without its motion (a chat or
+  // layout change), and on unmount.
+  useLayoutEffect(() => {
+    if (!editor && !motion.current.length) letGo();
+  }, [editor]);
+  useEffect(
+    () => () => {
+      letGo();
+      delete dock.dataset.wbDrag;
+      for (const name of ["--wb-rise", "--wb-rise-fade"]) dock.style.removeProperty(name);
+    },
+    [],
+  );
+  // Pulling the pill (Noval) or the compose band (RP) up grows it with the finger; past the
+  // threshold, or on a flick, it carries on into the full editor, otherwise it settles back. The
+  // band grows through RPStage's --wb-rp-pull, its card through --wb-rise.
+  useEffect(() => {
+    if (editor) return;
+    let drag: {
+      x: number;
+      y: number;
+      pointer: number;
+      room: number;
+      rise: number;
+      started: boolean;
+      previous: { y: number; t: number };
+      last: { y: number; t: number };
+    } | null = null;
+    const reset = () => {
+      delete dock.dataset.wbDrag;
+      delete document.body.dataset.wbBandDrag;
+      dock.style.removeProperty("--wb-rise");
+      dock.style.removeProperty("--wb-rise-fade");
+      document.body.style.removeProperty("--wb-rp-pull");
+    };
+    const down = (e: PointerEvent) => {
+      const target = e.target as Element;
+      if (e.button !== 0 || e.pointerType === "mouse" || target.closest("button,a,select")) return;
+      if (target === input && input.hasAttribute("data-wb-overflow")) return;
+      if (rp && !document.body.classList.contains("wb-rp-compose")) return;
+      const at = { y: e.clientY, t: e.timeStamp };
+      drag = {
+        x: e.clientX,
+        y: e.clientY,
+        pointer: e.pointerId,
+        // RP's band may rise to just under the header.
+        room: rp
+          ? stage.getBoundingClientRect().top - (headerRef.current?.getBoundingClientRect().bottom ?? 0) - 16
+          : form.getBoundingClientRect().top - stage.getBoundingClientRect().top,
+        rise: 0,
+        started: false,
+        previous: at,
+        last: at,
+      };
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointer) return;
+      const dy = drag.y - e.clientY;
+      if (!drag.started) {
+        if (Math.hypot(e.clientX - drag.x, dy) < 8) return;
+        if (dy <= 0 || Math.abs(e.clientX - drag.x) > dy) {
+          drag = null;
+          return;
+        }
+        drag.started = true;
+        if (rp) document.body.dataset.wbBandDrag = "";
+        else dock.dataset.wbDrag = "";
+      }
+      drag.rise = Math.min(drag.room, Math.max(0, dy));
+      drag.previous = drag.last;
+      drag.last = { y: e.clientY, t: e.timeStamp };
+      if (rp) document.body.style.setProperty("--wb-rp-pull", `${-drag.rise}px`);
+      else {
+        dock.style.setProperty("--wb-rise", `${drag.rise}px`);
+        dock.style.setProperty("--wb-rise-fade", String(Math.min(0.75, drag.rise / 160)));
+      }
+    };
+    const up = (e: PointerEvent) => {
+      const current = drag;
+      drag = null;
+      if (!current?.started || e.pointerId !== current.pointer) return;
+      const speed = (current.previous.y - current.last.y) / Math.max(1, current.last.t - current.previous.t);
+      if (speed > 0.45 || current.rise > 72) {
+        // The band is already as tall as the finger made it: the page grows from there, and the
+        // band settles back under it once it has covered the window.
+        openPage(rp ? 0 : current.rise);
+        if (rp) motion.current[0]?.finished.then(reset, reset);
+      } else reset();
+    };
+    const cancel = () => {
+      drag = null;
+      reset();
+    };
+    form.addEventListener("pointerdown", down);
+    form.addEventListener("pointermove", move);
+    form.addEventListener("pointerup", up);
+    form.addEventListener("pointercancel", cancel);
+    return () => {
+      form.removeEventListener("pointerdown", down);
+      form.removeEventListener("pointermove", move);
+      form.removeEventListener("pointerup", up);
+      form.removeEventListener("pointercancel", cancel);
+      reset();
+    };
+  }, [rp, editor]);
   useLayoutEffect(() => {
     const chat = document.getElementById("sheld")!,
       previous = chat.inert;
@@ -320,12 +547,18 @@ export function MobileShell({
       last: { x: number; t: number };
     };
     let drag: Drag | null = null;
-    const body = document.body;
+    // Drag state lives in data attributes and inline styles on the drawer and its shade only: class
+    // writes wake SillyTavern's keyboard observer, and anything on <body> restyles the whole page.
+    const shade = () => document.querySelector<HTMLElement>(".wb-mobile-shade");
     const release = (node?: HTMLElement) => {
-      node?.classList.remove("is-dragging");
-      node?.style.removeProperty("--wb-drawer-x");
-      body.classList.remove("wb-drawer-dragging");
-      body.style.removeProperty("--wb-drawer-progress");
+      if (!node) return;
+      delete node.dataset.wbDrag;
+      node.style.removeProperty("--wb-drawer-x");
+      const veil = shade();
+      if (veil) {
+        delete veil.dataset.wbDrag;
+        veil.style.removeProperty("opacity");
+      }
     };
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || e.pointerType !== "touch") return;
@@ -375,8 +608,9 @@ export function MobileShell({
         drag.side ??= dx > 0 ? "left" : "right";
         drag.node = document.querySelector<HTMLElement>(drag.side === "left" ? ".wb-left" : ".wb-right")!;
         drag.width = drag.node.offsetWidth;
-        drag.node.classList.add("is-dragging");
-        body.classList.add("wb-drawer-dragging");
+        drag.node.dataset.wbDrag = "";
+        const veil = shade();
+        if (veil) veil.dataset.wbDrag = "";
       }
       const toward = drag.side === "left" ? dx : -dx,
         shown = Math.min(drag.width!, Math.max(0, drag.opening ? toward : drag.width! + toward));
@@ -384,7 +618,7 @@ export function MobileShell({
       drag.previous = drag.last;
       drag.last = { x: e.clientX, t: e.timeStamp };
       drag.node.style.setProperty("--wb-drawer-x", `${shown}px`);
-      body.style.setProperty("--wb-drawer-progress", String(shown / drag.width!));
+      shade()?.style.setProperty("opacity", String(shown / drag.width!));
     };
     const up = (e: PointerEvent) => {
       const current = drag;
@@ -447,8 +681,9 @@ export function MobileShell({
       chat.querySelectorAll(".wb-mobile-actions").forEach((n) => n.classList.remove("wb-mobile-actions"));
     };
   }, [rp]);
-  // A sheet follows its handle down; past a third of its height or on a flick it closes, otherwise
-  // it settles back.
+  // A sheet follows its handle away from its edge (down for the bottom sheets, up for the session
+  // menu that hangs from the top); past a third of its height or on a flick it closes, otherwise it
+  // settles back.
   useEffect(() => {
     const node = sheetRef.current;
     if (!node || presence.exiting) return;
@@ -465,11 +700,12 @@ export function MobileShell({
       if ((e.target as Element).closest("button")) return;
       const at = { y: e.clientY, t: e.timeStamp };
       drag = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
-      node.classList.add("is-dragging");
+      node.dataset.wbDrag = "";
     };
+    const top = node.classList.contains("is-management");
     const move = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.pointer) return;
-      drag.dy = Math.max(0, e.clientY - drag.y);
+      drag.dy = top ? Math.min(0, e.clientY - drag.y) : Math.max(0, e.clientY - drag.y);
       drag.previous = drag.last;
       drag.last = { y: e.clientY, t: e.timeStamp };
       node.style.setProperty("--wb-sheet-pull", `${drag.dy}px`);
@@ -478,9 +714,11 @@ export function MobileShell({
       const current = drag;
       drag = null;
       if (!current || e.pointerId !== current.pointer) return;
-      const speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
-      node.classList.remove("is-dragging");
-      if (speed > 0.5 || current.dy > node.offsetHeight / 3) close();
+      const speed =
+        ((current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t)) *
+        (top ? -1 : 1);
+      delete node.dataset.wbDrag;
+      if (speed > 0.5 || Math.abs(current.dy) > node.offsetHeight / 3) close();
       else node.style.removeProperty("--wb-sheet-pull");
     };
     node.addEventListener("pointerdown", down);
@@ -494,11 +732,89 @@ export function MobileShell({
       node.removeEventListener("pointercancel", up);
     };
   }, [presence.value, presence.exiting]);
+  // Noval: pulling the header down draws the session menu down with the finger. Once the menu is
+  // up the header is inert, so the drag is followed on the document.
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    if (rp || !header) return;
+    const veil = () => document.querySelector<HTMLElement>(".wb-mobile-sheet-shade");
+    let drag: {
+      y: number;
+      pointer: number;
+      dy: number;
+      height: number;
+      started: boolean;
+      previous: { y: number; t: number };
+      last: { y: number; t: number };
+    } | null = null;
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointer) return;
+      const dy = e.clientY - drag.y;
+      if (!drag.started) {
+        if (Math.abs(dy) < 8) return;
+        if (dy < 0) return end();
+        drag.started = true;
+        flushSync(() => setSheet("management"));
+        const node = sheetRef.current!;
+        node.dataset.wbDrag = "";
+        node.style.setProperty("animation", "none");
+        veil()?.style.setProperty("animation", "none");
+        drag.height = node.offsetHeight;
+      }
+      drag.dy = Math.min(drag.height, Math.max(0, dy));
+      drag.previous = drag.last;
+      drag.last = { y: e.clientY, t: e.timeStamp };
+      sheetRef.current!.style.setProperty("--wb-sheet-pull", `${drag.dy - drag.height}px`);
+      veil()?.style.setProperty("opacity", String(drag.dy / drag.height));
+    };
+    const up = (e: PointerEvent) => {
+      const current = drag;
+      end();
+      if (!current?.started || e.pointerId !== current.pointer) return;
+      const node = sheetRef.current!,
+        speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+      delete node.dataset.wbDrag;
+      if (e.type === "pointerup" && (speed > 0.45 || (speed > -0.45 && current.dy > current.height * 0.35))) {
+        node.style.removeProperty("--wb-sheet-pull");
+        veil()?.style.setProperty("transition", "opacity 260ms");
+        veil()?.style.setProperty("opacity", "1");
+      } else close();
+    };
+    const end = () => {
+      drag = null;
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", up);
+    };
+    const down = (e: PointerEvent) => {
+      const state = latest.current;
+      if (e.button !== 0 || e.pointerType === "mouse" || (e.target as Element).closest("button")) return;
+      if (state.sheet || state.left || state.panel || state.editor) return;
+      const at = { y: e.clientY, t: e.timeStamp };
+      drag = { y: e.clientY, pointer: e.pointerId, dy: 0, height: 0, started: false, previous: at, last: at };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", up);
+    };
+    header.addEventListener("pointerdown", down);
+    return () => {
+      end();
+      header.removeEventListener("pointerdown", down);
+    };
+  }, [rp]);
+  // A sheet that was drawn by the finger hands its motion back to the exit animation.
+  useLayoutEffect(() => {
+    if (!presence.exiting) return;
+    sheetRef.current?.style.removeProperty("animation");
+    const shade = document.querySelector<HTMLElement>(".wb-mobile-sheet-shade");
+    for (const name of ["animation", "opacity", "transition"]) shade?.style.removeProperty(name);
+  }, [presence.exiting]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape" && editor) {
         e.preventDefault();
-        setEditing(false);
+        edit(false);
       }
     };
     document.addEventListener("keydown", key);
@@ -544,6 +860,7 @@ export function MobileShell({
   return (
     <>
       <header
+        ref={headerRef}
         className="wb-mobile-header wb-ui"
         inert={left || !!panel || !!sheet || editor || (focus && !rp)}
       >
@@ -554,6 +871,14 @@ export function MobileShell({
           onClick={toggleLeft}
         >
           <MenuDrawer size={21} />
+        </button>
+        <button
+          className="wb-mobile-management"
+          aria-label="打开会话管理"
+          aria-expanded={sheet === "management"}
+          onClick={() => setSheet("management")}
+        >
+          <MoreHorizontal size={21} strokeWidth={2.4} />
         </button>
         <div className="wb-mobile-title">
           <strong>{title}</strong>
@@ -592,40 +917,51 @@ export function MobileShell({
       {left && (
         <>
           <span className="wb-mobile-drawer-title wb-ui">大纲与导航</span>
-          <button className="wb-mobile-drawer-close wb-ui" aria-label="关闭边栏" onClick={closeDrawers}>
+          <button
+            className="wb-mobile-drawer-close is-left wb-ui"
+            aria-label="关闭边栏"
+            onClick={closeDrawers}
+          >
             <X size={20} />
           </button>
         </>
       )}
+      {/* Noval's quick configuration: what is connected, then one key per resource into its
+          right-panel page (switching happens there). */}
       {!rp && (
-        <div
-          className={`wb-mobile-config wb-ui ${collapsed ? "is-collapsed" : ""}`}
-          inert={left || !!panel || !!sheet || editor || focus}
-        >
-          <div hidden={collapsed}>{resources}</div>
-          {collapsed && (
-            <button className="wb-mobile-summary" onClick={() => setCollapsed(false)}>
-              <i className={`wb-dot ${snap.online ? "online" : ""}`} />
-              <span>
-                {snap.resources.connection.find((x) => x.id === snap.current.connection)?.name ||
-                  host.model() ||
-                  "未连接"}
-              </span>
-              {!!summary && <small>· {summary}</small>}
-            </button>
-          )}
-          <button
-            className="wb-mobile-config-fold"
-            aria-label={collapsed ? "展开快捷配置" : "收起快捷配置"}
-            aria-expanded={!collapsed}
-            onClick={() => {
-              setCollapsed(!collapsed);
-              setChooser(null);
-            }}
-          >
-            {collapsed && <span>快捷配置</span>}
-            <ChevronDown size={15} />
-          </button>
+        <div className="wb-mobile-config wb-ui" inert={left || !!panel || !!sheet || editor || focus}>
+          <span className="wb-mobile-status">
+            <i className={`wb-dot ${snap.online ? "online" : ""}`} />
+            <strong>
+              {snap.resources.connection.find((x) => x.id === snap.current.connection)?.name ||
+                host.model() ||
+                "未连接"}
+            </strong>
+            {!!summary && <small>{summary}</small>}
+          </span>
+          <div className="wb-mobile-keys" role="group" aria-label="快捷配置">
+            {(Object.keys(resourceLabels) as Resource[]).map((kind) => {
+              const Icon = resourceIcons[kind],
+                value =
+                  snap.resources[kind].find((x) => x.id === snap.current[kind])?.name ||
+                  (kind === "connection" ? host.model() : "未选择"),
+                count = kind === "world" ? worlds.length : 0;
+              return (
+                <button
+                  key={kind}
+                  aria-label={`${resourceLabels[kind]}：${kind === "world" ? `${count} 本已启用` : value}`}
+                  aria-pressed={panel === kind}
+                  onClick={() => {
+                    close();
+                    goPanel(kind);
+                  }}
+                >
+                  <Icon size={19} />
+                  {count > 0 && <b>{count}</b>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
       {!rp && focus && !editor && (
@@ -639,18 +975,6 @@ export function MobileShell({
           退出专注
         </button>
       )}
-      {!rp &&
-        createPortal(
-          <button
-            type="button"
-            className="wb-mobile-management wb-ui"
-            aria-label="打开会话管理"
-            onClick={() => setSheet("management")}
-          >
-            <MoreHorizontal size={21} strokeWidth={2.6} />
-          </button>,
-          document.getElementById("form_sheld")!,
-        )}
       {createPortal(
         <button
           type="button"
@@ -665,26 +989,58 @@ export function MobileShell({
       )}
       {createPortal(
         <>
-          <div className="wb-mobile-editor-heading wb-ui">
-            <button aria-label="返回聊天，保留草稿" onClick={() => setEditing(false)}>
-              <ArrowLeft size={19} />
-              返回
+          <div
+            className="wb-mobile-editor-heading wb-ui"
+            onPointerDown={(e) => {
+              if (e.button !== 0 || (e.target as Element).closest("button")) return;
+              // Touch is captured implicitly; a mouse needs it to keep the bar while dragging.
+              if (e.pointerType === "mouse") e.currentTarget.setPointerCapture(e.pointerId);
+              const at = { y: e.clientY, t: e.timeStamp };
+              pull.current = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
+              settle();
+              moving(true);
+            }}
+            onPointerMove={(e) => {
+              const current = pull.current;
+              if (!current || e.pointerId !== current.pointer) return;
+              current.dy = Math.max(0, e.clientY - current.y);
+              current.previous = current.last;
+              current.last = { y: e.clientY, t: e.timeStamp };
+              dock.style.setProperty("translate", `0 ${current.dy}px`);
+            }}
+            onPointerUp={(e) => {
+              const current = pull.current;
+              pull.current = null;
+              if (!current || e.pointerId !== current.pointer) return;
+              const speed =
+                (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+              if (speed > 0.5 || current.dy > dock.offsetHeight * 0.18) return closePage(current.dy);
+              dock.style.removeProperty("translate");
+              const back = dock.animate([{ translate: `0 ${current.dy}px` }, { translate: "0 0" }], {
+                duration: motionAllowed() ? 240 : 0,
+                easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+              });
+              motion.current = [back];
+              back.finished.then(
+                () => moving(false),
+                () => {},
+              );
+            }}
+            onPointerCancel={() => {
+              if (!pull.current) return;
+              pull.current = null;
+              dock.style.removeProperty("translate");
+              moving(false);
+            }}
+          >
+            <button aria-label="返回聊天，保留草稿" onClick={() => edit(false)}>
+              <ChevronDown size={22} />
             </button>
             <strong>
               {document.body.classList.contains("wb-image-input-mode") ? "生图提示词" : "编辑草稿"}
             </strong>
             <small>{length} 字</small>
           </div>
-          {rp && (
-            <button
-              type="button"
-              className="wb-mobile-editor-tools wb-ui"
-              aria-label="草稿工具"
-              onClick={() => setSheet("tools")}
-            >
-              <Plus size={23} />
-            </button>
-          )}
         </>,
         form,
       )}
@@ -835,7 +1191,7 @@ export function MobileShell({
                     <WandSparkles size={21} />
                     扩展工具
                   </button>
-                  <button onClick={() => setEditing(true)}>
+                  <button onClick={() => edit(true)}>
                     <Expand size={21} />
                     全屏输入
                   </button>

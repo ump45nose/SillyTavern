@@ -21,7 +21,6 @@ export interface BusEvents {
   /** Open a settings group (optionally one extension inside it). */
   "settings-group": { group: string; extension?: string };
   /** The PWA composer asked for the full-screen editor. */
-  "mobile-editor-open": undefined;
   /** The phone RP deck asked for the session menu. */
   "mobile-menu": undefined;
 }

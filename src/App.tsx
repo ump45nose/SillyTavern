@@ -368,8 +368,9 @@ export default function App({
   }, []);
   useEffect(() => {
     if (shown) {
-      // Switching tabs: the tab answers at once and the next panel mounts without blocking that paint.
-      if (renderedPanel) startTransition(() => setRenderedPanel(shown));
+      // The tab (or the sliding drawer) answers at once; the panel mounts without blocking that paint.
+      // The desk's first open stays synchronous so the column never appears empty.
+      if (renderedPanel || mobile) startTransition(() => setRenderedPanel(shown));
       else setRenderedPanel(shown);
       return;
     }

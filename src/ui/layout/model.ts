@@ -143,16 +143,18 @@ export function bodyClasses(s: LayoutState, hover: Hover, sizes: Sizes): Record<
   const visible = leftVisible(s, sizes),
     mobile = s.env.mobile;
   return {
-    "wb-left-open": visible,
+    // Phones keep drawer state off <body>: every class write there makes SillyTavern's keyboard
+    // observer rescan the whole document, which stalls the slide.
+    "wb-left-open": visible && !mobile,
     "wb-left-hover-open": hover.left && !visible,
     "wb-right-hover-open": hover.right && !s.panel,
-    "wb-right-open": !!s.panel && (!s.focus || mobile),
+    "wb-right-open": !!s.panel && !s.focus && !mobile,
     "wb-focus": s.focus,
     "wb-rail-open": railVisible(s, hover) && !!s.panel,
     "wb-mobile": mobile,
     "wb-mobile-rp": mobile && rp(s),
     "wb-rp": rp(s) && !mobile,
-    "wb-rp-overlay-open": compactRp(s) && !!(visible || (s.panel && !s.focus)),
+    "wb-rp-overlay-open": !mobile && compactRp(s) && !!(visible || (s.panel && !s.focus)),
   };
 }
 

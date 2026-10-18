@@ -30,6 +30,11 @@
     width: 44px;
     justify-content: center;
   }
+  /* RP draws the header on the picture: its glyphs take the on-scene colour. This sits in the same
+     layer as the important control-ink rule for icons, which it has to outrank. */
+  body.wb-active.wb-mobile-rp .wb-mobile-header :is(svg, svg *) {
+    color: var(--wb-rp-on-scene) !important;
+  }
   .wb-mobile-header .wb-mobile-person {
     flex: 1;
     min-width: 0;
@@ -77,16 +82,6 @@
     height: 44px;
     min-height: 44px;
     padding: 8px !important;
-  }
-  body.wb-active.wb-mobile .wb-input-grip {
-    inset: 0 0 auto !important;
-    height: 28px !important;
-    min-height: 28px !important;
-    width: 88px !important;
-  }
-  body.wb-mobile .wb-input-grip span {
-    width: 34px;
-    height: 3px;
   }
   .wb-mobile-config {
     grid-row: 1;
@@ -136,43 +131,6 @@
   }
   body.wb-mobile .wb-selector-detail svg {
     width: 15px;
-  }
-  body.wb-mobile .wb-mobile-summary {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    justify-content: flex-start;
-    gap: 8px;
-    height: 44px;
-    padding: 0 8px;
-    font-size: 12px;
-    border: 0;
-    background: transparent;
-  }
-  .wb-mobile-summary > span {
-    min-width: 0;
-    max-width: 55%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .wb-mobile-summary small {
-    color: var(--wb-muted);
-    font-size: 11px;
-  }
-  .wb-mobile-config .wb-mobile-config-fold {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    border: 0;
-    padding: 0;
-    background: transparent;
-  }
-  .wb-mobile-config-fold svg {
-    transition: transform 180ms;
-  }
-  .wb-mobile-config-fold[aria-expanded="true"] svg {
-    transform: rotate(180deg);
   }
   body.wb-active.wb-mobile #wb-layout-root {
     display: none;
@@ -244,7 +202,7 @@
     border-radius: 50%;
     z-index: 27;
   }
-  body.wb-mobile.wb-left-open .wb-mobile-drawer-close {
+  body.wb-mobile .wb-mobile-drawer-close.is-left {
     right: auto;
     left: min(calc(88vw - 50px), 310px);
   }
@@ -382,27 +340,8 @@
   body.wb-mobile .wb-popover header button {
     min-height: 44px;
   }
-  body.wb-mobile .wb-mobile-editor-heading,
-  body.wb-mobile .wb-mobile-editor-tools {
+  body.wb-mobile .wb-mobile-editor-heading {
     display: none;
-  }
-  body.wb-mobile-editor .wb-mobile-header {
-    visibility: hidden;
-    pointer-events: none;
-  }
-  body.wb-mobile-editor :is(.wb-mobile-config, .wb-input-grip) {
-    display: none !important;
-  }
-  body.wb-active.wb-mobile.wb-mobile-editor :is(#leftSendForm, .wb-composer-actions, #rightSendForm) {
-    grid-row: 2;
-  }
-  body.wb-mobile-editor .wb-mobile-editor-heading {
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: 8px;
-    height: 58px;
-    border-bottom: 1px solid var(--wb-line);
   }
   .wb-mobile-editor-heading > button {
     min-height: 44px;
@@ -423,9 +362,6 @@
   body.wb-mobile-keyboard .wb-mobile-header {
     transform: none !important;
   }
-  body.wb-mobile-rp :is(#leftSendForm, .wb-composer-actions, .wb-input-grip) {
-    display: none !important;
-  }
   body.wb-mobile .wb-mobile-plus {
     grid-row: 1;
     grid-column: 1;
@@ -437,22 +373,6 @@
     border: 0;
     padding: 0;
     background: var(--wb-surface);
-  }
-  body.wb-mobile-rp.wb-mobile-editor .wb-mobile-plus {
-    display: none;
-  }
-  body.wb-mobile-rp.wb-mobile-editor .wb-mobile-editor-tools {
-    display: grid;
-    position: absolute;
-    bottom: 12px;
-    left: 12px;
-    width: 44px;
-    height: 44px;
-    border: 0;
-    background: var(--wb-soft);
-    padding: 0;
-    place-items: center;
-    border-radius: 50%;
   }
   /* Existing editors and dialogs stack on phones, retaining their controls and handlers. */
   body.wb-mobile .wb-settings-workspace {
@@ -680,7 +600,7 @@
   body.wb-mobile-rp .wb-addon-task-strip {
     bottom: calc(100% - var(--wb-mobile-top, 0px) - var(--wb-mobile-height, 100dvh) + 84px);
   }
-  body.wb-mobile-editor .wb-addon-task-strip {
+  body[data-wb-covered] .wb-addon-task-strip {
     bottom: calc(100% - var(--wb-mobile-top, 0px) - var(--wb-mobile-height, 100dvh) + 68px);
   }
 }
