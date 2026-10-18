@@ -191,7 +191,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
       );
       input.value = "";
       input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.focus();
+      host.focusInput();
     };
     const off = bus.on("image-input", receive);
     const anchor = document.createElement("div");
@@ -248,7 +248,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
       }
       const prompt = input.value.trim();
       if (!prompt) {
-        input.focus();
+        host.focusInput();
         return;
       }
       const captured = mode.target;
