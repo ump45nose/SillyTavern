@@ -160,6 +160,7 @@ export function RPStage({
       bus.on("image-compose", imageCompose),
       bus.on("image-compose-end", imageEnd),
       bus.on("rp-jump", jump),
+      bus.on("rp-dialogue", () => turnNow.current(-1)),
     ];
     return () => off.forEach((f) => f());
   }, []);
@@ -485,17 +486,34 @@ export function RPStage({
       const rect = chat.getBoundingClientRect();
       turnNow.current(mobile && e.clientX < rect.left + rect.width / 2 ? -1 : 1);
     };
-    // The wheel over the text turns pages too: one turn per gesture, however many events it sends.
+    chat.addEventListener("click", press);
+    return () => chat.removeEventListener("click", press);
+  }, [block, mobile]);
+  // The wheel over the band turns pages too, one turn per gesture however many events it sends;
+  // composing, turning back returns to the dialogue. A text field scrolls first: only a gesture
+  // that begins with the field already at the end it is moving toward turns the page.
+  useEffect(() => {
+    if (mobile || history) return;
+    const band = document.getElementById("sheld")!;
     let travel = 0,
       quietUntil = 0,
-      lastTurn = 0;
+      lastTurn = 0,
+      fieldUntil = 0;
     const wheel = (e: WheelEvent) => {
-      // A text field being edited scrolls as usual.
-      if ((e.target as Element).closest("textarea,input,select,[contenteditable=true]")) return;
-      e.preventDefault();
       const now = performance.now(),
         delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX,
-        direction = Math.sign(delta);
+        direction = Math.sign(delta),
+        field = (e.target as Element).closest<HTMLElement>("textarea,input,select,[contenteditable=true]");
+      if (field) {
+        const scrolls =
+          direction > 0 ? field.scrollTop + field.clientHeight < field.scrollHeight - 1 : field.scrollTop > 0;
+        // Once the field has scrolled, the rest of that gesture stays with it.
+        if (scrolls || now < fieldUntil) {
+          fieldUntil = now + 300;
+          return;
+        }
+      }
+      e.preventDefault();
       // A gesture's trailing events keep the wheel quiet; turning the other way starts a new one.
       if (now < quietUntil && direction === lastTurn) {
         quietUntil = now + 160;
@@ -509,13 +527,9 @@ export function RPStage({
       travel = 0;
       quietUntil = now + 260;
     };
-    chat.addEventListener("click", press);
-    if (!mobile) chat.addEventListener("wheel", wheel, { passive: false });
-    return () => {
-      chat.removeEventListener("click", press);
-      chat.removeEventListener("wheel", wheel);
-    };
-  }, [block, mobile]);
+    band.addEventListener("wheel", wheel, { passive: false });
+    return () => band.removeEventListener("wheel", wheel);
+  }, [mobile, history]);
   const tools = (
     <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
       {host.isGenerating() && (

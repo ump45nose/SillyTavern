@@ -309,7 +309,6 @@ export function MobileShell({
     };
     const off = [
       bus.on("image-compose", image),
-      bus.on("mobile-menu", () => setSheet("management")),
       // A floor picked in the outline is also selected, so its tools are one tap away.
       bus.on("floor-jump", (id) => {
         const chat = document.getElementById("chat")!;
@@ -338,14 +337,21 @@ export function MobileShell({
   );
   // Pulling the pill (Noval) or the compose band (RP) up grows it with the finger; past the
   // threshold, or on a flick, it carries on into the full editor, otherwise it settles back. The
-  // band grows through RPStage's --wb-rp-pull, its card through --wb-rise.
+  // band grows through RPStage's --wb-rp-pull, its card through --wb-rise. Pulling RP's band down
+  // slides it after the finger and, let go far enough, returns to the dialogue. The whole field
+  // takes the gesture, the draft included: touch events, since a focused field's own touch
+  // handling cancels pointer events. Inside a long draft the finger scrolls it until it reaches
+  // the end it is moving toward; a press held before moving is left to text selection.
   useEffect(() => {
     if (editor) return;
     let drag: {
+      id: number;
       x: number;
       y: number;
-      pointer: number;
+      t: number;
+      draft: boolean;
       room: number;
+      up: boolean;
       rise: number;
       started: boolean;
       previous: { y: number; t: number };
@@ -354,58 +360,80 @@ export function MobileShell({
     const reset = () => {
       delete dock.dataset.wbDrag;
       delete document.body.dataset.wbBandDrag;
+      delete document.body.dataset.wbBandLower;
       dock.style.removeProperty("--wb-rise");
       dock.style.removeProperty("--wb-rise-fade");
       document.body.style.removeProperty("--wb-rp-pull");
     };
-    const down = (e: PointerEvent) => {
+    const down = (e: TouchEvent) => {
+      drag = null;
       const target = e.target as Element;
-      if (e.button !== 0 || e.pointerType === "mouse" || target.closest("button,a,select")) return;
-      if (target === input && input.hasAttribute("data-wb-overflow")) return;
+      if (e.touches.length !== 1 || target.closest("button,a,select")) return;
       if (rp && !document.body.hasAttribute("data-wb-rp-compose")) return;
-      const at = { y: e.clientY, t: e.timeStamp };
+      const t = e.touches[0],
+        at = { y: t.clientY, t: e.timeStamp };
       drag = {
-        x: e.clientX,
-        y: e.clientY,
-        pointer: e.pointerId,
+        id: t.identifier,
+        x: t.clientX,
+        y: t.clientY,
+        t: e.timeStamp,
+        draft: input.contains(target),
         // RP's band may rise to just under the header.
         room: rp
           ? stage.getBoundingClientRect().top - (headerRef.current?.getBoundingClientRect().bottom ?? 0) - 16
           : form.getBoundingClientRect().top - stage.getBoundingClientRect().top,
+        up: true,
         rise: 0,
         started: false,
         previous: at,
         last: at,
       };
     };
-    const move = (e: PointerEvent) => {
-      if (!drag || e.pointerId !== drag.pointer) return;
-      const dy = drag.y - e.clientY;
+    const move = (e: TouchEvent) => {
+      const t = [...e.changedTouches].find((touch) => touch.identifier === drag?.id);
+      if (!drag || !t) return;
+      const dy = drag.y - t.clientY;
       if (!drag.started) {
-        if (Math.hypot(e.clientX - drag.x, dy) < 8) return;
-        if (dy <= 0 || Math.abs(e.clientX - drag.x) > dy) {
-          drag = null;
-          return;
-        }
+        const dx = t.clientX - drag.x;
+        if (Math.hypot(dx, dy) < 8) return;
+        const up = dy > 0,
+          scrolls =
+            drag.draft &&
+            (up ? input.scrollTop + input.clientHeight < input.scrollHeight - 1 : input.scrollTop > 0);
+        if (Math.abs(dx) > Math.abs(dy) || e.timeStamp - drag.t > 400 || (!up && !rp) || scrolls)
+          return void (drag = null);
         drag.started = true;
+        drag.up = up;
         if (rp) document.body.dataset.wbBandDrag = "";
         else dock.dataset.wbDrag = "";
+        // Only a downward pull moves the band itself: a translated #sheld would hold the page.
+        if (!up) document.body.dataset.wbBandLower = "";
+      }
+      e.preventDefault();
+      drag.previous = drag.last;
+      drag.last = { y: t.clientY, t: e.timeStamp };
+      if (!drag.up) {
+        drag.rise = Math.min(0, dy);
+        document.body.style.setProperty("--wb-rp-pull", `${Math.min(160, -dy * 0.6)}px`);
+        return;
       }
       drag.rise = Math.min(drag.room, Math.max(0, dy));
-      drag.previous = drag.last;
-      drag.last = { y: e.clientY, t: e.timeStamp };
       if (rp) document.body.style.setProperty("--wb-rp-pull", `${-drag.rise}px`);
       else {
         dock.style.setProperty("--wb-rise", `${drag.rise}px`);
         dock.style.setProperty("--wb-rise-fade", String(Math.min(0.75, drag.rise / 160)));
       }
     };
-    const up = (e: PointerEvent) => {
+    const up = (e: TouchEvent) => {
       const current = drag;
+      if (!current || ![...e.changedTouches].some((touch) => touch.identifier === current.id)) return;
       drag = null;
-      if (!current?.started || e.pointerId !== current.pointer) return;
+      if (!current.started) return;
       const speed = (current.previous.y - current.last.y) / Math.max(1, current.last.t - current.previous.t);
-      if (speed > 0.45 || current.rise > 72) {
+      if (!current.up) {
+        reset();
+        if (speed < -0.45 || current.rise < -72) bus.emit("rp-dialogue");
+      } else if (speed > 0.45 || current.rise > 72) {
         // The band is already as tall as the finger made it: the page grows from there, and the
         // band settles back under it once it has covered the window.
         openPage(rp ? 0 : current.rise);
@@ -416,15 +444,15 @@ export function MobileShell({
       drag = null;
       reset();
     };
-    form.addEventListener("pointerdown", down);
-    form.addEventListener("pointermove", move);
-    form.addEventListener("pointerup", up);
-    form.addEventListener("pointercancel", cancel);
+    form.addEventListener("touchstart", down, { passive: true });
+    form.addEventListener("touchmove", move, { passive: false });
+    form.addEventListener("touchend", up);
+    form.addEventListener("touchcancel", cancel);
     return () => {
-      form.removeEventListener("pointerdown", down);
-      form.removeEventListener("pointermove", move);
-      form.removeEventListener("pointerup", up);
-      form.removeEventListener("pointercancel", cancel);
+      form.removeEventListener("touchstart", down);
+      form.removeEventListener("touchmove", move);
+      form.removeEventListener("touchend", up);
+      form.removeEventListener("touchcancel", cancel);
       reset();
     };
   }, [rp, editor]);

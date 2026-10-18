@@ -4162,6 +4162,10 @@ body.wb-active.wb-mobile.wb-mobile-rp #sheld {
 body.wb-mobile-rp:is([data-wb-rp-pulling], [data-wb-band-drag]) #sheld {
   transition: none !important;
 }
+/* Pulling the compose band down (MobileShell) slides it after the finger, back toward the dialogue. */
+body.wb-mobile-rp[data-wb-band-lower] #sheld {
+  translate: 0 var(--wb-rp-pull, 0px);
+}
 body.wb-mobile-rp.wb-focus #sheld {
   opacity: 0;
   visibility: hidden;

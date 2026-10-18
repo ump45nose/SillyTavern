@@ -485,6 +485,9 @@
   body.wb-mobile-rp:is([data-wb-rp-pulling], [data-wb-band-drag]) .wb-rp-deck {
     transition: none;
   }
+  body.wb-mobile-rp[data-wb-band-lower] .wb-rp-deck {
+    translate: 0 var(--wb-rp-pull, 0px);
+  }
   body.wb-mobile-rp .wb-rp-replies {
     top: 0;
     left: 0;

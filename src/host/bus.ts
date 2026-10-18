@@ -20,9 +20,8 @@ export interface BusEvents {
   "floor-jump": number;
   /** Open a settings group (optionally one extension inside it). */
   "settings-group": { group: string; extension?: string };
-  /** The PWA composer asked for the full-screen editor. */
-  /** The phone RP deck asked for the session menu. */
-  "mobile-menu": undefined;
+  /** The phone's compose band was pulled down: the RP stage returns to the dialogue. */
+  "rp-dialogue": undefined;
 }
 type Name = keyof BusEvents;
 type Handler<K extends Name> = (payload: BusEvents[K]) => void;
