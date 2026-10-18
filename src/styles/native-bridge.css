@@ -3283,7 +3283,8 @@ body.wb-active.wb-rp:is([data-wb-rp-compose], [data-wb-rp-editing]):not(.wb-mobi
   --wb-rp-deck: clamp(300px, 42vh, 440px);
 }
 /* The field sits on solid band; only the strip above the name fades into the picture. */
-body.wb-active.wb-rp:is([data-wb-rp-compose], [data-wb-rp-editing]):not(.wb-mobile):not([data-wb-rp-history]) #sheld {
+body.wb-active.wb-rp:is([data-wb-rp-compose], [data-wb-rp-editing]):not(.wb-mobile):not([data-wb-rp-history])
+  #sheld {
   background: linear-gradient(
     to top,
     var(--wb-rp-band-1) 0,
@@ -3366,12 +3367,18 @@ body.wb-active.wb-rp[data-wb-rp-compose][data-wb-rp-expanded] {
 body.wb-active.wb-rp[data-wb-rp-editing]:not(.wb-mobile) #chat {
   overflow: visible !important;
 }
-body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history])
+  #chat
+  .wb-rp-current:has(.edit_textarea)
+  .mes_block {
   display: flex !important;
   flex-direction: column;
   overflow: visible;
 }
-body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history])
+  #chat
+  .wb-rp-current:has(.edit_textarea)
+  .mes_text {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -4238,12 +4245,18 @@ body.wb-mobile-rp[data-wb-rp-history] #chat .edit_textarea {
   color: var(--wb-rp-ink-1);
 }
 /* Editing on the band: one field filling the text's place, in the dialogue's face, like the desk. */
-body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history])
+  #chat
+  .wb-rp-current:has(.edit_textarea)
+  .mes_block {
   display: flex !important;
   flex-direction: column;
   overflow: visible;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history])
+  #chat
+  .wb-rp-current:has(.edit_textarea)
+  .mes_text {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -4294,7 +4307,8 @@ body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-compose]:not([data-wb-rp-histor
   pointer-events: none;
   transform: translateX(-14px);
 }
-body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-compose]:not([data-wb-rp-history]) #form_sheld:not([data-wb-page]) {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-compose]:not([data-wb-rp-history])
+  #form_sheld:not([data-wb-page]) {
   opacity: 1;
   visibility: visible;
   /* Visible at once on entry so the reply key can focus the input. */

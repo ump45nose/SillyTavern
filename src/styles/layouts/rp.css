@@ -461,7 +461,8 @@
     color: var(--wb-rp-ink-2) !important;
     filter: none;
   }
-  body.wb-rp[data-wb-rp-history]:not(.wb-mobile) :is(.wb-rp-corner, .wb-rp-visibility):is(:hover, :focus-visible),
+  body.wb-rp[data-wb-rp-history]:not(.wb-mobile)
+    :is(.wb-rp-corner, .wb-rp-visibility):is(:hover, :focus-visible),
   body.wb-rp[data-wb-rp-history]:not(.wb-mobile) .wb-rp-corner[aria-pressed="true"] {
     background: var(--wb-rp-field);
   }
