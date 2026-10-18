@@ -249,3 +249,33 @@ export async function toggleRight(page) {
     if (await close.isVisible()) await close.click();
     else await page.locator('.wb-edge-right').click();
 }
+
+/**
+ * A world book "RP阵容测试" whose entries 张三 (joy, neutral) and 李四 (anger) have faces in
+ * characters/RP阵容测试/<entry>/, plus an entry whose title cannot be a folder; the open chat plays it.
+ */
+export async function seedCast(page) {
+    const sprite = file => fs.readFileSync(path.join(root, 'docs/design/rp-desktop/assets', file)).toString('base64');
+    await page.evaluate(async ({ a, b }) => {
+        const c = SillyTavern.getContext(), headers = c.getRequestHeaders(), plain = { ...headers };
+        delete plain['Content-Type'];
+        const entries = {
+            0: { uid: 0, comment: '张三', key: ['三哥'], content: '猎户。' },
+            1: { uid: 1, comment: '李四', key: ['阿四'], content: '药师。' },
+            2: { uid: 2, comment: '王五/村长', key: [], content: '标题不能作文件夹名。' },
+            3: { uid: 3, comment: '', key: ['山'], content: '无标题。' },
+        };
+        if (!(await fetch('/api/worldinfo/edit', { method: 'POST', headers, body: JSON.stringify({ name: 'RP阵容测试', data: { entries } }) })).ok) throw new Error('cast book');
+        await workbench.host.world.updateWorldInfoList();
+        for (const [who, label, data] of [['张三', 'joy', a], ['张三', 'neutral', a], ['李四', 'anger', b]]) {
+            const form = new FormData();
+            form.set('avatar', new File([Uint8Array.from(atob(data), x => x.charCodeAt(0))], label + '.webp', { type: 'image/webp' }));
+            form.set('name', 'RP阵容测试/' + who);
+            form.set('label', label);
+            if (!(await fetch('/api/sprites/upload', { method: 'POST', headers: plain, body: form })).ok) throw new Error('cast sprite');
+        }
+        // A run that stopped halfway may have left the face the cast page uploads.
+        await fetch('/api/sprites/delete', { method: 'POST', headers, body: JSON.stringify({ name: 'RP阵容测试/李四', label: 'neutral', spriteName: 'neutral' }) });
+        await workbench.host.cast.save({ book: 'RP阵容测试', entries: ['张三', '李四'] });
+    }, { a: sprite('r-character.webp'), b: sprite('r-user-character.webp') });
+}

@@ -565,3 +565,197 @@
     stroke-width: 2;
   }
 }
+
+/* RP 外观 › 立绘来源 and the cast page: entries as soft rows, each chosen one carrying a strip of
+   its expressions and the key that adds more. */
+@layer wb.layouts {
+  .wb-ui.wb-popover.is-wide {
+    width: min(460px, calc(100vw - 20px));
+  }
+  .wb-cast-source {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .wb-cast-source > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  .wb-cast-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 31px;
+    padding: 5px 8px 5px 10px;
+    border: 1px solid var(--wb-line);
+    border-radius: var(--wb-radius-md);
+    background: transparent;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .wb-cast-open:is(:hover, :focus-visible) {
+    color: var(--wb-accent);
+    border-color: color-mix(in srgb, var(--wb-accent) 28%, var(--wb-line));
+  }
+  .wb-cast {
+    max-height: min(560px, calc(100vh - 120px));
+  }
+  .wb-cast-note {
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--wb-muted);
+  }
+  .wb-cast-note:last-child {
+    margin: 12px 0 0;
+  }
+  .wb-cast-note.is-error {
+    margin-top: 8px;
+    color: var(--wb-danger, #b4432f);
+  }
+  .wb-cast-note code {
+    font:
+      11px ui-monospace,
+      monospace;
+    color: var(--wb-ink-2, var(--wb-ink));
+    border: 0;
+    padding: 1px 4px;
+    border-radius: var(--wb-radius-xs);
+    background: var(--wb-soft);
+    word-break: break-all;
+  }
+  .wb-cast-note button {
+    margin-left: 6px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--wb-accent);
+    font-size: 11.5px;
+  }
+  .wb-cast-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .wb-cast-list li {
+    padding: 8px 10px;
+    border-radius: var(--wb-radius-lg);
+    background: var(--wb-soft);
+    box-shadow: inset 0 0 0 1px transparent;
+    transition: box-shadow 160ms;
+  }
+  .wb-cast-list li.is-on {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 30%, var(--wb-line));
+  }
+  .wb-cast-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    cursor: pointer;
+  }
+  .wb-cast-entry input {
+    align-self: center;
+    margin: 0;
+  }
+  .wb-cast-entry strong {
+    flex: none;
+    font-size: 13px;
+    font-weight: 560;
+  }
+  .wb-cast-entry small {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
+    color: var(--wb-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wb-cast-entry:has(input:disabled) {
+    cursor: default;
+    opacity: 0.6;
+  }
+  .wb-cast-hint {
+    display: block;
+    margin: 4px 0 0 22px;
+    font-size: 11px;
+    color: var(--wb-muted);
+  }
+  .wb-cast-faces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 2px 22px;
+  }
+  .wb-cast-faces figure {
+    position: relative;
+    width: 52px;
+    margin: 0;
+  }
+  .wb-cast-faces img {
+    display: block;
+    width: 52px;
+    height: 68px;
+    object-fit: contain;
+    object-position: center bottom;
+    border-radius: var(--wb-radius-md);
+    background: var(--wb-surface);
+  }
+  .wb-cast-faces figcaption {
+    overflow: hidden;
+    font-size: 10.5px;
+    text-align: center;
+    color: var(--wb-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wb-cast-faces .wb-icon {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 20px;
+    height: 20px;
+    min-height: 20px;
+    padding: 4px;
+    border-radius: var(--wb-radius-pill);
+    background: var(--wb-surface);
+    opacity: 0;
+    transition: opacity 140ms;
+  }
+  .wb-cast-faces figure:is(:hover, :focus-within) .wb-icon {
+    opacity: 1;
+  }
+  .wb-cast-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 52px;
+    height: 68px;
+    border: 1px dashed var(--wb-line);
+    border-radius: var(--wb-radius-md);
+    font-size: 10.5px;
+    color: var(--wb-muted);
+    cursor: pointer;
+  }
+  .wb-cast-add:hover {
+    color: var(--wb-accent);
+    border-color: color-mix(in srgb, var(--wb-accent) 40%, var(--wb-line));
+  }
+  .wb-cast-add[aria-busy="true"] svg {
+    animation: wb-cast-spin 900ms linear infinite;
+  }
+  @keyframes wb-cast-spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+  /* A phone has no hover: the remove key always shows. */
+  body.wb-mobile .wb-cast-faces .wb-icon {
+    opacity: 1;
+  }
+}

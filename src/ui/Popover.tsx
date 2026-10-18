@@ -8,6 +8,7 @@ export function Popover({
   children,
   tools,
   exiting,
+  className = "",
 }: {
   anchor: HTMLElement;
   title: string;
@@ -15,6 +16,7 @@ export function Popover({
   children: React.ReactNode;
   tools?: React.ReactNode;
   exiting?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null),
     close = useRef(onClose),
@@ -74,7 +76,7 @@ export function Popover({
   return createPortal(
     <div
       ref={ref}
-      className="wb-ui wb-popover"
+      className={`wb-ui wb-popover ${className}`}
       data-wb-exiting={exiting || undefined}
       inert={exiting}
       role="dialog"

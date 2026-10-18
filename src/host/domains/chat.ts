@@ -2,6 +2,7 @@ import type { HostAdapter } from "../adapter";
 import type { Data } from "../types";
 import { ctx, internal, nativeNodes } from "../internals";
 import { bus } from "../bus";
+import { castTagsAsNames } from "../cast";
 
 /** Chat files, floors, quick replies, input and RP presentation. */
 export const chatMethods = {
@@ -200,7 +201,8 @@ export const chatMethods = {
       messages: c.chat.map((message: Data, id: number) => ({
         id,
         name: String(message.name || ""),
-        text: String(message.mes || ""),
+        // Cast tags (名字|表情:) export as the reader sees them: the speaker's name.
+        text: message.is_user ? String(message.mes || "") : castTagsAsNames(String(message.mes || "")),
         role: message.is_system
           ? ("system" as const)
           : message.is_user

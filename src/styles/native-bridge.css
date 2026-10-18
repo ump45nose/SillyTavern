@@ -3148,6 +3148,60 @@ body.wb-rp[data-wb-rp-history] .wb-rp-user {
   letter-spacing: 0.06em;
   background: linear-gradient(transparent, rgb(30 24 18 / 62%));
 }
+/* A cast tag (名字|表情:) leaves the speaker's name before the line, as in a script. On the RP band
+   the name plate names a page's first voice, so only the later ones keep theirs. */
+.mes_text .wb-cast-tag::before {
+  content: attr(data-speaker);
+  display: inline-block;
+  margin-right: 0.5em;
+  padding: 0 0.45em;
+  border-radius: 4px;
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  vertical-align: 0.08em;
+  color: var(--wb-accent, currentColor);
+  background: color-mix(in srgb, var(--wb-accent, currentColor) 10%, transparent);
+}
+body.wb-rp:not([data-wb-rp-history]) .mes.wb-rp-current .wb-cast-tag[data-wb-lead]::before {
+  content: none;
+}
+/* A world book's cast: two places, as in a visual novel. Each figure keeps its place while the other
+   speaks; the one listening steps back a little and dims. */
+.wb-rp-stage .is-cast {
+  transform-origin: 50% 100%;
+  animation: wb-cast-enter 360ms cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  transition:
+    left 220ms,
+    filter 260ms,
+    scale 260ms,
+    opacity 200ms;
+}
+.wb-rp-stage .is-cast.is-right {
+  left: calc(var(--wb-left) + var(--wb-rp-area) * 0.77);
+}
+body.wb-rp[data-wb-rp-history] .wb-rp-stage .is-cast.is-right {
+  left: calc(var(--wb-left) + var(--wb-rp-area) * 0.88);
+}
+.wb-rp-stage .is-cast.is-speaking {
+  z-index: 1;
+}
+.wb-rp-stage .is-cast.is-listening {
+  scale: 0.95;
+}
+@keyframes wb-cast-enter {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wb-rp-stage .is-cast {
+    animation: none;
+    transition: none;
+  }
+}
 /* The band runs the whole window width, under the columns, so it never ends in an edge beside
    them; its text column follows the space between them. */
 body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #sheld {

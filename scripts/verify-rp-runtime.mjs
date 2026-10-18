@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, openResource, chooseLayout } from "./browser.mjs";
+import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, openResource, chooseLayout, seedCast } from "./browser.mjs";
 
 const dir = "artifacts/rp-runtime"; fs.mkdirSync(dir, { recursive: true });
 const checks = [], pass = (name, details = {}) => { checks.push({ name, details }); console.log("PASS", name); };
@@ -165,6 +165,42 @@ try {
   assert(compact.band.left <= 1 && compact.band.right >= compact.width - 1 && compact.leftOnTop && compact.rightOnTop && compact.plate.bottom <= compact.text.top + 1 && compact.foot.top >= compact.text.bottom - 1 && compact.tools.top >= compact.foot.top - 1 && compact.tools.left >= compact.dots.right && compact.reply.left >= compact.tools.right, JSON.stringify(compact));
   await role("关闭右栏").click(); await role("收纳左边栏").click(); await settle();
   pass("both panels open together over a stage that keeps the whole window; dialogue controls stay in order", compact);
+  // A world book's cast: entries with images in characters/<book>/<entry>/, tagged lines, two places on stage.
+  await seedCast(page);
+  const say = async mes => {
+    await page.evaluate(mes => { const c = SillyTavern.getContext(), msg = { name:c.name2, is_user:false, is_system:false, send_date:Date.now(), mes, extra:{} }; c.chat.push(msg); c.addOneMessage(msg); }, mes);
+    await settle(); if (await role("快进到最新对白").isEnabled()) await role("快进到最新对白").click();
+    await settle(); await role("对白第 1 段").click(); await settle();
+  };
+  // Who stands where depends on who came first; each keeps its place, so only voice and face are compared.
+  const figures = () => page.evaluate(() => {
+    const all = [...document.querySelectorAll(".wb-rp-actor")];
+    if (all.length === 2 && all[0].classList.contains("is-right") === all[1].classList.contains("is-right")) throw new Error("two figures share a place");
+    return all.map(n => decodeURIComponent(n.querySelector("img").getAttribute("src")).split("?")[0].split("/").slice(-2).join("/") + (n.classList.contains("is-speaking") ? " speaking" : " listening")).sort();
+  });
+  const prose = Array.from({ length:7 }, () => "风从山谷里吹上来，带着松针和雨后泥土的气味，远处的钟声一下一下地敲着。").join("");
+  await say(["张三|joy:「今天风大，我们上山看看吧。」", "李四|anger:「别去！山上要塌方了。」", prose, prose].join("\n")); await settle();
+  assert.deepEqual(await figures(), ["张三/joy.webp speaking", "李四/anger.webp listening"]);
+  assert.equal(await page.locator(".wb-rp-plate strong").textContent(), "张三"); assert.equal(await page.locator(".wb-rp-user").count(), 0, "two of the cast fill both places");
+  const shown = await page.locator(".mes.wb-rp-current .mes_text").evaluate(n => ({ text:n.innerText, labels:[...n.querySelectorAll(".wb-cast-tag")].map(t => getComputedStyle(t, "::before").content) }));
+  assert(!shown.text.includes("|joy") && !shown.text.includes("|anger"), shown.text); assert.deepEqual(shown.labels, ["none", '"李四"'], "the plate names the page's first voice; a later one carries its own label");
+  assert.match(await page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value), /张三（joy、neutral）；李四（anger）/);
+  await role("下一段对白或输入").click(); await settle();
+  assert.deepEqual(await figures(), ["张三/joy.webp listening", "李四/anger.webp speaking"], "an untagged page continues the last voice before it");
+  await say("三哥笑道「好，听你的。」"); await settle();
+  assert.deepEqual(await figures(), ["张三/neutral.webp speaking", "李四/anger.webp listening"], "an untagged reply goes by its names; with no classifier, the neutral face");
+  pass("a world-book cast tags each line: speaker and face per page, two places, names kept, prompt injected");
+  await role("RP 外观").click(); await page.locator(".wb-cast-open").click(); await page.locator(".wb-cast-list").waitFor();
+  assert.deepEqual(await page.locator(".wb-cast-entry input").evaluateAll(ns => ns.map(n => [n.checked, n.disabled])), [[true,false],[true,false],[false,true]]);
+  await page.getByLabel("为 李四 上传立绘").setInputFiles({ name:"neutral.webp", mimeType:"image/webp", buffer:fs.readFileSync("docs/design/rp-desktop/assets/r-user-character.webp") });
+  await page.waitForFunction(() => document.querySelectorAll(".wb-cast-faces figure").length === 4);
+  assert.match(await page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value), /李四（anger、neutral）/);
+  await role("删除 李四 的 neutral").click(); await page.waitForFunction(() => document.querySelectorAll(".wb-cast-faces figure").length === 3);
+  await page.getByRole("button", { name:"外观", exact:true }).click(); await page.getByRole("button", { name:"角色卡 · 单人" }).click();
+  await page.waitForFunction(() => !document.querySelector(".wb-rp-actor.is-cast"));
+  assert.equal(await page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value === "" && !SillyTavern.getContext().chatMetadata.workbenchRP?.cast), true);
+  await page.keyboard.press("Escape"); await page.evaluate(async () => { const c = SillyTavern.getContext(); await c.deleteLastMessage(); await c.deleteLastMessage(); }); await settle();
+  pass("the cast page chooses entries, uploads and removes faces; the card returns the stage and clears the prompt");
   await withReducedMotion(page, async () => assert.equal(await css("#sheld", "transitionDuration"), "0s")); pass("reduced motion is honored and the account preference restored");
   await role("切换阅读布局").click(); await settle(); assert.equal(await has("wb-rp"), false); assert.equal(await page.locator(".wb-reading-bar").count(), 1);
   assert.equal(await page.evaluate(() => __rpNative.chat === document.getElementById("chat") && __rpNative.input === document.getElementById("send_textarea")), true);

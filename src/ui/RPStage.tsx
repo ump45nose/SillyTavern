@@ -21,6 +21,7 @@ import {
 } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { boundedPreference } from "../host/rp";
+import { matchSpeaker, pickSprite } from "../host/cast";
 import { useHostSlices } from "./common";
 import { ReadingPresentation } from "./Reading";
 import { beginImage } from "./AddonControls";
@@ -38,6 +39,11 @@ type Message = {
   editing: boolean;
 };
 type Cursor = { id: number; page: number; compose: boolean };
+/** A cast tag in the current message, and the page it falls on. */
+type Mark = { page: number; speaker: string; expr: string };
+/** The world-book cast on stage: who holds the left and right places, and the face each last wore. */
+type Stage = { slots: [string | null, string | null]; last: string | null; faces: Record<string, string> };
+const emptyStage: Stage = { slots: [null, null], last: null, faces: {} };
 
 /** Keep native message, media, iframe, textarea and event-handler identities intact. */
 function useNativeDialogue(host: HostAdapter) {
@@ -100,9 +106,14 @@ export function RPStage({
   cursorNow.current = cursor;
   const [history, setHistory] = useState(false),
     [expanded, setExpanded] = useState(false),
-    [mediaRevision, setMediaRevision] = useState(0);
+    [mediaRevision, setMediaRevision] = useState(0),
+    [, setCastRevision] = useState(0);
   // The current message is laid out in page-wide columns; this is how many it took.
-  const [paging, setPaging] = useState<{ node: HTMLElement | null; count: number }>({ node: null, count: 1 }),
+  const [paging, setPaging] = useState<{ node: HTMLElement | null; count: number; marks: Mark[] }>({
+      node: null,
+      count: 1,
+      marks: [],
+    }),
     [auto, setAuto] = useState(false);
   const originals = useRef(new Map<HTMLElement, { inert: boolean; aria: string | null }>());
   const focusInput = useRef(false),
@@ -118,6 +129,84 @@ export function RPStage({
   const compose = cursor.compose || !current,
     presentation = host.rpPresentation(current?.user ? undefined : current?.name);
   void mediaRevision;
+  // A world-book cast: who speaks on this page, in reading order; a page with no tag continues the
+  // last one before it (or opens with the message's first). An untagged reply goes by the names in
+  // its text, with the expression the host's classifier reads.
+  const [classified, setClassified] = useState({ key: "", label: "" }),
+    [stage, setStage] = useState<Stage>(emptyStage);
+  const cast = host.cast.state,
+    castOn = !!cast.config && cast.members.some((member) => member.sprites.length),
+    castReply = castOn && !!current && !current.user,
+    marks = current && paging.node === current.node ? paging.marks : [],
+    onPage = marks.filter((m) => m.page === page),
+    lead = onPage[0] ?? marks.filter((m) => m.page < page).at(-1) ?? marks[0],
+    passage = castReply && !lead ? current!.node.querySelector(".mes_text")?.textContent || "" : "",
+    guessed = passage ? matchSpeaker(passage, cast.members) : null,
+    classifyKey =
+      guessed && host.cast.member(guessed)?.sprites.length
+        ? `${snap.chatName}:${current!.id}:${passage.length}`
+        : "",
+    lines = !castReply
+      ? []
+      : onPage.length
+        ? onPage
+        : lead
+          ? [lead]
+          : guessed
+            ? [{ speaker: guessed, expr: classified.key === classifyKey ? classified.label : "" }]
+            : [];
+  const voices: { name: string; face: string }[] = [];
+  for (const line of lines) {
+    const member = host.cast.member(line.speaker),
+      face = member && pickSprite(member.sprites, line.expr || null, host.cast.fallbackExpression())?.path;
+    if (member && face && !voices.some((voice) => voice.name === member.name))
+      voices.push({ name: member.name, face });
+  }
+  const shown = voices[0],
+    voiceKey = voices.map((voice) => voice.name + "\n" + voice.face).join("\n");
+  useEffect(() => host.cast.subscribe(() => setCastRevision((v) => v + 1)), [host]);
+  // A reply still streaming in is read once it is complete.
+  const streaming = snap.busy && current?.id === snap.messages.length - 1;
+  useEffect(() => {
+    if (!classifyKey || streaming) return;
+    let live = true;
+    void host.cast
+      .expression(classifyKey, passage)
+      .then((label) => live && setClassified({ key: classifyKey, label }));
+    return () => {
+      live = false;
+    };
+  }, [host, classifyKey, streaming]);
+  // Two places on stage, taken in reading order: a new voice takes the empty one, else the one not
+  // held by the voice before. The page's first voice is the one speaking.
+  useLayoutEffect(() => {
+    if (!voices.length) return;
+    setStage((old) => {
+      const names = new Set(cast.members.map((member) => member.name));
+      let next: Stage = {
+        ...old,
+        slots: old.slots.map((slot) => (slot && names.has(slot) ? slot : null)) as Stage["slots"],
+      };
+      for (const { name, face } of voices.slice(0, 2)) {
+        const held = next.slots,
+          slots: Stage["slots"] = held.includes(name)
+            ? held
+            : !held[0]
+              ? [name, held[1]]
+              : !held[1]
+                ? [held[0], name]
+                : held[0] === next.last
+                  ? [held[0], name]
+                  : [name, held[1]];
+        next = { slots, last: name, faces: { ...next.faces, [name]: face } };
+      }
+      next.last = voices[0].name;
+      return JSON.stringify(next) === JSON.stringify(old) ? old : next;
+    });
+  }, [voiceKey, cast.members]);
+  useEffect(() => {
+    if (!castOn) setStage(emptyStage);
+  }, [castOn]);
   const isHidden = hidden || blocked;
   useEffect(() => {
     if (lastChat.current !== snap.chatName) {
@@ -126,6 +215,7 @@ export function RPStage({
       setCursor({ id: -1, page: -1, compose: false });
       setHistory(false);
       setExpanded(false);
+      setStage(emptyStage);
     }
   }, [snap.chatName]);
   useEffect(() => {
@@ -271,8 +361,23 @@ export function RPStage({
       block.style.setProperty("--wb-rp-column", block.clientWidth + "px");
       block.style.setProperty("--wb-rp-gap", PAGE_GAP + "px");
       block.style.setProperty("--wb-rp-page", block.clientHeight + "px");
-      const count = Math.max(1, Math.round((block.scrollWidth + PAGE_GAP) / (block.clientWidth + PAGE_GAP)));
-      setPaging((old) => (old.node === node && old.count === count ? old : { node, count }));
+      const count = Math.max(1, Math.round((block.scrollWidth + PAGE_GAP) / (block.clientWidth + PAGE_GAP))),
+        origin = block.getBoundingClientRect().left - block.scrollLeft,
+        tags = [...block.querySelectorAll<HTMLElement>(".wb-cast-tag")],
+        marks = tags.map((mark) => ({
+          page: Math.floor((mark.getBoundingClientRect().left - origin + 1) / (block.clientWidth + PAGE_GAP)),
+          speaker: mark.dataset.speaker!,
+          expr: mark.dataset.expr!,
+        }));
+      // The band's name plate already names a page's first voice; later voices carry their own.
+      tags.forEach((tag, i) =>
+        tag.toggleAttribute("data-wb-lead", !i || marks[i - 1].page !== marks[i].page),
+      );
+      setPaging((old) =>
+        old.node === node && old.count === count && JSON.stringify(old.marks) === JSON.stringify(marks)
+          ? old
+          : { node, count, marks },
+      );
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -682,15 +787,31 @@ export function RPStage({
       {createPortal(
         <div className="wb-rp-stage" aria-label="RP 舞台">
           <div className="wb-rp-atmosphere" />
-          {(presentation.sprite || (prefs.rpShowPortraits !== false && presentation.portrait)) && (
-            <div
-              className={`wb-rp-actor ${presentation.sprite ? "is-sprite" : "is-portrait"} ${current?.user || compose ? "is-listening" : "is-speaking"}`}
-            >
-              <img src={presentation.sprite || presentation.portrait} alt={presentation.name} />
-              <span>{presentation.name}</span>
-            </div>
-          )}
+          {castOn && (stage.slots[0] || stage.slots[1])
+            ? stage.slots.map((name, place) => {
+                // The phone has room for one figure: whoever spoke last.
+                if (!name || !stage.faces[name] || (mobile && name !== stage.last)) return null;
+                const speaking = name === shown?.name && !compose && !current?.user;
+                return (
+                  <div
+                    key={name}
+                    className={`wb-rp-actor is-sprite is-cast ${place && !mobile ? "is-right" : "is-left"} ${speaking ? "is-speaking" : "is-listening"}`}
+                  >
+                    <img src={stage.faces[name]} alt={name} />
+                    <span>{name}</span>
+                  </div>
+                );
+              })
+            : (presentation.sprite || (prefs.rpShowPortraits !== false && presentation.portrait)) && (
+                <div
+                  className={`wb-rp-actor ${presentation.sprite ? "is-sprite" : "is-portrait"} ${current?.user || compose ? "is-listening" : "is-speaking"}`}
+                >
+                  <img src={presentation.sprite || presentation.portrait} alt={presentation.name} />
+                  <span>{presentation.name}</span>
+                </div>
+              )}
           {!mobile &&
+            !(castOn && stage.slots[1]) &&
             (presentation.userSprite || (prefs.rpShowPortraits !== false && presentation.userPortrait)) && (
               <div
                 className={`wb-rp-user ${presentation.userSprite ? "is-sprite" : "is-portrait"} ${current?.user || compose ? "is-speaking" : "is-listening"}`}
@@ -760,7 +881,9 @@ export function RPStage({
                 alt=""
               />
             )}
-            <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
+            <strong>
+              {compose ? presentation.userName : shown?.name || current?.name || presentation.name}
+            </strong>
           </div>
           {/* Phone: the page marks sit by the name, the quick menu along the foot; composing and
               editing keep their own keys here. */}

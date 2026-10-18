@@ -12,6 +12,7 @@ import type {
 import { clone } from "./model";
 import { ctx, internal } from "./internals";
 import type { ChatObserver, MediaObserver } from "./chat-observer";
+import type { CastRuntime } from "./cast-runtime";
 import { bus } from "./bus";
 
 export const defaults: Preferences = { left: true, bindings: {}, groups: {} };
@@ -68,6 +69,8 @@ export class HostCore {
   /** Created in init; the only observers on #chat and on the native sprite wrappers. */
   chatObserver!: ChatObserver;
   media!: MediaObserver;
+  /** The chat's world-book cast on the RP stage. */
+  cast!: CastRuntime;
   listen(name: string, fn: (...args: any[]) => void) {
     const c = ctx(),
       event = c.eventTypes[name];

@@ -1,6 +1,7 @@
 import { clone } from "./model";
 import { assertContext, ctx, internal, nativeNodes } from "./internals";
 import { ChatObserver, MediaObserver } from "./chat-observer";
+import { CastRuntime } from "./cast-runtime";
 import { guards, type Guard } from "./bus";
 import { HostCore, defaults, sliceNames } from "./core";
 import type { Slice } from "./types";
@@ -35,7 +36,12 @@ export class HostAdapter extends HostCore {
     assertContext();
     this.chatObserver = new ChatObserver(nativeNodes.chat!);
     this.media = new MediaObserver();
+    this.cast = new CastRuntime(this);
+    const chat = nativeNodes.chat!;
+    // Subscribed before any view, so every view reads replies with their cast tags already out.
+    this.cast.mark(null, chat);
     this.cleanup.push(
+      this.chatObserver.subscribe((change) => this.cast.mark(change, chat)),
       () => this.chatObserver.disconnect(),
       () => this.media.disconnect(),
     );
@@ -119,6 +125,11 @@ export class HostAdapter extends HostCore {
         if (!this.busy && !this.resourceAction && !this.bindingRun)
           void this.applyBinding().catch((e) => this.report(e));
       });
+    this.listen("CHAT_CHANGED", () => void this.cast.load());
+    this.listen("WORLDINFO_UPDATED", (name: string) => {
+      if (name === this.cast.state.config?.book) void this.cast.load();
+    });
+    void this.cast.load();
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
     const guard: Guard = ({ preserveDrafts }) => {
