@@ -222,6 +222,43 @@ export function MobileShell({
     flushSync(() => setEditing(false));
   };
   const edit = (value: boolean) => (value ? openPage() : closePage());
+  // Pulling the page down: it follows the finger, then folds back into the pill or band past a
+  // fifth of its height or on a flick, and otherwise springs back up.
+  const pullFrom = (pointer: number, y: number, t: number) => {
+    const at = { y, t };
+    pull.current = { y, pointer, dy: 0, previous: at, last: at };
+    settle();
+    moving(true);
+  };
+  const pullTo = (y: number, t: number) => {
+    const current = pull.current!;
+    current.dy = Math.max(0, y - current.y);
+    current.previous = current.last;
+    current.last = { y, t };
+    dock.style.setProperty("translate", `0 ${current.dy}px`);
+  };
+  const letPull = () => {
+    const current = pull.current!;
+    pull.current = null;
+    const speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+    if (speed > 0.5 || current.dy > dock.offsetHeight * 0.18) return closePage(current.dy);
+    dock.style.removeProperty("translate");
+    const back = dock.animate([{ translate: `0 ${current.dy}px` }, { translate: "0 0" }], {
+      duration: motionAllowed() ? 240 : 0,
+      easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    });
+    motion.current = [back];
+    back.finished.then(
+      () => moving(false),
+      () => {},
+    );
+  };
+  const dropPull = () => {
+    if (!pull.current) return;
+    pull.current = null;
+    dock.style.removeProperty("translate");
+    moving(false);
+  };
   const presentation = host.rpPresentation();
   // Novel names the story; RP names the scene, falling back to the story when the card has none.
   const scene = (key: string) => {
@@ -243,16 +280,13 @@ export function MobileShell({
     ]
       .filter(Boolean)
       .join(" · ");
+  // Every class written on <body> makes SillyTavern's keyboard.js rescan the whole page, so these
+  // change only when their value does and are removed only on unmount.
   useLayoutEffect(() => {
     document.body.classList.toggle("wb-mobile-busy", snap.busy);
     document.body.classList.toggle("wb-mobile-offline", !snap.online);
-    return () => document.body.classList.remove("wb-mobile-busy", "wb-mobile-offline");
   }, [snap.busy, snap.online]);
-  useLayoutEffect(() => {
-    // The editor page keys off its own attributes (a class on <body> stalls its first frame).
-    document.body.classList.toggle("wb-mobile-tools", sheet === "tools");
-  }, [sheet]);
-  useLayoutEffect(() => () => document.body.classList.remove("wb-mobile-tools"), []);
+  useLayoutEffect(() => () => document.body.classList.remove("wb-mobile-busy", "wb-mobile-offline"), []);
   useEffect(() => {
     setSheet(null);
     setEditor(false);
@@ -392,6 +426,52 @@ export function MobileShell({
       reset();
     };
   }, [rp, editor]);
+  // The whole upper half of the page pulls it down too, while the draft is scrolled to its top: a
+  // downward drag there folds the page instead of scrolling (touch events, which can stop the
+  // scroll). A press held before moving is left to text selection.
+  useEffect(() => {
+    if (!editor) return;
+    let start: { id: number; x: number; y: number; t: number } | null = null;
+    const down = (e: TouchEvent) => {
+      start = null;
+      const t = e.touches[0],
+        page = dock.getBoundingClientRect();
+      if (e.touches.length !== 1 || pull.current || t.clientY > page.top + page.height / 2) return;
+      if ((e.target as Element).closest("button,a,select") || input.scrollTop > 0) return;
+      start = { id: t.identifier, x: t.clientX, y: t.clientY, t: e.timeStamp };
+    };
+    const move = (e: TouchEvent) => {
+      const t = [...e.changedTouches].find((touch) => touch.identifier === start?.id);
+      if (!start || !t) return;
+      if (pull.current?.pointer !== -1) {
+        const dx = t.clientX - start.x,
+          dy = t.clientY - start.y;
+        if (Math.hypot(dx, dy) < 8) return;
+        if (dy <= 0 || Math.abs(dx) > dy || e.timeStamp - start.t > 400) return void (start = null);
+        pullFrom(-1, start.y, start.t);
+      }
+      e.preventDefault();
+      pullTo(t.clientY, e.timeStamp);
+    };
+    const up = () => {
+      start = null;
+      if (pull.current?.pointer === -1) letPull();
+    };
+    const cancel = () => {
+      start = null;
+      if (pull.current?.pointer === -1) dropPull();
+    };
+    dock.addEventListener("touchstart", down, { passive: true });
+    dock.addEventListener("touchmove", move, { passive: false });
+    dock.addEventListener("touchend", up);
+    dock.addEventListener("touchcancel", cancel);
+    return () => {
+      dock.removeEventListener("touchstart", down);
+      dock.removeEventListener("touchmove", move);
+      dock.removeEventListener("touchend", up);
+      dock.removeEventListener("touchcancel", cancel);
+    };
+  }, [editor]);
   useLayoutEffect(() => {
     const chat = document.getElementById("sheld")!,
       previous = chat.inert;
@@ -1020,43 +1100,15 @@ export function MobileShell({
               if (e.button !== 0 || (e.target as Element).closest("button")) return;
               // Touch is captured implicitly; a mouse needs it to keep the bar while dragging.
               if (e.pointerType === "mouse") e.currentTarget.setPointerCapture(e.pointerId);
-              const at = { y: e.clientY, t: e.timeStamp };
-              pull.current = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
-              settle();
-              moving(true);
+              pullFrom(e.pointerId, e.clientY, e.timeStamp);
             }}
             onPointerMove={(e) => {
-              const current = pull.current;
-              if (!current || e.pointerId !== current.pointer) return;
-              current.dy = Math.max(0, e.clientY - current.y);
-              current.previous = current.last;
-              current.last = { y: e.clientY, t: e.timeStamp };
-              dock.style.setProperty("translate", `0 ${current.dy}px`);
+              if (e.pointerId === pull.current?.pointer) pullTo(e.clientY, e.timeStamp);
             }}
             onPointerUp={(e) => {
-              const current = pull.current;
-              pull.current = null;
-              if (!current || e.pointerId !== current.pointer) return;
-              const speed =
-                (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
-              if (speed > 0.5 || current.dy > dock.offsetHeight * 0.18) return closePage(current.dy);
-              dock.style.removeProperty("translate");
-              const back = dock.animate([{ translate: `0 ${current.dy}px` }, { translate: "0 0" }], {
-                duration: motionAllowed() ? 240 : 0,
-                easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-              });
-              motion.current = [back];
-              back.finished.then(
-                () => moving(false),
-                () => {},
-              );
+              if (e.pointerId === pull.current?.pointer) letPull();
             }}
-            onPointerCancel={() => {
-              if (!pull.current) return;
-              pull.current = null;
-              dock.style.removeProperty("translate");
-              moving(false);
-            }}
+            onPointerCancel={dropPull}
           >
             <button aria-label="返回聊天，保留草稿" onClick={() => edit(false)}>
               <ChevronDown size={22} />

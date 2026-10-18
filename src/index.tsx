@@ -154,7 +154,6 @@ function unmount() {
     "wb-active",
     "wb-mobile",
     "wb-mobile-rp",
-    "wb-mobile-tools",
     "wb-mobile-lowered",
     "wb-mobile-keyboard",
     "wb-mobile-dragging",
