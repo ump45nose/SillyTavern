@@ -189,9 +189,12 @@
     box-shadow: var(--wb-shadow-1);
     color: var(--wb-ink-1);
   }
-  /* The editor page rises over the header and quick config; they leave once it covers them. */
-  body.wb-mobile[data-wb-covered] :is(.wb-mobile-header, .wb-mobile-config) {
+  /* The editor page rises over the header, the quick config and RP's deck; they leave once it
+     covers them, at once: the page drops back under them as it settles. */
+  body.wb-mobile[data-wb-covered] :is(.wb-mobile-header, .wb-mobile-config, .wb-rp-deck),
+  body.wb-mobile[data-wb-covered] :is(.wb-mobile-header, .wb-mobile-config, .wb-rp-deck) * {
     visibility: hidden;
+    transition: none;
   }
   body.wb-mobile .wb-mobile-status {
     flex: 1;
@@ -361,10 +364,10 @@
     color: var(--wb-rp-ink-1);
   }
 
-  /* ── Noval editor page (native-bridge.css lays out the page; this is its bar) ──
+  /* ── Editor page (native-bridge.css lays out the page; this is its bar) ──
      A grabber over one row: fold-down key, the title centred, the count. The whole bar pulls the
      page back down into the pill. */
-  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading {
+  body.wb-mobile #form_sheld[data-wb-page] .wb-mobile-editor-heading {
     position: relative;
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) 56px;
@@ -376,7 +379,7 @@
     touch-action: none;
     cursor: grab;
   }
-  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading::before {
+  body.wb-mobile #form_sheld[data-wb-page] .wb-mobile-editor-heading::before {
     content: "";
     position: absolute;
     top: 8px;
@@ -387,7 +390,7 @@
     border-radius: 2px;
     background: var(--wb-line-1);
   }
-  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading > button {
+  body.wb-mobile #form_sheld[data-wb-page] .wb-mobile-editor-heading > button {
     display: grid;
     place-items: center;
     width: 44px;
@@ -396,19 +399,19 @@
     border-radius: 14px;
     color: var(--wb-ink-2);
   }
-  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading strong {
+  body.wb-mobile #form_sheld[data-wb-page] .wb-mobile-editor-heading strong {
     font: 600 15px/1.3 var(--wb-font-reading);
     text-align: center;
     color: var(--wb-ink-1);
   }
-  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-editor-heading small {
+  body.wb-mobile #form_sheld[data-wb-page] .wb-mobile-editor-heading small {
     justify-self: end;
     padding-right: 16px;
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: var(--wb-ink-3);
   }
-  body.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] .wb-mobile-plus {
+  body.wb-mobile #form_sheld[data-wb-page] .wb-mobile-plus {
     grid-row: 2;
   }
 
@@ -467,7 +470,7 @@
       opacity 180ms,
       visibility 180ms;
   }
-  body.wb-mobile-rp.wb-rp-pulling .wb-rp-deck {
+  body.wb-mobile-rp:is(.wb-rp-pulling, [data-wb-band-drag]) .wb-rp-deck {
     transition: none;
   }
   body.wb-mobile-rp .wb-rp-replies {
@@ -872,7 +875,7 @@
   body.wb-mobile :is(#chat, .wb-mobile-shade) {
     touch-action: pan-y;
   }
-  body.wb-mobile-rp:not(.wb-mobile-editor) {
+  body.wb-mobile-rp {
     touch-action: pan-y;
   }
   body.wb-mobile .wb-mobile-shade {

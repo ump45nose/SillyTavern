@@ -2,7 +2,6 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
-  ArrowLeft,
   BookMarked,
   BookOpen,
   ChevronDown,
@@ -106,9 +105,9 @@ export function MobileShell({
       setChooser(null);
       setEditor(value);
     };
-  // Noval: the pill grows into the full-screen editor and shrinks back into it. The page is the
-  // native #form_sheld let out of the flow ([data-wb-page]); #chat keeps its place with a margin
-  // where the pill was. While the page moves, #sheld[data-wb-rise] lifts it over the header; once it
+  // The pill (Noval) or the compose band (RP) grows into the full-screen editor and shrinks back
+  // into it. The page is the native #form_sheld let out of the flow ([data-wb-page]); Noval's #chat
+  // keeps its place with a margin where the pill was. While the page moves, #sheld[data-wb-rise] lifts it over the header; once it
   // covers the window, body[data-wb-covered] hides what is underneath. The morph is a Web Animation
   // of the page's offset and clip from the pill's rectangle: no class changes mid-motion, and the
   // textarea stays the same node.
@@ -141,7 +140,9 @@ export function MobileShell({
     dock.style.removeProperty("translate");
     document.getElementById("chat")!.style.removeProperty("margin-bottom");
   };
-  const pillShape = (page: DOMRect, pill: DOMRect, top = pill.top) => ({
+  // RP's band fades in over its first rows; the page grows from, and folds back to, where it is solid.
+  const bandFade = rp ? 40 : 0;
+  const pillShape = (page: DOMRect, pill: DOMRect, top = pill.top + bandFade) => ({
     translate: `0 ${top - page.top}px`,
     clipPath: `inset(0px ${page.right - pill.right}px ${page.height - (pill.bottom - top)}px ${pill.left - page.left}px round 24px)`,
   });
@@ -153,12 +154,15 @@ export function MobileShell({
     delete dock.dataset.wbDrag;
     dock.style.removeProperty("--wb-rise");
     dock.style.removeProperty("--wb-rise-fade");
-    document.getElementById("chat")!.style.setProperty("margin-bottom", `${dock.offsetHeight}px`);
+    if (!rp) document.getElementById("chat")!.style.setProperty("margin-bottom", `${dock.offsetHeight}px`);
     dock.dataset.wbPage = "";
     moving(true);
     const page = dock.getBoundingClientRect(),
       grow = dock.animate(
-        [pillShape(page, pill, pill.top - rise), { translate: "0 0", clipPath: "inset(0px round 0px)" }],
+        [
+          pillShape(page, pill, pill.top + bandFade - rise),
+          { translate: "0 0", clipPath: "inset(0px round 0px)" },
+        ],
         { duration, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
       );
     motion.current = [
@@ -217,7 +221,7 @@ export function MobileShell({
     );
     flushSync(() => setEditing(false));
   };
-  const edit = (value: boolean) => (rp ? setEditing(value) : value ? openPage() : closePage());
+  const edit = (value: boolean) => (value ? openPage() : closePage());
   const presentation = host.rpPresentation();
   // Novel names the story; RP names the scene, falling back to the story when the card has none.
   const scene = (key: string) => {
@@ -245,14 +249,14 @@ export function MobileShell({
     return () => document.body.classList.remove("wb-mobile-busy", "wb-mobile-offline");
   }, [snap.busy, snap.online]);
   useLayoutEffect(() => {
-    // Noval's page keys off its own attributes (a class on <body> stalls its first frame).
-    document.body.classList.toggle("wb-mobile-editor", editor && rp);
+    // The editor page keys off its own attributes (a class on <body> stalls its first frame).
     document.body.classList.toggle("wb-mobile-tools", sheet === "tools");
-  }, [editor, sheet, rp]);
-  useLayoutEffect(() => () => document.body.classList.remove("wb-mobile-editor", "wb-mobile-tools"), []);
+  }, [sheet]);
+  useLayoutEffect(() => () => document.body.classList.remove("wb-mobile-tools"), []);
   useEffect(() => {
     setSheet(null);
     setEditor(false);
+    letGo();
   }, [rp, snap.chatName, snap.character?.id]);
   useEffect(() => {
     // A draft taller than the pill scrolls under the finger; a short one lets the pill be pulled up.
@@ -296,10 +300,11 @@ export function MobileShell({
     },
     [],
   );
-  // Noval: pulling the pill up grows its card with the finger; past the threshold, or on a flick,
-  // the card carries on into the full editor, otherwise it settles back.
+  // Pulling the pill (Noval) or the compose band (RP) up grows it with the finger; past the
+  // threshold, or on a flick, it carries on into the full editor, otherwise it settles back. The
+  // band grows through RPStage's --wb-rp-pull, its card through --wb-rise.
   useEffect(() => {
-    if (rp || editor) return;
+    if (editor) return;
     let drag: {
       x: number;
       y: number;
@@ -312,19 +317,25 @@ export function MobileShell({
     } | null = null;
     const reset = () => {
       delete dock.dataset.wbDrag;
+      delete document.body.dataset.wbBandDrag;
       dock.style.removeProperty("--wb-rise");
       dock.style.removeProperty("--wb-rise-fade");
+      document.body.style.removeProperty("--wb-rp-pull");
     };
     const down = (e: PointerEvent) => {
       const target = e.target as Element;
       if (e.button !== 0 || e.pointerType === "mouse" || target.closest("button,a,select")) return;
       if (target === input && input.hasAttribute("data-wb-overflow")) return;
+      if (rp && !document.body.classList.contains("wb-rp-compose")) return;
       const at = { y: e.clientY, t: e.timeStamp };
       drag = {
         x: e.clientX,
         y: e.clientY,
         pointer: e.pointerId,
-        room: form.getBoundingClientRect().top - stage.getBoundingClientRect().top,
+        // RP's band may rise to just under the header.
+        room: rp
+          ? stage.getBoundingClientRect().top - (headerRef.current?.getBoundingClientRect().bottom ?? 0) - 16
+          : form.getBoundingClientRect().top - stage.getBoundingClientRect().top,
         rise: 0,
         started: false,
         previous: at,
@@ -341,21 +352,29 @@ export function MobileShell({
           return;
         }
         drag.started = true;
-        dock.dataset.wbDrag = "";
+        if (rp) document.body.dataset.wbBandDrag = "";
+        else dock.dataset.wbDrag = "";
       }
       drag.rise = Math.min(drag.room, Math.max(0, dy));
       drag.previous = drag.last;
       drag.last = { y: e.clientY, t: e.timeStamp };
-      dock.style.setProperty("--wb-rise", `${drag.rise}px`);
-      dock.style.setProperty("--wb-rise-fade", String(Math.min(0.75, drag.rise / 160)));
+      if (rp) document.body.style.setProperty("--wb-rp-pull", `${-drag.rise}px`);
+      else {
+        dock.style.setProperty("--wb-rise", `${drag.rise}px`);
+        dock.style.setProperty("--wb-rise-fade", String(Math.min(0.75, drag.rise / 160)));
+      }
     };
     const up = (e: PointerEvent) => {
       const current = drag;
       drag = null;
       if (!current?.started || e.pointerId !== current.pointer) return;
       const speed = (current.previous.y - current.last.y) / Math.max(1, current.last.t - current.previous.t);
-      if (speed > 0.45 || current.rise > 72) openPage(current.rise);
-      else reset();
+      if (speed > 0.45 || current.rise > 72) {
+        // The band is already as tall as the finger made it: the page grows from there, and the
+        // band settles back under it once it has covered the window.
+        openPage(rp ? 0 : current.rise);
+        if (rp) motion.current[0]?.finished.then(reset, reset);
+      } else reset();
     };
     const cancel = () => {
       drag = null;
@@ -973,7 +992,7 @@ export function MobileShell({
           <div
             className="wb-mobile-editor-heading wb-ui"
             onPointerDown={(e) => {
-              if (rp || e.button !== 0 || (e.target as Element).closest("button")) return;
+              if (e.button !== 0 || (e.target as Element).closest("button")) return;
               // Touch is captured implicitly; a mouse needs it to keep the bar while dragging.
               if (e.pointerType === "mouse") e.currentTarget.setPointerCapture(e.pointerId);
               const at = { y: e.clientY, t: e.timeStamp };
@@ -1015,24 +1034,13 @@ export function MobileShell({
             }}
           >
             <button aria-label="返回聊天，保留草稿" onClick={() => edit(false)}>
-              {rp ? <ArrowLeft size={19} /> : <ChevronDown size={22} />}
-              {rp && "返回"}
+              <ChevronDown size={22} />
             </button>
             <strong>
               {document.body.classList.contains("wb-image-input-mode") ? "生图提示词" : "编辑草稿"}
             </strong>
             <small>{length} 字</small>
           </div>
-          {rp && (
-            <button
-              type="button"
-              className="wb-mobile-editor-tools wb-ui"
-              aria-label="草稿工具"
-              onClick={() => setSheet("tools")}
-            >
-              <Plus size={23} />
-            </button>
-          )}
         </>,
         form,
       )}

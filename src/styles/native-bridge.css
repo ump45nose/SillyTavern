@@ -3808,8 +3808,7 @@ body.wb-active.wb-mobile #send_textarea::placeholder {
   color: var(--wb-ink-3);
   opacity: 1;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-editor) :is(#leftSendForm, .wb-composer-actions),
-body.wb-active.wb-mobile:not(.wb-mobile-rp) :is(#leftSendForm, .wb-composer-actions) {
+body.wb-active.wb-mobile :is(#leftSendForm, .wb-composer-actions) {
   display: none !important;
 }
 body.wb-active.wb-mobile #leftSendForm {
@@ -3851,46 +3850,8 @@ body.wb-mobile-busy #send_but {
   display: none !important;
 }
 
-/* ── Full-screen editor, RP: the box becomes the window (Noval's page follows below) ── */
-body.wb-active.wb-mobile.wb-mobile-editor:where(.wb-mobile-rp) #sheld {
-  top: var(--wb-mobile-top, 0px) !important;
-  height: var(--wb-mobile-height, 100dvh) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor:where(.wb-mobile-rp) #chat {
-  display: none !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor:where(.wb-mobile-rp) #form_sheld {
-  height: 100% !important;
-  padding: var(--wb-safe-top) 0 var(--wb-safe-bottom) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor:where(.wb-mobile-rp) #send_form {
-  height: 100% !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  padding: 0 12px 12px !important;
-}
-body.wb-active.wb-mobile.wb-mobile-editor:where(.wb-mobile-rp) #nonQRFormItems {
-  flex: 1;
-  min-height: 0;
-  grid-template-columns: 88px minmax(0, 1fr) 44px;
-  grid-template-rows: minmax(0, 1fr) 44px;
-}
-body.wb-active.wb-mobile.wb-mobile-editor:where(.wb-mobile-rp) #send_textarea {
-  grid-row: 1;
-  grid-column: 1/-1;
-  align-self: stretch;
-  height: 100% !important;
-  max-height: none !important;
-  font-size: 17px !important;
-  line-height: 2 !important;
-  padding: 16px 8px !important;
-  field-sizing: fixed;
-}
-body.wb-active.wb-mobile.wb-mobile-editor:where(.wb-mobile-rp) :is(#leftSendForm, .wb-composer-actions, #rightSendForm) {
-  grid-row: 2;
-}
-
-/* ── Noval: the pill and its full-screen page (MobileShell drives the motion) ──
+/* ── The pill (Noval) and the full-screen page it and RP's compose band open into (MobileShell
+   drives the motion) ──
    The pill's card is drawn behind its content so it can grow upward with the finger (--wb-rise)
    while the content rides its top edge. Letting go turns #form_sheld into a page fixed over the
    window ([data-wb-page]): a grabber bar to pull it back down, the draft in the reading face, and
@@ -3925,13 +3886,13 @@ body.wb-active.wb-mobile #form_sheld[data-wb-drag] #send_form::before,
 body.wb-active.wb-mobile #form_sheld[data-wb-drag] #nonQRFormItems {
   transition: none;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #send_textarea:not([data-wb-overflow]) {
+body.wb-active.wb-mobile #form_sheld:not([data-wb-page]) #send_textarea:not([data-wb-overflow]) {
   touch-action: none;
 }
 body.wb-active.wb-mobile #sheld[data-wb-rise] {
   z-index: 6 !important;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] {
+body.wb-active.wb-mobile #form_sheld[data-wb-page] {
   position: fixed !important;
   inset: var(--wb-mobile-top, 0px) 0 auto 0 !important;
   height: var(--wb-mobile-height, 100dvh) !important;
@@ -3942,20 +3903,21 @@ body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] {
   /* #chat is a flex item of #sheld with z-index 30. */
   z-index: 31;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] #send_form {
+body.wb-active.wb-mobile #form_sheld[data-wb-page] #send_form {
   flex: 1;
   min-height: 0 !important;
   padding: 0 12px max(12px, var(--wb-safe-bottom)) !important;
   border-radius: 0 !important;
+  box-shadow: none !important;
   touch-action: auto;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] #nonQRFormItems {
+body.wb-active.wb-mobile #form_sheld[data-wb-page] #nonQRFormItems {
   flex: 1;
   min-height: 0;
   grid-template-rows: minmax(0, 1fr) 44px;
   row-gap: 8px;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] #send_textarea {
+body.wb-active.wb-mobile #form_sheld[data-wb-page] #send_textarea {
   grid-row: 1;
   grid-column: 1/-1;
   align-self: stretch;
@@ -3967,7 +3929,7 @@ body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] #send_text
   touch-action: pan-y;
   field-sizing: fixed;
 }
-body.wb-active.wb-mobile:not(.wb-mobile-rp) #form_sheld[data-wb-page] #rightSendForm {
+body.wb-active.wb-mobile #form_sheld[data-wb-page] #rightSendForm {
   grid-row: 2;
 }
 /* The page covers the reading; once it has risen, what lies under it leaves the accessibility tree. */
@@ -4106,14 +4068,14 @@ body.wb-active.wb-mobile.wb-mobile-rp #sheld {
     opacity 180ms,
     visibility 180ms;
 }
-body.wb-mobile-rp.wb-rp-pulling #sheld {
+body.wb-mobile-rp:is(.wb-rp-pulling, [data-wb-band-drag]) #sheld {
   transition: none !important;
 }
 body.wb-mobile-rp.wb-focus #sheld {
   opacity: 0;
   visibility: hidden;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history):not(.wb-mobile-editor) #chat {
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat {
   position: absolute;
   inset: var(--wb-rp-text-top) 0 var(--wb-rp-foot);
   height: auto;
@@ -4190,7 +4152,7 @@ body.wb-mobile-rp #chat .edit_textarea {
 }
 
 /* Compose: the box is the input — the field fills it, ＋ and send on its bottom row. */
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #form_sheld {
+body.wb-active.wb-mobile.wb-mobile-rp #form_sheld:not([data-wb-page]) {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
@@ -4212,7 +4174,7 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history) #chat {
   pointer-events: none;
   transform: translateX(-14px);
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history):not(.wb-mobile-editor) #form_sheld {
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history) #form_sheld:not([data-wb-page]) {
   opacity: 1;
   visibility: visible;
   /* Visible at once on entry so the reply key can focus the input. */
@@ -4220,20 +4182,22 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history):not(.wb-
   pointer-events: auto;
   transform: none;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor) #send_form {
+body.wb-active.wb-mobile.wb-mobile-rp #form_sheld:not([data-wb-page]) #send_form {
   height: 100% !important;
   padding: var(--wb-rp-text-top) 10px max(10px, var(--wb-safe-bottom)) 18px !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
   outline: 0 !important;
+  /* Pulling the band up opens the full editor (MobileShell). */
+  touch-action: none;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor):not(.wb-image-input-mode) #nonQRFormItems {
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-image-input-mode) #form_sheld:not([data-wb-page]) #nonQRFormItems {
   flex: 1;
   min-height: 0;
   grid-template-rows: minmax(0, 1fr) 44px;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor):not(.wb-image-input-mode) #send_textarea {
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-image-input-mode) #form_sheld:not([data-wb-page]) #send_textarea {
   grid-row: 1;
   grid-column: 1 / -1;
   align-self: stretch;
@@ -4248,7 +4212,7 @@ body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor):not(.wb-image-input
 body.wb-active.wb-mobile.wb-mobile-rp #send_textarea::placeholder {
   color: var(--wb-rp-ink-3);
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-mobile-editor):not(.wb-image-input-mode) #rightSendForm {
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-image-input-mode) #form_sheld:not([data-wb-page]) #rightSendForm {
   grid-row: 2;
 }
 body.wb-active.wb-mobile.wb-mobile-rp #send_but {
@@ -4257,37 +4221,6 @@ body.wb-active.wb-mobile.wb-mobile-rp #send_but {
 body.wb-active.wb-mobile.wb-mobile-rp #send_but :is(.wb-native-icon, .wb-native-icon *) {
   color: var(--wb-rp-on-accent) !important;
 }
-body.wb-mobile-rp :is(#leftSendForm, .wb-composer-actions) {
-  display: none !important;
-}
-/* The full-screen editor is fixed to the window, so the box lets go of its frost and frame first
-   (a backdrop filter would make it the editor's containing block). */
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #sheld {
-  inset: var(--wb-mobile-top, 0px) 0 auto 0 !important;
-  top: var(--wb-mobile-top, 0px) !important;
-  height: var(--wb-mobile-height, 100dvh) !important;
-  border-radius: 0 !important;
-  background: var(--wb-surface-0) !important;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  box-shadow: none !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #chat {
-  display: none !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_form {
-  background: var(--wb-surface-0) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #send_textarea {
-  color: var(--wb-ink-1) !important;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #nonQRFormItems {
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
-}
-body.wb-active.wb-mobile.wb-mobile-rp.wb-mobile-editor #rightSendForm {
-  grid-column: 3;
-}
-
 /* History (board "RpHistory" on a phone): one frosted pane from under the header to the bottom,
    each line its own box with the speaker's plate; the user's lines mirror to the right. */
 body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #sheld {
