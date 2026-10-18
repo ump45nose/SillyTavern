@@ -551,7 +551,7 @@ export function RPStage({
             <X size={16} />
           </button>
         </>
-      ) : mobile ? null : (
+      ) : (
         <>
           <button
             className="wb-rp-tool"
@@ -617,6 +617,21 @@ export function RPStage({
     </div>
   );
   const visibleDots = Array.from({ length: pageCount }, (_, i) => i).filter((i) => Math.abs(i - page) <= 3);
+  const dots = (
+    <div className="wb-rp-dots">
+      {visibleDots.map((index) => (
+        <button
+          key={index}
+          aria-label={`对白第 ${index + 1} 段`}
+          aria-current={index === page ? "true" : undefined}
+          onClick={() => {
+            live.current = false;
+            setCursor({ id: current!.id, page: index, compose: false });
+          }}
+        />
+      ))}
+    </div>
+  );
   const replies = [...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(
     0,
     3,
@@ -711,14 +726,16 @@ export function RPStage({
             )}
             <strong>{compose ? presentation.userName : current?.name || presentation.name}</strong>
           </div>
-          {mobile && tools}
+          {/* Phone: the page marks sit by the name, the quick menu along the foot; composing and
+              editing keep their own keys here. */}
+          {mobile && (compose || current?.editing ? tools : dots)}
         </div>
         {/* Turning pages: back, the page marks, forward (past the last page is your reply), then the
             quick menu and the reply key. Editing keeps only its own keys; composing moves them into
             the input's tool row, just before send. */}
         {!compose && (
           <div className="wb-rp-foot">
-            {!current?.editing && (
+            {!current?.editing && !mobile && (
               <>
                 <button
                   className="wb-rp-tool"
@@ -729,19 +746,7 @@ export function RPStage({
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <div className="wb-rp-dots">
-                  {visibleDots.map((index) => (
-                    <button
-                      key={index}
-                      aria-label={`对白第 ${index + 1} 段`}
-                      aria-current={index === page ? "true" : undefined}
-                      onClick={() => {
-                        live.current = false;
-                        setCursor({ id: current!.id, page: index, compose: false });
-                      }}
-                    />
-                  ))}
-                </div>
+                {dots}
                 <button
                   className="wb-rp-tool"
                   aria-label="下一段对白或输入"
@@ -752,7 +757,7 @@ export function RPStage({
                 </button>
               </>
             )}
-            {!mobile && tools}
+            {(!mobile || !current?.editing) && tools}
             {!current?.editing && (
               <button className="wb-rp-reply" aria-label="快进到你的回应" title="直接回应" onClick={reply}>
                 <PencilLine size={15} />

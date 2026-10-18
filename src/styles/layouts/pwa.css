@@ -465,9 +465,10 @@
     color: var(--wb-ink-1);
   }
 
-  /* ── RP deck (RPStage) over the band: suggested replies float just above it, the speaker's name
-     where the band turns solid, the page marks and the reply key along its foot. The text itself
-     turns the page (left half back, right half forward), so the arrows stay off the phone. ── */
+  /* ── RP deck (RPStage) over the band: suggested replies float just above it; the speaker's name
+     where the band turns solid with the page marks beside it; the desktop's quick menu and the
+     reply key along its foot. The text itself turns the page (left half back, right half
+     forward), so there are no arrows on the phone. ── */
   body.wb-mobile-rp .wb-rp-deck {
     top: calc(var(--wb-rp-box-top) - var(--wb-rp-bar-height) - var(--wb-rp-bar-gap));
     bottom: auto;
@@ -518,15 +519,28 @@
     font-size: 16px;
     letter-spacing: 0.1em;
   }
+  /* No hover on a phone: the quick menu stays visible, in the quieter ink. */
   body.wb-mobile-rp .wb-rp-tools {
     opacity: 1;
+    gap: 0;
   }
   body.wb-mobile-rp .wb-rp-tool {
     width: 36px;
+    height: 40px;
+    min-height: 40px;
+    border-radius: 18px;
+    color: var(--wb-rp-ink-2);
+  }
+  body.wb-mobile-rp .wb-rp-head .wb-rp-tool {
     height: 34px;
     min-height: 34px;
-    border-radius: 17px;
     color: var(--wb-rp-ink-1);
+  }
+  body.wb-mobile-rp .wb-rp-tools-rule {
+    margin: 0 4px;
+  }
+  body.wb-mobile-rp .wb-rp-foot .wb-rp-tools {
+    margin-left: 0;
   }
   body.wb-mobile-rp .wb-rp-tool.is-labelled {
     width: auto;
@@ -543,10 +557,7 @@
     bottom: 0;
     height: var(--wb-rp-foot);
     gap: 0;
-    padding: 0 10px max(4px, var(--wb-safe-bottom)) 16px;
-  }
-  body.wb-mobile-rp .wb-rp-foot > .wb-rp-tool {
-    display: none;
+    padding: 0 10px max(4px, var(--wb-safe-bottom)) 10px;
   }
   body.wb-mobile-rp .wb-rp-dots button {
     width: 14px;
@@ -560,6 +571,7 @@
     width: 18px;
   }
   body.wb-mobile-rp .wb-rp-reply {
+    flex: none;
     margin-left: auto;
     height: 36px;
     min-height: 36px;
@@ -568,6 +580,18 @@
     border-radius: 18px;
     background: var(--wb-rp-field);
     font-size: 13px;
+  }
+  /* Narrow phones: the quick menu closes up so it and the reply key share one line. */
+  @media (max-width: 374px) {
+    body.wb-mobile-rp .wb-rp-foot .wb-rp-tool {
+      width: 31px;
+    }
+    body.wb-mobile-rp .wb-rp-tools-rule {
+      display: none;
+    }
+    body.wb-mobile-rp .wb-rp-reply {
+      padding: 0 11px 0 9px;
+    }
   }
   /* The log's head rides on top of the history pane (native-bridge.css). */
   body.wb-mobile-rp .wb-rp-log-head {

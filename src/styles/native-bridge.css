@@ -4169,11 +4169,12 @@ body.wb-mobile-rp
   :is(.wb-user-heading, .swipe_left, .swipeRightBlock, .swipe_right, .swipes-counter) {
   display: none !important;
 }
+/* RP 外观 sets the dialogue's face and size; the phone reads it 2px smaller than the desk. */
 body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
   margin: 0 !important;
   padding: 0 !important;
   color: var(--wb-rp-ink-1) !important;
-  font: 17px / 1.8 var(--wb-font-reading) !important;
+  font: calc(var(--wb-rp-text, 19px) - 2px) / 1.8 var(--wb-rp-font, var(--wb-font-reading)) !important;
   letter-spacing: 0.01em;
 }
 body.wb-mobile-rp #chat .mes_text :is(q, em, i) {
