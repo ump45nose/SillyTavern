@@ -183,6 +183,7 @@ export const states = [
   { name: "m-rp-tools", viewport: phone, mobile: true, steps: [layout("rp"), label("快进到你的回应"), label("打开输入工具")] },
   { name: "m-rp-hidden", viewport: phone, mobile: true, steps: [layout("rp"), label("隐藏界面")] },
   { name: "m-rp-compose", viewport: phone, mobile: true, steps: [layout("rp"), label("快进到你的回应")] },
+  { name: "m-rp-edit", viewport: phone, mobile: true, steps: [layout("rp"), label("编辑当前对白")] },
   { name: "m-rp-dark", viewport: phone, mobile: true, steps: [layout("rp"), dark] },
   { name: "m-rp-history", viewport: phone, mobile: true, steps: [layout("rp"), swipe("#sheld", 0, -160)] },
   { name: "m-novel-dark", viewport: phone, mobile: true, steps: [dark] },

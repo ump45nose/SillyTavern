@@ -551,6 +551,11 @@
     background: var(--wb-rp-field);
     font: 500 13px/1 var(--wb-font-ui);
   }
+  body.wb-mobile-rp .wb-rp-tool.is-primary {
+    margin-left: 6px;
+    background: var(--wb-accent);
+    color: var(--wb-rp-on-accent);
+  }
   body.wb-mobile-rp .wb-rp-foot {
     left: 0;
     right: 0;

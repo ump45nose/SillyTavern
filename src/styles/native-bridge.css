@@ -4192,13 +4192,8 @@ body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .mes_block {
   background: none !important;
   box-shadow: none !important;
 }
-body.wb-mobile-rp:not(.wb-rp-history)
-  #chat
-  .mes:not(:has(.edit_textarea))
-  :is(.mesAvatarWrapper, .ch_name, .mes_buttons) {
-  display: none !important;
-}
-body.wb-mobile-rp:not(.wb-rp-history) #chat .mes:has(.edit_textarea) .mesAvatarWrapper {
+/* On the band the head carries 取消 / 保存, so editing shows no native row either. */
+body.wb-mobile-rp:not(.wb-rp-history) #chat .mes :is(.mesAvatarWrapper, .ch_name, .mes_buttons) {
   display: none !important;
 }
 body.wb-mobile-rp
@@ -4221,25 +4216,59 @@ body.wb-mobile-rp #chat .mes_text :is(q, em, i) {
 body.wb-mobile-rp:not(.wb-rp-history) #chat .mes_text p {
   margin: 0 0 0.6em;
 }
-body.wb-active.wb-mobile.wb-mobile-rp #chat .mes:has(.edit_textarea) .ch_name {
+/* Editing in the log keeps the native row (save, cancel, copy, move, delete) over the field. */
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes:has(.edit_textarea) .ch_name {
   display: flex !important;
   justify-content: flex-end;
   margin-bottom: 8px;
 }
-body.wb-active.wb-mobile.wb-mobile-rp
+body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history
   #chat
   .mes:has(.edit_textarea)
   :is(.name_text, .timestamp, .wb-reading-meta) {
   display: none !important;
 }
-body.wb-mobile-rp #chat .mes:has(.edit_textarea) .mes_buttons {
+body.wb-mobile-rp.wb-rp-history #chat .mes:has(.edit_textarea) .mes_buttons {
   display: flex !important;
 }
-body.wb-mobile-rp #chat .edit_textarea {
+body.wb-mobile-rp.wb-rp-history #chat .edit_textarea {
   min-height: 120px;
   width: 100%;
   font: 16px / 1.7 var(--wb-font-reading);
   color: var(--wb-rp-ink-1);
+}
+/* Editing on the band: one field filling the text's place, in the dialogue's face, like the desk. */
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+  display: flex !important;
+  flex-direction: column;
+  overflow: visible;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  overflow: visible !important;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .edit_textarea {
+  flex: 1 1 auto;
+  width: calc(100% + 24px) !important;
+  height: auto !important;
+  min-height: 0;
+  max-height: none;
+  margin: 0 -12px !important;
+  padding: 10px 12px !important;
+  border: 0 !important;
+  border-radius: 14px;
+  background: var(--wb-rp-field) !important;
+  box-shadow: inset 0 0 0 1px var(--wb-rp-line) !important;
+  color: var(--wb-rp-ink-1) !important;
+  caret-color: var(--wb-accent);
+  font: calc(var(--wb-rp-text, 19px) - 2px) / 1.8 var(--wb-rp-font, var(--wb-font-reading)) !important;
+  resize: none;
+}
+body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .edit_textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent) !important;
 }
 
 /* Compose: the box is the input — the field fills it, ＋ and send on its bottom row. */
