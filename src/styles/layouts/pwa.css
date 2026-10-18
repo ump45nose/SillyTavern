@@ -482,7 +482,7 @@
       opacity 180ms,
       visibility 180ms;
   }
-  body.wb-mobile-rp:is(.wb-rp-pulling, [data-wb-band-drag]) .wb-rp-deck {
+  body.wb-mobile-rp:is([data-wb-rp-pulling], [data-wb-band-drag]) .wb-rp-deck {
     transition: none;
   }
   body.wb-mobile-rp .wb-rp-replies {
@@ -613,7 +613,7 @@
     color: var(--wb-rp-ink-1);
     font: 13px/1.4 var(--wb-font-ui);
     transform: translateY(max(0px, var(--wb-rp-pull, 0px)));
-    animation: wb-mobile-fade-in 220ms ease both;
+    animation: wb-rp-log-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
   }
   body.wb-mobile-rp .wb-rp-log-head::before {
     content: "";

@@ -107,10 +107,11 @@ export function MobileShell({
     };
   // The pill (Noval) or the compose band (RP) grows into the full-screen editor and shrinks back
   // into it. The page is the native #form_sheld let out of the flow ([data-wb-page]); Noval's #chat
-  // keeps its place with a margin where the pill was. While the page moves, #sheld[data-wb-rise] lifts it over the header; once it
-  // covers the window, body[data-wb-covered] hides what is underneath. The morph is a Web Animation
-  // of the page's offset and clip from the pill's rectangle: no class changes mid-motion, and the
-  // textarea stays the same node.
+  // keeps its place with a margin where the pill was. While the page moves, #sheld[data-wb-rise]
+  // lifts it over the header; once it covers the window, body[data-wb-covered] hides what is
+  // underneath. The motion is a Web Animation of the page's translate and horizontal scale from the
+  // pill's top edge and width, with its top corners rounded meanwhile: compositor-only, so no
+  // repaint per frame, no class changes mid-motion, and the textarea stays the same node.
   const motion = useRef<Animation[]>([]),
     pull = useRef<{
       y: number;
@@ -127,9 +128,11 @@ export function MobileShell({
     if (on) {
       stage.dataset.wbRise = "";
       delete document.body.dataset.wbCovered;
+      dock.style.setProperty("border-radius", "24px 24px 0 0");
     } else {
       delete stage.dataset.wbRise;
       document.body.dataset.wbCovered = "";
+      dock.style.removeProperty("border-radius");
     }
   };
   const letGo = () => {
@@ -138,13 +141,14 @@ export function MobileShell({
     delete stage.dataset.wbRise;
     delete document.body.dataset.wbCovered;
     dock.style.removeProperty("translate");
+    dock.style.removeProperty("border-radius");
     document.getElementById("chat")!.style.removeProperty("margin-bottom");
   };
   // RP's band fades in over its first rows; the page grows from, and folds back to, where it is solid.
   const bandFade = rp ? 40 : 0;
   const pillShape = (page: DOMRect, pill: DOMRect, top = pill.top + bandFade) => ({
     translate: `0 ${top - page.top}px`,
-    clipPath: `inset(0px ${page.right - pill.right}px ${page.height - (pill.bottom - top)}px ${pill.left - page.left}px round 24px)`,
+    scale: `${pill.width / page.width} 1`,
   });
   const openPage = (rise = 0) => {
     if (latest.current.editor) return;
@@ -159,10 +163,7 @@ export function MobileShell({
     moving(true);
     const page = dock.getBoundingClientRect(),
       grow = dock.animate(
-        [
-          pillShape(page, pill, pill.top + bandFade - rise),
-          { translate: "0 0", clipPath: "inset(0px round 0px)" },
-        ],
+        [pillShape(page, pill, pill.top + bandFade - rise), { translate: "0 0", scale: "1 1" }],
         { duration, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
       );
     motion.current = [
@@ -198,10 +199,11 @@ export function MobileShell({
     chat.scrollTo({ top: scroll, behavior: "instant" });
     dock.dataset.wbPage = "";
     moving(true);
-    const shrink = dock.animate(
-      [{ translate: `0 ${from}px`, clipPath: "inset(0px round 0px)" }, pillShape(page, pill)],
-      { duration, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" },
-    );
+    const shrink = dock.animate([{ translate: `0 ${from}px`, scale: "1 1" }, pillShape(page, pill)], {
+      duration,
+      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+      fill: "forwards",
+    });
     motion.current = [
       shrink,
       form.animate([{ opacity: 1 }, { opacity: 0 }], {
@@ -360,7 +362,7 @@ export function MobileShell({
       const target = e.target as Element;
       if (e.button !== 0 || e.pointerType === "mouse" || target.closest("button,a,select")) return;
       if (target === input && input.hasAttribute("data-wb-overflow")) return;
-      if (rp && !document.body.classList.contains("wb-rp-compose")) return;
+      if (rp && !document.body.hasAttribute("data-wb-rp-compose")) return;
       const at = { y: e.clientY, t: e.timeStamp };
       drag = {
         x: e.clientX,

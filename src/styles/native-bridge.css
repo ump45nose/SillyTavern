@@ -2907,22 +2907,22 @@ body.wb-active #chat {
   padding-right: min(var(--wb-reading-inset, 64px), max(20px, calc((100% - 320px) / 2))) !important;
 }
 /* Equal side gutters keep native swipe controls beside the last line, clear of text/media. */
-body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat .mes {
+body.wb-active:is(:not(.wb-rp), [data-wb-rp-history]) #chat .mes {
   --wb-swipe-bottom: calc(25px + var(--wb-reading-size, 17px) * var(--wb-reading-leading, 2) / 2 - 32px);
 }
-body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat .mes_block {
+body.wb-active:is(:not(.wb-rp), [data-wb-rp-history]) #chat .mes_block {
   padding-left: 32px !important;
   padding-right: 32px !important;
 }
-body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat .swipe_left {
+body.wb-active:is(:not(.wb-rp), [data-wb-rp-history]) #chat .swipe_left {
   left: 0;
   bottom: calc(var(--wb-swipe-bottom) + 18px);
 }
-body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat .swipeRightBlock {
+body.wb-active:is(:not(.wb-rp), [data-wb-rp-history]) #chat .swipeRightBlock {
   right: 0;
   bottom: var(--wb-swipe-bottom);
 }
-body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat :is(.swipe_left, .swipe_right) {
+body.wb-active:is(:not(.wb-rp), [data-wb-rp-history]) #chat :is(.swipe_left, .swipe_right) {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2932,7 +2932,7 @@ body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat :is(.swipe_left, .swipe_ri
   color: var(--wb-muted);
   z-index: 1;
 }
-body.wb-active:is(:not(.wb-rp), .wb-rp-history) #chat .swipes-counter {
+body.wb-active:is(:not(.wb-rp), [data-wb-rp-history]) #chat .swipes-counter {
   height: 18px;
   min-width: 24px;
   padding: 0;
@@ -3083,10 +3083,10 @@ body.wb-rp:not(.wb-mobile) .wb-rp-atmosphere {
   left: calc(var(--wb-left) + var(--wb-rp-area) * 0.77);
 }
 /* History opens the middle of the scene for the log; the cast steps to the edges. */
-body.wb-rp.wb-rp-history .wb-rp-actor {
+body.wb-rp[data-wb-rp-history] .wb-rp-actor {
   left: calc(var(--wb-left) + var(--wb-rp-area) * 0.17);
 }
-body.wb-rp.wb-rp-history .wb-rp-user {
+body.wb-rp[data-wb-rp-history] .wb-rp-user {
   left: calc(var(--wb-left) + var(--wb-rp-area) * 0.88);
 }
 .wb-rp-stage .is-sprite {
@@ -3150,7 +3150,7 @@ body.wb-rp.wb-rp-history .wb-rp-user {
 }
 /* The band runs the whole window width, under the columns, so it never ends in an edge beside
    them; its text column follows the space between them. */
-body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #sheld {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #sheld {
   inset: auto 0 0 0 !important;
   width: auto !important;
   height: var(--wb-rp-deck) !important;
@@ -3175,7 +3175,7 @@ body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #sheld {
     visibility 160ms;
   z-index: 2;
 }
-body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #chat {
   position: absolute;
   inset: 64px calc(var(--wb-right) + var(--wb-rp-inset)) 58px calc(var(--wb-left) + var(--wb-rp-inset));
   width: auto !important;
@@ -3190,11 +3190,11 @@ body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat {
     transform 200ms,
     visibility 160ms;
 }
-body.wb-rp:not(.wb-rp-history) #chat > .mes:not(.wb-rp-current),
-body.wb-rp:not(.wb-rp-history) #show_more_messages {
+body.wb-rp:not([data-wb-rp-history]) #chat > .mes:not(.wb-rp-current),
+body.wb-rp:not([data-wb-rp-history]) #show_more_messages {
   display: none !important;
 }
-body.wb-active.wb-rp:not(.wb-rp-history) #chat .mes {
+body.wb-active.wb-rp:not([data-wb-rp-history]) #chat .mes {
   flex: none;
   width: 100%;
   max-width: none;
@@ -3203,37 +3203,37 @@ body.wb-active.wb-rp:not(.wb-rp-history) #chat .mes {
   padding: 0 !important;
   margin: 0 !important;
 }
-body.wb-active.wb-rp:not(.wb-rp-history) #chat .mes_block {
+body.wb-active.wb-rp:not([data-wb-rp-history]) #chat .mes_block {
   padding: 0 !important;
   width: 100%;
 }
-body.wb-rp:not(.wb-rp-history)
+body.wb-rp:not([data-wb-rp-history])
   #chat
   :is(.mes > .avatar, .ch_name, .mes_buttons, .swipe_left, .swipe_right, .swipes-counter) {
   display: none !important;
 }
-body.wb-active.wb-rp:not(.wb-rp-history) #chat .mes_text {
+body.wb-active.wb-rp:not([data-wb-rp-history]) #chat .mes_text {
   font: var(--wb-rp-text) / 1.85 var(--wb-rp-font, serif) !important;
   letter-spacing: 0.02em;
   color: var(--wb-rp-ink-1) !important;
   margin: 0 !important;
   padding: 0 !important;
 }
-body.wb-rp:not(.wb-rp-history) #chat .mes_text p {
+body.wb-rp:not([data-wb-rp-history]) #chat .mes_text p {
   margin: 0 0 0.65em;
 }
 /* Paging (RPStage): the current message's block is laid out in columns one page wide and turned
    with scrollLeft, so lines never split and nothing scrolls inside the box. Media stay whole and
    no taller than a page. Editing returns to a plain block. */
-body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat {
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not([data-wb-rp-history]) #chat {
   overflow: hidden !important;
 }
-body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat > .mes.wb-rp-current {
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not([data-wb-rp-history]) #chat > .mes.wb-rp-current {
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
 }
-body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat .wb-rp-current .mes_block {
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not([data-wb-rp-history]) #chat .wb-rp-current .mes_block {
   display: block !important;
   height: 100%;
   overflow: hidden;
@@ -3242,11 +3242,11 @@ body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat .wb-rp-curren
   column-fill: auto;
 }
 /* A page fills to its last whole line instead of pushing paragraph ends over. */
-body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history) #chat .wb-rp-current .mes_block * {
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not([data-wb-rp-history]) #chat .wb-rp-current .mes_block * {
   orphans: 1;
   widows: 1;
 }
-body:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history)
+body:is(.wb-rp, .wb-mobile-rp):not([data-wb-rp-history])
   #chat
   .wb-rp-current
   .mes_block
@@ -3254,7 +3254,7 @@ body:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history)
   break-inside: avoid;
   max-height: var(--wb-rp-page, none);
 }
-body.wb-active:is(.wb-rp, .wb-mobile-rp):not(.wb-rp-history)
+body.wb-active:is(.wb-rp, .wb-mobile-rp):not([data-wb-rp-history])
   #chat
   .wb-rp-current:has(.edit_textarea)
   .mes_block {
@@ -3279,11 +3279,11 @@ body.wb-active.wb-rp #form_sheld {
     visibility 160ms;
 }
 /* Replying or editing: the band grows and its text column becomes a field. */
-body.wb-active.wb-rp:is(.wb-rp-compose, .wb-rp-editing):not(.wb-mobile) {
+body.wb-active.wb-rp:is([data-wb-rp-compose], [data-wb-rp-editing]):not(.wb-mobile) {
   --wb-rp-deck: clamp(300px, 42vh, 440px);
 }
 /* The field sits on solid band; only the strip above the name fades into the picture. */
-body.wb-active.wb-rp:is(.wb-rp-compose, .wb-rp-editing):not(.wb-mobile):not(.wb-rp-history) #sheld {
+body.wb-active.wb-rp:is([data-wb-rp-compose], [data-wb-rp-editing]):not(.wb-mobile):not([data-wb-rp-history]) #sheld {
   background: linear-gradient(
     to top,
     var(--wb-rp-band-1) 0,
@@ -3338,13 +3338,13 @@ body.wb-rp:not(.wb-mobile) #send_textarea::placeholder {
 body.wb-rp #nonQRFormItems {
   height: 100%;
 }
-body.wb-rp.wb-rp-compose #chat {
+body.wb-rp[data-wb-rp-compose] #chat {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transform: translateX(-14px);
 }
-body.wb-rp.wb-rp-compose #form_sheld {
+body.wb-rp[data-wb-rp-compose] #form_sheld {
   opacity: 1;
   visibility: visible;
   /* Visible at once on entry so the reply key can focus the input. */
@@ -3358,26 +3358,26 @@ body.wb-active.wb-rp:not(.wb-mobile) #send_but {
 body.wb-active.wb-rp:not(.wb-mobile) #send_but :is(.wb-native-icon, .wb-native-icon *) {
   color: var(--wb-rp-on-accent) !important;
 }
-body.wb-active.wb-rp.wb-rp-compose.wb-rp-expanded {
+body.wb-active.wb-rp[data-wb-rp-compose][data-wb-rp-expanded] {
   --wb-rp-deck: clamp(360px, 74vh, 900px);
 }
 /* Editing a line: the same soft field as replying, filling the text column (its padding keeps
    the words on the column's edges), with save and cancel on the band's bottom line. */
-body.wb-active.wb-rp.wb-rp-editing:not(.wb-mobile) #chat {
+body.wb-active.wb-rp[data-wb-rp-editing]:not(.wb-mobile) #chat {
   overflow: visible !important;
 }
-body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
   display: flex !important;
   flex-direction: column;
   overflow: visible;
 }
-body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   overflow: visible !important;
 }
-body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .edit_textarea {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #chat .edit_textarea {
   flex: 1 1 auto;
   width: calc(100% + 40px) !important;
   height: auto !important;
@@ -3398,7 +3398,7 @@ body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .edit_textarea {
   scrollbar-color: var(--wb-rp-dot) transparent;
   transition: box-shadow 160ms;
 }
-body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .edit_textarea:focus {
+body.wb-active.wb-rp:not(.wb-mobile):not([data-wb-rp-history]) #chat .edit_textarea:focus {
   outline: none;
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent),
@@ -3407,7 +3407,7 @@ body.wb-active.wb-rp:not(.wb-mobile):not(.wb-rp-history) #chat .edit_textarea:fo
 /* History, board "RpHistory" v2 — a visual-novel backlog: the band rises over the whole stage,
    and the conversation reads down one centred column, each speaker's name in a narrow column to
    the left of their lines. The line you came from carries the accent stroke. */
-body.wb-active.wb-rp.wb-rp-history #sheld {
+body.wb-active.wb-rp[data-wb-rp-history] #sheld {
   inset: 0 !important;
   width: auto !important;
   height: auto !important;
@@ -3418,7 +3418,7 @@ body.wb-active.wb-rp.wb-rp-history #sheld {
   -webkit-backdrop-filter: none;
   box-shadow: none !important;
 }
-body.wb-rp.wb-rp-history #chat {
+body.wb-rp[data-wb-rp-history] #chat {
   position: absolute;
   inset: calc(var(--wb-rp-chrome) + 92px) var(--wb-right) 0 var(--wb-left);
   width: auto !important;
@@ -3428,7 +3428,7 @@ body.wb-rp.wb-rp-history #chat {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
   mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes {
   position: relative;
   box-sizing: border-box;
   width: auto;
@@ -3440,7 +3440,7 @@ body.wb-active.wb-rp.wb-rp-history #chat .mes {
   border-radius: 0 !important;
   background: none !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes.wb-rp-current::before {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes.wb-rp-current::before {
   content: "";
   position: absolute;
   top: 6px;
@@ -3450,15 +3450,15 @@ body.wb-active.wb-rp.wb-rp-history #chat .mes.wb-rp-current::before {
   border-radius: 1px;
   background: var(--wb-accent);
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .mesAvatarWrapper {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .mesAvatarWrapper {
   display: none !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .mes_block {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .mes_block {
   min-width: 0;
   padding: 0 !important;
 }
 /* The name row spans the entry so its actions can sit at the far end; only its pieces take pointers. */
-body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .ch_name {
   position: absolute;
   top: 3px;
   left: 0;
@@ -3469,7 +3469,7 @@ body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name {
   margin: 0 !important;
   pointer-events: none;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name > .flex1 {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .ch_name > .flex1 {
   width: var(--wb-rp-log-name);
   display: flex;
   flex-direction: column;
@@ -3479,7 +3479,7 @@ body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name > .flex1 {
   text-align: right;
   pointer-events: auto;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .name_text {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .name_text {
   display: block !important;
   max-width: 100%;
   overflow: hidden;
@@ -3489,10 +3489,10 @@ body.wb-active.wb-rp.wb-rp-history #chat .mes .name_text {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes[is_user="true"] .name_text {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes[is_user="true"] .name_text {
   color: var(--wb-rp-ink-2);
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .wb-reading-meta {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .wb-reading-meta {
   display: flex;
   gap: 6px;
   opacity: 1;
@@ -3500,13 +3500,13 @@ body.wb-active.wb-rp.wb-rp-history #chat .mes .wb-reading-meta {
   font: 11.5px / 1.5 var(--wb-font-ui);
   font-variant-numeric: tabular-nums;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .wb-reading-meta > b,
-body.wb-active.wb-rp.wb-rp-history #chat .mes :is(.timestamp, .wb-reading-time),
-body.wb-rp.wb-rp-history #chat .mes .wb-user-heading {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .wb-reading-meta > b,
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes :is(.timestamp, .wb-reading-time),
+body.wb-rp[data-wb-rp-history] #chat .mes .wb-user-heading {
   display: none !important;
 }
 /* Message actions surface at the line's top-right only while it is pointed at. */
-body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name .mes_buttons {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .ch_name .mes_buttons {
   position: absolute;
   top: -10px;
   right: 0;
@@ -3522,30 +3522,30 @@ body.wb-active.wb-rp.wb-rp-history #chat .mes .ch_name .mes_buttons {
     opacity 160ms,
     visibility 160ms;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes:is(:hover, :focus-within) .ch_name .mes_buttons {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes:is(:hover, :focus-within) .ch_name .mes_buttons {
   opacity: 1;
   visibility: visible;
 }
-body.wb-active.wb-rp.wb-rp-history
+body.wb-active.wb-rp[data-wb-rp-history]
   #chat
   .mes
   :is(.mes_text, .mes_img_container, .mes_file_container, .mes_reasoning_details) {
   width: auto;
   margin: 0 !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .mes_text {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .mes_text {
   padding: 0 !important;
   font: 17px / 1.9 var(--wb-rp-font, var(--wb-font-reading)) !important;
   letter-spacing: 0.02em;
   color: var(--wb-rp-ink-1) !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes[is_user="true"] .mes_text {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes[is_user="true"] .mes_text {
   color: var(--wb-rp-ink-2) !important;
 }
-body.wb-active.wb-rp.wb-rp-history #chat .mes .mes_text p {
+body.wb-active.wb-rp[data-wb-rp-history] #chat .mes .mes_text p {
   margin: 0 0 0.5em;
 }
-body.wb-rp.wb-rp-history #form_sheld {
+body.wb-rp[data-wb-rp-history] #form_sheld {
   display: none;
 }
 body.wb-rp.wb-focus #sheld,
@@ -4023,8 +4023,8 @@ body.wb-active.wb-mobile[data-wb-covered] #chat {
 
 /* ── RP (board "RpPwa"): the scene is the page. RPStage, shared with the desk, shows one page of one
    message in a frosted box above the bottom edge. Reading has no input field: 回应, or "轮到你回应"
-   on the last page, turns the box itself into the input (wb-rp-compose). Pulling the box up past
-   the end of its text opens the log (wb-rp-history). Panes hang from the top of the visible
+   on the last page, turns the box itself into the input ([data-wb-rp-compose]). Pulling the box up past
+   the end of its text opens the log ([data-wb-rp-history]). Panes hang from the top of the visible
    viewport (SillyTavern's translateZ on <html>, which is 0px tall here, would pin anything placed
    by `bottom` to the page top), so the box rides up with the keyboard while the scene keeps the
    large viewport and nothing shrinks. ── */
@@ -4152,14 +4152,14 @@ body.wb-active.wb-mobile.wb-mobile-rp #sheld {
     opacity 180ms,
     visibility 180ms;
 }
-body.wb-mobile-rp:is(.wb-rp-pulling, [data-wb-band-drag]) #sheld {
+body.wb-mobile-rp:is([data-wb-rp-pulling], [data-wb-band-drag]) #sheld {
   transition: none !important;
 }
 body.wb-mobile-rp.wb-focus #sheld {
   opacity: 0;
   visibility: hidden;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat {
   position: absolute;
   inset: var(--wb-rp-text-top) 0 var(--wb-rp-foot);
   height: auto;
@@ -4174,11 +4174,11 @@ body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat {
     transform 220ms cubic-bezier(0.22, 0.8, 0.3, 1),
     visibility 160ms;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history)
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history])
   :is(#chat > .mes:not(.wb-rp-current), #chat > #show_more_messages) {
   display: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .mes {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .mes {
   display: block !important;
   width: 100%;
   max-width: none;
@@ -4187,13 +4187,13 @@ body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .mes {
   border: 0 !important;
   background: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .mes_block {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .mes_block {
   padding: 0 !important;
   background: none !important;
   box-shadow: none !important;
 }
 /* On the band the head carries 取消 / 保存, so editing shows no native row either. */
-body.wb-mobile-rp:not(.wb-rp-history) #chat .mes :is(.mesAvatarWrapper, .ch_name, .mes_buttons) {
+body.wb-mobile-rp:not([data-wb-rp-history]) #chat .mes :is(.mesAvatarWrapper, .ch_name, .mes_buttons) {
   display: none !important;
 }
 body.wb-mobile-rp
@@ -4213,43 +4213,43 @@ body.wb-active.wb-mobile.wb-mobile-rp #chat .mes_text {
 body.wb-mobile-rp #chat .mes_text :is(q, em, i) {
   color: inherit;
 }
-body.wb-mobile-rp:not(.wb-rp-history) #chat .mes_text p {
+body.wb-mobile-rp:not([data-wb-rp-history]) #chat .mes_text p {
   margin: 0 0 0.6em;
 }
 /* Editing in the log keeps the native row (save, cancel, copy, move, delete) over the field. */
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes:has(.edit_textarea) .ch_name {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes:has(.edit_textarea) .ch_name {
   display: flex !important;
   justify-content: flex-end;
   margin-bottom: 8px;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history]
   #chat
   .mes:has(.edit_textarea)
   :is(.name_text, .timestamp, .wb-reading-meta) {
   display: none !important;
 }
-body.wb-mobile-rp.wb-rp-history #chat .mes:has(.edit_textarea) .mes_buttons {
+body.wb-mobile-rp[data-wb-rp-history] #chat .mes:has(.edit_textarea) .mes_buttons {
   display: flex !important;
 }
-body.wb-mobile-rp.wb-rp-history #chat .edit_textarea {
+body.wb-mobile-rp[data-wb-rp-history] #chat .edit_textarea {
   min-height: 120px;
   width: 100%;
   font: 16px / 1.7 var(--wb-font-reading);
   color: var(--wb-rp-ink-1);
 }
 /* Editing on the band: one field filling the text's place, in the dialogue's face, like the desk. */
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_block {
   display: flex !important;
   flex-direction: column;
   overflow: visible;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .wb-rp-current:has(.edit_textarea) .mes_text {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   overflow: visible !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .edit_textarea {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .edit_textarea {
   flex: 1 1 auto;
   width: calc(100% + 24px) !important;
   height: auto !important;
@@ -4266,7 +4266,7 @@ body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .edit_textarea {
   font: calc(var(--wb-rp-text, 19px) - 2px) / 1.8 var(--wb-rp-font, var(--wb-font-reading)) !important;
   resize: none;
 }
-body.wb-active.wb-mobile.wb-mobile-rp:not(.wb-rp-history) #chat .edit_textarea:focus {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #chat .edit_textarea:focus {
   outline: none;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 45%, transparent) !important;
 }
@@ -4288,13 +4288,13 @@ body.wb-active.wb-mobile.wb-mobile-rp #form_sheld:not([data-wb-page]) {
     transform 240ms cubic-bezier(0.22, 0.8, 0.3, 1),
     visibility 160ms;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history) #chat {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-compose]:not([data-wb-rp-history]) #chat {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transform: translateX(-14px);
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-compose:not(.wb-rp-history) #form_sheld:not([data-wb-page]) {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-compose]:not([data-wb-rp-history]) #form_sheld:not([data-wb-page]) {
   opacity: 1;
   visibility: visible;
   /* Visible at once on entry so the reply key can focus the input. */
@@ -4349,7 +4349,7 @@ body.wb-active.wb-mobile.wb-mobile-rp #send_but :is(.wb-native-icon, .wb-native-
 }
 /* History (board "RpHistory" on a phone): one frosted pane from under the header to the bottom,
    each line its own box with the speaker's plate; the user's lines mirror to the right. */
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #sheld {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #sheld {
   inset: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 66px) 0 auto 0 !important;
   top: calc(var(--wb-mobile-top, 0px) + var(--wb-safe-top) + 66px) !important;
   height: calc(var(--wb-mobile-height, 100dvh) - var(--wb-safe-top) - 66px) !important;
@@ -4359,8 +4359,27 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #sheld {
   backdrop-filter: blur(18px);
   box-shadow: 0 0 0 1px var(--wb-rp-line) !important;
   transform: translateY(max(0px, var(--wb-rp-pull, 0px)));
+  /* The pane takes its place at once and rises into view on the compositor; the band, coming back,
+     does the same (RPStage drops the band's geometry transitions for that switch). */
+  transition: none !important;
+  animation: wb-rp-log-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat {
+body.wb-active.wb-mobile.wb-mobile-rp:not([data-wb-rp-history]) #sheld {
+  animation: wb-rp-band-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@keyframes wb-rp-log-in {
+  from {
+    translate: 0 36vh;
+    opacity: 0;
+  }
+}
+@keyframes wb-rp-band-in {
+  from {
+    translate: 0 24px;
+    opacity: 0;
+  }
+}
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat {
   position: absolute;
   inset: 56px 0 0;
   height: auto;
@@ -4370,13 +4389,13 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat > .mes:first-of-type {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat > .mes:first-of-type {
   margin-top: auto !important;
 }
-body.wb-mobile-rp.wb-rp-history #form_sheld {
+body.wb-mobile-rp[data-wb-rp-history] #form_sheld {
   display: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes {
   position: relative;
   display: block !important;
   width: 100%;
@@ -4387,7 +4406,7 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes {
   border-radius: 0 !important;
   background: transparent !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes_block {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes_block {
   min-width: 0;
   width: auto;
   max-width: none;
@@ -4395,11 +4414,11 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes_block {
   border-radius: 18px;
   background: var(--wb-rp-field);
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes_text {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes_text {
   font-size: 16px !important;
   line-height: 1.75 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes:not(:has(.edit_textarea)) .ch_name {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes:not(:has(.edit_textarea)) .ch_name {
   position: absolute !important;
   top: -16px;
   left: 14px;
@@ -4417,12 +4436,12 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes:not(:has(.edit_te
   box-shadow: var(--wb-rp-plate-shadow);
   font: 600 14px/1 var(--wb-font-ui);
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .ch_name div {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes .ch_name div {
   flex: none !important;
   width: auto !important;
   min-width: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .ch_name .name_text {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes .ch_name .name_text {
   display: block !important;
   color: inherit !important;
   font: inherit;
@@ -4430,14 +4449,14 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .ch_name .name_te
   overflow: hidden;
   text-overflow: ellipsis;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history]
   #chat
   .mes:not(:has(.edit_textarea))
   .ch_name
   :is(.timestamp, .wb-reading-meta, .mes_ghost, .mes_buttons) {
   display: none !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes .mesAvatarWrapper {
   position: absolute;
   top: -13px;
   left: 17px;
@@ -4448,13 +4467,13 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper
   height: 26px !important;
   min-height: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper > .avatar {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes .mesAvatarWrapper > .avatar {
   display: block !important;
   width: 26px !important;
   height: 26px !important;
   margin: 0 !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper > .avatar img {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes .mesAvatarWrapper > .avatar img {
   display: block;
   width: 26px !important;
   height: 26px !important;
@@ -4462,19 +4481,19 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes .mesAvatarWrapper
   border-radius: 50%;
   object-fit: cover;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mesAvatarWrapper > :not(.avatar) {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mesAvatarWrapper > :not(.avatar) {
   display: none !important;
 }
 /* The row stays a reversed flex row so the avatar keeps its place for native layouts. */
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"] {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes[is_user="true"] {
   display: flex !important;
   flex-direction: row-reverse;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"] .mes_block {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes[is_user="true"] .mes_block {
   flex: 1;
   background: color-mix(in srgb, var(--wb-accent) 12%, var(--wb-rp-field));
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history]
   #chat
   .mes[is_user="true"]:not(:has(.edit_textarea))
   .ch_name {
@@ -4482,11 +4501,11 @@ body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history
   right: 14px !important;
   padding: 0 34px 0 14px !important;
 }
-body.wb-active.wb-mobile.wb-mobile-rp.wb-rp-history #chat .mes[is_user="true"] .mesAvatarWrapper {
+body.wb-active.wb-mobile.wb-mobile-rp[data-wb-rp-history] #chat .mes[is_user="true"] .mesAvatarWrapper {
   left: auto;
   right: 17px;
 }
-body.wb-mobile-rp.wb-rp-history #chat .mes:not(:has(.edit_textarea)) .mes_buttons {
+body.wb-mobile-rp[data-wb-rp-history] #chat .mes:not(:has(.edit_textarea)) .mes_buttons {
   display: none !important;
 }
 

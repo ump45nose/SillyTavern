@@ -165,10 +165,12 @@ export function RPStage({
   }, []);
   useEffect(() => host.media.subscribe(() => setMediaRevision((v) => v + 1)), [host]);
   useLayoutEffect(() => {
-    document.body.classList.toggle("wb-rp-compose", compose && !history);
-    document.body.classList.toggle("wb-rp-expanded", expanded && compose && !history);
-    document.body.classList.toggle("wb-rp-history", history);
-    document.body.classList.toggle("wb-rp-editing", !!current?.editing && !compose && !history);
+    // Data attributes, not classes: SillyTavern's keyboard.js rescans the whole document on every
+    // class written on <body>, which stalled each switch into and out of these states.
+    document.body.toggleAttribute("data-wb-rp-compose", compose && !history);
+    document.body.toggleAttribute("data-wb-rp-expanded", expanded && compose && !history);
+    document.body.toggleAttribute("data-wb-rp-history", history);
+    document.body.toggleAttribute("data-wb-rp-editing", !!current?.editing && !compose && !history);
     const sheld = document.getElementById("sheld")!,
       form = document.getElementById("form_sheld")!;
     // Written only when they change: on a phone MobileShell also makes the box inert under drawers.
@@ -250,7 +252,8 @@ export function RPStage({
       });
       document.getElementById("sheld")!.inert = false;
       document.getElementById("form_sheld")!.inert = false;
-      document.body.classList.remove("wb-rp-compose", "wb-rp-expanded", "wb-rp-history", "wb-rp-editing");
+      for (const name of ["compose", "expanded", "history", "editing"])
+        document.body.removeAttribute("data-wb-rp-" + name);
       for (const name of ["text", "width", "sprite", "font"])
         document.body.style.removeProperty("--wb-rp-" + name);
     },
@@ -333,11 +336,25 @@ export function RPStage({
   const turnNow = useRef(turn);
   turnNow.current = turn;
   const deck = useRef<HTMLElement>(null);
-  // Phone: the log opens at its newest line.
+  // Phone: the log opens at its newest line. Leaving it, the band and its deck take their places
+  // at once (they rise in by animation) instead of transitioning top and height through every
+  // layout in between.
   useLayoutEffect(() => {
     if (!mobile || !history) return;
     const chat = document.getElementById("chat")!;
     chat.scrollTop = chat.scrollHeight;
+    return () => {
+      const box = document.getElementById("sheld")!,
+        band = deck.current;
+      box.style.setProperty("transition", "none");
+      band?.style.setProperty("transition", "opacity 180ms, visibility 180ms");
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          box.style.removeProperty("transition");
+          band?.style.removeProperty("transition");
+        }),
+      );
+    };
   }, [mobile, history]);
   // Phone gestures on the dialogue box: sideways turns the page, pulling up past the end of the
   // text opens the log, and pulling the log down from its top closes it. The box follows the
@@ -352,7 +369,7 @@ export function RPStage({
     const setPull = (value: number) => {
       pull = value;
       body.style.setProperty("--wb-rp-pull", `${value}px`);
-      body.classList.toggle("wb-rp-pulling", value !== 0);
+      body.toggleAttribute("data-wb-rp-pulling", value !== 0);
     };
     const down = (e: TouchEvent) => {
       start = null;

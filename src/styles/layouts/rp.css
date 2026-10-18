@@ -457,12 +457,12 @@
     visibility: hidden;
   }
   /* Over the backlog's wash the corner keys and edge arrows take the band's ink. */
-  body.wb-rp.wb-rp-history:not(.wb-mobile) :is(.wb-rp-corner, .wb-rp-visibility, .wb-edge-arrow) {
+  body.wb-rp[data-wb-rp-history]:not(.wb-mobile) :is(.wb-rp-corner, .wb-rp-visibility, .wb-edge-arrow) {
     color: var(--wb-rp-ink-2) !important;
     filter: none;
   }
-  body.wb-rp.wb-rp-history:not(.wb-mobile) :is(.wb-rp-corner, .wb-rp-visibility):is(:hover, :focus-visible),
-  body.wb-rp.wb-rp-history:not(.wb-mobile) .wb-rp-corner[aria-pressed="true"] {
+  body.wb-rp[data-wb-rp-history]:not(.wb-mobile) :is(.wb-rp-corner, .wb-rp-visibility):is(:hover, :focus-visible),
+  body.wb-rp[data-wb-rp-history]:not(.wb-mobile) .wb-rp-corner[aria-pressed="true"] {
     background: var(--wb-rp-field);
   }
 

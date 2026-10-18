@@ -21,6 +21,7 @@ try {
   await page.evaluate(() => { window.__rpNative = { chat: document.getElementById("chat"), input: document.getElementById("send_textarea"), form: document.getElementById("send_form"), background: document.getElementById("bg1") }; });
   const settle = () => page.waitForTimeout(350), css = (selector, key) => page.locator(selector).first().evaluate((n, key) => getComputedStyle(n)[key], key);
   const has = c => page.evaluate(c => document.body.classList.contains(c), c);
+  const flag = c => page.evaluate(c => document.body.hasAttribute("data-" + c), c);
   const role = name => page.getByRole("button", { name, exact: true });
   await chooseLayout(page,'RP'); await settle();
   assert.equal(await has("wb-rp"), true); assert.equal(await has("wb-left-open"), false); assert.equal(await has("wb-right-open"), false);
@@ -59,13 +60,13 @@ try {
   pass("top bar hover and keyboard reveal work while its auto-hide preference persists");
 
   const input = page.locator("#send_textarea"), draft = "WB_RP_DRAFT **MD**\n<story>{{char}}</story>";
-  assert.equal(await role("展开 RP 输入区").count(), 0); await role("快进到你的回应").click(); await settle(); assert.equal(await has("wb-rp-compose"), true);
+  assert.equal(await role("展开 RP 输入区").count(), 0); await role("快进到你的回应").click(); await settle(); assert.equal(await flag("wb-rp-compose"), true);
   assert.equal(await page.evaluate(() => document.activeElement === document.getElementById("send_textarea")), true);
   await input.fill(draft); const before = (await page.locator("#sheld").boundingBox()).height;
   await role("展开 RP 输入区").click(); await page.waitForTimeout(70); const halfway = (await page.locator("#sheld").boundingBox()).height;
   await settle(); const after = (await page.locator("#sheld").boundingBox()).height;
   assert(halfway > before && halfway < after, JSON.stringify({ before, halfway, after })); assert.equal(await input.inputValue(), draft);
-  await role("还原 RP 输入区").click(); await settle(); await role("返回对白").click(); await settle(); assert.equal(await has("wb-rp-compose"), false); assert.equal(await input.inputValue(), draft);
+  await role("还原 RP 输入区").click(); await settle(); await role("返回对白").click(); await settle(); assert.equal(await flag("wb-rp-compose"), false); assert.equal(await input.inputValue(), draft);
   assert.equal(await page.locator("#form_sheld").evaluate(n => n.getBoundingClientRect().height === 0 || getComputedStyle(n).display === "none" || getComputedStyle(n).visibility === "hidden"), true);
   pass("reading hides the input; the reply key enters it focused, expansion interpolates and returning preserves the native raw draft", { before, halfway, after });
   await role("RP 外观").click(); await page.getByRole("slider", { name: "RP 对白宽度", exact: true }).press("End");
@@ -98,7 +99,7 @@ try {
   await page.mouse.wheel(0, -120); await settle(); assert.equal(await role("对白第 1 段").getAttribute("aria-current"), "true"); assert.equal(await page.evaluate(() => scrollY), 0);
   await page.locator("#chat .wb-rp-current .mes_text").click({ position: { x: 40, y: 20 } }); await settle(); assert.equal(await role("对白第 2 段").getAttribute("aria-current"), "true");
   await role(`对白第 ${pages} 段`).click(); await settle(); await role("下一段对白或输入").click(); await settle();
-  assert.equal(await has("wb-rp-compose"), true); await role("返回对白").click(); await settle();
+  assert.equal(await flag("wb-rp-compose"), true); await role("返回对白").click(); await settle();
   assert.equal(await role(`对白第 ${pages} 段`).getAttribute("aria-current"), "true");
   pass("long messages page by lines without scrollbars; keys, the wheel, clicks and dots turn pages and the last page continues into input", { pages, step });
   await role("编辑当前对白").click(); const editor = page.locator(".wb-rp-current .edit_textarea"); await editor.waitFor();
@@ -106,7 +107,7 @@ try {
   // The wheel over the field scrolls the draft; it never turns the page out of editing.
   await editor.fill("WB_RP_EDIT_LONG\n\n".repeat(80)); await editor.hover(); await page.mouse.wheel(0, 300); await settle();
   assert((await editor.evaluate(n => n.scrollTop)) > 0); assert.equal(await editor.isVisible(), true);
-  assert.equal(await page.evaluate(() => { const t = document.querySelector(".wb-rp-current .edit_textarea").getBoundingClientRect(), c = document.getElementById("chat").getBoundingClientRect(); return document.body.classList.contains("wb-rp-editing") && t.left < c.left && t.right > c.right; }), true);
+  assert.equal(await page.evaluate(() => { const t = document.querySelector(".wb-rp-current .edit_textarea").getBoundingClientRect(), c = document.getElementById("chat").getBoundingClientRect(); return document.body.hasAttribute("data-wb-rp-editing") && t.left < c.left && t.right > c.right; }), true);
   await editor.fill("WB_RP_EDIT **native Markdown**"); await role("保存对白编辑").click(); await editor.waitFor({ state: "detached" });
   assert.equal(await page.evaluate(() => SillyTavern.getContext().chat.at(-1).mes), "WB_RP_EDIT **native Markdown**");
   pass("editing fills the column with one field the wheel scrolls; save uses native controls and preserves raw Markdown");
@@ -120,14 +121,14 @@ try {
   await role("快进到你的回应").click(); await settle(); await role("展开 RP 输入区").click(); await settle(); await role("还原 RP 输入区").click(); await role("返回对白").click(); await settle();
   assert.equal(await page.evaluate(() => __rpFrame === document.querySelector(".wb-rp-current iframe") && __rpFrameParent === __rpFrame.parentNode), true);
   await frame.locator("#rp-frame-button").click(); assert.equal(await frame.locator("body").getAttribute("data-count"), "2");
-  await role("查看对话记录").click(); await settle(); assert.equal(await has("wb-rp-history"), true); assert(await page.locator("#chat .mes").count() >= 3);
+  await role("查看对话记录").click(); await settle(); assert.equal(await flag("wb-rp-history"), true); assert(await page.locator("#chat .mes").count() >= 3);
   await role("返回 RP 对白").click(); await settle(); assert.equal(await page.evaluate(() => __rpFrame.isConnected), true);
   pass("Tavern Helper iframe identity and interactive state survive input and history transitions");
 
   await role("快进到你的回应").click(); await settle(); await input.fill("WB_RP_SEND 原生发送验证"); await page.locator("#send_but").click();
   await page.waitForFunction(() => SillyTavern.getContext().chat.at(-1)?.mes.includes("工作台验证回复") && !workbench.host.snapshot().busy); await settle();
   assert.equal(await page.evaluate(() => SillyTavern.getContext().chat.at(-2).mes), "WB_RP_SEND 原生发送验证");
-  assert.equal(await input.inputValue(), ""); assert.equal(await has("wb-rp-compose"), false);
+  assert.equal(await input.inputValue(), ""); assert.equal(await flag("wb-rp-compose"), false);
   pass("native send and streamed model reply return the stage to the live speaker");
   await role("快进到你的回应").click(); await settle(); await input.fill("WB_SLOW WB_RP_STOP"); await page.locator("#send_but").click();
   await role("停止生成").waitFor(); stopping = true; await role("停止生成").click(); await page.waitForFunction(() => !workbench.host.snapshot().busy); await settle(); stopping = false;
