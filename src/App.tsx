@@ -69,7 +69,6 @@ import {
   reduce,
   sameEnv,
   shownPanel,
-  stageWidth,
   type Action,
   type Deep,
   type Env,
@@ -632,8 +631,14 @@ export default function App({
           className={`wb-edge-nav ${focus ? "is-hidden" : ""}`}
           style={
             {
-              "--wb-edge-left": `${navigationShown ? sizes.left : 0}px`,
-              "--wb-edge-right": `${shown && !focus ? sizes.right + (railShown ? sizes.rail : 0) : 0}px`,
+              // Beside an open column, plus the gap a floating card keeps from the window edge.
+              "--wb-edge-left": navigationShown
+                ? `calc(${sizes.left}px + var(--wb-edge-gap-left, 0px))`
+                : "0px",
+              "--wb-edge-right":
+                shown && !focus
+                  ? `calc(${sizes.right + (railShown ? sizes.rail : 0)}px + var(--wb-edge-gap-right, 0px))`
+                  : "0px",
             } as React.CSSProperties
           }
           inert={focus}
@@ -783,7 +788,7 @@ export default function App({
           host={host}
           hidden={focus}
           blocked={!mobile && width <= 1100 && !!(navigationShown || shown)}
-          width={mobile ? width : stageWidth(s, hovered, sizes)}
+          width={width}
           readingLayout={() => onLayout("novel")}
           run={task.run}
           mobile={mobile}

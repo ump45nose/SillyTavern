@@ -168,6 +168,7 @@ export function RPStage({
     document.body.classList.toggle("wb-rp-compose", compose && !history);
     document.body.classList.toggle("wb-rp-expanded", expanded && compose && !history);
     document.body.classList.toggle("wb-rp-history", history);
+    document.body.classList.toggle("wb-rp-editing", !!current?.editing && !compose && !history);
     const sheld = document.getElementById("sheld")!,
       form = document.getElementById("form_sheld")!;
     // Written only when they change: on a phone MobileShell also makes the box inert under drawers.
@@ -249,7 +250,7 @@ export function RPStage({
       });
       document.getElementById("sheld")!.inert = false;
       document.getElementById("form_sheld")!.inert = false;
-      document.body.classList.remove("wb-rp-compose", "wb-rp-expanded", "wb-rp-history");
+      document.body.classList.remove("wb-rp-compose", "wb-rp-expanded", "wb-rp-history", "wb-rp-editing");
       for (const name of ["text", "width", "sprite", "font"])
         document.body.style.removeProperty("--wb-rp-" + name);
     },
@@ -472,6 +473,8 @@ export function RPStage({
       quietUntil = 0,
       lastTurn = 0;
     const wheel = (e: WheelEvent) => {
+      // A text field being edited scrolls as usual.
+      if ((e.target as Element).closest("textarea,input,select,[contenteditable=true]")) return;
       e.preventDefault();
       const now = performance.now(),
         delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX,
@@ -535,20 +538,22 @@ export function RPStage({
       ) : current?.editing ? (
         <>
           <button
-            className="wb-rp-tool"
-            aria-label="保存对白编辑"
-            title="保存对白编辑"
-            onClick={() => nativeAction(".mes_edit_done")}
-          >
-            <Check size={16} />
-          </button>
-          <button
-            className="wb-rp-tool"
+            className="wb-rp-tool is-labelled"
             aria-label="取消对白编辑"
             title="取消对白编辑"
             onClick={() => nativeAction(".mes_edit_cancel")}
           >
             <X size={16} />
+            取消
+          </button>
+          <button
+            className="wb-rp-tool is-labelled is-primary"
+            aria-label="保存对白编辑"
+            title="保存对白编辑"
+            onClick={() => nativeAction(".mes_edit_done")}
+          >
+            <Check size={16} />
+            保存
           </button>
         </>
       ) : mobile ? null : (

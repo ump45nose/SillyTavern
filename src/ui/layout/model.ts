@@ -130,14 +130,6 @@ export const railVisible = (s: LayoutState, hover: Hover) => {
 export const navigationVisible = (s: LayoutState, hover: Hover, sizes: Sizes) =>
   leftVisible(s, sizes) || (hover.left && !s.focus);
 
-/** Width left for the RP stage beside the pinned sidebars. */
-export function stageWidth(s: LayoutState, hover: Hover, sizes: Sizes) {
-  if (s.env.width <= 1100) return s.env.width;
-  const left = leftVisible(s, sizes) ? sizes.left : 0;
-  const right = s.panel && !s.focus ? sizes.right + (railVisible(s, hover) ? sizes.rail : 0) : 0;
-  return s.env.width - left - right;
-}
-
 /** Classes the native-bridge CSS keys off, toggled on <body>. */
 export function bodyClasses(s: LayoutState, hover: Hover, sizes: Sizes): Record<string, boolean> {
   const visible = leftVisible(s, sizes),
