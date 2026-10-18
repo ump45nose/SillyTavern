@@ -332,7 +332,9 @@ export function ResourceControls({
             <button
               className="wb-selector-value"
               title={`${resourceLabels[kind]}：${value}`}
-              aria-label={mobile ? `${resourceLabels[kind]}：${value}${count > 1 ? ` 等 ${count} 本` : ""}` : undefined}
+              aria-label={
+                mobile ? `${resourceLabels[kind]}：${value}${count > 1 ? ` 等 ${count} 本` : ""}` : undefined
+              }
               aria-expanded={chooser === kind}
               aria-controls={`wb-choices-${kind}`}
               onClick={() => setChooser(chooser === kind ? null : kind)}
