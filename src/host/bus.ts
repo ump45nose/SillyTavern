@@ -16,6 +16,8 @@ export interface BusEvents {
   "layout-menu": boolean;
   /** Show a floor on the RP stage. */
   "rp-jump": number;
+  /** The RP stage moved its current line (`.wb-rp-current`) to another floor, or cleared it. */
+  "rp-line": undefined;
   /** The reading scrolled to a floor picked from navigation (the phone selects it for editing). */
   "floor-jump": number;
   /** Open a settings group (optionally one extension inside it). */

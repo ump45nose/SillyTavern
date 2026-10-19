@@ -125,6 +125,7 @@ export function RPStage({
     lastChat = useRef(snap.chatName),
     lastCount = useRef(0),
     lastTurn = useRef(""),
+    lastLine = useRef<HTMLElement | null>(null),
     animation = useRef<Animation | null>(null);
   const current = messages.find((m) => m.id === cursor.id) || messages.at(-1);
   const pageCount = current && paging.node === current.node ? paging.count : 1,
@@ -306,6 +307,10 @@ export function RPStage({
         node.classList.remove("wb-rp-current");
         originals.current.delete(node);
       }
+    if ((current?.node ?? null) !== lastLine.current) {
+      lastLine.current = current?.node ?? null;
+      bus.emit("rp-line");
+    }
     const turn = `${current?.id}:${page}:${compose}:${history}`;
     if (turn !== lastTurn.current) {
       lastTurn.current = turn;
@@ -345,6 +350,7 @@ export function RPStage({
           : node.setAttribute("aria-hidden", previous.aria);
         node.classList.remove("wb-rp-current");
       });
+      bus.emit("rp-line");
       document.getElementById("sheld")!.inert = false;
       document.getElementById("form_sheld")!.inert = false;
       for (const name of ["compose", "expanded", "history", "editing"])

@@ -16,6 +16,7 @@ import type { HostAdapter } from "../host/adapter";
 import type { Data, HostSnapshot, SettingsPage } from "../host/types";
 import AddonWorkspace from "./AddonWorkspace";
 import { useHostSlice } from "./common";
+import { bus } from "../host/bus";
 import { settingsLabels } from "../host/labels";
 import { addonEnabled } from "../addons/catalog";
 import type { ComposerPopup } from "./ComposerPopovers";
@@ -24,9 +25,10 @@ const RECENT_FLOORS = 5;
 
 /**
  * The floor being read: RP's current line, else the turn at the upper third of #chat while it is
- * scrolled away from the end. null means the latest floor.
+ * scrolled away from the end. null means the latest floor. Re-read on scroll, on changes reported by
+ * the shared chat observer and when the RP stage moves its line; #chat gets no observer of its own.
  */
-function useReadingFloor(active: boolean, count: number) {
+function useReadingFloor(host: HostAdapter, active: boolean, count: number) {
   const [floor, setFloor] = useState<number | null>(null);
   useEffect(() => {
     const chat = document.getElementById("chat");
@@ -54,16 +56,18 @@ function useReadingFloor(active: boolean, count: number) {
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(read);
     };
-    const classes = new MutationObserver(schedule);
-    classes.observe(chat, { subtree: true, attributeFilter: ["class"] });
+    // Floors added, removed or renumbered; streamed text alone does not move the reading floor.
+    const offChat = host.chatObserver.subscribe((change) => change.nodes && schedule()),
+      offLine = bus.on("rp-line", schedule);
     chat.addEventListener("scroll", schedule, { passive: true });
     read();
     return () => {
       cancelAnimationFrame(frame);
-      classes.disconnect();
+      offChat();
+      offLine();
       chat.removeEventListener("scroll", schedule);
     };
-  }, [active, count]);
+  }, [host, active, count]);
   return floor ?? count - 1;
 }
 
@@ -118,7 +122,7 @@ export function Navigation({
   }, [host, visible, hasChat, snap.chatName, snap.character?.id, snap.groupId, host.chatsVersion]);
   const others = (recent || []).filter((c) => String(c.file_name).replace(/\.jsonl$/, "") !== snap.chatName);
   const floors = allFloors ? messages : messages.slice(-RECENT_FLOORS);
-  const reading = useReadingFloor(visible && expanded.floors, messages.length);
+  const reading = useReadingFloor(host, visible && expanded.floors, messages.length);
   return (
     <aside
       className={`wb-left wb-nav ${visible ? "is-open" : ""}`}
