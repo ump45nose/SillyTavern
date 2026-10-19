@@ -1,5 +1,25 @@
 import type { Data } from "./types";
 export const clone = <T>(value: T): T => structuredClone(value);
+const isRecord = (value: unknown): value is Data =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+/**
+ * Deep equality for JSON data that trusts shared references: a draft edited copy-on-write only costs
+ * the comparison of the branches it replaced. Arrays and scalars compare by their JSON.
+ */
+export function sameData(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!isRecord(a) || !isRecord(b)) return JSON.stringify(a) === JSON.stringify(b);
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)]))
+    if (!sameData(a[key], b[key])) return false;
+  return true;
+}
+/** SillyTavern's server-side merge for card updates: plain objects merge, anything else replaces. */
+export function deepMerge(target: Data, source: Data): Data {
+  const output = { ...target };
+  for (const [key, value] of Object.entries(source))
+    output[key] = isRecord(value) && isRecord(target[key]) ? deepMerge(target[key], value) : value;
+  return output;
+}
 export function activation(entry: Data) {
   return entry.constant ? "constant" : entry.vectorized ? "vector" : "keyword";
 }

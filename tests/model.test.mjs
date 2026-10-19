@@ -6,7 +6,7 @@ const { code } = await transform(
   await readFile(new URL("../src/host/model.ts", import.meta.url), "utf8"),
   { loader: "ts", format: "esm" },
 );
-const { mergeBook, mergeEdits, setActivation, validateBook, validatePreset } = await import(
+const { deepMerge, mergeBook, mergeEdits, sameData, setActivation, validateBook, validatePreset } = await import(
   "data:text/javascript;base64," + Buffer.from(code).toString("base64")
 );
 const entry = {
@@ -89,4 +89,32 @@ test("preset validation refuses malformed editable structures and preserves exte
   assert.throws(() => validatePreset({ prompts: {} }));
   assert.throws(() => validatePreset({ prompts: [{identifier:"x"},{identifier:"x"}] }));
   assert.throws(() => validatePreset({ prompt_order: [{order: [{}]}] }));
+});
+
+test("sameData agrees with JSON equality and only walks branches that were replaced", () => {
+  const book = { name: "b", entries: { 0: { ...entry }, 1: { ...entry, uid: 1 } } };
+  assert.equal(sameData(book, structuredClone(book)), true);
+  const edited = { ...book, entries: { ...book.entries, 1: { ...book.entries[1], content: "x" } } };
+  assert.equal(sameData(book, edited), false);
+  const restored = { ...edited, entries: { ...edited.entries, 1: { ...edited.entries[1], content: "original" } } };
+  assert.equal(sameData(book, restored), true, "an edit typed back to the original is clean");
+  assert.equal(sameData({ a: [1, 2] }, { a: [2, 1] }), false);
+  assert.equal(sameData({ a: undefined }, {}), true, "like JSON, an undefined field is absent");
+  assert.equal(sameData({ a: null }, {}), false);
+  // Shared references are trusted: a branch that is the same object is not inspected.
+  let reads = 0;
+  const shared = { get deep() { reads++; return 1; } };
+  assert.equal(sameData({ shared, x: 1 }, { shared, x: 1 }), true);
+  assert.equal(reads, 0);
+});
+
+test("deepMerge mirrors the server's card merge: objects merge, arrays and scalars replace", () => {
+  const card = { name: "A", tags: ["a", "b"], extensions: { fav: false, world: "w", vendor: { keep: 1 } } };
+  const merged = deepMerge(card, { tags: ["c"], extensions: { fav: true, vendor: { extra: 2 } } });
+  assert.deepEqual(merged, {
+    name: "A",
+    tags: ["c"],
+    extensions: { fav: true, world: "w", vendor: { keep: 1, extra: 2 } },
+  });
+  assert.deepEqual(card.extensions, { fav: false, world: "w", vendor: { keep: 1 } }, "inputs are untouched");
 });

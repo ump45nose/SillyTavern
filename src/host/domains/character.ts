@@ -1,6 +1,6 @@
 import type { HostAdapter } from "../adapter";
 import type { Data, Item } from "../types";
-import { clone, mergeEdits } from "../model";
+import { clone, deepMerge, mergeEdits, sameData } from "../model";
 import { ctx } from "../internals";
 
 /** Characters: selection, creation/import, card data and bulk actions. */
@@ -10,7 +10,6 @@ export const characterMethods = {
     const index = ctx().characters.findIndex((x: Data) => x.avatar === id);
     if (index < 0) throw new Error("角色已不存在。");
     await ctx().selectCharacterById(index);
-    this.refresh();
   },
   async createCharacter(this: HostAdapter, name: string) {
     const form = new FormData();
@@ -23,7 +22,7 @@ export const characterMethods = {
     if (!response.ok) throw new Error(`创建角色失败 (${response.status})`);
     const avatar = await response.text();
     await ctx().getCharacters();
-    this.refresh();
+    this.invalidate("characters");
     return avatar.replace(/^"|"$/g, "");
   },
   async importCharacter(this: HostAdapter, file: File) {
@@ -38,7 +37,7 @@ export const characterMethods = {
     const data = await response.json();
     if (data.error) throw new Error("角色文件无法解析。");
     await ctx().getCharacters();
-    this.refresh();
+    this.invalidate("characters");
     return data.file_name;
   },
   async characterAvatar(this: HostAdapter, id: string, file: File) {
@@ -50,12 +49,12 @@ export const characterMethods = {
     const response = await fetch("/api/characters/edit-avatar", { method: "POST", headers, body: form });
     if (!response.ok) throw new Error(`头像保存失败 (${response.status})`);
     await ctx().getCharacters();
-    this.refresh();
+    this.invalidate("characters");
   },
   async duplicateCharacter(this: HostAdapter, id: string) {
     const data = await (await this.request("/api/characters/duplicate", { avatar_url: id })).json();
     await ctx().getCharacters();
-    this.refresh();
+    this.invalidate("characters");
     return data.path;
   },
   /** Tokens for a card field with the active tokenizer; null when the host has none. */
@@ -79,22 +78,18 @@ export const characterMethods = {
     });
     return response.json();
   },
+  /** Saves the fields changed from base to draft and returns the card as saved, without reading it again. */
   async saveCharacter(this: HostAdapter, id: string, base: Data, draft: Data) {
     const latest = await this.characterData(id),
       merged = mergeEdits(base, draft, latest.data ?? {});
     const patch: Data = {};
-    for (const k of Object.keys(draft))
-      if (JSON.stringify(base[k]) !== JSON.stringify(draft[k])) patch[k] = merged[k];
-    if (Object.keys(patch).length) {
-      await this.request("/api/characters/merge-attributes", {
-        avatar: id,
-        data: patch,
-      });
-      await ctx().getCharacters();
-      await ctx().eventSource.emit(ctx().eventTypes.CHARACTER_EDITED);
-    }
-    this.refresh();
-    return this.characterData(id);
+    for (const k of Object.keys(draft)) if (!sameData(base[k], draft[k])) patch[k] = merged[k];
+    if (!Object.keys(patch).length) return latest;
+    await this.request("/api/characters/merge-attributes", { avatar: id, data: patch });
+    await ctx().getCharacters();
+    // Rebuilds the character slice through the adapter's event table.
+    await ctx().eventSource.emit(ctx().eventTypes.CHARACTER_EDITED);
+    return { ...latest, data: deepMerge(latest.data ?? {}, patch) };
   },
   async favorite(this: HostAdapter, item: Item) {
     const c = await this.characterData(item.id),
@@ -121,17 +116,31 @@ export const characterMethods = {
       });
     }
     await ctx().getCharacters();
-    this.refresh();
+    this.invalidate("characters");
   },
+  /** One merge request per card, from the tags in the loaded list; one reload and event at the end. */
   async tagCharacters(this: HostAdapter, ids: string[], tag: string) {
-    if (!ids.length || !tag.trim()) return;
-    for (const id of ids) {
-      const c = await this.characterData(id),
-        base = clone(c.data ?? {});
-      await this.saveCharacter(id, base, {
-        ...base,
-        tags: [...new Set([...(base.tags ?? []), tag.trim()])],
-      });
+    const name = tag.trim();
+    if (!ids.length || !name) return;
+    const c = ctx();
+    let saved = false;
+    try {
+      for (const id of ids) {
+        const card = c.characters.find((x: Data) => x.avatar === id);
+        if (!card) throw new Error("角色已不存在。");
+        const tags: string[] = card.data?.tags ?? [];
+        if (tags.includes(name)) continue;
+        await this.request("/api/characters/merge-attributes", {
+          avatar: id,
+          data: { tags: [...new Set([...tags, name])] },
+        });
+        saved = true;
+      }
+    } finally {
+      if (saved) {
+        await c.getCharacters();
+        await c.eventSource.emit(c.eventTypes.CHARACTER_EDITED);
+      }
     }
   },
 };
