@@ -1,9 +1,9 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
-import { clone, mergeEdits } from "../host/model";
-import { guards } from "../host/bus";
+import { clone, mergeEdits, sameData } from "../host/model";
+import { useLeaveGuard } from "./common";
 export function Fold({
   title,
   children,
@@ -209,50 +209,37 @@ export function useDraft(
   /** Fold outside changes into a dirty draft instead of waiting for it to be saved or reverted. */
   rebase = false,
 ) {
-  const previous = cache?.host.drafts.get(cache.key),
-    retain = previous && JSON.stringify(previous.base) !== JSON.stringify(previous.draft);
-  const [base, setBase] = useState(() => (retain ? clone(previous.base) : read())),
-    [draft, setDraft] = useState(() => (retain ? clone(previous.draft) : clone(base))),
+  // Base and draft are replaced, never mutated, so they may share branches and be cached as they are.
+  const [initial] = useState(() => {
+    const previous = cache?.host.drafts.get(cache.key);
+    if (previous && !sameData(previous.base, previous.draft)) return previous;
+    const value = read();
+    return { base: value, draft: value };
+  });
+  const [base, setBase] = useState<Data>(initial.base),
+    [draft, setDraft] = useState<Data>(initial.draft),
     [message, setMessage] = useState("");
-  const dirty = JSON.stringify(base) !== JSON.stringify(draft);
+  const dirty = useMemo(() => !sameData(base, draft), [base, draft]);
   useLayoutEffect(() => {
     if (cache)
-      cache.host.drafts.set(cache.key, {
-        base: clone(base),
-        draft: clone(draft),
-        extra: cache.host.drafts.get(cache.key)?.extra,
-      });
+      cache.host.drafts.set(cache.key, { base, draft, extra: cache.host.drafts.get(cache.key)?.extra });
   }, [base, draft, cache?.key]);
   useEffect(() => {
     if (!dirty) {
       const value = read();
       setBase(value);
-      setDraft(clone(value));
+      setDraft(value);
     } else if (rebase)
       try {
         const value = read();
-        if (JSON.stringify(value) === JSON.stringify(base)) return;
+        if (sameData(value, base)) return;
         setDraft(mergeEdits(base, draft, value));
         setBase(value);
       } catch {
         // Both sides changed the same field: keep the draft; saving reports the conflict.
       }
   }, [version]);
-  useEffect(() => {
-    const guard = () => !!cache || !dirty || confirm("有未保存修改，放弃这些修改？");
-    const unload = (e: BeforeUnloadEvent) => {
-      if (dirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    const off = guards.add(guard);
-    window.addEventListener("beforeunload", unload);
-    return () => {
-      off();
-      window.removeEventListener("beforeunload", unload);
-    };
-  }, [dirty]);
+  useLeaveGuard(dirty, cache ? undefined : () => confirm("有未保存修改，放弃这些修改？"));
   return {
     base,
     draft,
@@ -264,18 +251,22 @@ export function useDraft(
       setMessage("");
     },
     saved: (data: Data) => {
-      setBase(clone(data));
-      setDraft(clone(data));
+      // One copy, so later changes the host makes to its own object cannot reach the editor.
+      const value = clone(data);
+      setBase(value);
+      setDraft(value);
       setMessage("已保存");
     },
     reset: () => {
-      setDraft(clone(base));
+      setDraft(base);
       setMessage("");
     },
     /** Records a change already applied outside the draft (a live setting) on both sides. */
     patch: (key: string, base: any, draft = base) => {
-      setBase((b) => ({ ...b, [key]: clone(base) }));
-      setDraft((d) => ({ ...d, [key]: clone(draft) }));
+      const saved = clone(base),
+        edited = draft === base ? saved : clone(draft);
+      setBase((b) => ({ ...b, [key]: saved }));
+      setDraft((d) => ({ ...d, [key]: edited }));
     },
   };
 }

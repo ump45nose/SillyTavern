@@ -785,8 +785,11 @@ function PresetEditor({
     );
   // The running preset follows SillyTavern: parameters, toggles and order apply at once; prompt
   // text stays a draft until saved. "更新预设" then writes the running state into the file.
-  const running = !!host.livePreset(id),
-    pending = running ? host.presetChanges(id).length > 0 : false;
+  // One read of the preset per render: the running settings, the file and where they differ.
+  const live = host.runningPreset(id),
+    running = !!live,
+    changed = live ? host.presetChanges(id, live) : [],
+    pending = changed.length > 0;
   const { draft, change } = edit,
     [entry, setEntry] = useState(() => {
       const focus = studioFocus;
@@ -831,8 +834,7 @@ function PresetEditor({
     );
   const pins = host.prefs().presetPins ?? ["temperature", "openai_max_tokens"];
   const always = ["stream_openai", "show_thoughts"];
-  const changed = running ? host.presetChanges(id) : [];
-  const fileData = changed.length ? host.presetData(id) : null;
+  const fileData = changed.length ? live!.file : null;
   const pendingDetail = fileData
     ? `${parameterNames[changed[0]] || changed[0]} ${shown(fileData[changed[0]])} → ${shown(draft[changed[0]])}` +
       (changed.length > 1 ? ` 等 ${changed.length} 项` : "")

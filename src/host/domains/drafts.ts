@@ -1,6 +1,6 @@
 import type { HostAdapter } from "../adapter";
 import type { Data } from "../types";
-import { clone } from "../model";
+import { clone, sameData } from "../model";
 
 /** Resource drafts: dirty tracking and the save-all path used by the close guard. */
 export const draftsMethods = {
@@ -9,7 +9,7 @@ export const draftsMethods = {
       .filter(
         ([, d]) =>
           !!d.extra?.advanced ||
-          JSON.stringify(d.base) !== JSON.stringify(d.draft) ||
+          !sameData(d.base, d.draft) ||
           (d.extra?.tab === "json" && d.extra.json !== JSON.stringify(d.draft, null, 2)),
       )
       .map(([key]) => key);
