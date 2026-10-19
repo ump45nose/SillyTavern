@@ -1165,7 +1165,7 @@ export function MobileShell({
                 : sheet === "tools"
                   ? "输入工具"
                   : sheet === "options"
-                    ? "剧情选项"
+                    ? "选择剧情选项"
                     : "最新回复操作"
             }
             inert={presence.exiting}

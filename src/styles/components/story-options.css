@@ -562,9 +562,21 @@
       animation: none;
     }
   }
-  /* The tag by the input that brings the choice back. */
+  /* The tag by the input that brings the choice back: beside 回应 while reading, in the input's
+     tool row while composing. */
   .wb-rp-tool.wb-rp-options-tag {
+    gap: 5px;
+    padding: 0 6px 0 9px;
+    border-radius: var(--wb-radius-pill);
+    background: color-mix(in srgb, var(--wb-accent) 10%, transparent);
     color: var(--wb-rp-ink-1);
+    font-size: 13px;
+  }
+  .wb-rp-foot > .wb-rp-options-tag {
+    margin-left: 8px;
+  }
+  .wb-rp-tool.wb-rp-options-tag:is(:hover, :focus-visible) {
+    background: color-mix(in srgb, var(--wb-accent) 18%, transparent);
   }
   .wb-rp-options-tag > svg {
     color: var(--wb-accent);

@@ -253,7 +253,7 @@ export function useRPChoices(
   const overlay = open && (
     <div className="wb-rp-choices wb-ui">
       <div className="wb-rp-choice-veil" aria-hidden="true" />
-      <div ref={panel} className="wb-rp-choice-panel" role="dialog" aria-label="剧情选项">
+      <div ref={panel} className="wb-rp-choice-panel" role="dialog" aria-label="选择剧情选项">
         <header>
           <span>{actionHint(state.config.rp)}</span>
           <button aria-label="隐藏剧情选项" title="隐藏（Esc）" onClick={hide}>

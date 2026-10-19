@@ -784,7 +784,6 @@ export function RPStage({
           >
             <PanelBottom size={16} />
           </button>
-          {options.tag}
         </>
       )}
     </div>
@@ -949,6 +948,7 @@ export function RPStage({
               </>
             )}
             {(!mobile || !current?.editing) && tools}
+            {!current?.editing && options.tag}
             {!current?.editing && (
               <button className="wb-rp-reply" aria-label="快进到你的回应" title="直接回应" onClick={reply}>
                 <PencilLine size={15} />
