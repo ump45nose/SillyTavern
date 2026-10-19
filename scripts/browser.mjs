@@ -57,6 +57,13 @@ export async function session(browser, { mobile = false, helper = true, probe = 
         isMobile: mobile, hasTouch: mobile,
         recordVideo,
     });
+    // The local instances link workbench-probe to the main checkout; serve this checkout's build so a
+    // worktree verifies its own code against the shared instances.
+    const extension = path.join(root, 'extension');
+    if (probe) await context.route('**/scripts/extensions/third-party/workbench-probe/**', route => {
+        const file = path.join(extension, decodeURIComponent(new URL(route.request().url()).pathname.split('/workbench-probe/')[1]));
+        return file.startsWith(extension + path.sep) && fs.existsSync(file) ? route.fulfill({ path: file }) : route.continue();
+    });
     if (!database) await context.route('**/scripts/extensions/third-party/shujuku/index.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
     if (!helper || !probe) {
         // These flags are session-only test overrides; never persist them to the test account.
