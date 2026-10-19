@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState, useRef, useSyncExternalStore, Suspense } from "react";
+import { useEffect, useLayoutEffect, useState, useRef, useSyncExternalStore, Suspense } from "react";
 import { lazyChunk } from "./lazyChunk";
 import { createPortal } from "react-dom";
 import { ImagePlus, Pause, Play, Square, X, ListTree, Images } from "./icons";

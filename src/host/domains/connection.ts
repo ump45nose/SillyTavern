@@ -5,11 +5,6 @@ import { ctx } from "../internals";
 
 /** Connection profiles and the mirrored quick API controls (non-secret fields only). */
 export const connectionMethods = {
-  leaseConnection(this: HostAdapter, container: HTMLElement) {
-    const node = document.getElementById("rm_api_block");
-    if (!node) throw new Error("此版本未提供连接设置控件");
-    return this.lease(node, container, "Workbench connection panel origin");
-  },
   /** Only non-secret fields are mirrored into the quick API controls. */
   connectionControls(this: HostAdapter) {
     const main = document.getElementById("main_api") as HTMLSelectElement;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, RefreshCw } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Empty, Select } from "../ui/common";

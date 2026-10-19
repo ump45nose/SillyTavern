@@ -106,9 +106,6 @@ async function mount() {
           host={host}
           trace={trace}
           toolbar={toolbar}
-          onExit={() => {
-            void changeLayout("native").catch((error) => host?.report(error));
-          }}
           onLayout={(mode) => {
             void changeLayout(mode).catch((error) => host?.report(error));
           }}

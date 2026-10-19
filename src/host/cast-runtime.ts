@@ -1,14 +1,6 @@
 import type { HostAdapter } from "./adapter";
 import { ctx, loadExtensionModule, nativeNodes } from "./internals";
-import {
-  castPrompt,
-  isPathSafe,
-  markCastTags,
-  parseCastTag,
-  spriteLabel,
-  type CastName,
-  type Sprite,
-} from "./cast";
+import { castPrompt, isPathSafe, markCastTags, parseCastTag, type CastName, type Sprite } from "./cast";
 
 let hookAdded = false,
   marking = false;

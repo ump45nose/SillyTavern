@@ -77,24 +77,6 @@ export function Check({
     </label>
   );
 }
-export function NativeConnection({ host }: { host: HostAdapter }) {
-  const ref = useRef<HTMLDivElement>(null),
-    [error, setError] = useState("");
-  useEffect(() => {
-    try {
-      return host.leaseConnection(ref.current!);
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [host]);
-  return (
-    <>
-      <p className="wb-native-caption">当前运行连接</p>
-      {error && <p role="alert">{error}</p>}
-      <div ref={ref} className="wb-native-slot" />
-    </>
-  );
-}
 export const saveHint = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘S" : "Ctrl+S";
 /** An on/off control that applies at once (boards "Panel*"); the label names it for assistive tech. */
 export function Switch({

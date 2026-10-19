@@ -15,13 +15,11 @@ import {
   ScanLine,
   X,
   Activity,
-  BookOpen,
   FileOutput,
   SlidersHorizontal,
   UserRound,
   UsersRound,
   Plug,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -57,9 +55,9 @@ import { useDatabase } from "./ui/useDatabase";
 import type { LayoutMode } from "./ui/LayoutSwitcher";
 import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
-import { useTask, IconButton, Empty, Dialog, Loading, useHostSlices, withoutChat } from "./ui/common";
+import { useTask, IconButton, Dialog, Loading, useHostSlices, withoutChat } from "./ui/common";
 import { bus, guards } from "./host/bus";
-import { panelLabels, resourceLabels } from "./host/labels";
+import { panelLabels } from "./host/labels";
 import {
   available,
   bodyClasses,
@@ -73,7 +71,6 @@ import {
   sameEnv,
   shownPanel,
   type Action,
-  type Deep,
   type Env,
   type Sizes,
 } from "./ui/layout/model";
@@ -87,8 +84,9 @@ export function beforeClose() {
   return guards.check();
 }
 /** Sidebar widths come from the --wb-*-size tokens, so CSS breakpoints stay the only source. */
+type DeepTarget = Exclude<NonNullable<Panel>, "character" | "trace" | "export"> | "library";
 /** Where the panel header's "独立深度编辑" leads for each panel; Trace and export have no larger view. */
-function deepTarget(kind: NonNullable<Panel>): Deep | null {
+function deepTarget(kind: NonNullable<Panel>): DeepTarget | null {
   if (kind === "character") return "library";
   return kind === "trace" || kind === "export" ? null : kind;
 }
@@ -105,13 +103,11 @@ export default function App({
   host,
   trace,
   toolbar,
-  onExit,
   onLayout,
 }: {
   host: HostAdapter;
   trace: any;
   toolbar: HTMLElement;
-  onExit: () => void;
   onLayout: (layout: LayoutMode) => void;
 }) {
   const snap = useHostSlices(host, withoutChat),
@@ -148,7 +144,7 @@ export default function App({
     deviceChanged = envChanged && layout.env.mobile !== env.mobile;
   if (envChanged) dispatch(envAction);
   const s = envChanged ? reduce(layout, envAction) : layout;
-  const { panel, chooser, focusId, deep, focus, popup, workspace, help, railOpen, tabsOpen } = s;
+  const { panel, chooser, focusId, deep, focus, popup, workspace, help, railOpen } = s;
   const sizes = useMemo(readSizes, [width]);
   const leftShown = leftVisible(s, sizes);
   const edgeHover = !mobile && prefs.edgeHover !== false;
@@ -238,19 +234,11 @@ export default function App({
     if (next && id !== undefined) selectedIds.current[next] = id;
     hover.dismiss("right");
   };
-  const goDeep = (next: Deep, id = "") => {
-    if (
-      next === "world" ||
-      next === "connection" ||
-      next === "preset" ||
-      next === "persona" ||
-      next === "database" ||
-      next === "library"
-    ) {
+  /** The add-ons open their own full editor; every other larger view is a settings workspace page. */
+  const goDeep = (next: DeepTarget, id = "") => {
+    if (next === "outline" || next === "image-gen") act({ type: "deep", deep: next, id });
+    else
       openSettings(next === "preset" ? "generation" : next === "library" ? "character" : next, undefined, id);
-      return;
-    }
-    act({ type: "deep", deep: next, id });
   };
   const closeDeep = () => act({ type: "deep", deep: null });
   const activateTool = (id: string, anchor: HTMLElement) => {
@@ -362,10 +350,10 @@ export default function App({
   useEffect(
     () =>
       bus.on("addon-open", ({ id, view }) => {
-        // The record-export add-on's panel is "export".
-        const target: Panel = id === "record-export" ? "export" : id;
-        if (view === "editor") live.current.act({ type: "deep", deep: target });
-        else live.current.goPanel(target);
+        // The record-export add-on's panel is "export", and it has no full editor.
+        if (id === "record-export") live.current.goPanel("export");
+        else if (view === "editor") live.current.act({ type: "deep", deep: id });
+        else live.current.goPanel(id);
       }),
     [],
   );
@@ -466,14 +454,13 @@ export default function App({
       document.removeEventListener("keydown", shortcut, true);
     };
   }, [host, operations]);
-  const content = (kind: Panel, independent = false) =>
+  const content = (kind: Panel) =>
     kind === "world" ? (
       <World
         key={`world:${focusId}:${worldEntry?.n ?? 0}`}
         host={host}
         initial={focusId}
         entryTitle={worldEntry?.title}
-        deep={independent}
         onSelection={(name) => {
           selectedIds.current.world = name;
         }}
@@ -486,12 +473,7 @@ export default function App({
     ) : kind === "export" ? (
       <AddonWorkspace host={host} id="record-export" active={shown === "export" && !workspace && !deep} />
     ) : kind === "outline" || kind === "image-gen" ? (
-      <AddonWorkspace
-        host={host}
-        id={kind}
-        active={independent || (shown === kind && !workspace && !deep)}
-        view={independent ? "editor" : "workspace"}
-      />
+      <AddonWorkspace host={host} id={kind} active={shown === kind && !workspace && !deep} />
     ) : kind === "trace" ? (
       <Trace host={host} trace={trace} />
     ) : kind === "database" ? (
@@ -511,7 +493,6 @@ export default function App({
           selectedIds.current[kind] = id;
         }}
         initial={focusId}
-        deep={independent}
       />
     ) : null;
   return (
@@ -536,7 +517,6 @@ export default function App({
           settings={openSettings}
           open={openPopup}
           activate={activateTool}
-          next={next}
           select={(kind, id, enabled) => {
             void task.run(() => (kind === "world" ? host.toggleBook(id, enabled) : host.select(kind, id)));
           }}
@@ -563,7 +543,6 @@ export default function App({
             chooser={chooser}
             setChooser={setChooser}
             goPanel={goPanel}
-            next={(kind) => operations.run(`next.${kind}`)}
             model={host.model()}
             focus={toggleFocus}
             focused={focus}
@@ -853,7 +832,7 @@ export default function App({
           />
         </Suspense>
       )}
-      {(deep === "outline" || deep === "image-gen") && (
+      {deep && (
         <section className="wb-addon-editor" aria-label="附加功能完整编辑页">
           <header>
             <strong>{deep === "outline" ? "大纲 · 完整编辑" : "生图 · 完整配置"}</strong>
@@ -864,21 +843,6 @@ export default function App({
           </header>
           <AddonWorkspace host={host} id={deep} active view="editor" />
         </section>
-      )}
-      {deep && deep !== "outline" && deep !== "image-gen" && (
-        <Dialog
-          wide
-          title={
-            deep === "library"
-              ? "角色管理"
-              : `${deep in resourceLabels ? resourceLabels[deep as Resource] : "资源"} · 深度编辑`
-          }
-          onClose={closeDeep}
-        >
-          <Suspense fallback={<Loading />}>
-            {deep === "library" ? <Characters host={host} management /> : content(deep, true)}
-          </Suspense>
-        </Dialog>
       )}
       {helpPresence.value && (
         <Dialog

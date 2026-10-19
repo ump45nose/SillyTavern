@@ -75,7 +75,6 @@ export interface TaskHost extends AddonHost {
   chatMetadata: (name: string) => Promise<Data | undefined>;
   open: (view: "workspace" | "editor") => void;
   beforeClose: () => boolean;
-  summary: () => Promise<null>; // Database add-on bridge reserved for a later integration.
 }
 export interface AddonViewProps {
   host: TaskHost;

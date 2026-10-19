@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { HostAdapter } from "../host/adapter";
 import type { OptionSource } from "../host/options-runtime";

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookOpen, PanelsTopLeft, Theater } from "./icons";
 
 export type LayoutMode = "novel" | "rp" | "native";

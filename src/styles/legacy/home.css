@@ -243,14 +243,6 @@
     border-color: #c69277;
     box-shadow: 0 0 0 3px #b7644910;
   }
-  .wb-selector > button.wb-selector-detail {
-    flex: none;
-    width: 34px;
-    min-height: 40px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 9px 0 0 9px;
-  }
   .wb-selector > button.wb-selector-value {
     flex: 1;
     min-width: 0;
@@ -491,20 +483,6 @@
     background: var(--wb-surface);
     animation: wb-page 180ms ease;
   }
-  .wb-row {
-    transition:
-      background-color 160ms,
-      box-shadow 160ms;
-  }
-  .wb-row:is(:hover, :focus-visible) {
-    background: color-mix(in srgb, var(--wb-selected) 30%, transparent);
-  }
-  .wb-row.is-active {
-    background: var(--wb-selected);
-  }
-  .wb-row.is-active button {
-    background: transparent;
-  }
   .wb-dialog[open] {
     animation: wb-menu 180ms ease;
   }
@@ -557,9 +535,6 @@
       grid-template-columns: 112px minmax(0, 1fr) 112px;
       gap: 10px;
       padding: 0 14px;
-    }
-    .wb-selector > button.wb-selector-detail {
-      width: 29px;
     }
     .wb-selector > button.wb-selector-value {
       font-size: 12px;
@@ -729,10 +704,6 @@
     border: 0 !important;
     margin-bottom: 8px;
   }
-  .wb-native-slot {
-    border-top: 1px solid var(--wb-line);
-    padding-top: 12px;
-  }
   .wb-preset-editor {
     min-height: 0;
     flex: 1;
@@ -818,10 +789,6 @@
       12px/1.8 ui-monospace,
       monospace;
     color: var(--wb-ink);
-  }
-  body.wb-active .wb-native-slot {
-    font-size: 12px;
-    line-height: 1.7;
   }
   .wb-choice-state {
     display: block;

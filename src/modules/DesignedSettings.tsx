@@ -3,8 +3,6 @@ import {
   ChevronRight,
   Copy,
   Download,
-  FilePlus,
-  FolderPlus,
   KeyRound,
   PencilLine,
   Plus,
@@ -16,7 +14,6 @@ import {
   Trash2,
   Upload,
   Volume2,
-  WandSparkles,
 } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Field, Notice, SearchBox, useTask } from "../ui/common";
@@ -242,7 +239,7 @@ function applicable(n: HTMLElement, root: HTMLElement) {
   }
   return true;
 }
-function sectionOf(n: HTMLElement, root: HTMLElement) {
+function sectionOf(n: HTMLElement) {
   const block = n.closest(
     ".extension_container,.inline-drawer,[name$=Toggles],#UI-Theme-Block,#CustomCSS-block,#MovingUI-presets-block",
   );
@@ -267,8 +264,7 @@ export default function DesignedSettings({
     [root, setRoot] = useState<HTMLElement | null>(null),
     [error, setError] = useState(""),
     [, redraw] = useReducer((n) => n + 1, 0),
-    [extension, setExtension] = useState(extensionId || ""),
-    [query, setQuery] = useState("");
+    [extension, setExtension] = useState(extensionId || "");
   const config = nativePages[page];
   useLayoutEffect(() => {
     let restore: undefined | (() => void);
@@ -410,7 +406,7 @@ export default function DesignedSettings({
     : [];
   const buckets = new Map<string, FormControl[]>();
   for (const n of controls) {
-    const key = sectionOf(n, root!);
+    const key = sectionOf(n);
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key)!.push(n);
   }

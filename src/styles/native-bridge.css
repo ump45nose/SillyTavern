@@ -712,70 +712,6 @@ body.wb-active #rm_api_block.wb-native-embedded {
   backdrop-filter: none !important;
   color: var(--wb-ink) !important;
 }
-body.wb-active .wb-native-slot * {
-  text-shadow: none !important;
-}
-body.wb-active .wb-native-slot input:not([type="checkbox"]),
-body.wb-active .wb-native-slot select,
-body.wb-active .wb-native-slot textarea {
-  color: var(--wb-ink) !important;
-  background: var(--wb-surface) !important;
-  border: 1px solid var(--wb-line);
-  border-radius: 8px;
-  min-height: 36px;
-  font: 12px/1.6 system-ui;
-  width: 100%;
-  max-width: 100%;
-}
-body.wb-active .wb-native-slot .menu_button {
-  color: var(--wb-control-ink);
-  background: var(--wb-soft);
-  border: 1px solid var(--wb-line);
-  border-radius: 7px;
-  box-shadow: none;
-}
-body.wb-active .wb-native-slot h3,
-body.wb-active .wb-native-slot h4 {
-  color: var(--wb-control-ink);
-  font-size: 13px;
-  margin: 12px 0;
-}
-body.wb-active .wb-native-slot .flex-container {
-  min-width: 0;
-}
-body.wb-active .wb-native-slot .range-block,
-body.wb-active .wb-native-slot .range-block-counter {
-  max-width: 100%;
-}
-body.wb-active .wb-native-slot .flex-container > input.flex1 {
-  flex: 1 1 0% !important;
-  width: 0 !important;
-  min-width: 0 !important;
-}
-body.wb-active .wb-native-slot .flex-container > .manage-api-keys {
-  flex: 0 0 34px;
-  width: 34px;
-  min-height: 36px;
-  display: grid;
-  place-items: center;
-}
-body.wb-active .wb-native-slot ol {
-  padding-left: 20px;
-  font-size: 11px;
-  color: var(--wb-muted);
-}
-body.wb-active .wb-native-slot .checkbox_label {
-  align-items: center;
-  gap: 8px;
-  padding: 5px 0;
-}
-body.wb-active .wb-native-slot #api_button_openai,
-body.wb-active .wb-native-slot #test_api_button {
-  padding: 8px 12px;
-  border-radius: 7px;
-  font-size: 12px;
-  min-height: 36px;
-}
 
 /* ── from controls.css ── */
 .wb-ui button:hover {
@@ -884,9 +820,6 @@ body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea).wb-scrolling {
   color: var(--wb-muted);
   font-weight: 500;
 }
-body.wb-active .wb-native-slot #rm_api_block.wb-native-embedded {
-  min-width: 0 !important;
-}
 body.wb-active .wb-connection-detail #title_api {
   display: none;
 }
@@ -902,56 +835,6 @@ body.wb-active
   .wb-connection-actions-original
   > :is(#api_button_openai, #test_api_button, #api_button_textgenerationwebui) {
   display: none !important;
-}
-body.wb-active .wb-native-slot .neutral_warning {
-  color: var(--wb-muted);
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.8;
-  margin: 6px 0 13px;
-}
-body.wb-active .wb-native-slot :is(h4, .range-block-title) {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--wb-muted);
-  margin: 8px 0 6px;
-}
-body.wb-active .wb-native-slot input:not([type="checkbox"]),
-body.wb-active .wb-native-slot select,
-body.wb-active .wb-native-slot textarea {
-  font-size: 13px;
-  min-height: 37px;
-  border-radius: 7px;
-}
-body.wb-active .wb-native-slot .inline-drawer-header {
-  background: transparent;
-  border: 0;
-  padding: 12px 0;
-  box-shadow: none;
-}
-body.wb-active .wb-native-slot .inline-drawer {
-  border-top: 1px solid var(--wb-line);
-  padding-bottom: 8px;
-}
-body.wb-active .wb-native-slot .inline-drawer-header b {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--wb-muted);
-}
-body.wb-active .wb-native-slot .menu_button:hover {
-  background: var(--wb-paper);
-  color: var(--wb-accent);
-}
-body.wb-active .wb-native-slot .select2-selection {
-  background: var(--wb-surface);
-  border: 1px solid var(--wb-line);
-  border-radius: 7px;
-  color: var(--wb-ink);
-  box-shadow: none;
-}
-body.wb-active .wb-native-slot .select2-selection__rendered {
-  color: var(--wb-ink);
-  font-size: 13px;
 }
 body.wb-active .select2-dropdown {
   background: var(--wb-surface);

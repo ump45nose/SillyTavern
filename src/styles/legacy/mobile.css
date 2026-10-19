@@ -114,11 +114,6 @@
     border: 0;
     border-radius: 9px;
   }
-  body.wb-mobile .wb-selector > .wb-selector-detail {
-    width: 26px;
-    height: 44px;
-    min-height: 44px;
-  }
   body.wb-mobile .wb-selector > .wb-selector-value {
     font-size: 11px;
     gap: 2px;
@@ -128,9 +123,6 @@
     width: 26px;
     height: 44px;
     min-height: 44px;
-  }
-  body.wb-mobile .wb-selector-detail svg {
-    width: 15px;
   }
   body.wb-active.wb-mobile #wb-layout-root {
     display: none;

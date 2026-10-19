@@ -1,4 +1,3 @@
-import React from "react";
 import type { HostAdapter } from "../host/adapter";
 import NativeSettings from "./NativeSettings";
 import { InstalledExtensions, ReadingForm } from "./DesignedSettings";

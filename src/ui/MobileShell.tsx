@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import {
   Activity,
@@ -35,7 +35,8 @@ import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Panel, Resource, SettingsPage } from "../host/types";
 import type { LayoutMode } from "./LayoutSwitcher";
 import type { ComposerPopup } from "./ComposerPopovers";
-import { ResourceControls, resourceLabels } from "./Header";
+import { ResourceControls } from "./Header";
+import { resourceLabels } from "../host/labels";
 import { ReadingSettings } from "./Reading";
 import { builtinTools, toolIcon } from "./ToolIcon";
 import { useDatabase } from "./useDatabase";
@@ -60,7 +61,6 @@ export function MobileShell({
   settings,
   open,
   activate,
-  next,
   select,
   focus,
   toggleFocus,
@@ -79,7 +79,6 @@ export function MobileShell({
   settings: (page: SettingsPage, group?: string) => void;
   open: (popup: ComposerPopup) => void;
   activate: (id: string, anchor: HTMLElement) => void;
-  next: (kind: Resource) => unknown;
   select: (kind: Resource, id: string, on: boolean) => void;
   /** Focus mode: Noval keeps only the reading and the composer; RP hides every pane. */
   focus: boolean;
@@ -944,7 +943,6 @@ export function MobileShell({
   }, [editor]);
   const resources = (
     <ResourceControls
-      mobile
       snap={snap}
       panel={panel}
       chooser={chooser}
@@ -952,9 +950,6 @@ export function MobileShell({
       goPanel={(next, id) => {
         close();
         goPanel(next, id);
-      }}
-      next={(kind) => {
-        void next(kind);
       }}
       select={select}
       model={host.model()}

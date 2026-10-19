@@ -392,7 +392,6 @@ export class AddonBridge {
       },
       open,
       beforeClose: () => guards.check(),
-      summary: async () => null,
     });
   }
   private media(target: MessageTarget, url: string, replace: string | undefined, remove: boolean) {
@@ -424,7 +423,7 @@ export class AddonBridge {
         message.swipe_info[swipe].extra = copy(extra);
       const element = document.querySelector(`.mes[mesid="${target.id}"]`);
       if (element) c.appendMediaToMessage(message, window.jQuery(element));
-      hostRefresh(this.host);
+      this.host.refresh();
       return true;
     });
   }
@@ -438,7 +437,4 @@ export class AddonBridge {
     this.replies.clear();
     this.inputs.clear();
   }
-}
-function hostRefresh(host: HostAdapter) {
-  host.refresh();
 }

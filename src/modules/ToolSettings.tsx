@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ArrowDown, ArrowUp, RotateCcw, Settings2, X } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { addonEnabled } from "../addons/catalog";

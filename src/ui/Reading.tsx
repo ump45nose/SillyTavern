@@ -4,7 +4,6 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
-  ChevronDown,
   ChevronRight,
   Copy,
   Eye,
@@ -27,8 +26,9 @@ import { Popover } from "./Popover";
 import { usePresence } from "./Motion";
 /** `row` renders a labelled list row (the phone's session menu) instead of the toolbar icon. */
 export function ReadingSettings({ host, row = false }: { host: HostAdapter; row?: boolean }) {
-  const snap = useHostSlices(host, ["session", "chat", "prefs"]),
-    prefs = host.prefs(),
+  // Subscribed for the re-render: the preferences below are read from the host on each render.
+  useHostSlices(host, ["session", "chat", "prefs"]);
+  const prefs = host.prefs(),
     [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const presence = usePresence(anchor);
   return (

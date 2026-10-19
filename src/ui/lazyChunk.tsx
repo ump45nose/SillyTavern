@@ -1,4 +1,4 @@
-import React, { lazy, type ComponentType } from "react";
+import { lazy, type ComponentType } from "react";
 import { RotateCw } from "./icons";
 
 /**

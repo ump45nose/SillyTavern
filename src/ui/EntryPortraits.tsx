@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImagePlus, LoaderCircle, RefreshCw, Trash2, X } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { EXPRESSIONS, isPathSafe, stagedNotes, suggestLabel, type Sprite } from "../host/cast";

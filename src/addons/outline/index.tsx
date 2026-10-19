@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   ChevronDown,
   Plus,
@@ -14,7 +14,6 @@ import {
   Square,
   PanelRightClose,
   Send,
-  FileText,
   Flag,
   Check as CheckIcon,
   PencilLine,

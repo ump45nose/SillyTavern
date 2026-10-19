@@ -24,16 +24,10 @@ import { clone, validatePreset } from "../host/model";
 import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat } from "../ui/common";
 import { useTokenCounts } from "../ui/tokens";
 import { Check, Fold, SaveBar, Switch, useDraft } from "../ui/ResourceControls";
-import { actionLabels } from "../host/labels";
+import { actionLabels, resourceLabels } from "../host/labels";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
 import { bus, guards } from "../host/bus";
-export const labels: Record<Resource, string> = {
-  connection: "连接",
-  preset: "预设",
-  world: "世界书",
-  persona: "用户设定",
-};
 const safeToLeave = () => guards.check();
 export default function Resources({
   host,
@@ -132,7 +126,7 @@ export default function Resources({
         <div className="wb-panel-heading-copy">
           <div className="wb-panel-heading-line">
             <ResourcePicker
-              label={labels[kind]}
+              label={resourceLabels[kind]}
               items={snap.resources[kind]}
               id={id}
               active={snap.current[kind]}
@@ -160,8 +154,8 @@ export default function Resources({
           {current && snap.current[kind] !== id && (
             <button
               className="wb-panel-action"
-              aria-label={`使用此${labels[kind]}`}
-              title={`使用此${labels[kind]}`}
+              aria-label={`使用此${resourceLabels[kind]}`}
+              title={`使用此${resourceLabels[kind]}`}
               disabled={snap.busy || task.busy}
               onClick={() => apply(id)}
             >
