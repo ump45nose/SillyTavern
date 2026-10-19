@@ -3,8 +3,8 @@ import http from "node:http";
 import crypto from "node:crypto";
 // LAN entry for phone acceptance: basic auth with the local .env test credentials, then a plain
 // proxy to the 127.0.0.1 instance.
-// Usage: node scripts/lan-proxy.mjs <lan-ip> <lan-port> <local-port> [env-file=.env]
-const [lanIp, lanPort, localPort, envFile = ".env"] = process.argv.slice(2);
+// Usage: node scripts/lan-proxy.mjs [lan-ip=0.0.0.0] [lan-port=32124] [local-port=32014] [env-file=.env]
+const [lanIp = "0.0.0.0", lanPort = "32124", localPort = "32014", envFile = ".env"] = process.argv.slice(2);
 const env = Object.fromEntries(
   fs
     .readFileSync(envFile, "utf8")
@@ -26,7 +26,7 @@ http
     }
     const headers = { ...req.headers, host: `127.0.0.1:${localPort}` };
     for (const key of ["origin", "referer"])
-      if (headers[key]) headers[key] = headers[key].replace(`//${lanIp}:${lanPort}`, `//127.0.0.1:${localPort}`);
+      if (headers[key]) headers[key] = headers[key].replace(/\/\/[^/]+/, `//127.0.0.1:${localPort}`);
     const upstream = http.request({ host: "127.0.0.1", port: localPort, method: req.method, path: req.url, headers }, (reply) => {
       res.writeHead(reply.statusCode, reply.headers);
       reply.pipe(res);
