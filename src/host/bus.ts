@@ -57,10 +57,25 @@ export type Guard = (options: LeaveOptions) => boolean;
 /** "May the user leave?" checks, run in registration order until one says no. */
 class Guards {
   private list = new Set<Guard>();
+  private unsaved = new Set<() => boolean>();
+  private unload = (e: BeforeUnloadEvent) => {
+    if (![...this.unsaved].some((pending) => pending())) return;
+    e.preventDefault();
+    e.returnValue = "";
+  };
   add(fn: Guard) {
     this.list.add(fn);
     return () => {
       this.list.delete(fn);
+    };
+  }
+  /** While `pending()` is true the browser asks before the page unloads; one listener serves every source. */
+  hold(pending: () => boolean) {
+    if (!this.unsaved.size) window.addEventListener("beforeunload", this.unload);
+    this.unsaved.add(pending);
+    return () => {
+      if (this.unsaved.delete(pending) && !this.unsaved.size)
+        window.removeEventListener("beforeunload", this.unload);
     };
   }
   /** True when every guard allows leaving. */

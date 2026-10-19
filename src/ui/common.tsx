@@ -3,6 +3,24 @@ import { X, Search, LoaderCircle, ChevronRight } from "./icons";
 export { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Slice, Slices } from "../host/types";
+import { guards, type Guard } from "../host/bus";
+/**
+ * While `dirty`, the browser asks before the page unloads and `guard` (if any) joins the workbench's
+ * leave checks. The latest `guard` is used, so callers may pass an inline function.
+ */
+export function useLeaveGuard(dirty: boolean, guard?: Guard) {
+  const latest = useRef(guard);
+  latest.current = guard;
+  useEffect(() => {
+    if (!dirty) return;
+    const offHold = guards.hold(() => true),
+      offGuard = guards.add((options) => latest.current?.(options) ?? true);
+    return () => {
+      offHold();
+      offGuard();
+    };
+  }, [dirty]);
+}
 export function useHost<S>(host: {
   subscribe: (listener: () => void) => () => void;
   revision: () => number;

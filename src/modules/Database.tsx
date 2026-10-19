@@ -15,7 +15,7 @@ import {
 } from "../host/database";
 import type { DatabaseState } from "../host/database-runtime";
 import { guards } from "../host/bus";
-import { Empty, Notice, useTask } from "../ui/common";
+import { Empty, Notice, useLeaveGuard, useTask } from "../ui/common";
 import { SaveBar } from "../ui/ResourceControls";
 import { ResourcePicker, ResourceRailContext } from "../ui/ResourcePicker";
 import { useDatabase } from "../ui/useDatabase";
@@ -405,19 +405,7 @@ function RowEditor({
     setDraft((d) => source.map((value, i) => (d[i] !== base[i] ? d[i] : value)));
     setBase(source);
   }, [sourceKey]);
-  useEffect(() => {
-    if (!dirty) return;
-    const off = guards.add(() => confirm("这一行有未保存的修改，放弃这些修改？"));
-    const unload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", unload);
-    return () => {
-      off();
-      window.removeEventListener("beforeunload", unload);
-    };
-  }, [dirty]);
+  useLeaveGuard(dirty, () => confirm("这一行有未保存的修改，放弃这些修改？"));
   const save = () =>
     task.run(async () => {
       if (!row) {

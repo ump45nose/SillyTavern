@@ -144,14 +144,11 @@ export class HostAdapter extends HostCore {
       this.drafts.clear();
       return true;
     };
-    const unload = (e: BeforeUnloadEvent) => {
-      if (this.dirtyDraftKeys().length || this.resourceAction) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", unload);
-    this.cleanup.push(guards.add(guard), () => window.removeEventListener("beforeunload", unload));
+    // Cached drafts outlive the editors that made them, so the host keeps its own unload hold.
+    this.cleanup.push(
+      guards.add(guard),
+      guards.hold(() => this.resourceAction || this.dirtyDraftKeys().length > 0),
+    );
     this.refresh();
   }
   destroy() {
