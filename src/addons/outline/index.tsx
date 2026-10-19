@@ -33,7 +33,8 @@ import {
   type OutlineNode,
 } from "./model";
 import "./style.css";
-import { bus, guards } from "../../host/bus";
+import { bus } from "../../host/bus";
+import { useLeaveGuard } from "../../ui/common";
 export { createRuntime };
 export const apiVersion = 2,
   id = "outline";
@@ -306,23 +307,10 @@ export function Workspace(props: AddonViewProps) {
     setDraft({ title: node?.title || "", content: node?.content || "" });
   }, [node?.id, node?.title, node?.content]);
   const dirty = !!node && (node.title !== draft.title || node.content !== draft.content);
-  useEffect(() => {
-    if (!dirty) return;
-    const guard = () => {
-      bus.emit("error", "大纲节点有未保存内容，请先保存或撤销草稿。");
-      return false;
-    };
-    const unload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    const off = guards.add(guard);
-    window.addEventListener("beforeunload", unload);
-    return () => {
-      off();
-      window.removeEventListener("beforeunload", unload);
-    };
-  }, [dirty]);
+  useLeaveGuard(dirty, () => {
+    bus.emit("error", "大纲节点有未保存内容，请先保存或撤销草稿。");
+    return false;
+  });
   const review = (data: OutlineData) => {
     setPending(data);
     setSource("");

@@ -1,12 +1,21 @@
 import { Select } from "../ui/Select";
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Search, X, Braces, BookMarked } from "../ui/icons";
 import { SaveBar } from "../ui/ResourceControls";
 import { useTokenCounts } from "../ui/tokens";
-import { clone, activation, setActivation, validateBook } from "../host/model";
+import { activation, sameData, setActivation, validateBook } from "../host/model";
 import type { Data } from "../host/types";
 import type { HostAdapter } from "../host/adapter";
-import { useTask, SearchBox, Notice, Empty, Field, useHostSlices, withoutChat } from "../ui/common";
+import {
+  useTask,
+  SearchBox,
+  Notice,
+  Empty,
+  Field,
+  useHostSlices,
+  useLeaveGuard,
+  withoutChat,
+} from "../ui/common";
 import { ResourcePicker } from "../ui/ResourcePicker";
 import { EntryPortraits } from "../ui/EntryPortraits";
 import { isPathSafe } from "../host/cast";
@@ -20,6 +29,12 @@ const positions = [
   "示例之后",
   "Outlet",
 ];
+const modeName: Record<string, string> = { keyword: "关键词", constant: "常驻", vector: "向量化" };
+/** Copy-on-write: only the book, its entry map and the one entry are new objects. */
+const withEntry = (book: Data, id: string, entry: Data) => ({
+  ...book,
+  entries: { ...book.entries, [id]: entry },
+});
 export default function World({
   host,
   deep,
@@ -55,37 +70,29 @@ export default function World({
   useEffect(() => {
     onSelection?.(name);
   }, [name]);
+  // Edits never mutate base or draft, so the cache can hold them as they are.
   useLayoutEffect(() => {
-    if (base && draft)
-      host.drafts.set("world:" + name, {
-        base: clone(base),
-        draft: clone(draft),
-        extra: { json, tab, entry },
-      });
+    if (base && draft) host.drafts.set("world:" + name, { base, draft, extra: { json, tab, entry } });
   }, [name, base, draft, json, tab, entry]);
-  const dirty =
-    Boolean(base && draft && JSON.stringify(base) !== JSON.stringify(draft)) ||
-    (tab === "json" && Boolean(draft) && json !== JSON.stringify(draft, null, 2));
-  useEffect(() => {
-    const unload = (e: BeforeUnloadEvent) => {
-      if (dirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", unload);
-    return () => window.removeEventListener("beforeunload", unload);
-  }, [dirty]);
+  const changed = useMemo(() => !!base && !!draft && !sameData(base, draft), [base, draft]),
+    pretty = useMemo(() => (tab === "json" && draft ? JSON.stringify(draft, null, 2) : ""), [tab, draft]);
+  const dirty = changed || (tab === "json" && Boolean(draft) && json !== pretty);
+  useLeaveGuard(dirty);
+  /** The book version base was read at; a clean editor rereads only when the book has changed since. */
+  const loaded = useRef<{ name: string; version: number } | null>(null);
   useEffect(() => {
     if (dirty) return;
+    const version = host.resourceVersions.world;
+    if (loaded.current?.name === name && loaded.current.version === version) return;
     let live = true;
     if (name)
       host
         .readBook(name)
         .then((data) => {
           if (live) {
-            setBase(clone(data));
-            setDraft(clone(data));
+            loaded.current = { name, version };
+            setBase(data);
+            setDraft(data);
             const wanted =
               target &&
               Object.entries<Data>(data.entries ?? {}).find(
@@ -120,9 +127,7 @@ export default function World({
   };
   const update = (patch: Data) => {
     if (!draft || !draft.entries[entry]) return;
-    const next = clone(draft);
-    Object.assign(next.entries[entry], patch);
-    setDraft(next);
+    setDraft(withEntry(draft, entry, { ...draft.entries[entry], ...patch }));
     setSaved("");
   };
   const save = () =>
@@ -141,25 +146,32 @@ export default function World({
         }
         setSaved(moved ? `已保存 · ${moved} 张立绘随改名移动` : "已保存");
       } finally {
-        setBase(clone(result));
-        setDraft(clone(result));
+        // The saved book is current: saving must not trigger a reread of it.
+        loaded.current = { name, version: host.resourceVersions.world };
+        setBase(result);
+        setDraft(result);
         setJson(JSON.stringify(result, null, 2));
       }
     });
-  const modeChange = (id: string, mode: string) => {
-    if (!draft) return;
-    const next = clone(draft);
-    next.entries[id] = setActivation(next.entries[id], mode);
-    setDraft(next);
+  // Stable, so list rows that did not change skip rendering.
+  const modeChange = useCallback((id: string, mode: string) => {
+    setDraft((d) => d && withEntry(d, id, setActivation(d.entries[id], mode)));
     setSaved("");
-  };
-  const entries = draft ? (Object.entries(draft.entries) as [string, Data][]) : [];
-  const selected = draft?.entries[entry];
-  const entryTokens = useTokenCounts(
-    host,
-    deep ? entries.map(([id, e]) => [id, String(e.content ?? "")] as [string, string]) : [],
-    500,
+  }, []);
+  const toggleEntry = useCallback(
+    (id: string, on: boolean) => setDraft((d) => d && withEntry(d, id, { ...d.entries[id], disable: !on })),
+    [],
   );
+  const entries = useMemo(
+    () => (draft ? (Object.entries(draft.entries) as [string, Data][]) : []),
+    [draft?.entries],
+  );
+  const selected = draft?.entries[entry];
+  const tokenItems = useMemo(
+    () => (deep ? entries.map(([id, e]) => [id, String(e.content ?? "")] as [string, string]) : []),
+    [deep, entries],
+  );
+  const entryTokens = useTokenCounts(host, tokenItems, 500);
   const switchTab = (t: string) => {
     if (tab === "json") {
       try {
@@ -177,22 +189,17 @@ export default function World({
   const addEntry = () =>
     task.run(async () => {
       if (!draft) return;
-      const next = clone(draft),
+      // SillyTavern adds the entry to the map it is given.
+      const next = { ...draft, entries: { ...draft.entries } },
         item = await host.createEntry(name, next);
       setDraft(next);
       setEntry(String(item.uid));
     });
   const removeEntry = () => {
     if (!confirm("删除此条目？")) return;
-    const next = clone(draft!);
-    delete next.entries[entry];
-    setDraft(next);
-    setEntry(Object.keys(next.entries)[0] ?? "");
-  };
-  const toggleEntry = (id: string, on: boolean) => {
-    const next = clone(draft!);
-    next.entries[id].disable = !on;
-    setDraft(next);
+    const { [entry]: _removed, ...rest } = draft!.entries;
+    setDraft({ ...draft!, entries: rest });
+    setEntry(Object.keys(rest)[0] ?? "");
   };
   const enabledBooks =
     scope === "global"
@@ -269,52 +276,18 @@ export default function World({
         <ul className="wb-entries" aria-label="条目">
           {entries
             .filter(([, e]) => `${e.comment} ${e.key?.join(" ")}`.toLowerCase().includes(query.toLowerCase()))
-            .map(([id, e]) => {
-              const mode = activation(e),
-                title = e.comment || `条目 ${id}`;
-              return (
-                <li
-                  key={id}
-                  className={`wb-entry mode-${mode} ${entry === id ? "is-selected" : ""} ${e.disable ? "is-off" : ""}`}
-                >
-                  <input
-                    type="checkbox"
-                    aria-label={`启用条目 ${title}`}
-                    disabled={tab === "json"}
-                    checked={!e.disable}
-                    onChange={(v) => toggleEntry(id, v.target.checked)}
-                  />
-                  <span className="wb-entry-mode">
-                    <Select
-                      aria-label={`${title} 激活方式`}
-                      title="关键词 / 常驻 / 向量化"
-                      disabled={tab === "json"}
-                      value={mode}
-                      onChange={(v) => modeChange(id, v.target.value)}
-                    >
-                      <option value="keyword">关键词</option>
-                      <option value="constant">常驻</option>
-                      <option value="vector">向量化</option>
-                    </Select>
-                  </span>
-                  <button
-                    className="wb-entry-open"
-                    aria-label={`编辑条目 ${title}`}
-                    aria-pressed={entry === id}
-                    onClick={() => setEntry(id)}
-                  >
-                    <strong>{title}</strong>
-                    <small>
-                      {mode === "constant"
-                        ? "始终注入"
-                        : mode === "vector"
-                          ? "语义匹配"
-                          : (e.key ?? []).join("、") || "未设置关键词"}
-                    </small>
-                  </button>
-                </li>
-              );
-            })}
+            .map(([id, e]) => (
+              <EntryItem
+                key={id}
+                id={id}
+                entry={e}
+                selected={entry === id}
+                locked={tab === "json"}
+                onToggle={toggleEntry}
+                onMode={modeChange}
+                onOpen={setEntry}
+              />
+            ))}
           {!entries.length && (
             <li className="wb-entries-empty">{name ? "这本世界书还没有条目" : "选择或新建一本世界书"}</li>
           )}
@@ -473,7 +446,7 @@ export default function World({
           message={saved}
           reset={() => {
             if (!base) return;
-            setDraft(clone(base));
+            setDraft(base);
             setJson(JSON.stringify(base, null, 2));
             setSaved("");
           }}
@@ -482,7 +455,6 @@ export default function World({
       </fieldset>
     );
   }
-  const modeName: Record<string, string> = { keyword: "关键词", constant: "常驻", vector: "向量化" };
   const counts = entries.reduce<Record<string, number>>((n, [, e]) => {
     n[activation(e)] = (n[activation(e)] ?? 0) + 1;
     return n;
@@ -710,58 +682,19 @@ export default function World({
                 <span role="columnheader">顺序</span>
                 <span role="columnheader">Tokens</span>
               </div>
-              {shown.map(([id, e]) => {
-                const mode = activation(e),
-                  open = entry === id;
-                return (
-                  <React.Fragment key={id}>
-                    <div
-                      role="row"
-                      className={`wb-wt-row is-${mode} ${open ? "is-open" : ""} ${e.disable ? "is-disabled" : ""}`}
-                      onClick={(v) => {
-                        if (!(v.target as HTMLElement).closest("input, button")) setEntry(open ? "" : id);
-                      }}
-                    >
-                      <span role="cell">
-                        <input
-                          type="checkbox"
-                          aria-label={`启用条目 ${e.comment || id}`}
-                          checked={!e.disable}
-                          onChange={(v) => toggleEntry(id, v.target.checked)}
-                        />
-                        <i title={modeName[mode]} />
-                      </span>
-                      <span role="cell">
-                        <button
-                          className="wb-wt-open"
-                          aria-expanded={open}
-                          onClick={() => setEntry(open ? "" : id)}
-                        >
-                          {e.comment || `条目 ${id}`}
-                        </button>
-                      </span>
-                      <span role="cell" className="wb-wt-keys">
-                        {mode === "constant"
-                          ? "—"
-                          : mode === "vector"
-                            ? "向量匹配"
-                            : (e.key ?? []).join(", ") || "—"}
-                      </span>
-                      <span role="cell">{positions[e.position ?? 0]}</span>
-                      <span role="cell" className="is-num">
-                        {(e.position ?? 0) === 4 ? (e.depth ?? 4) : "—"}
-                      </span>
-                      <span role="cell" className="is-num">
-                        {e.order ?? 0}
-                      </span>
-                      <span role="cell" className="is-num">
-                        {entryTokens[id] ?? ""}
-                      </span>
-                    </div>
-                    {open && editor}
-                  </React.Fragment>
-                );
-              })}
+              {shown.map(([id, e]) => (
+                <React.Fragment key={id}>
+                  <EntryRow
+                    id={id}
+                    entry={e}
+                    open={entry === id}
+                    tokens={entryTokens[id]}
+                    onToggle={toggleEntry}
+                    onOpen={setEntry}
+                  />
+                  {entry === id && editor}
+                </React.Fragment>
+              ))}
               {!entries.length &&
                 (name ? (
                   <Empty
@@ -798,7 +731,7 @@ export default function World({
           message={saved}
           reset={() => {
             if (!base) return;
-            setDraft(clone(base));
+            setDraft(base);
             setJson(JSON.stringify(base, null, 2));
             setSaved("");
           }}
@@ -808,6 +741,116 @@ export default function World({
     </fieldset>
   );
 }
+type EntryActions = {
+  onToggle: (id: string, on: boolean) => void;
+  onOpen: (id: string) => void;
+};
+/** One entry in the sidebar list; an edit elsewhere in the book leaves it untouched. */
+const EntryItem = memo(function EntryItem({
+  id,
+  entry: e,
+  selected,
+  locked,
+  onToggle,
+  onMode,
+  onOpen,
+}: EntryActions & {
+  id: string;
+  entry: Data;
+  selected: boolean;
+  locked: boolean;
+  onMode: (id: string, mode: string) => void;
+}) {
+  const mode = activation(e),
+    title = e.comment || `条目 ${id}`;
+  return (
+    <li className={`wb-entry mode-${mode} ${selected ? "is-selected" : ""} ${e.disable ? "is-off" : ""}`}>
+      <input
+        type="checkbox"
+        aria-label={`启用条目 ${title}`}
+        disabled={locked}
+        checked={!e.disable}
+        onChange={(v) => onToggle(id, v.target.checked)}
+      />
+      <span className="wb-entry-mode">
+        <Select
+          aria-label={`${title} 激活方式`}
+          title="关键词 / 常驻 / 向量化"
+          disabled={locked}
+          value={mode}
+          onChange={(v) => onMode(id, v.target.value)}
+        >
+          <option value="keyword">关键词</option>
+          <option value="constant">常驻</option>
+          <option value="vector">向量化</option>
+        </Select>
+      </span>
+      <button
+        className="wb-entry-open"
+        aria-label={`编辑条目 ${title}`}
+        aria-pressed={selected}
+        onClick={() => onOpen(id)}
+      >
+        <strong>{title}</strong>
+        <small>
+          {mode === "constant"
+            ? "始终注入"
+            : mode === "vector"
+              ? "语义匹配"
+              : (e.key ?? []).join("、") || "未设置关键词"}
+        </small>
+      </button>
+    </li>
+  );
+});
+/** One row of the deep editor's entry table. */
+const EntryRow = memo(function EntryRow({
+  id,
+  entry: e,
+  open,
+  tokens,
+  onToggle,
+  onOpen,
+}: EntryActions & { id: string; entry: Data; open: boolean; tokens?: number }) {
+  const mode = activation(e);
+  return (
+    <div
+      role="row"
+      className={`wb-wt-row is-${mode} ${open ? "is-open" : ""} ${e.disable ? "is-disabled" : ""}`}
+      onClick={(v) => {
+        if (!(v.target as HTMLElement).closest("input, button")) onOpen(open ? "" : id);
+      }}
+    >
+      <span role="cell">
+        <input
+          type="checkbox"
+          aria-label={`启用条目 ${e.comment || id}`}
+          checked={!e.disable}
+          onChange={(v) => onToggle(id, v.target.checked)}
+        />
+        <i title={modeName[mode]} />
+      </span>
+      <span role="cell">
+        <button className="wb-wt-open" aria-expanded={open} onClick={() => onOpen(open ? "" : id)}>
+          {e.comment || `条目 ${id}`}
+        </button>
+      </span>
+      <span role="cell" className="wb-wt-keys">
+        {mode === "constant" ? "—" : mode === "vector" ? "向量匹配" : (e.key ?? []).join(", ") || "—"}
+      </span>
+      <span role="cell">{positions[e.position ?? 0]}</span>
+      <span role="cell" className="is-num">
+        {(e.position ?? 0) === 4 ? (e.depth ?? 4) : "—"}
+      </span>
+      <span role="cell" className="is-num">
+        {e.order ?? 0}
+      </span>
+      <span role="cell" className="is-num">
+        {tokens ?? ""}
+      </span>
+    </div>
+  );
+});
 /** Keyword chips with an inline add field (Enter adds, Backspace on empty removes the last). */
 function KeyChips({
   label,

@@ -10,7 +10,8 @@ export const worldMethods = {
     const values = new Set<string>(this.world.selected_world_info);
     on ? values.add(name) : values.delete(name);
     select.val([...values].map((value) => String(this.world.world_names.indexOf(value)))).trigger("change");
-    this.refresh();
+    // SillyTavern's WORLDINFO_SETTINGS_UPDATED is not awaited by the change trigger; callers read at once.
+    this.invalidate("resources", "session");
   },
   characterBooks(this: HostAdapter) {
     const character = this.snapshot().character;
@@ -44,7 +45,6 @@ export const worldMethods = {
       [...books].filter((x) => x !== primary),
     );
     await this.persistSettings();
-    this.refresh();
   },
   async readBook(this: HostAdapter, name: string) {
     const response = await this.request("/api/worldinfo/get", { name });
@@ -57,7 +57,6 @@ export const worldMethods = {
     this.world.worldInfoCache.set(name, clone(data));
     await ctx().eventSource.emit(ctx().eventTypes.WORLDINFO_UPDATED, name, clone(data));
     ctx().reloadWorldInfoEditor(name);
-    this.refresh();
     return clone(data);
   },
   async createEntry(this: HostAdapter, name: string, data: Data) {
@@ -74,6 +73,7 @@ export const worldMethods = {
     if (scope === "chat") {
       ctx().chatMetadata.world_info = name;
       await ctx().saveMetadata();
+      this.invalidate("session");
     } else {
       const character = this.snapshot().character;
       if (!character) throw new Error("请先选择角色。");
@@ -83,6 +83,5 @@ export const worldMethods = {
         extensions: { ...data.data.extensions, world: name },
       });
     }
-    this.refresh();
   },
 };

@@ -39,7 +39,6 @@ export const extensionsMethods = {
   async toggleExtension(this: HostAdapter, id: string, on: boolean) {
     const module = await internal("extensions");
     await (on ? module.enableExtension(id, false) : module.disableExtension(id, false));
-    this.refresh();
   },
   async extensionAction(this: HostAdapter, id: string, action: "update" | "delete") {
     const module = await internal("extensions");
@@ -52,7 +51,6 @@ export const extensionsMethods = {
     if (action === "delete") await this.persistSettings();
     const data = await response.json();
     if (action === "update" && !data.isUpToDate) await this.extensionHook(id, "update");
-    this.refresh();
     return data;
   },
   async extensionHook(this: HostAdapter, id: string, hook: string) {
@@ -68,6 +66,5 @@ export const extensionsMethods = {
   async installExtension(this: HostAdapter, url: string, branch: string, global: boolean) {
     const module = await internal("extensions");
     if (!(await module.installExtension(url, global, branch))) throw new Error("扩展安装未完成。");
-    this.refresh();
   },
 };

@@ -46,3 +46,29 @@ test("guards run in order, stop at the first refusal and see the leave options",
   offA();
   offC();
 });
+
+test("one beforeunload listener serves every hold and leaves with the last one", () => {
+  const listeners = new Set();
+  globalThis.window = {
+    addEventListener: (name, fn) => name === "beforeunload" && listeners.add(fn),
+    removeEventListener: (name, fn) => name === "beforeunload" && listeners.delete(fn),
+  };
+  const unload = () => {
+    const event = { prevented: false, preventDefault() { this.prevented = true; } };
+    listeners.forEach((fn) => fn(event));
+    return event.prevented;
+  };
+  let pending = false;
+  const offA = guards.hold(() => pending),
+    offB = guards.hold(() => false);
+  assert.equal(listeners.size, 1);
+  assert.equal(unload(), false);
+  pending = true;
+  assert.equal(unload(), true);
+  offA();
+  assert.equal(listeners.size, 1);
+  assert.equal(unload(), false);
+  offB();
+  assert.equal(listeners.size, 0);
+  delete globalThis.window;
+});

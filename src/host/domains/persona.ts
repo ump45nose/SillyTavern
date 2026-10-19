@@ -38,12 +38,11 @@ export const personaMethods = {
       if (p.personas[id] === name) p.personas[id] = previousName;
       if (p.persona_descriptions[id] === description) p.persona_descriptions[id] = previousDescription;
       if (current) applyCurrent(p.personas[id], p.persona_descriptions[id]);
-      this.refresh();
+      this.invalidate("resources");
       throw error;
     }
     await this.personas.getUserAvatars();
     await ctx().eventSource.emit(ctx().eventTypes.PERSONA_UPDATED, id);
-    this.refresh();
     return merged;
   },
   personaOptions(this: HostAdapter, id: string) {
@@ -65,8 +64,9 @@ export const personaMethods = {
     };
   },
   async personaLock(this: HostAdapter, type: "default" | "character" | "chat", enabled: boolean) {
+    // Locks are saved with a debounce, so no event follows in time for the persona panel.
     await this.personas.setPersonaLockState(enabled, type);
-    this.refresh();
+    this.invalidate("resources");
   },
   async personaPreference(this: HostAdapter, key: string, value: boolean) {
     if (!["persona_show_notifications", "persona_allow_multi_connections", "persona_auto_lock"].includes(key))
@@ -82,6 +82,5 @@ export const personaMethods = {
     }
     const input = document.getElementById(key) as HTMLInputElement;
     if (input) input.checked = value;
-    this.refresh();
   },
 };

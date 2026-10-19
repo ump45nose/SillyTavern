@@ -16,6 +16,8 @@ export interface BusEvents {
   "layout-menu": boolean;
   /** Show a floor on the RP stage. */
   "rp-jump": number;
+  /** The RP stage moved its current line (`.wb-rp-current`) to another floor, or cleared it. */
+  "rp-line": undefined;
   /** The reading scrolled to a floor picked from navigation (the phone selects it for editing). */
   "floor-jump": number;
   /** Open a settings group (optionally one extension inside it). */
@@ -57,10 +59,25 @@ export type Guard = (options: LeaveOptions) => boolean;
 /** "May the user leave?" checks, run in registration order until one says no. */
 class Guards {
   private list = new Set<Guard>();
+  private unsaved = new Set<() => boolean>();
+  private unload = (e: BeforeUnloadEvent) => {
+    if (![...this.unsaved].some((pending) => pending())) return;
+    e.preventDefault();
+    e.returnValue = "";
+  };
   add(fn: Guard) {
     this.list.add(fn);
     return () => {
       this.list.delete(fn);
+    };
+  }
+  /** While `pending()` is true the browser asks before the page unloads; one listener serves every source. */
+  hold(pending: () => boolean) {
+    if (!this.unsaved.size) window.addEventListener("beforeunload", this.unload);
+    this.unsaved.add(pending);
+    return () => {
+      if (this.unsaved.delete(pending) && !this.unsaved.size)
+        window.removeEventListener("beforeunload", this.unload);
     };
   }
   /** True when every guard allows leaving. */

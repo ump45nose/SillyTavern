@@ -20,11 +20,20 @@ import {
 import type { HostAdapter } from "../host/adapter";
 import type { Data, Item } from "../host/types";
 import { clone } from "../host/model";
-import { useTask, SearchBox, Notice, Empty, Field, useHostSlices, withoutChat } from "../ui/common";
+import {
+  useTask,
+  SearchBox,
+  Notice,
+  Empty,
+  Field,
+  useHostSlices,
+  useLeaveGuard,
+  withoutChat,
+} from "../ui/common";
 import { ResourceRailContext } from "../ui/ResourcePicker";
 import { SaveBar } from "../ui/ResourceControls";
 import { useTokenCounts } from "../ui/tokens";
-import { guards, type Guard } from "../host/bus";
+import { guards } from "../host/bus";
 
 export default function Characters(props: {
   host: HostAdapter;
@@ -571,22 +580,7 @@ function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
   useEffect(() => {
     if (base && draft) host.drafts.set("character:" + id, { base: clone(base), draft: clone(draft) });
   }, [base, draft, id]);
-  useEffect(() => {
-    const guard: Guard = ({ preserveDrafts }) =>
-      preserveDrafts || !dirty || confirm("角色有未保存修改，放弃这些修改？");
-    const unload = (e: BeforeUnloadEvent) => {
-      if (dirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    const off = guards.add(guard);
-    window.addEventListener("beforeunload", unload);
-    return () => {
-      off();
-      window.removeEventListener("beforeunload", unload);
-    };
-  }, [dirty]);
+  useLeaveGuard(dirty, ({ preserveDrafts }) => preserveDrafts || confirm("角色有未保存修改，放弃这些修改？"));
   if (!draft || !base)
     return (
       <>

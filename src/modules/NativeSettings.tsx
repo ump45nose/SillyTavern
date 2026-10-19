@@ -117,7 +117,6 @@ function NativeSelect({ node, host }: { node: HTMLSelectElement; host: HostAdapt
         node.value = e.target.value;
         node.dispatchEvent(new Event("input", { bubbles: true }));
         node.dispatchEvent(new Event("change", { bubbles: true }));
-        host.refresh();
       }}
     >
       {[...node.options].map((o, i) => (

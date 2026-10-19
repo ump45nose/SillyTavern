@@ -274,7 +274,8 @@ export class AddonBridge {
             };
           await bridge.persist(key, metadata, copy(c.chat));
           c.chatMetadata.workbench_addons = metadata.workbench_addons;
-          host.refresh();
+          // Add-on views re-read metadata on any non-chat change; the chat index is untouched.
+          host.invalidate("session");
         }),
       config: () => copy(host.prefs().addonSettings?.[id] || {}),
       saveConfig: async (data: Data) => {
@@ -423,7 +424,7 @@ export class AddonBridge {
         message.swipe_info[swipe].extra = copy(extra);
       const element = document.querySelector(`.mes[mesid="${target.id}"]`);
       if (element) c.appendMediaToMessage(message, window.jQuery(element));
-      this.host.refresh();
+      this.host.updateMessage(target.id);
       return true;
     });
   }

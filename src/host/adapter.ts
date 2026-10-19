@@ -62,7 +62,8 @@ export class HostAdapter extends HostCore {
       CHARACTER_RENAMED: ["characters"],
       CHARACTER_DELETED: ["characters"],
       CHARACTER_SELECTED: ["characters"],
-      SETTINGS_UPDATED: sliceNames,
+      // Settings never touch ctx().chat; rebuilding the chat index on every settings save is waste.
+      SETTINGS_UPDATED: sliceNames.filter((name) => name !== "chat"),
       MAIN_API_CHANGED: resource,
       OAI_PRESET_CHANGED_AFTER: resource,
       PRESET_CHANGED: resource,
@@ -144,14 +145,11 @@ export class HostAdapter extends HostCore {
       this.drafts.clear();
       return true;
     };
-    const unload = (e: BeforeUnloadEvent) => {
-      if (this.dirtyDraftKeys().length || this.resourceAction) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", unload);
-    this.cleanup.push(guards.add(guard), () => window.removeEventListener("beforeunload", unload));
+    // Cached drafts outlive the editors that made them, so the host keeps its own unload hold.
+    this.cleanup.push(
+      guards.add(guard),
+      guards.hold(() => this.resourceAction || this.dirtyDraftKeys().length > 0),
+    );
     this.refresh();
   }
   destroy() {

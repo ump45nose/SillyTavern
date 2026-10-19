@@ -37,7 +37,6 @@ export const groupMethods = {
     if (value === "forbid") p.external_media_forbidden_overrides.push(id);
     await this.persistSettings();
     if (c.groupId === id) await c.reloadCurrentChat();
-    this.refresh();
   },
   groupOverrides(this: HostAdapter) {
     const m = ctx().chatMetadata;
@@ -63,13 +62,11 @@ export const groupMethods = {
       force: false,
     });
     Object.assign(c.chatMetadata, edited);
-    this.refresh();
     return edited;
   },
   async openGroup(this: HostAdapter, id: string) {
     if (this.isBusy()) throw new Error("生成完成后再切换群组。");
     await (await internal("groupChats")).openGroupById(id);
-    this.refresh();
   },
   async saveGroup(this: HostAdapter, base: Data | null, draft: Data) {
     const module = await internal("groupChats");
@@ -96,12 +93,12 @@ export const groupMethods = {
         });
       } catch (e) {
         await module.getGroups();
-        this.refresh();
+        this.invalidate("session");
         throw e;
       }
     }
     await module.getGroups();
-    this.refresh();
+    this.invalidate("session");
     return this.groups();
   },
   async deleteGroup(this: HostAdapter, id: string) {
@@ -109,6 +106,6 @@ export const groupMethods = {
     const module = await internal("groupChats");
     if (ctx().groupId === id) await module.resetSelectedGroup();
     await module.getGroups();
-    this.refresh();
+    this.invalidate("session");
   },
 };

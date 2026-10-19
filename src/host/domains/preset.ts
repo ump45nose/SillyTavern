@@ -1,6 +1,6 @@
 import type { HostAdapter } from "../adapter";
 import type { Data } from "../types";
-import { clone, mergeEdits, validatePreset } from "../model";
+import { clone, mergeEdits, sameData, validatePreset } from "../model";
 import { ctx } from "../internals";
 
 /** Presets, preset bindings to connections/models, and prompt token composition. */
@@ -44,10 +44,18 @@ export const presetMethods = {
     if (!name || manager.getAllPresets().includes(name)) throw new Error("预设名称不能为空或重复");
     if (data) validatePreset(data);
     await manager.savePreset(name, data);
-    this.refresh();
+    this.invalidate("resources", "session");
     return manager.getSelectedPresetName();
   },
   async deletePreset(this: HostAdapter, name: string) {
+    try {
+      await this.removePreset(name);
+    } finally {
+      this.invalidate("resources", "session");
+    }
+  },
+  /** deletePreset without invalidating, for callers that delete several and invalidate once. */
+  async removePreset(this: HostAdapter, name: string) {
     const manager = ctx().getPresetManager(),
       { presets, preset_names } = manager.getPresetList();
     const wasActive = manager.getSelectedPresetName() === name;
@@ -67,11 +75,9 @@ export const presetMethods = {
       }
       select.html(previousOptions);
       await manager.selectPreset(previousSelection);
-      this.refresh();
       throw error;
     }
     if (wasActive && manager.getAllPresets().length) await manager.selectPreset(manager.getSelectedPreset());
-    this.refresh();
   },
   /**
    * The running chat-completion settings in the shape of preset `name`, or null when `name` is not
@@ -79,24 +85,35 @@ export const presetMethods = {
    * apply to these settings at once, as in SillyTavern; "更新预设" writes them into the file.
    */
   livePreset(this: HostAdapter, name: string): Data | null {
+    return this.runningPreset(name)?.live ?? null;
+  },
+  /**
+   * livePreset beside the preset file it was read from, from one read of the file. Unmapped keys share
+   * the file's values, so neither object may be mutated.
+   */
+  runningPreset(this: HostAdapter, name: string): { live: Data; file: Data } | null {
     const o = this.openai,
       map: Record<string, [string, string, boolean, boolean]> | undefined = o?.settingsToUpdate;
     if (ctx().mainApi !== "openai" || !map || !o.oai_settings || !o.getChatCompletionPreset) return null;
     if (ctx().getPresetManager().getSelectedPresetName() !== name) return null;
     const file = this.presetData(name),
-      live = o.oai_settings;
+      live: Data = { ...file },
+      settings = o.oai_settings;
     for (const key of Object.keys(file)) {
       const setting = map[key]?.[1];
-      if (setting && live[setting] !== undefined) file[key] = clone(live[setting]);
+      if (setting && settings[setting] !== undefined) live[key] = clone(settings[setting]);
     }
-    return file;
+    return { live, file };
   },
   /** Keys where the running settings differ from the saved preset file. */
-  presetChanges(this: HostAdapter, name: string) {
-    const live = this.livePreset(name);
-    if (!live) return [];
-    const file = this.presetData(name);
-    return Object.keys(file).filter((k) => JSON.stringify(live[k]) !== JSON.stringify(file[k]));
+  presetChanges(
+    this: HostAdapter,
+    name: string,
+    running: { live: Data; file: Data } | null = this.runningPreset(name),
+  ): string[] {
+    if (!running) return [];
+    const { live, file } = running;
+    return Object.keys(file).filter((k) => !sameData(live[k], file[k]));
   },
   /** Applies preset fields to the running settings through SillyTavern's own controls. */
   applyPreset(this: HostAdapter, patch: Data) {
@@ -138,7 +155,7 @@ export const presetMethods = {
     const preset = { ...this.presetData(name), ...clone(o.getChatCompletionPreset(o.oai_settings)) };
     await ctx().getPresetManager().savePreset(name, preset);
     this.resourceVersions.preset++;
-    this.refresh();
+    this.invalidate("resources");
   },
   /** Reapplies the preset file to the running settings, dropping changes not written to it. */
   async revertPreset(this: HostAdapter) {
@@ -152,13 +169,13 @@ export const presetMethods = {
       window.jQuery("#settings_preset_openai").trigger("change");
     });
     this.resourceVersions.preset++;
-    this.refresh();
+    this.invalidate("resources");
   },
   async savePreset(this: HostAdapter, name: string, base: Data, draft: Data) {
     validatePreset(draft);
     const merged = mergeEdits(base, draft, this.presetData(name));
     await ctx().getPresetManager().savePreset(name, merged);
-    this.refresh();
+    this.invalidate("resources");
     return merged;
   },
   traceComposition(this: HostAdapter) {
