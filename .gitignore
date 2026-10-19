@@ -6,3 +6,4 @@ artifacts/
 *.log
 extension/dist/
 .DS_Store
+server/workbench-sync/dist/
