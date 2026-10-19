@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { lazyChunk } from "./lazyChunk";
 import {
   Download,
@@ -15,10 +15,8 @@ import type { HostAdapter } from "../host/adapter";
 import type { Data, SettingsPage } from "../host/types";
 import { Popover } from "./Popover";
 import { Empty, Loading, Notice, useTask, useHostSlices } from "./common";
-import { addonEnabled } from "../addons/catalog";
-import { pinnedTools, resolveTool } from "../host/tools";
-import { composerTools, toolIcon } from "./ToolIcon";
-import { useTools } from "./useTools";
+import { toolIcon } from "./ToolIcon";
+import { useComposerTools } from "./useTools";
 const NativeSettings = lazyChunk(() => import("../modules/NativeSettings"));
 export type ComposerPopup = {
   kind: "menu" | "tools" | "quick" | "chat" | "files" | "rename" | "pinned" | "tool";
@@ -41,7 +39,6 @@ export function ComposerPopovers({
   activate: (id: string, anchor: HTMLElement) => void;
   exiting?: boolean;
 }) {
-  useTools();
   const [nativeEditor, setNativeEditor] = useState<"note" | "cfg" | null>(
     popup.kind === "tool" ? (popup.toolId?.endsWith(":option_toggle_AN") ? "note" : "cfg") : null,
   );
@@ -52,6 +49,7 @@ export function ComposerPopovers({
     [files, setFiles] = useState<Data[]>([]),
     [name, setName] = useState(snap.chatName),
     [renaming, setRenaming] = useState<string | null>(popup.kind === "rename" ? snap.chatName : null);
+  const toolRow = useComposerTools(host, snap.busy);
   useEffect(() => {
     if (popup.kind === "files") task.run(async () => setFiles(await host.recentChats()));
   }, [popup.kind, snap.chatName, snap.groupId]);
@@ -167,20 +165,11 @@ export function ComposerPopovers({
         </div>
       ) : popup.kind === "pinned" ? (
         <div className="wb-pop-list">
-          {[...composerTools, ...pinnedTools(host.prefs().pinnedTools)]
-            .filter(
-              (tool) =>
-                popup.toolIds?.includes(tool.id) &&
-                (tool.id !== "wb:export" || addonEnabled(host.prefs(), "record-export")),
-            )
+          {toolRow.tools
+            .filter((tool) => popup.toolIds?.includes(tool.id))
             .map((tool) => {
               const Icon = toolIcon(tool.id, tool.label),
-                entry = resolveTool(tool.id),
-                native = tool.id.startsWith("builtin:") || tool.id === "wb:export",
-                disabled = native
-                  ? snap.busy &&
-                    ["builtin:continue", "builtin:regenerate", "builtin:impersonate"].includes(tool.id)
-                  : !entry || entry.disabled;
+                disabled = toolRow.disabled(tool.id);
               return (
                 <button
                   className="wb-pop-row"

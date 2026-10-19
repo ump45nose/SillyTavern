@@ -1,5 +1,5 @@
 import { Select } from "../ui/Select";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Activity, ArrowUpRight, Download, Info } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Dialog, Empty } from "../ui/common";

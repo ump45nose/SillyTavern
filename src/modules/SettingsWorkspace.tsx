@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { lazyChunk } from "../ui/lazyChunk";
 import {
   ArrowLeft,
@@ -7,7 +7,6 @@ import {
   Image,
   Plug,
   Puzzle,
-  Save,
   Settings,
   SlidersHorizontal,
   Table2,
@@ -29,7 +28,6 @@ const ComponentSettings = lazyChunk(() => import("./ComponentSettings")),
   Groups = lazyChunk(() => import("./Groups")),
   PersonaManager = lazyChunk(() => import("./PersonaManager")),
   ResourceManager = lazyChunk(() => import("./ResourceManager")),
-  Resources = lazyChunk(() => import("./Resources")),
   Characters = lazyChunk(() => import("./Characters")),
   Database = lazyChunk(() => import("./Database"));
 const AddonSettings = lazyChunk(() => import("./AddonSettings"));
@@ -67,8 +65,9 @@ export default function SettingsWorkspace({
   /** Phones navigate in two levels: every page's groups as one list, then a single group with back. */
   mobile?: boolean;
 }) {
-  const snap = useHostSlices(host, withoutChat),
-    database = useDatabase(host),
+  // Subscribed for the re-render: host state such as pending resource actions is read directly.
+  useHostSlices(host, withoutChat);
+  const database = useDatabase(host),
     // 数据库 is the database plug-in's page, listed while the plug-in is installed.
     pages = settingsPages.filter(([id]) => id !== "database" || database.available),
     [closing, setClosing] = useState(false),
@@ -362,7 +361,7 @@ export default function SettingsWorkspace({
 }
 
 /** Instant settings are written by SillyTavern's debounced save; ST confirms a write with SETTINGS_UPDATED. */
-const instantSettings = ".wb-designed-settings,.wb-native-slot,.wb-native-settings-slot";
+const instantSettings = ".wb-designed-settings,.wb-native-settings-slot";
 /**
  * Save state of the instant (native) settings in place of a save button: 已保存, 保存中, or
  * 保存失败 with a retry that writes the settings directly.

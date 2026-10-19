@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { X, Search, LoaderCircle, ChevronRight } from "./icons";
+import { X, Search, LoaderCircle } from "./icons";
 export { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Slice, Slices } from "../host/types";
@@ -206,28 +206,5 @@ export function Loading() {
     <Empty>
       <LoaderCircle size={20} className="wb-spin" /> 正在载入…
     </Empty>
-  );
-}
-export function Row({
-  name,
-  detail,
-  active,
-  onClick,
-  children,
-}: {
-  name: string;
-  detail?: string;
-  active?: boolean;
-  onClick: () => void;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className={`wb-row ${active ? "is-active" : ""}`}>
-      <button className="wb-row-main" onClick={onClick}>
-        <strong>{name}</strong>
-        {detail && <small>{detail}</small>}
-      </button>
-      {children ?? <ChevronRight size={14} />}
-    </div>
   );
 }

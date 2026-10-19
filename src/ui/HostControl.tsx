@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
 export type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;

@@ -2,7 +2,6 @@ import React, { useEffect, useLayoutEffect, useRef } from "react";
 import {
   BookMarked,
   Activity,
-  BookOpen,
   Check,
   ChevronDown,
   ChevronRight,
@@ -15,10 +14,9 @@ import {
 import { createPortal } from "react-dom";
 import type { HostSnapshot, Item, Panel, Resource } from "../host/types";
 import { Empty, IconButton } from "./common";
+import { resourceLabels } from "../host/labels";
 import { usePresence } from "./Motion";
-export const resourceLabels = { connection: "连接", preset: "预设", world: "世界书", persona: "用户设定" };
-const icons = { preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
-const pillIcons = { connection: Plug, ...icons };
+const pillIcons = { connection: Plug, preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
 /** The popover's way into the full panel, named after what the panel lets you do there. */
 const manageLabels: Record<Resource, string> = {
   connection: "管理连接",
@@ -44,7 +42,6 @@ export function Header({
   chooser,
   setChooser,
   goPanel,
-  next,
   select,
   model,
   focus,
@@ -57,7 +54,6 @@ export function Header({
   chooser: Resource | null;
   setChooser: (value: Resource | null) => void;
   goPanel: (panel: Panel, id?: string) => void;
-  next: (kind: Resource) => void;
   select: (kind: Resource, id: string, enabled: boolean) => void;
   model: string;
   focus: () => void;
@@ -269,27 +265,25 @@ function ResourcePills({
   );
 }
 
-/** Both desktop and PWA configuration rows share the same resource actions and selection UI. */
+/** The PWA configuration row: one tile per resource, each opening its chooser sheet. */
 export function ResourceControls({
   snap,
   panel,
   chooser,
   setChooser,
   goPanel,
-  next,
   select,
   model,
-  mobile = false,
 }: Pick<
   Parameters<typeof Header>[0],
-  "snap" | "panel" | "chooser" | "setChooser" | "goPanel" | "next" | "select" | "model"
-> & { mobile?: boolean }) {
+  "snap" | "panel" | "chooser" | "setChooser" | "goPanel" | "select" | "model"
+>) {
   const presence = usePresence(chooser);
   // Phone tiles share the card's width equally; a name that does not fit leaves just the icon.
   const row = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = row.current;
-    if (!mobile || !node) return;
+    if (!node) return;
     const fit = () => {
       for (const tile of node.querySelectorAll<HTMLElement>(".wb-selector")) {
         const text = tile.querySelector<HTMLElement>(".wb-value-text"),
@@ -304,65 +298,36 @@ export function ResourceControls({
     observer.observe(node);
     return () => observer.disconnect();
   });
-  const overlay = (children: React.ReactNode) =>
-    mobile
-      ? createPortal(<div className="wb-ui wb-mobile-resource-popup">{children}</div>, document.body)
-      : children;
   return (
     <div className="wb-contexts" ref={row}>
       {(Object.keys(resourceLabels) as Resource[]).map((kind) => {
         const items = snap.resources[kind],
           selected = items.find((x) => x.id === snap.current[kind]);
-        const Icon = kind === "connection" ? null : icons[kind];
         const value = selected?.name || (kind === "connection" ? model : "未选择");
         const count = kind === "world" ? items.filter((x) => x.active).length : 0;
         return (
           <div className={`wb-selector ${panel === kind || chooser === kind ? "is-active" : ""}`} key={kind}>
-            {!mobile && (
-              <button
-                className="wb-selector-detail"
-                title={`${resourceLabels[kind]}详情`}
-                aria-label={`${resourceLabels[kind]}详情`}
-                onClick={() => goPanel(kind)}
-              >
-                {Icon ? <Icon size={17} /> : <span className={`wb-dot ${snap.online ? "online" : ""}`} />}
-              </button>
-            )}
             {/* A phone tile is one tap target: icon and name open the chooser, whose rows lead on to details. */}
             <button
               className="wb-selector-value"
               title={`${resourceLabels[kind]}：${value}`}
-              aria-label={
-                mobile ? `${resourceLabels[kind]}：${value}${count > 1 ? ` 等 ${count} 本` : ""}` : undefined
-              }
+              aria-label={`${resourceLabels[kind]}：${value}${count > 1 ? ` 等 ${count} 本` : ""}`}
               aria-expanded={chooser === kind}
               aria-controls={`wb-choices-${kind}`}
               onClick={() => setChooser(chooser === kind ? null : kind)}
             >
-              {mobile && (
-                <span className="wb-selector-icon" aria-hidden="true">
-                  {React.createElement(pillIcons[kind], { size: 17 })}
-                  {kind === "connection" && <i className={`wb-dot ${snap.online ? "online" : ""}`} />}
-                </span>
-              )}
+              <span className="wb-selector-icon" aria-hidden="true">
+                {React.createElement(pillIcons[kind], { size: 17 })}
+                {kind === "connection" && <i className={`wb-dot ${snap.online ? "online" : ""}`} />}
+              </span>
               <span key={value + count} className="wb-value-text">
                 {value}
                 {count > 1 ? ` +${count - 1}` : ""}
               </span>
-              {!mobile && <ChevronDown size={13} />}
             </button>
-            {!mobile && (
-              <IconButton
-                title={`下一个${resourceLabels[kind]}`}
-                disabled={snap.busy}
-                onClick={() => next(kind)}
-              >
-                <ChevronRight size={16} />
-              </IconButton>
-            )}
             {presence.value === kind &&
-              overlay(
-                <>
+              createPortal(
+                <div className="wb-ui wb-mobile-resource-popup">
                   <button
                     className="wb-pop-dismiss"
                     aria-label="关闭选择框"
@@ -370,8 +335,8 @@ export function ResourceControls({
                   />
                   <div
                     className="wb-popover"
-                    role={mobile ? "dialog" : undefined}
-                    aria-label={mobile ? `${resourceLabels[kind]}选择` : undefined}
+                    role="dialog"
+                    aria-label={`${resourceLabels[kind]}选择`}
                     inert={presence.exiting}
                     data-wb-exiting={presence.exiting || undefined}
                     id={`wb-choices-${kind}`}
@@ -379,15 +344,9 @@ export function ResourceControls({
                     <div className="wb-section-title">
                       {resourceLabels[kind]}
                       <small>选择 · 查看详情</small>
-                      {mobile && (
-                        <button
-                          className="wb-icon"
-                          aria-label="关闭资源选择"
-                          onClick={() => setChooser(null)}
-                        >
-                          <X size={18} />
-                        </button>
-                      )}
+                      <button className="wb-icon" aria-label="关闭资源选择" onClick={() => setChooser(null)}>
+                        <X size={18} />
+                      </button>
                     </div>
                     {items.map((item) => (
                       <div
@@ -415,7 +374,8 @@ export function ResourceControls({
                       查看全部与编辑 <ChevronRight size={14} />
                     </button>
                   </div>
-                </>,
+                </div>,
+                document.body,
               )}
           </div>
         );

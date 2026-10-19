@@ -7,7 +7,8 @@ import type { ComposerPopup } from "../ComposerPopovers";
  */
 
 export type AddonPanel = "export" | "outline" | "image-gen";
-export type Deep = Panel | "library";
+/** The add-on full editors, which replace the workbench until closed. */
+export type Deep = "outline" | "image-gen" | null;
 export interface Workspace {
   page: SettingsPage;
   group?: string;
@@ -38,7 +39,6 @@ export interface LayoutState {
   workspace: Workspace | null;
   help: boolean;
   railOpen: boolean;
-  tabsOpen: boolean;
 }
 /** Hover-revealed sidebars (useSidebarHover) are transient UI state the model reads but does not own. */
 export interface Hover {
@@ -67,7 +67,6 @@ export type Action =
   | { type: "toggle-popup"; popup: ComposerPopup }
   | { type: "help"; open: boolean }
   | { type: "rail"; open: boolean }
-  | { type: "tabs"; open: boolean }
   /** Manual image input began; a narrow RP stage needs both sidebars out of the way. */
   | { type: "image-input" }
   | { type: "layout-menu"; open: boolean };
@@ -76,8 +75,8 @@ const addonPanels: readonly string[] = ["export", "outline", "image-gen"];
 /** Panels that take the whole right column, without the resource rail. */
 const unrailed: readonly string[] = ["trace", ...addonPanels];
 
-export const isAddonPanel = (panel: Deep): panel is AddonPanel => addonPanels.includes(panel as string);
-export const available = (env: Env, panel: Deep) =>
+export const isAddonPanel = (panel: Panel): panel is AddonPanel => addonPanels.includes(panel as string);
+export const available = (env: Env, panel: Panel) =>
   panel === "database" ? env.database : !isAddonPanel(panel) || env.addons[panel];
 const rp = (s: LayoutState) => s.env.mode === "rp";
 /** RP narrow enough that the sidebars overlay the stage instead of sitting beside it. */
@@ -106,7 +105,6 @@ export function initial(env: Env, prefLeft: boolean): LayoutState {
     workspace: null,
     help: false,
     railOpen: true,
-    tabsOpen: false,
   };
 }
 
@@ -252,8 +250,6 @@ export function reduce(s: LayoutState, a: Action): LayoutState {
       return { ...s, help: a.open, left: a.open && s.env.mobile ? false : s.left };
     case "rail":
       return { ...s, railOpen: a.open };
-    case "tabs":
-      return { ...s, tabsOpen: a.open };
     case "image-input":
       return compactRp(s) ? { ...s, panel: null, left: false } : s;
     case "layout-menu":

@@ -1,5 +1,5 @@
 import { Download, Plus, Upload } from "../ui/icons";
-import React, { useState } from "react";
+import { useState } from "react";
 import type { HostAdapter } from "../host/adapter";
 import { Empty, Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";
 import Resources from "./Resources";

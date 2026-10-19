@@ -26,11 +26,7 @@ export const presetMethods = {
     try {
       await this.select("preset", name);
       // Bindings choose generation settings while keeping the chosen API/model.
-      for (const control of [connection.main, connection.provider, connection.model]) {
-        if (!control) continue;
-        const node = document.getElementById(control.id) as HTMLInputElement | HTMLSelectElement | null;
-        if (node && node.value !== control.value) this.setConnectionControl(control.id, control.value);
-      }
+      this.restoreConnectionControls(connection);
     } finally {
       this.bindingRun = false;
     }

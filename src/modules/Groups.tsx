@@ -1,5 +1,5 @@
-import React, { useLayoutEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Image, MessageSquare, Plus, Save, Trash2, UsersRound } from "../ui/icons";
+import { useLayoutEffect, useState } from "react";
+import { ArrowDown, ArrowUp, Image, MessageSquare, Plus, Trash2, UsersRound } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
 import { Field, IconButton, Notice, SearchBox, useTask, useHostSlices, withoutChat } from "../ui/common";
@@ -7,8 +7,9 @@ import { Check, Fold, SaveBar, useDraft } from "../ui/ResourceControls";
 import { BoundControl } from "../ui/HostControl";
 import { Select } from "../ui/Select";
 export default function Groups({ host }: { host: HostAdapter }) {
-  const snap = useHostSlices(host, withoutChat),
-    task = useTask(),
+  // Subscribed for the re-render: the groups below are read from the host on each render.
+  useHostSlices(host, withoutChat);
+  const task = useTask(),
     groups = host.groups(),
     [id, setId] = useState(groups[0]?.id || ""),
     [creating, setCreating] = useState(false),

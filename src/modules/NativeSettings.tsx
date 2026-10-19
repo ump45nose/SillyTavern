@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { HostAdapter } from "../host/adapter";
 import { Select } from "../ui/Select";

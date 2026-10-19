@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, Plus, RefreshCw, Search, Square, Trash2 } from "../../ui/icons";
 import type { AddonHost } from "../types";
 import type { ExportOptions, ExportRole, ExportSummary, TagStat } from "./xml-export";

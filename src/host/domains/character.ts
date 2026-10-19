@@ -17,9 +17,7 @@ export const characterMethods = {
     form.append("ch_name", name);
     form.append("description", "");
     form.append("first_mes", "");
-    const headers = { ...ctx().getRequestHeaders() };
-    delete headers["Content-Type"];
-    const response = await fetch("/api/characters/create", { method: "POST", headers, body: form });
+    const response = await this.upload("/api/characters/create", form);
     if (!response.ok) throw new Error(`创建角色失败 (${response.status})`);
     const avatar = await response.text();
     await ctx().getCharacters();
@@ -31,9 +29,7 @@ export const characterMethods = {
     form.append("avatar", file);
     form.append("file_type", file.name.split(".").pop() || "");
     form.append("user_name", ctx().name1 || "User");
-    const headers = { ...ctx().getRequestHeaders() };
-    delete headers["Content-Type"];
-    const response = await fetch("/api/characters/import", { method: "POST", headers, body: form });
+    const response = await this.upload("/api/characters/import", form);
     if (!response.ok) throw new Error(`导入角色失败 (${response.status})`);
     const data = await response.json();
     if (data.error) throw new Error("角色文件无法解析。");
@@ -45,9 +41,7 @@ export const characterMethods = {
     const form = new FormData();
     form.append("avatar", file);
     form.append("avatar_url", id);
-    const headers = { ...ctx().getRequestHeaders() };
-    delete headers["Content-Type"];
-    const response = await fetch("/api/characters/edit-avatar", { method: "POST", headers, body: form });
+    const response = await this.upload("/api/characters/edit-avatar", form);
     if (!response.ok) throw new Error(`头像保存失败 (${response.status})`);
     await ctx().getCharacters();
     this.refresh();

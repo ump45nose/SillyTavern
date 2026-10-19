@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Search, Upload, SquareArrowOutUpRight, X } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Item } from "../host/types";
@@ -6,6 +6,7 @@ import { Dialog, Empty, Notice, useTask, useHostSlices, withoutChat } from "../u
 import Resources from "./Resources";
 import World from "./World";
 import { guards } from "../host/bus";
+import { resourceLabels } from "../host/labels";
 type Kind = "preset" | "connection" | "world";
 export default function ResourceManager({
   host,
@@ -27,7 +28,7 @@ export default function ResourceManager({
   const snap = useHostSlices(host, withoutChat),
     task = useTask(),
     items = snap.resources[kind],
-    label = { preset: "预设", connection: "连接", world: "世界书" }[kind];
+    label = resourceLabels[kind];
   const [id, setId] = useState(initial || snap.current[kind] || items[0]?.id || ""),
     [query, setQuery] = useState(""),
     [confirmDelete, setConfirmDelete] = useState(false),

@@ -41,28 +41,10 @@
     color: var(--wb-accent);
     border-bottom-color: var(--wb-accent);
   }
-  .wb-selector > button.wb-selector-detail {
-    flex: 0 0 34px;
-  }
-  .wb-ui .wb-selector > button.wb-selector-detail:is(:hover, :focus-visible),
-  .wb-ui .wb-selector > button.wb-selector-detail:active,
   .wb-ui .wb-selector > button.wb-selector-value:is(:hover, :focus-visible),
   .wb-ui .wb-selector > button.wb-selector-value:active {
     background: transparent;
     color: var(--wb-accent);
-  }
-  .wb-selector-detail .wb-dot {
-    transition: box-shadow 160ms;
-  }
-  .wb-selector-detail:is(:hover, :focus-visible) .wb-dot {
-    box-shadow: 0 0 0 4px color-mix(in srgb, #628671 12%, transparent);
-  }
-  .wb-selector-detail > svg {
-    transition: color 160ms;
-  }
-  body.wb-active .wb-ui .wb-selector-detail:is(:hover, :focus-visible) svg,
-  body.wb-active .wb-ui .wb-selector-detail:is(:hover, :focus-visible) svg * {
-    color: var(--wb-accent) !important;
   }
   .wb-selector.is-active {
     border-color: color-mix(in srgb, var(--wb-accent) 48%, var(--wb-line));
@@ -227,15 +209,14 @@
     background: var(--wb-accent);
   }
   /* A resource row has one hover surface; nested controls never paint a second. */
-  .wb-ui :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row) button:is(:hover, :focus-visible),
-  .wb-ui :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row) button:active {
+  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row) button:is(:hover, :focus-visible),
+  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row) button:active {
     background: transparent;
   }
-  .wb-ui :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row):is(:hover, :focus-visible) {
+  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row):is(:hover, :focus-visible) {
     background: color-mix(in srgb, var(--wb-selected) 28%, var(--wb-surface));
   }
-  .wb-ui
-    :is(.wb-resource-choice, .wb-row, .wb-prompt-row, .wb-quick-row).is-active:is(:hover, :focus-visible) {
+  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row).is-active:is(:hover, :focus-visible) {
     background: var(--wb-selected);
   }
   /* Same quiet scroll thumb in reading, editors, popovers and leased controls. */

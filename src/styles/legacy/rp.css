@@ -141,9 +141,6 @@
       gap: 5px;
       transform: none;
     }
-    body.wb-rp .wb-selector-detail {
-      width: 26px !important;
-    }
     body.wb-rp .wb-selector-value {
       font-size: 12px !important;
     }

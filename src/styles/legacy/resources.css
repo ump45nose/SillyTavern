@@ -242,13 +242,6 @@
     margin: 8px 7px;
     font-size: 11px;
   }
-  .wb-connection-detail .wb-native-caption {
-    display: none;
-  }
-  .wb-connection-detail .wb-native-slot {
-    border: 0;
-    padding: 0;
-  }
   .wb-resource-v3 .wb-preset-common {
     padding: 10px 20px 9px;
     flex: none;

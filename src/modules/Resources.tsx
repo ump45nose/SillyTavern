@@ -24,16 +24,10 @@ import { clone, validatePreset } from "../host/model";
 import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat } from "../ui/common";
 import { useTokenCounts } from "../ui/tokens";
 import { Check, Fold, SaveBar, Switch, useDraft } from "../ui/ResourceControls";
-import { actionLabels } from "../host/labels";
+import { actionLabels, resourceLabels } from "../host/labels";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
 import { bus, guards } from "../host/bus";
-export const labels: Record<Resource, string> = {
-  connection: "连接",
-  preset: "预设",
-  world: "世界书",
-  persona: "用户设定",
-};
 const safeToLeave = () => guards.check();
 export default function Resources({
   host,
@@ -132,7 +126,7 @@ export default function Resources({
         <div className="wb-panel-heading-copy">
           <div className="wb-panel-heading-line">
             <ResourcePicker
-              label={labels[kind]}
+              label={resourceLabels[kind]}
               items={snap.resources[kind]}
               id={id}
               active={snap.current[kind]}
@@ -160,8 +154,8 @@ export default function Resources({
           {current && snap.current[kind] !== id && (
             <button
               className="wb-panel-action"
-              aria-label={`使用此${labels[kind]}`}
-              title={`使用此${labels[kind]}`}
+              aria-label={`使用此${resourceLabels[kind]}`}
+              title={`使用此${resourceLabels[kind]}`}
               disabled={snap.busy || task.busy}
               onClick={() => apply(id)}
             >
@@ -407,6 +401,35 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
       ))}
     </Select>
   );
+  // The panel's fold and the settings page's side column offer the same persona actions.
+  const manage = (
+    <>
+      <button disabled={edit.dirty} onClick={exportPersona}>
+        <Download size={14} />
+        导出
+      </button>
+      <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
+        <RefreshCw size={14} />
+        同步名称
+      </button>
+      <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
+        <ChartNoAxesColumn size={14} />
+        统计
+      </button>
+      <button onClick={() => action("#personas_backup")}>
+        <Download size={14} />
+        备份全部身份
+      </button>
+      <button onClick={() => action("#personas_restore")}>
+        <Upload size={14} />
+        恢复备份
+      </button>
+      <button className="is-danger" disabled={edit.dirty} onClick={() => action("#persona_delete_button")}>
+        <Trash2 size={14} />
+        删除
+      </button>
+    </>
+  );
   if (!deep) {
     // Board "PanelPersona": who uses this persona first (applies at once), then what it says, then the rest.
     const locks = [
@@ -525,36 +548,7 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
             </div>
           </section>
           <Fold title="管理与偏好" hint="导出 · 统计 · 删除">
-            <div className="wb-persona-manage">
-              <button disabled={edit.dirty} onClick={exportPersona}>
-                <Download size={14} />
-                导出
-              </button>
-              <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
-                <RefreshCw size={14} />
-                同步名称
-              </button>
-              <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
-                <ChartNoAxesColumn size={14} />
-                统计
-              </button>
-              <button onClick={() => action("#personas_backup")}>
-                <Download size={14} />
-                备份全部身份
-              </button>
-              <button onClick={() => action("#personas_restore")}>
-                <Upload size={14} />
-                恢复备份
-              </button>
-              <button
-                className="is-danger"
-                disabled={edit.dirty}
-                onClick={() => action("#persona_delete_button")}
-              >
-                <Trash2 size={14} />
-                删除
-              </button>
-            </div>
+            <div className="wb-persona-manage">{manage}</div>
             {[
               ["persona_show_notifications", "切换身份时显示通知"],
               ["persona_allow_multi_connections", "允许角色关联多个身份"],
@@ -647,32 +641,7 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
               </Select>
             </label>
           </section>
-          <div className="wb-persona-tools">
-            <button disabled={edit.dirty} onClick={exportPersona}>
-              <Download size={14} />
-              导出
-            </button>
-            <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
-              <RefreshCw size={14} />
-              同步名称
-            </button>
-            <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
-              <ChartNoAxesColumn size={14} />
-              统计
-            </button>
-            <button onClick={() => action("#personas_backup")}>
-              <Download size={14} />
-              备份全部身份
-            </button>
-            <button
-              className="is-danger"
-              disabled={edit.dirty}
-              onClick={() => action("#persona_delete_button")}
-            >
-              <Trash2 size={14} />
-              删除
-            </button>
-          </div>
+          <div className="wb-persona-tools">{manage}</div>
         </div>
         <div className="wb-persona-main">
           <label className="wb-persona-line">

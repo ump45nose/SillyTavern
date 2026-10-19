@@ -18,8 +18,7 @@ export const nativeMethods = {
   leaseNative(this: HostAdapter, id: string, container: HTMLElement) {
     const node = document.getElementById(id);
     if (!node) throw new Error(`酒馆未提供 ${id} 控件。`);
-    if (node.closest(".wb-native-settings-slot,.wb-native-slot"))
-      throw new Error("此设置已在其他编辑区打开。");
+    if (node.closest(".wb-native-settings-slot")) throw new Error("此设置已在其他编辑区打开。");
     return this.lease(node, container, "Workbench native settings origin");
   },
 };

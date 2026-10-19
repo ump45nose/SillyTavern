@@ -1,4 +1,4 @@
-import React, { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { ChevronRight, UsersRound } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { useHostSlices } from "./common";
