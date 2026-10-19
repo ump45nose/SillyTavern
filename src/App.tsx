@@ -41,6 +41,7 @@ import { ResourceRailContext } from "./ui/ResourcePicker";
 import { ClickFeedback, usePresence } from "./ui/Motion";
 import { Header } from "./ui/Header";
 import { Composer } from "./ui/Composer";
+import { ComposerOptions, OptionsPopover } from "./ui/StoryOptions";
 import { useSidebarHover } from "./ui/useSidebarHover";
 import { useScrollbars } from "./ui/useScrollbars";
 import { Navigation } from "./ui/Navigation";
@@ -115,7 +116,8 @@ export default function App({
     [width, setWidth] = useState(window.innerWidth),
     [renderedPanel, setRenderedPanel] = useState<Panel>(null),
     [railTarget, setRailTarget] = useState<HTMLElement | null>(null),
-    [externalError, setExternalError] = useState("");
+    [externalError, setExternalError] = useState(""),
+    [optionsAnchor, setOptionsAnchor] = useState<HTMLElement | null>(null);
   const prefs = host.prefs(),
     mobile = width < 1024,
     rp = prefs.layout === "rp";
@@ -251,6 +253,11 @@ export default function App({
     }
     if (id === "builtin:quick") {
       dispatch({ type: "popup", popup: { kind: "quick", anchor } });
+      return;
+    }
+    if (id === "builtin:options") {
+      // A phone's tool sheet closes as this opens, so the settings sit over the composer instead.
+      setOptionsAnchor(mobile ? document.getElementById("send_form")! : anchor);
       return;
     }
     const selectors: Record<string, string> = {
@@ -855,6 +862,10 @@ export default function App({
         >
           <Shortcuts host={host} />
         </Dialog>
+      )}
+      {!rp && <ComposerOptions host={host} />}
+      {optionsAnchor && (
+        <OptionsPopover host={host} anchor={optionsAnchor} onClose={() => setOptionsAnchor(null)} />
       )}
       <Composer
         host={host}

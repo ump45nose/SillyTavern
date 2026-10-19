@@ -8,6 +8,7 @@ import {
   FileOutput,
   Image,
   Languages,
+  Lightbulb,
   MessagesSquare,
   NotebookPen,
   Paperclip,
@@ -27,12 +28,14 @@ export const composerTools = [
   { id: "builtin:quick", label: "快速回复" },
   { id: "builtin:impersonate", label: actionLabels.impersonate },
   { id: "builtin:attachment", label: "附件" },
+  { id: "builtin:options", label: "剧情选项" },
 ];
 export function toolIcon(id: string, label = "") {
   if (id === "builtin:continue") return Play;
   if (id === "builtin:regenerate") return RotateCcw;
   if (id === "builtin:quick") return MessagesSquare;
   if (id === "builtin:impersonate") return UserRoundPen;
+  if (id === "builtin:options") return Lightbulb;
   if (id === "wb:export") return FileOutput;
   const key = (id + " " + label).toLowerCase();
   if (/bank|manageattachments/.test(key)) return Database;

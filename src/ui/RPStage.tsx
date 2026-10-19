@@ -18,6 +18,7 @@ import {
   Square,
   X,
   ImagePlus,
+  Lightbulb,
 } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { boundedPreference } from "../host/rp";
@@ -27,6 +28,7 @@ import { ReadingPresentation } from "./Reading";
 import { beginImage } from "./AddonControls";
 import { addonEnabled } from "../addons/catalog";
 import { RPAppearance } from "./RPAppearance";
+import { OptionsPopover, useStoryOptions } from "./StoryOptions";
 import { motionAllowed } from "./Motion";
 import { bus } from "../host/bus";
 import { actionLabels } from "../host/labels";
@@ -635,6 +637,8 @@ export function RPStage({
     band.addEventListener("wheel", wheel, { passive: false });
     return () => band.removeEventListener("wheel", wheel);
   }, [mobile, history]);
+  const options = useStoryOptions(host, () => reply()),
+    [optionsAnchor, setOptionsAnchor] = useState<HTMLElement | null>(null);
   const tools = (
     <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
       {host.isGenerating() && (
@@ -744,6 +748,15 @@ export function RPStage({
             </button>
           )}
           <span className="wb-rp-tools-rule" aria-hidden="true" />
+          <button
+            className="wb-rp-tool"
+            aria-label="剧情选项"
+            title="剧情选项"
+            aria-expanded={!!optionsAnchor}
+            onClick={(e) => setOptionsAnchor(optionsAnchor ? null : e.currentTarget)}
+          >
+            <Lightbulb size={16} />
+          </button>
           <RPAppearance host={host} />
           <button
             className="wb-rp-tool"
@@ -855,8 +868,10 @@ export function RPStage({
         inert={isHidden || history}
         aria-label="RP 对白与输入"
       >
-        {!expanded && !!replies.length && (
+        {!expanded && options.detail && <div className="wb-rp-option-detail">{options.detail}</div>}
+        {!expanded && (!!replies.length || !!options.items.length) && (
           <div className="wb-rp-replies" role="group" aria-label="建议回应">
+            {options.chips}
             {replies.map((qr) => (
               <button
                 key={qr.key}
@@ -927,6 +942,9 @@ export function RPStage({
         )}
         {compose && !mobile && sendRow && createPortal(tools, sendRow)}
       </section>
+      {optionsAnchor && (
+        <OptionsPopover host={host} anchor={optionsAnchor} onClose={() => setOptionsAnchor(null)} />
+      )}
       {!isHidden && !mobile && (
         <button
           className="wb-rp-corner wb-rp-log-toggle"

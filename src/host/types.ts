@@ -42,6 +42,8 @@ export interface Preferences {
   messageMeta?: "hover" | "always" | "never";
   /** Workbench color scheme; "system" follows prefers-color-scheme (default light). */
   theme?: "light" | "dark" | "system";
+  /** The instruction asking the model for story options; empty is the default one. */
+  optionsPrompt?: string;
   /** Reveal a sidebar while the pointer rests at the window edge (default on). */
   edgeHover?: boolean;
   bindings: Record<string, string>;
