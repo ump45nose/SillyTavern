@@ -215,7 +215,14 @@ export const chatMethods = {
     const node = nativeNodes.input as HTMLTextAreaElement;
     node.value = text;
     node.dispatchEvent(new Event("input", { bubbles: true }));
+    this.focusInput(text.length);
+  },
+  /** Puts the caret in the native input. The phone leaves it to the user's tap, so the keyboard
+   *  opens when they start typing instead of covering the page each time the input is entered. */
+  focusInput(this: HostAdapter, caret?: number) {
+    if (document.body.classList.contains("wb-mobile")) return;
+    const node = nativeNodes.input as HTMLTextAreaElement;
     node.focus();
-    node.setSelectionRange(text.length, text.length);
+    if (caret !== undefined) node.setSelectionRange(caret, caret);
   },
 };

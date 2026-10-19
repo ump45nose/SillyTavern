@@ -268,7 +268,7 @@ export function RPStage({
     if (inertBefore.current?.sheld !== isHidden) sheld.inert = isHidden;
     if (inertBefore.current?.form !== (history || isHidden)) form.inert = history || isHidden;
     inertBefore.current = { sheld: isHidden, form: history || isHidden };
-    if (focusInput.current && compose && !history) document.getElementById("send_textarea")?.focus();
+    if (focusInput.current && compose && !history) host.focusInput();
     focusInput.current = false;
     document.body.style.setProperty("--wb-rp-text", textSize + "px");
     document.body.style.setProperty("--wb-rp-width", String(dialogWidth / 100));

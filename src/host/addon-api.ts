@@ -181,9 +181,7 @@ export class AddonBridge {
       end = input.selectionEnd;
     input.value = mode === "replace" ? text : input.value.slice(0, start) + text + input.value.slice(end);
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.focus();
-    const position = mode === "replace" ? text.length : start + text.length;
-    input.setSelectionRange(position, position);
+    this.host.focusInput(mode === "replace" ? text.length : start + text.length);
     bus.emit("image-compose");
   }
   async write(text: string | null, signal: AbortSignal, allowDraft = false): Promise<StoryReply> {
