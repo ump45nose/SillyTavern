@@ -15,10 +15,11 @@ try {
  assert.equal(await page.locator('.wb-nav-footer button').count(),3);
  // Six core panels plus the three bundled add-ons (export, outline, image), enabled by default.
  assert.equal(await page.locator('.wb-panel-tabs button').count(),9);
- assert.equal(await page.locator('.wb-floor-list .wb-nav-row').count(),Math.min(5,await page.evaluate(()=>workbench.host.snapshot().messages.length)));
+ const floors=await page.evaluate(()=>{const list=document.querySelector('.wb-floor-list');return {count:workbench.host.snapshot().messages.length,height:list.getBoundingClientRect().height,rows:list.querySelectorAll('.wb-nav-row').length,current:list.querySelectorAll('.wb-nav-row.is-current').length};});
+ assert.equal(floors.height,floors.count*30,JSON.stringify(floors));assert(floors.rows<=floors.count&&floors.current===Math.min(1,floors.count),JSON.stringify(floors));
  assert.equal(await page.locator('.wb-chat-name').textContent(),await page.evaluate(()=>String(SillyTavern.getContext().chatId).replace(/\.jsonl$/,'')));
  assert.equal(await page.locator('#wb-nav-outline').count(),1);
- pass('real chat name, recent five floors, outline section and the settings footer');
+ pass('real chat name, every floor in a windowed list, outline section and the settings footer');
  const geometry=async()=>page.evaluate(()=>{
   const r=s=>{const b=document.querySelector(s).getBoundingClientRect();return {x:b.x,y:b.y,w:b.width,h:b.height,right:b.right,bottom:b.bottom};};
   const actions=[...document.querySelectorAll('.wb-composer-actions button')].map(x=>x.getBoundingClientRect());

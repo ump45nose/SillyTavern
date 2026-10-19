@@ -15,7 +15,7 @@ try{
   {role:'assistant',message:'信封背面，写着一个早已从地图上消失的地名。\n\n“天亮之前，灯塔会再亮一次。”她的手指停在信纸的折痕上，窗外的水汽渐渐模糊了旧码头的轮廓。'},
   {role:'user',message:'我推开窗，朝港口望去。'},
   {role:'assistant',message:'海面上没有船。雾里的汽笛却越来越近，像一封迟到了二十年的回信。'}]);});await settle();
- assert.deepEqual(await page.locator('.wb-nav-footer button').evaluateAll(ns=>ns.map(n=>n.textContent||n.getAttribute('aria-label'))),['设置','角色管理','快捷键']);assert.equal(await page.locator('.wb-floor-list .wb-nav-row').count(),5);assert.equal(await page.locator('#wb-nav-outline .wb-nav-toggle').getAttribute('aria-expanded'),'false');
+ assert.deepEqual(await page.locator('.wb-nav-footer button').evaluateAll(ns=>ns.map(n=>n.textContent||n.getAttribute('aria-label'))),['设置','角色管理','快捷键']);assert.equal(await page.locator('.wb-floor-list .wb-nav-row').count(),await page.evaluate(()=>workbench.host.snapshot().messages.length));assert.equal(await page.locator('#wb-nav-outline .wb-nav-toggle').getAttribute('aria-expanded'),'false');
  assert.equal(await page.getByRole('button',{name:'开始新对话',exact:true}).isVisible(),true);assert(await page.getByRole('button',{name:'管理聊天文件',exact:true}).isVisible());
  const heights=await page.evaluate(()=>({info:document.querySelector('.wb-nav-sections').clientHeight,all:document.querySelector('.wb-left').clientHeight}));assert(heights.info/heights.all>.60&&heights.info/heights.all<.85,JSON.stringify(heights));
  pass('current chat card first, persistent new/files controls, folded outline and a scrolling sections area',heights);

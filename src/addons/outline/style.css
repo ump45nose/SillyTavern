@@ -227,10 +227,6 @@
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  /* The outline section of the left column grows with its tree; the column scrolls, not the section. */
-  .wb-nav-section#wb-nav-outline > .wb-fold-body.is-open > div {
-    max-height: none;
-  }
   .wb-ot-inject > div {
     display: flex;
     flex-wrap: wrap;
@@ -287,22 +283,10 @@
     color: var(--wb-ink-3);
     font-size: 11px;
   }
+  /* In the left column the section is the one scroll box (Navigation sizes it), so the tree is not. */
   .wb-outline-sidebar .wb-ot-tree {
-    max-height: clamp(110px, calc(100vh - 665px), 260px);
-  }
-  .is-outline-expanded .wb-outline-sidebar {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .is-outline-expanded .wb-outline-sidebar :is(.wb-ot-tools, .wb-ot-now, .wb-ot-add) {
-    flex: none;
-  }
-  .is-outline-expanded .wb-outline-sidebar .wb-ot-tree {
-    flex: 1;
-    min-height: 36px;
     max-height: none;
+    overflow: visible;
   }
   .wb-addon-empty {
     padding: 8px;

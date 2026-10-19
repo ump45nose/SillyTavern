@@ -677,6 +677,7 @@ export default function App({
         host={host}
         snap={snap}
         visible={navigationShown}
+        mobile={mobile}
         settings={openSettings}
         open={openPopup}
         help={() => dispatch({ type: "help", open: true })}
