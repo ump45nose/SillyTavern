@@ -353,6 +353,43 @@ export class AddonBridge {
         bridge.inputs.forEach((fn) => fn());
         bus.emit("image-input", target);
       },
+      otherChats: async () => {
+        const c = context(),
+          current = c.getCurrentChatId();
+        if (c.groupId)
+          return (c.groups.find((g: Data) => g.id === c.groupId)?.chats || [])
+            .filter((name: string) => name !== current)
+            .reverse()
+            .map((name: string) => ({ name }));
+        const avatar = c.characters[c.characterId]?.avatar;
+        if (!avatar) return [];
+        // The listing reads only each file's first line, so one request carries every chat's metadata.
+        const data = await (
+          await host.request("/api/characters/chats", { avatar_url: avatar, metadata: true })
+        ).json();
+        if (data.error) throw new Error("读取聊天列表失败。");
+        return host
+          .sortChats(Object.values(data) as Data[])
+          .map((chat) => ({
+            name: String(chat.file_name).replace(/\.jsonl$/, ""),
+            data: chat.chat_metadata?.workbench_addons?.[id],
+          }))
+          .filter((chat) => chat.name !== current && chat.data);
+      },
+      chatMetadata: async (name: string) => {
+        const c = context(),
+          character = c.characters[c.characterId];
+        const lines = await (
+          await host.request(
+            c.groupId ? "/api/chats/group/get" : "/api/chats/get",
+            c.groupId
+              ? { id: name }
+              : { ch_name: character?.name, file_name: name, avatar_url: character?.avatar },
+          )
+        ).json();
+        const data = Array.isArray(lines) ? lines[0]?.chat_metadata?.workbench_addons?.[id] : undefined;
+        return data ? copy(data) : undefined;
+      },
       open,
       beforeClose: () => guards.check(),
       summary: async () => null,

@@ -1,0 +1,201 @@
+/* Story options: the latest reply's next moves as a row of pills; the open one's detail above them. */
+@layer wb.components {
+  /* Noval: a row in the composer's flow, so the reading column gives way rather than being covered. */
+  .wb-story-options:empty {
+    display: none;
+  }
+  /* On the desk the row takes the composer card's measure (native-bridge: 780px, 800px in focus). */
+  body:not(.wb-mobile) .wb-story-options {
+    width: 100%;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  body.wb-focus:not(.wb-mobile) .wb-story-options {
+    max-width: 800px;
+  }
+  .wb-story-options > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .wb-story-chips {
+    display: flex;
+    gap: 8px;
+    padding: 1px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .wb-ui .wb-story-option {
+    flex: none;
+    max-width: 280px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 14px;
+    overflow: hidden;
+    border: 1px solid var(--wb-line);
+    border-radius: var(--wb-radius-pill);
+    background: var(--wb-surface);
+    box-shadow: none;
+    color: var(--wb-ink-1);
+    font: inherit;
+    font-size: var(--wb-text-sm);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition:
+      border-color var(--wb-duration-fast),
+      background-color var(--wb-duration-fast),
+      color var(--wb-duration-fast);
+  }
+  .wb-ui .wb-story-option:is(:hover, :focus-visible) {
+    border-color: color-mix(in srgb, var(--wb-accent) 32%, var(--wb-line));
+  }
+  .wb-ui .wb-story-option.is-open {
+    border-color: color-mix(in srgb, var(--wb-accent) 48%, var(--wb-line));
+    background: var(--wb-selected-bg);
+    color: var(--wb-accent-text);
+  }
+  .wb-ui .wb-story-detail {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--wb-line);
+    border-radius: 13px;
+    background: var(--wb-surface);
+    box-shadow: var(--wb-shadow-1);
+    color: var(--wb-ink-1);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    animation: wb-story-in var(--wb-duration-base) var(--wb-ease-standard);
+  }
+  .wb-story-detail strong {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .wb-story-detail span {
+    color: var(--wb-ink-2);
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+  .wb-story-detail small {
+    margin-top: 2px;
+    color: var(--wb-ink-3);
+    font-size: 11px;
+  }
+  @keyframes wb-story-in {
+    from {
+      opacity: 0;
+      translate: 0 4px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wb-ui .wb-story-detail {
+      animation: none;
+    }
+  }
+
+  /* Settings: the source of this chat's options, and the prompt every chat shares. */
+  .wb-ui.wb-popover.wb-options-pop {
+    width: min(400px, calc(100vw - 20px));
+  }
+  .wb-options-pop .wb-select {
+    display: flex;
+    width: 100%;
+  }
+  .wb-options-pop .wb-select-trigger {
+    flex: 1;
+  }
+  .wb-options-pop .wb-pop-label:first-of-type {
+    margin-top: 2px;
+  }
+  .wb-ui .wb-options-prompt {
+    width: 100%;
+    min-height: 168px;
+    resize: vertical;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .wb-options-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .wb-ui .wb-options-actions button {
+    min-height: 31px;
+    padding: 0 12px;
+    border: 1px solid var(--wb-line);
+    border-radius: var(--wb-radius-md);
+    background: transparent;
+    font-size: 12px;
+  }
+  .wb-ui .wb-options-actions button.wb-primary {
+    border-color: transparent;
+    background: var(--wb-accent);
+    color: var(--wb-accent-ink);
+  }
+  .wb-ui .wb-options-actions button:disabled {
+    opacity: 0.5;
+  }
+  .wb-options-note {
+    margin: 10px 0 0;
+    color: var(--wb-muted);
+    font-size: 11.5px;
+    line-height: 1.6;
+  }
+  .wb-options-note.is-error {
+    color: var(--wb-danger);
+  }
+  .wb-options-note code {
+    padding: 0 4px;
+    border: 1px solid var(--wb-line);
+    border-radius: 4px;
+    background: var(--wb-surface-2);
+    color: var(--wb-ink-1);
+    font-family: var(--wb-font-mono);
+    font-size: 11px;
+  }
+}
+
+/* RP: the options lead the row over the dialogue band, as glass pills beside the quick replies; the
+   open one's detail floats over the band's top edge. */
+@layer wb.layouts {
+  .wb-rp-replies .wb-story-option.is-open {
+    background: var(--wb-rp-box);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wb-accent) 50%, transparent);
+    color: var(--wb-rp-ink-1);
+  }
+  .wb-rp-option-detail {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: var(--wb-rp-inset);
+    width: min(520px, calc(100% - 2 * var(--wb-rp-inset)));
+    pointer-events: auto;
+  }
+  .wb-ui .wb-rp-option-detail .wb-story-detail {
+    border: 0;
+    border-radius: 14px;
+    background: var(--wb-rp-box);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    box-shadow:
+      inset 0 0 0 1px var(--wb-rp-line),
+      var(--wb-rp-box-shadow);
+    color: var(--wb-rp-ink-1);
+  }
+  .wb-rp-option-detail .wb-story-detail span {
+    color: var(--wb-rp-ink-2);
+  }
+  .wb-rp-option-detail .wb-story-detail small {
+    color: var(--wb-rp-ink-3);
+  }
+  body.wb-mobile-rp .wb-rp-option-detail {
+    left: 16px;
+    width: calc(100% - 32px);
+  }
+}

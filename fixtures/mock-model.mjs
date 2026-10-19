@@ -28,7 +28,11 @@ const server = http.createServer(async (req, res) => {
     if (requests.length > 100) requests.shift();
     const lastUser = body.messages?.findLast(message => message.role === 'user');
     const slow = JSON.stringify(lastUser?.content).includes('WB_SLOW');
-    const reply = slow ? '慢速验证回复。'.repeat(30) : '工作台验证回复：流式、世界书与插件链路正常。';
+    // The workbench's options prompt asks for a block at the end of the reply.
+    const options = JSON.stringify(body.messages).includes('[剧情选项]')
+        ? '\n<options><option title="追上去">踩着脚印追进林子，天黑前找到他。</option><option title="回村">先回村里报信。</option><option>原地生火等他</option></options>'
+        : '';
+    const reply = (slow ? '慢速验证回复。'.repeat(30) : '工作台验证回复：流式、世界书与插件链路正常。') + options;
     const base = { id: 'wb-fixture', object: 'chat.completion', created: Math.floor(Date.now() / 1000), model: 'workbench-fixture' };
     if (!body.stream) {
         res.setHeader('content-type', 'application/json');

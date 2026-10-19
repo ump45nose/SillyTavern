@@ -15,11 +15,24 @@ import {
   PanelRightClose,
   Send,
   FileText,
+  Flag,
+  Check as CheckIcon,
+  PencilLine,
+  TextCursorInput,
+  MessagesSquare,
 } from "../../ui/icons";
 import type { AddonViewProps } from "../types";
 import { Check } from "../../ui/ResourceControls";
 import { createRuntime } from "./runtime";
-import { orderedNodes, markdownExport, parseImport, type OutlineData, type OutlineNode } from "./model";
+import {
+  orderedNodes,
+  markdownExport,
+  normalizeOutline,
+  parseImport,
+  reuseOutline,
+  type OutlineData,
+  type OutlineNode,
+} from "./model";
 import "./style.css";
 import { bus, guards } from "../../host/bus";
 export { createRuntime };
@@ -100,7 +113,9 @@ function Tree({
                 data-outline-node={node.id}
                 onClick={() => {
                   run("select", node.id);
-                  if (inline) run("open", "workspace");
+                  // In the sidebar a leaf opens its card in place; a chapter opens the workspace.
+                  if (inline && !children) setDetail({ ...detail, [node.id]: !shown });
+                  else if (inline) run("open", "workspace");
                 }}
                 onKeyDown={(e) => {
                   const ordered = orderedNodes(data),
@@ -124,6 +139,7 @@ function Tree({
               >
                 <span className={`wb-ot-status ${node.status}`} />
                 <span>{node.title}</span>
+                {node.status === "active" && <em className="wb-ot-current">当前</em>}
                 <small>
                   {node.completed}/{node.rounds}
                 </small>
@@ -142,18 +158,29 @@ function Tree({
                   <div className="wb-ot-excerpt">
                     <p>{node.content || "尚未填写节点内容"}</p>
                     <footer>
-                      <button onClick={() => run("insert", node.id)}>
-                        <Send size={12} />
-                        插入
+                      {node.status === "active" ? (
+                        <button className="is-primary" onClick={() => run("status", node.id, "done")}>
+                          <CheckIcon size={12} />
+                          标记完成
+                        </button>
+                      ) : (
+                        <button className="is-primary" onClick={() => run("status", node.id, "active")}>
+                          <Flag size={12} />
+                          {node.status === "done" ? "重新设为当前" : "设为当前"}
+                        </button>
+                      )}
+                      <button aria-label="插入" title="插入节点指令" onClick={() => run("insert", node.id)}>
+                        <Send size={13} />
                       </button>
                       <button
+                        aria-label="编辑"
+                        title="编辑节点"
                         onClick={() => {
                           run("select", node.id);
-                          run("open", "editor");
+                          run("open", "workspace");
                         }}
                       >
-                        <FileText size={12} />
-                        编辑
+                        <PencilLine size={13} />
                       </button>
                     </footer>
                   </div>
@@ -173,7 +200,8 @@ function Tree({
 export function Sidebar(props: AddonViewProps) {
   const data = useOutline(props),
     { run, error } = useAction(props.runtime),
-    [search, setSearch] = useState("");
+    [search, setSearch] = useState(""),
+    current = data.nodes.find((n) => n.status === "active");
   return (
     <div className="wb-outline-sidebar">
       <div className="wb-ot-tools">
@@ -190,6 +218,22 @@ export function Sidebar(props: AddonViewProps) {
           <Expand size={15} />
         </button>
       </div>
+      {current && (
+        <button
+          className="wb-ot-now"
+          aria-label={`当前节点：${current.title}`}
+          onClick={() => {
+            if (!props.host.beforeClose()) return;
+            run("select", current.id);
+            document
+              .querySelector(`.wb-outline-sidebar [data-outline-node="${CSS.escape(current.id)}"]`)
+              ?.scrollIntoView({ block: "nearest" });
+          }}
+        >
+          <Flag size={13} />
+          <span>{current.title}</span>
+        </button>
+      )}
       <Tree
         data={data}
         run={(name, ...args) => {
@@ -250,9 +294,13 @@ export function Workspace(props: AddonViewProps) {
   const data = useOutline(props),
     { run, error } = useAction(props.runtime),
     node = data.nodes.find((n) => n.id === data.selected),
+    inject = data.settings.inject,
     [search, setSearch] = useState(""),
     [preview, setPreview] = useState(true),
     [pending, setPending] = useState<OutlineData | null>(null),
+    [source, setSource] = useState<"" | "paste" | "chats">(""),
+    [pasted, setPasted] = useState(""),
+    [chats, setChats] = useState<{ name: string; data?: OutlineData }[] | null>(null),
     [draft, setDraft] = useState({ title: "", content: "" });
   const task = props.runtime.task();
   useEffect(() => {
@@ -276,6 +324,33 @@ export function Workspace(props: AddonViewProps) {
       window.removeEventListener("beforeunload", unload);
     };
   }, [dirty]);
+  const review = (data: OutlineData) => {
+    setPending(data);
+    setSource("");
+  };
+  const openSource = (next: "paste" | "chats") => {
+    setSource(source === next ? "" : next);
+    if (next !== "chats" || source === next) return;
+    setChats(null);
+    props.host
+      .otherChats()
+      .then((list) =>
+        setChats(list.map((chat) => ({ name: chat.name, data: chat.data && normalizeOutline(chat.data) }))),
+      )
+      .catch((e) => {
+        setChats([]);
+        bus.emit("error", (e as Error).message);
+      });
+  };
+  const reuse = async (chat: { name: string; data?: OutlineData }) => {
+    try {
+      const data = chat.data ?? normalizeOutline(await props.host.chatMetadata(chat.name));
+      if (!data.nodes.length) throw new Error(`「${chat.name}」里没有大纲。`);
+      review(reuseOutline(data));
+    } catch (e) {
+      bus.emit("error", (e as Error).message);
+    }
+  };
   const exportFile = (format: string) =>
     props.host.download(
       new Blob([format === "json" ? JSON.stringify(data, null, 2) : markdownExport(data)], {
@@ -319,6 +394,14 @@ export function Workspace(props: AddonViewProps) {
               }}
             />
           </label>
+          <button aria-pressed={source === "paste"} onClick={() => openSource("paste")}>
+            <TextCursorInput size={14} />
+            粘贴
+          </button>
+          <button aria-pressed={source === "chats"} onClick={() => openSource("chats")}>
+            <MessagesSquare size={14} />
+            从其他聊天
+          </button>
           {!props.editor && (
             <button aria-label="完整大纲编辑" onClick={() => run("open", "editor")}>
               <Expand size={15} />
@@ -326,6 +409,58 @@ export function Workspace(props: AddonViewProps) {
           )}
         </div>
       </header>
+      {source === "paste" && (
+        <div className="wb-ot-source">
+          <textarea
+            aria-label="粘贴大纲"
+            value={pasted}
+            onChange={(e) => setPasted(e.target.value)}
+            placeholder={"# 第一章\n章节背景…\n## 节点标题\n这一步发生的事…\n\n也可以粘贴导出的 JSON。"}
+          />
+          <footer>
+            <button
+              className="wb-primary"
+              disabled={!pasted.trim()}
+              onClick={() => {
+                try {
+                  review(parseImport(pasted));
+                  setPasted("");
+                } catch (e) {
+                  bus.emit("error", (e as Error).message);
+                }
+              }}
+            >
+              预览
+            </button>
+            <button onClick={() => setSource("")}>取消</button>
+          </footer>
+        </div>
+      )}
+      {source === "chats" && (
+        <div className="wb-ot-source" role="group" aria-label="其他聊天的大纲">
+          {!chats ? (
+            <p className="wb-addon-hint">正在读取聊天列表…</p>
+          ) : !chats.length ? (
+            <p className="wb-addon-hint">本角色的其他聊天里没有大纲。</p>
+          ) : (
+            <ul>
+              {chats.map((chat) => (
+                <li key={chat.name}>
+                  <button onClick={() => reuse(chat)}>
+                    <span>{chat.name}</span>
+                    {chat.data && (
+                      <small>
+                        {chat.data.nodes.length} 个节点 · {chat.data.nodes[0]?.title}
+                      </small>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="wb-addon-hint">复用节点和正文，进度从头开始。</p>
+        </div>
+      )}
       {pending && (
         <div className="wb-ot-import">
           <strong>导入预览 · {pending.nodes.length} 个节点</strong>
@@ -410,15 +545,10 @@ export function Workspace(props: AddonViewProps) {
                 <select
                   aria-label="节点状态"
                   value={node.status}
-                  onChange={(e) =>
-                    run("patch", node.id, {
-                      status: e.target.value,
-                      completed: e.target.value === "todo" ? 0 : node.completed,
-                    })
-                  }
+                  onChange={(e) => run("status", node.id, e.target.value)}
                 >
                   <option value="todo">待写</option>
-                  <option value="active">进行中</option>
+                  <option value="active">当前</option>
                   <option value="done">完成</option>
                 </select>
                 <label>
@@ -489,6 +619,33 @@ export function Workspace(props: AddonViewProps) {
               onChange={(send) => run("settings", { send })}
             />
           </div>
+          <section className="wb-ot-inject">
+            <header>
+              <strong>主线注入</strong>
+              <span>
+                默认关闭 · 也可以在预设里写 <code>{"{{outline}}"}</code>
+              </span>
+            </header>
+            <div>
+              <Check
+                checked={inject.enabled}
+                label="当前节点写入每次请求"
+                onChange={(enabled) => run("settings", { inject: { ...inject, enabled } })}
+              />
+              <label>
+                深度
+                <input
+                  aria-label="主线注入深度"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={inject.depth}
+                  disabled={!inject.enabled}
+                  onChange={(e) => run("settings", { inject: { ...inject, depth: Number(e.target.value) } })}
+                />
+              </label>
+            </div>
+          </section>
           <section className="wb-ot-auto">
             <header>
               <strong>自动写作</strong>

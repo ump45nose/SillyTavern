@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, openResource, chooseLayout, seedCast } from "./browser.mjs";
+import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, openResource, chooseLayout, seedCast, selectPaper } from "./browser.mjs";
 
 const dir = "artifacts/rp-runtime"; fs.mkdirSync(dir, { recursive: true });
 const checks = [], pass = (name, details = {}) => { checks.push({ name, details }); console.log("PASS", name); };
@@ -262,6 +262,54 @@ try {
   assert.equal(await page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value === "" && !SillyTavern.getContext().chatMetadata.workbenchRP?.cast), true);
   await page.keyboard.press("Escape"); await page.evaluate(async () => { const c = SillyTavern.getContext(); await c.deleteLastMessage(); await c.deleteLastMessage(); }); await settle();
   pass("the card returns the stage and clears the prompt");
+  // Story options. From the model: an injected prompt asks for an <options> block that no reader sees and no later prompt carries.
+  const optionsPanel = () => page.getByRole("dialog", { name:"剧情选项" }), chips = page.locator(".wb-rp-replies .wb-story-option");
+  const closeOptions = async () => { await optionsPanel().getByRole("button", { name:"关闭弹出框" }).click(); await settle(); };
+  await role("剧情选项").click(); await optionsPanel().waitFor(); await optionsPanel().getByRole("button", { name:"模型输出", exact:true }).click();
+  await page.waitForFunction(() => SillyTavern.getContext().extensionPrompts.noval_options?.value.includes("[剧情选项]") && SillyTavern.getContext().chatMetadata.workbenchOptions?.source === "model");
+  await closeOptions(); await fetch(urls.mock + "/requests", { method:"DELETE" });
+  await page.evaluate(() => { window.__optionsSeen = false; const chat = document.getElementById("chat"); window.__optionsWatch = new MutationObserver(() => { if (/<\/?options|option title|踩着脚印/.test([...chat.querySelectorAll(".mes_text")].map(n => n.textContent).join(""))) __optionsSeen = true; }); __optionsWatch.observe(chat, { subtree:true, childList:true, characterData:true }); });
+  await role("快进到你的回应").click(); await settle(); await input.fill("WB_RP_OPTIONS"); await page.locator("#send_but").click();
+  await page.waitForFunction(() => SillyTavern.getContext().chat.at(-1)?.mes.includes("</options>") && !workbench.host.snapshot().busy); await settle();
+  assert.equal(await page.evaluate(() => { __optionsWatch.disconnect(); return __optionsSeen; }), false, "the block never shows, not even while it streams");
+  assert.deepEqual(await chips.allInnerTexts(), ["追上去", "回村", "原地生火等他"]);
+  await chips.first().click(); await page.locator(".wb-rp-option-detail .wb-story-detail").waitFor(); assert.match(await page.locator(".wb-rp-option-detail").innerText(), /踩着脚印追进林子/); assert.equal(await input.inputValue(), "", "one tap only opens the detail");
+  await page.screenshot({ path:`${dir}/options-rp.png` });
+  await chips.first().click(); await settle(); assert.equal(await input.inputValue(), "踩着脚印追进林子，天黑前找到他。"); assert.equal(await flag("wb-rp-compose"), true, "a second tap fills the input and opens it");
+  await page.locator("#send_but").click(); await page.waitForFunction(() => SillyTavern.getContext().chat.at(-2)?.mes.startsWith("踩着") && SillyTavern.getContext().chat.at(-1)?.mes.includes("</options>") && !workbench.host.snapshot().busy); await settle();
+  const sent = (await (await fetch(urls.mock + "/requests")).json()).at(-1).body.messages;
+  assert.equal(sent.some(m => m.role === "assistant" && JSON.stringify(m.content).includes("<options")), false, "earlier replies reach the model without their options");
+  assert.equal(sent.some(m => m.role === "assistant" && JSON.stringify(m.content).includes("工作台验证回复")), true);
+  assert.equal(sent.some(m => m.role === "system" && String(m.content).includes("[剧情选项]") && String(m.content).includes("<options>") && !String(m.content).includes("{{user}}")), true, "the instruction keeps its example and its macros are filled");
+  const exported = await page.evaluate(() => workbench.host.exportSnapshot().messages.map(m => m.text).join("\n"));
+  assert.equal(exported.includes("<options"), false, "the record export reads as the reader sees it"); assert.equal(exported.includes("工作台验证回复"), true);
+  pass("model options: an injected prompt, a block hidden even while streaming, one tap opens and a second fills; later prompts leave the blocks out");
+  // From the database plug-in: a bound table, read again on every update.
+  await page.evaluate(() => { window.__dbCallbacks = []; window.__dbTables = { sheet_1:{ name:"选项表", content:[[null, "选项一", "选项二"], [0, "推门进去", "转身离开"]] }, mate:{ type:"chatSheets" } }; window.AutoCardUpdaterAPI = { exportTableAsJson:() => structuredClone(__dbTables), registerTableUpdateCallback:fn => __dbCallbacks.push(fn) }; });
+  await role("剧情选项").click(); await optionsPanel().waitFor(); await optionsPanel().getByRole("button", { name:"数据库表", exact:true }).click();
+  await page.waitForFunction(() => SillyTavern.getContext().extensionPrompts.noval_options?.value === "" && SillyTavern.getContext().chatMetadata.workbenchOptions?.source === "db");
+  assert.match(await optionsPanel().innerText(), /请选择一张表/); assert.equal(await chips.count(), 0);
+  await selectPaper(page, "数据库选项表", "选项表"); await page.waitForFunction(() => SillyTavern.getContext().chatMetadata.workbenchOptions?.table === "选项表");
+  await closeOptions(); assert.deepEqual(await chips.allInnerTexts(), ["推门进去", "转身离开"]);
+  await page.evaluate(() => { __dbTables.sheet_1.content = [["row_id", "行动", "后果"], [0, "敲门", "有人应声"], [1, "翻墙", "惊动护院"]]; __dbCallbacks.forEach(fn => fn()); });
+  await page.waitForFunction(() => [...document.querySelectorAll(".wb-rp-replies .wb-story-option")].map(n => n.textContent).join() === "敲门,翻墙");
+  await chips.nth(1).click(); assert.match(await page.locator(".wb-rp-option-detail").innerText(), /后果：惊动护院/);
+  await page.evaluate(() => { __dbTables = { mate:{} }; __dbCallbacks.forEach(fn => fn()); }); await page.waitForFunction(() => !document.querySelector(".wb-rp-replies .wb-story-option"));
+  await role("剧情选项").click(); await optionsPanel().waitFor(); assert.match(await optionsPanel().innerText(), /没有名为「选项表」的表/); await closeOptions();
+  await page.evaluate(() => { __dbTables.sheet_1 = { name:"选项表", content:[[null, "选项一", "选项二"], [0, "推门进去", "转身离开"]] }; __dbCallbacks.forEach(fn => fn()); }); await chips.first().waitFor();
+  pass("database options: a bound table by name, one row column by column and rows one by one, read again on each update; a missing table is reported");
+  // Noval reads the same options over its composer.
+  await role("切换阅读布局").click(); await settle();
+  const novalChips = page.locator(".wb-story-options .wb-story-option"); assert.deepEqual(await novalChips.allInnerTexts(), ["推门进去", "转身离开"]);
+  const [row, form] = await page.evaluate(() => [".wb-story-options", "#send_form"].map(s => document.querySelector(s).getBoundingClientRect().toJSON()));
+  assert(row.bottom <= form.top + 1 && Math.abs(row.left - form.left) < 2, JSON.stringify({ row, form }));
+  await novalChips.first().click(); await page.locator(".wb-story-options .wb-story-detail").waitFor(); await page.screenshot({ path:`${dir}/options-noval.png` });
+  await page.locator(".wb-story-options .wb-story-detail").click(); assert.equal(await input.inputValue(), "推门进去"); await input.fill("");
+  await chooseLayout(page, "RP"); await settle();
+  await role("剧情选项").click(); await optionsPanel().waitFor(); await optionsPanel().getByRole("button", { name:"关闭", exact:true }).click();
+  await page.waitForFunction(() => !document.querySelector(".wb-rp-replies .wb-story-option") && SillyTavern.getContext().chatMetadata.workbenchOptions?.source === "off"); await closeOptions();
+  await page.evaluate(async () => { delete window.AutoCardUpdaterAPI; const c = SillyTavern.getContext(); for (let i = 0; i < 4; i++) await c.deleteLastMessage(); }); await settle();
+  pass("Noval shows the options over its composer and the detail fills the input; switching the source off clears them");
   await withReducedMotion(page, async () => assert.equal(await css("#sheld", "transitionDuration"), "0s")); pass("reduced motion is honored and the account preference restored");
   await role("切换阅读布局").click(); await settle(); assert.equal(await has("wb-rp"), false); assert.equal(await page.locator(".wb-reading-bar").count(), 1);
   assert.equal(await page.evaluate(() => __rpNative.chat === document.getElementById("chat") && __rpNative.input === document.getElementById("send_textarea")), true);

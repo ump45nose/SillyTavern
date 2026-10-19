@@ -3,6 +3,7 @@ import type { Data } from "../types";
 import { ctx, internal, nativeNodes } from "../internals";
 import { bus } from "../bus";
 import { castTagsAsNames } from "../cast";
+import { stripOptions } from "../options";
 
 /** Chat files, floors, quick replies, input and RP presentation. */
 export const chatMethods = {
@@ -202,7 +203,9 @@ export const chatMethods = {
         id,
         name: String(message.name || ""),
         // Cast tags (名字|表情:) export as the reader sees them: the speaker's name.
-        text: message.is_user ? String(message.mes || "") : castTagsAsNames(String(message.mes || "")),
+        text: message.is_user
+          ? String(message.mes || "")
+          : castTagsAsNames(stripOptions(String(message.mes || ""))),
         role: message.is_system
           ? ("system" as const)
           : message.is_user

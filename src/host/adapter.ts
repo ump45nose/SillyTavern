@@ -2,6 +2,7 @@ import { clone } from "./model";
 import { assertContext, ctx, internal, nativeNodes } from "./internals";
 import { ChatObserver, MediaObserver } from "./chat-observer";
 import { CastRuntime } from "./cast-runtime";
+import { OptionsRuntime } from "./options-runtime";
 import { guards, type Guard } from "./bus";
 import { HostCore, defaults, sliceNames } from "./core";
 import type { Slice } from "./types";
@@ -127,6 +128,8 @@ export class HostAdapter extends HostCore {
       if (name === this.cast.state.config?.book) void this.cast.load();
     });
     void this.cast.load();
+    this.options = new OptionsRuntime(this);
+    this.cleanup.push(() => this.options.dispose());
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
     const guard: Guard = ({ preserveDrafts }) => {

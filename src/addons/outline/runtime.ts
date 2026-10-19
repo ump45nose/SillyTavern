@@ -1,6 +1,7 @@
 import { randomId } from "../../host/ids";
 import type { AddonRuntime, TaskHost, TaskState } from "../types";
 import {
+  advance,
   descendants,
   emptyOutline,
   instruction,
@@ -66,10 +67,7 @@ export function createRuntime(host: TaskHost): AddonRuntime {
           }));
           continue;
         }
-        await save((current) => ({
-          ...current,
-          nodes: current.nodes.map((n) => (n.id === id ? { ...n, status: "active" } : n)),
-        }));
+        await save((current) => advance(current, id, "active"));
         if (disposed || activeController.signal.aborted || pauseRequested) break;
         task = { status: "running", label: `${node.title} · ${node.completed}/${node.rounds} 轮` };
         emit();
@@ -79,14 +77,13 @@ export function createRuntime(host: TaskHost): AddonRuntime {
           const latest = current.nodes.find((n) => n.id === id);
           if (!latest) throw new Error("执行节点已删除。");
           const completed = latest.completed + 1,
-            done = completed >= latest.rounds;
-          return {
-            ...current,
-            nodes: current.nodes.map((n) =>
-              n.id === id ? { ...n, completed, status: done ? "done" : "active" } : n,
-            ),
-            job: current.job ? { ...current.job, index: current.job.index + (done ? 1 : 0) } : undefined,
-          };
+            done = completed >= latest.rounds,
+            next = {
+              ...current,
+              nodes: current.nodes.map((n) => (n.id === id ? { ...n, completed } : n)),
+              job: current.job ? { ...current.job, index: current.job.index + (done ? 1 : 0) } : undefined,
+            };
+          return done ? advance(next, id, "done") : next;
         });
         if (pauseRequested) break;
       }
@@ -171,7 +168,8 @@ export function createRuntime(host: TaskHost): AddonRuntime {
         next.selected = id;
       } else if (name === "patch") {
         next.nodes = next.nodes.map((n) => (n.id === args[0] ? { ...n, ...args[1] } : n));
-      } else if (name === "settings") next.settings = { ...next.settings, ...args[0] };
+      } else if (name === "status") next = advance(next, args[0], args[1]);
+      else if (name === "settings") next.settings = { ...next.settings, ...args[0] };
       else if (name === "delete") {
         const ids = new Set([args[0], ...descendants(next, args[0]).map((n) => n.id)]);
         next.nodes = next.nodes.filter((n) => !ids.has(n.id));
