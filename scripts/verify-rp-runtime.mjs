@@ -220,6 +220,8 @@ try {
   assert.equal(sent.some(m => m.role === "assistant" && JSON.stringify(m.content).includes("<options")), false, "earlier replies reach the model without their options");
   assert.equal(sent.some(m => m.role === "assistant" && JSON.stringify(m.content).includes("工作台验证回复")), true);
   assert.equal(sent.some(m => m.role === "system" && String(m.content).includes("[剧情选项]") && String(m.content).includes("<options>") && !String(m.content).includes("{{user}}")), true, "the instruction keeps its example and its macros are filled");
+  const exported = await page.evaluate(() => workbench.host.exportSnapshot().messages.map(m => m.text).join("\n"));
+  assert.equal(exported.includes("<options"), false, "the record export reads as the reader sees it"); assert.equal(exported.includes("工作台验证回复"), true);
   pass("model options: an injected prompt, a block hidden even while streaming, one tap opens and a second fills; later prompts leave the blocks out");
   // From the database plug-in: a bound table, read again on every update.
   await page.evaluate(() => { window.__dbCallbacks = []; window.__dbTables = { sheet_1:{ name:"选项表", content:[[null, "选项一", "选项二"], [0, "推门进去", "转身离开"]] }, mate:{ type:"chatSheets" } }; window.AutoCardUpdaterAPI = { exportTableAsJson:() => structuredClone(__dbTables), registerTableUpdateCallback:fn => __dbCallbacks.push(fn) }; });

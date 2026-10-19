@@ -36,11 +36,19 @@
 - [x] 大纲：`advance`、`outlineContext`、`reuseOutline`，只有一个当前节点
 - [x] 大纲：详情卡（设为当前 / 标记完成）、侧栏当前节点行、粘贴导入、从其他聊天复用
 - [x] 大纲：`{{outline}}` 宏与主线注入（在工作区设置）
-- [ ] 选项：纯逻辑与单元测试
-- [ ] 选项：运行时（模型输出与数据库表）
-- [ ] 选项：界面与设置、记录导出
-- [ ] 验证脚本与全量门禁
+- [x] 选项：纯逻辑与单元测试
+- [x] 选项：运行时（模型输出与数据库表）
+- [x] 选项：界面与设置、记录导出
+- [x] 验证脚本与全量门禁
+
+### 验证结果（2026-10-19，实测）
+
+- 单元测试 75 项通过；format / check / typecheck / build 无报错。
+- 逐个通过：workbench、compat、home、resources、interactions（输入框工具按钮由 6 个增至 7 个，期望值已同步）、fidelity、migration、motion、click-motion、preferences、rp（32）、addons、utilities、writing-addons（14）、pwa（18）、edge、layout-controls、stale。
+- verify:styles 未执行比对：基线 `artifacts/baseline-c6/computed` 在本机不存在，只完成了快照。
 
 ## 未验证
 
+- 真实模型是否稳定输出 `<options>` 块（只用模拟模型验证过）。
+- 真实数据库插件 `exportTableAsJson` 的表格格式（只用模拟数据验证过）。
 - 数据库剧情推进的提示词会不会展开 `{{outline}}`。
