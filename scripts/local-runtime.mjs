@@ -116,14 +116,23 @@ extensions:
   console.log(`Prepared official ${lock.upstream.release} (${commit.slice(0, 12)}) on 127.0.0.1:${Object.values(instances).join("/")}.`);
 }
 
-// Re-applied on every start so changing WB_BIND_ADDRESS needs no reprepare; SillyTavern keeps these keys when it rewrites the file.
-function bind(name) {
+// Re-applied on every start so changing WB_BIND_ADDRESS or the credentials in .env needs no reprepare;
+// SillyTavern keeps these keys when it rewrites the file.
+function applyEnv(name) {
+  const env = readEnv();
   const config = path.join(runtime, name, "config/config.yaml");
-  const address = exposed.includes(name) ? readEnv().WB_BIND_ADDRESS || "127.0.0.1" : "127.0.0.1";
-  const text = fs.readFileSync(config, "utf8")
-    .replace(/^listen: .*$/m, `listen: ${address !== "127.0.0.1"}`)
-    .replace(/^(listenAddress:\n  ipv4: ).*$/m, `$1${address}`);
-  if (!/^listenAddress:\n  ipv4: /m.test(text)) throw new Error(`${config} lacks listenAddress.ipv4`);
+  const address = exposed.includes(name) ? env.WB_BIND_ADDRESS || "127.0.0.1" : "127.0.0.1";
+  const keys = [
+    [/^listen: .*$/m, `listen: ${address !== "127.0.0.1"}`],
+    [/^(listenAddress:\n  ipv4: ).*$/m, `$1${address}`],
+    [/^(basicAuthUser:\n  username: ).*$/m, `$1${JSON.stringify(env.WB_USERNAME)}`],
+    [/^(basicAuthUser:\n  username: .*\n  password: ).*$/m, `$1${JSON.stringify(env.WB_PASSWORD)}`],
+  ];
+  let text = fs.readFileSync(config, "utf8");
+  for (const [pattern, value] of keys) {
+    if (!pattern.test(text)) throw new Error(`${config} lacks ${pattern.source}`);
+    text = text.replace(pattern, value);
+  }
   fs.writeFileSync(config, text, { mode: 0o600 });
   return address;
 }
@@ -162,7 +171,7 @@ async function start() {
   for (const [name] of Object.entries(instances)) {
     if (only.length && !only.includes(name)) continue;
     if (!pids[name]) {
-      console.log(`${name} listens on ${bind(name)}:${instances[name]}`);
+      console.log(`${name} listens on ${applyEnv(name)}:${instances[name]}`);
       pids[name] = launch(name, process.execPath, ["server.js", "--configPath", path.join(runtime, name, "config/config.yaml")], { cwd: upstream, env: { ...process.env, NODE_ENV: "production" } });
     }
   }
