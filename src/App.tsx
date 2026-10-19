@@ -31,6 +31,7 @@ import {
   ListTree,
   ImagePlus,
   Maximize2,
+  Table2,
 } from "./ui/icons";
 import { resolveTool } from "./host/tools";
 import { addonEnabled } from "./addons/catalog";
@@ -52,6 +53,7 @@ import { Shortcuts } from "./ui/Shortcuts";
 import { RPStage } from "./ui/RPStage";
 import { MobileShell } from "./ui/MobileShell";
 import { useMobileViewport } from "./ui/useMobileViewport";
+import { useDatabase } from "./ui/useDatabase";
 import type { LayoutMode } from "./ui/LayoutSwitcher";
 import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
@@ -79,6 +81,7 @@ const World = lazyChunk(() => import("./modules/World"));
 const Characters = lazyChunk(() => import("./modules/Characters"));
 const Resources = lazyChunk(() => import("./modules/Resources"));
 const Trace = lazyChunk(() => import("./modules/Trace"));
+const Database = lazyChunk(() => import("./modules/Database"));
 const SettingsWorkspace = lazyChunk(() => import("./modules/SettingsWorkspace"));
 export function beforeClose() {
   return guards.check();
@@ -120,6 +123,7 @@ export default function App({
     // The entry the world panel opens on, at its portraits; n tells one request from the next.
     [worldEntry, setWorldEntry] = useState<{ title: string; n: number }>(),
     [optionsAnchor, setOptionsAnchor] = useState<HTMLElement | null>(null);
+  const database = useDatabase(host);
   const prefs = host.prefs(),
     mobile = width < 1024,
     rp = prefs.layout === "rp";
@@ -133,6 +137,7 @@ export default function App({
       outline: addonEnabled(prefs, "outline"),
       "image-gen": addonEnabled(prefs, "image-gen"),
     },
+    database: database.available,
   };
   const [layout, dispatch] = useReducer(reduce, null, () => initial(env, prefs.left));
   // Mode, device, width and add-on switches arrive as props of the render, so the model catches up
@@ -239,6 +244,7 @@ export default function App({
       next === "connection" ||
       next === "preset" ||
       next === "persona" ||
+      next === "database" ||
       next === "library"
     ) {
       openSettings(next === "preset" ? "generation" : next === "library" ? "character" : next, undefined, id);
@@ -255,6 +261,10 @@ export default function App({
     }
     if (id === "builtin:quick") {
       dispatch({ type: "popup", popup: { kind: "quick", anchor } });
+      return;
+    }
+    if (id === "builtin:database") {
+      goPanel(shown === "database" ? null : "database");
       return;
     }
     if (id === "builtin:options") {
@@ -329,7 +339,7 @@ export default function App({
       ops.register(`open.${kind}`, () => live.current.goPanel(kind));
       ops.register(`next.${kind}`, () => live.current.next(kind));
     }
-    for (const kind of ["trace", "outline", "image-gen", "character"] as const)
+    for (const kind of ["trace", "outline", "database", "image-gen", "character"] as const)
       ops.register(`open.${kind}`, () => live.current.goPanel(kind));
     ops.register("outline.editor", () => {
       if (addonEnabled(host.prefs(), "outline")) manager.api("outline").open("editor");
@@ -484,6 +494,14 @@ export default function App({
       />
     ) : kind === "trace" ? (
       <Trace host={host} trace={trace} />
+    ) : kind === "database" ? (
+      <Database
+        host={host}
+        initial={focusId}
+        onSelection={(key) => {
+          selectedIds.current.database = key;
+        }}
+      />
     ) : kind ? (
       <Resources
         key={`${kind}:${focusId}`}
@@ -709,6 +727,7 @@ export default function App({
                 ["trace", Activity],
                 ["export", FileOutput],
                 ["outline", ListTree],
+                ["database", Table2],
                 ["image-gen", ImagePlus],
               ] as const
             )

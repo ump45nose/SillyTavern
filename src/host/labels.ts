@@ -17,6 +17,7 @@ export const panelLabels: Record<NonNullable<Panel>, string> = {
   trace: "Trace",
   export: "记录导出",
   outline: "大纲",
+  database: "数据库",
   "image-gen": "生图",
 };
 
@@ -30,6 +31,7 @@ export const settingsLabels: Record<SettingsPage, string> = {
   extensions: "扩展",
   persona: "用户设定",
   character: "角色管理",
+  database: "数据库",
 };
 
 export const actionLabels = {

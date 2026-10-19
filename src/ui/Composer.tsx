@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { ArrowUp, Menu, MoreHorizontal, WandSparkles } from "./icons";
 import { addonEnabled } from "../addons/catalog";
 import { pinnedTools } from "../host/tools";
-import { composerTools, toolIcon } from "./ToolIcon";
+import { builtinTools, toolIcon } from "./ToolIcon";
+import { useDatabase } from "./useDatabase";
 import { useTools } from "./useTools";
 import type { ComposerPopup } from "./ComposerPopovers";
 import type { HostAdapter } from "../host/adapter";
@@ -26,8 +27,9 @@ export function Composer({
   mobile?: boolean;
 }) {
   useTools();
+  const database = useDatabase(host);
   const actions = [
-      ...composerTools,
+      ...builtinTools(database.available),
       ...pinnedTools(host.prefs().pinnedTools).filter(
         (tool) => tool.id !== "wb:export" || addonEnabled(host.prefs(), "record-export"),
       ),
@@ -242,12 +244,20 @@ export function Composer({
           )}
           <div className="wb-composer-actions" ref={actionRow}>
             {visible.map((tool) => {
-              const Icon = toolIcon(tool.id, tool.label);
+              const Icon = toolIcon(tool.id, tool.label),
+                filling = tool.id === "builtin:database" && database.filling;
               return (
                 <button
                   key={tool.id}
                   data-wb-tool={tool.id}
-                  title={disabled(tool.id) ? `${tool.label} · 当前不可用` : tool.label}
+                  data-wb-busy={filling || undefined}
+                  title={
+                    disabled(tool.id)
+                      ? `${tool.label} · 当前不可用`
+                      : filling
+                        ? "数据库 · 填表中"
+                        : tool.label
+                  }
                   aria-label={tool.label}
                   disabled={disabled(tool.id)}
                   onClick={(e) => activate(tool.id, e.currentTarget)}

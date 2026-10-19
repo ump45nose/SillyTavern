@@ -19,6 +19,8 @@ export interface Env {
   width: number;
   /** Which add-on panels are enabled in the user's settings. */
   addons: Record<AddonPanel, boolean>;
+  /** The database plug-in is installed; its panel exists only then. */
+  database: boolean;
 }
 export interface LayoutState {
   env: Env;
@@ -75,7 +77,8 @@ const addonPanels: readonly string[] = ["export", "outline", "image-gen"];
 const unrailed: readonly string[] = ["trace", ...addonPanels];
 
 export const isAddonPanel = (panel: Deep): panel is AddonPanel => addonPanels.includes(panel as string);
-export const available = (env: Env, panel: Deep) => !isAddonPanel(panel) || env.addons[panel];
+export const available = (env: Env, panel: Deep) =>
+  panel === "database" ? env.database : !isAddonPanel(panel) || env.addons[panel];
 const rp = (s: LayoutState) => s.env.mode === "rp";
 /** RP narrow enough that the sidebars overlay the stage instead of sitting beside it. */
 export const compactRp = (s: LayoutState) => rp(s) && s.env.width <= 1100;
@@ -86,6 +89,7 @@ export const sameEnv = (a: Env, b: Env) =>
   a.mode === b.mode &&
   a.mobile === b.mobile &&
   a.width === b.width &&
+  a.database === b.database &&
   addonPanels.every((k) => a.addons[k as AddonPanel] === b.addons[k as AddonPanel]);
 
 export function initial(env: Env, prefLeft: boolean): LayoutState {

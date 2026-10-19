@@ -6,7 +6,7 @@ const { code } = await transform(await readFile(new URL("../src/host/options.ts"
   loader: "ts",
   format: "esm",
 });
-const { parseOptions, stripOptions, stripHistory, tableOptions, sheets, DEFAULT_OPTIONS_PROMPT } = await import(
+const { parseOptions, stripOptions, stripHistory, tableOptions, DEFAULT_OPTIONS_PROMPT } = await import(
   "data:text/javascript;base64," + Buffer.from(code).toString("base64")
 );
 
@@ -62,8 +62,4 @@ test("a bound table becomes options: one row column by column, several rows row 
     { title: "回村", detail: "代价：错过" },
   ]);
   assert.deepEqual(tableOptions({ name: "空" }), []);
-  assert.deepEqual(
-    sheets({ sheet_a: one, sheet_b: many, mate: { type: "chatSheets" }, broken: { name: "x" } }).map((s) => s.name),
-    ["选项表", "行动"],
-  );
 });

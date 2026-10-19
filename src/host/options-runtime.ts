@@ -1,9 +1,9 @@
 import type { HostAdapter } from "./adapter";
 import { ctx } from "./internals";
+import type { DbTable } from "./database";
 import {
   DEFAULT_OPTIONS_PROMPT,
   parseOptions,
-  sheets,
   stripHistory,
   stripOptions,
   tableOptions,
@@ -34,12 +34,11 @@ const PROMPT = "noval_options",
   HOOKED = Symbol.for("workbench.options.formatter");
 const off: OptionsConfig = { source: "off", table: "" };
 
-/** The database plug-in's API, as far as the options need it. */
-interface DatabaseApi {
-  exportTableAsJson: () => unknown;
-  registerTableUpdateCallback?: (fn: () => void) => void;
-}
-const database = () => (window as any).AutoCardUpdaterAPI as DatabaseApi | undefined;
+/** A table back in the plug-in's shape: header row, then rows, row_id in column 0. */
+const asSheet = (table: DbTable) => ({
+  name: table.name,
+  content: [[null, ...table.columns], ...table.rows.map((row) => [row.id, ...row.cells])],
+});
 
 /**
  * A chat's story options: the model's `<options>` block (asked for by an injected prompt, hidden in
@@ -49,8 +48,6 @@ export class OptionsRuntime {
   state: OptionsState = { config: off, items: [], key: "", tables: [], error: "" };
   private listeners = new Set<() => void>();
   private table: StoryOption[] = [];
-  private subscribed = false;
-  private disposed = false;
   constructor(private host: HostAdapter) {
     // MessageFormatter keeps its hooks for the page's life, so the hook goes in once per page.
     const formatter = ctx().messageFormatter;
@@ -69,7 +66,12 @@ export class OptionsRuntime {
         data.prompt = stripHistory(data.prompt, this.state.config.source === "model");
     });
     host.listen("CHAT_CHANGED", () => this.load());
-    host.cleanup.push(host.subscribe(() => this.update()));
+    host.cleanup.push(
+      host.subscribe(() => this.update()),
+      host.database.subscribe(() => {
+        if (this.state.config.source === "db") this.readTable();
+      }),
+    );
     this.load();
   }
   subscribe = (fn: () => void) => {
@@ -113,8 +115,11 @@ export class OptionsRuntime {
     );
     this.table = [];
     this.set({ config, error: "" });
-    if (config.source === "db") this.readTable();
-    else this.set({ tables: [] });
+    if (config.source === "db") {
+      // A plug-in that loaded after the workbench is picked up here; its read notifies readTable too.
+      this.host.database.read();
+      this.readTable();
+    } else this.set({ tables: [] });
     this.update(true);
   }
   async save(config: OptionsConfig) {
@@ -130,33 +135,18 @@ export class OptionsRuntime {
     await this.host.persistSettings();
     this.load();
   }
-  /** Reads the bound table, and keeps reading it whenever the database updates. */
+  /** Reads the bound table from the database runtime, which reads again on every plug-in update. */
   readTable() {
-    const api = database();
-    if (!api || typeof api.exportTableAsJson !== "function") {
-      this.table = [];
-      this.set({ tables: [], error: "没有检测到数据库插件（AutoCardUpdaterAPI）。" });
-      return this.update(true);
-    }
-    if (!this.subscribed && typeof api.registerTableUpdateCallback === "function") {
-      this.subscribed = true;
-      api.registerTableUpdateCallback(() => {
-        if (!this.disposed && this.state.config.source === "db") this.readTable();
-      });
-    }
-    try {
-      const all = sheets(api.exportTableAsJson()),
-        name = this.state.config.table,
-        sheet = all.find((s) => s.name === name);
-      this.table = sheet ? tableOptions(sheet) : [];
-      this.set({
-        tables: all.map((s) => s.name!),
-        error: !name ? "请选择一张表。" : sheet ? "" : `数据库里没有名为「${name}」的表。`,
-      });
-    } catch (error) {
-      this.table = [];
-      this.set({ error: `读取数据库表失败：${error instanceof Error ? error.message : String(error)}` });
-    }
+    const db = this.host.database.state,
+      name = this.state.config.table,
+      table = db.tables.find((t) => t.name === name);
+    this.table = table ? tableOptions(asSheet(table)) : [];
+    this.set({
+      tables: db.tables.map((t) => t.name),
+      error: !db.available
+        ? "没有检测到数据库插件（AutoCardUpdaterAPI）。"
+        : db.error || (!name ? "请选择一张表。" : table ? "" : `数据库里没有名为「${name}」的表。`),
+    });
     this.update(true);
   }
   /** The options belong to the latest reply, and only once it has finished and the user has not answered. */
@@ -176,7 +166,6 @@ export class OptionsRuntime {
     this.set({ items, key });
   }
   dispose() {
-    this.disposed = true;
     ctx().setExtensionPrompt(PROMPT, "", IN_CHAT, 0, false, SYSTEM);
     this.listeners.clear();
   }

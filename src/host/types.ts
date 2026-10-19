@@ -1,5 +1,5 @@
 export type Resource = "connection" | "preset" | "world" | "persona";
-export type Panel = Resource | "character" | "trace" | "export" | "outline" | "image-gen" | null;
+export type Panel = Resource | "character" | "trace" | "export" | "outline" | "database" | "image-gen" | null;
 export type SettingsPage =
   | "generation"
   | "connection"
@@ -9,7 +9,8 @@ export type SettingsPage =
   | "background"
   | "extensions"
   | "persona"
-  | "character";
+  | "character"
+  | "database";
 export type Data = Record<string, any>;
 export interface Item {
   id: string;

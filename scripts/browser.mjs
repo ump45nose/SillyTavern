@@ -280,3 +280,78 @@ export async function seedCast(page) {
         await workbench.host.cast.save({ book: 'RP阵容测试', entries: ['张三', '李四'] });
     }, { a: sprite('r-character.webp'), b: sprite('r-user-character.webp') });
 }
+
+/**
+ * A stand-in for the database plug-in (龙血玄黄·数据库) with its API's semantics: sheet_* tables whose
+ * column 0 is the row_id, 1-based updateRow/insertRow/deleteRow that refuse locked targets, 0-based
+ * lock toggles, and update / fill-start callbacks. `window.__db` holds the tables, locks and calls.
+ */
+export async function seedDatabase(page) {
+    await page.evaluate(() => {
+        const tables = {
+            mate: { type: 'chatSheets', version: 1 },
+            sheet_global: { name: '全局数据', orderNo: 0, sourceData: { note: '当前时间、地点与天气。' }, content: [[null, '时间', '地点', '天气'], ['1', '第三天 · 黄昏', '灯塔下的渔村', '细雨']] },
+            sheet_people: { name: '重要人物', orderNo: 1, sourceData: { note: '出场的重要人物与他们的现状。每个人物一行，离场后保留。' }, content: [
+                [null, '姓名', '身份', '与主角的关系', '现状'],
+                ['1', '林晚', '灯塔看守人的女儿', '旧识，信任渐深', '在灯塔顶层整理父亲留下的航海日志，发现最后一页被撕去，日志里反复出现一个陌生的坐标。'],
+                ['2', '沈舟', '邮差', '刚认识', '每天黄昏送信到灯塔，今天迟到了。'],
+                ['3', '老周', '渔夫', '欠主角一个人情', '修补渔网，偶尔说起二十年前的那场风暴。'],
+            ] },
+            sheet_items: { name: '物品', orderNo: 2, content: [[null, '名称', '数量', '说明'], ['1', '黄铜钥匙', '1', '刻着灯塔的标记'], ['2', '旧航海日志', '1', '最后一页缺失']] },
+            sheet_options: { name: '选项表', orderNo: 3, content: [[null, '选项一', '选项二'], ['1', '推门进去', '转身离开']] },
+        };
+        const locks = {}, calls = [], update = [], fill = [];
+        const lockOf = key => (locks[key] ??= { rows: [], cols: [], cells: [] });
+        const sheet = name => Object.entries(tables).find(([key, t]) => key.startsWith('sheet_') && t.name === name);
+        const notify = () => update.forEach(fn => fn(tables, { persisted: true }));
+        const blocked = (key, row, cols) => {
+            const l = lockOf(key), at = row - 1, t = tables[key];
+            if (l.rows.includes(at)) return true;
+            return cols.some(name => { const c = t.content[0].indexOf(name) - 1; return l.cols.includes(c) || l.cells.includes(`${at}:${c}`); });
+        };
+        const toggle = (list, value) => { const i = list.indexOf(value); if (i < 0) list.push(value); else list.splice(i, 1); return true; };
+        window.__db = { tables, locks, calls, fill };
+        window.AutoCardUpdaterAPI = {
+            exportTableAsJson: () => tables,
+            registerTableUpdateCallback: fn => { if (!update.includes(fn)) update.push(fn); },
+            unregisterTableUpdateCallback: fn => { const i = update.indexOf(fn); if (i > -1) update.splice(i, 1); },
+            registerTableFillStartCallback: fn => { if (!fill.includes(fn)) fill.push(fn); },
+            getTableLockState: key => structuredClone(lockOf(key)),
+            toggleTableRowLock: (key, row) => toggle(lockOf(key).rows, row),
+            toggleTableColLock: (key, col) => toggle(lockOf(key).cols, col),
+            toggleTableCellLock: (key, row, col) => toggle(lockOf(key).cells, `${row}:${col}`),
+            getUpdateConfigParams: () => ({ autoUpdateThreshold: 3, autoUpdateFrequency: 2, updateBatchSize: 2, autoUpdateTokenThreshold: 0 }),
+            updateRow: async (name, row, data) => {
+                calls.push(['updateRow', name, row, data]);
+                const [key, t] = sheet(name) ?? [];
+                if (!t || !t.content[row] || blocked(key, row, Object.keys(data))) return false;
+                for (const [col, value] of Object.entries(data)) t.content[row][t.content[0].indexOf(col)] = value;
+                notify(); return true;
+            },
+            insertRow: async (name, data) => {
+                calls.push(['insertRow', name, data]);
+                const [, t] = sheet(name) ?? [];
+                if (!t) return -1;
+                const id = String(Math.max(0, ...t.content.slice(1).map(r => Number(r[0]) || 0)) + 1);
+                t.content.push([id, ...t.content[0].slice(1).map(col => data[col] ?? '')]);
+                notify(); return t.content.length - 1;
+            },
+            deleteRow: async (name, row) => {
+                calls.push(['deleteRow', name, row]);
+                const [key, t] = sheet(name) ?? [];
+                const l = lockOf(key);
+                if (!t || row < 1 || !t.content[row] || l.rows.includes(row - 1) || l.cells.some(c => c.startsWith(`${row - 1}:`))) return false;
+                t.content.splice(row, 1); notify(); return true;
+            },
+            triggerUpdate: async () => {
+                calls.push(['triggerUpdate']);
+                fill.forEach(fn => fn());
+                await new Promise(resolve => setTimeout(resolve, 600));
+                tables.sheet_global.content[1][3] = '雨停了';
+                notify(); return true;
+            },
+            openSettings: async () => { calls.push(['openSettings']); return true; },
+        };
+        workbench.host.database.read();
+    });
+}
