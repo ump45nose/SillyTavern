@@ -209,9 +209,7 @@ export class CastRuntime {
     form.append("name", `${book}/${name}`);
     form.append("label", label);
     form.append("spriteName", file.name.replace(/\.[^.]+$/, ""));
-    const headers = { ...ctx().getRequestHeaders() };
-    delete headers["Content-Type"];
-    const response = await fetch("/api/sprites/upload", { method: "POST", headers, body: form });
+    const response = await this.host.upload("/api/sprites/upload", form);
     if (!response.ok) throw new Error(`上传「${file.name}」失败（HTTP ${response.status}）。`);
   }
   private async drop(book: string, name: string, sprite: Sprite) {

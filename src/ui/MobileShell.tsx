@@ -29,8 +29,6 @@ import {
   WandSparkles,
   X,
 } from "./icons";
-import { pinnedTools, resolveTool } from "../host/tools";
-import { addonEnabled } from "../addons/catalog";
 import type { HostAdapter } from "../host/adapter";
 import type { HostSnapshot, Panel, Resource, SettingsPage } from "../host/types";
 import type { LayoutMode } from "./LayoutSwitcher";
@@ -38,7 +36,8 @@ import type { ComposerPopup } from "./ComposerPopovers";
 import { ResourceControls } from "./Header";
 import { resourceLabels } from "../host/labels";
 import { ReadingSettings } from "./Reading";
-import { builtinTools, toolIcon } from "./ToolIcon";
+import { toolIcon } from "./ToolIcon";
+import { useComposerTools } from "./useTools";
 import { useDatabase } from "./useDatabase";
 import { motionAllowed, usePresence } from "./Motion";
 import { bus } from "../host/bus";
@@ -846,6 +845,7 @@ export function MobileShell({
   // up the header is inert, so the drag is followed on the document.
   const headerRef = useRef<HTMLElement>(null);
   const database = useDatabase(host);
+  const { tools, disabled: toolDisabled } = useComposerTools(host, snap.busy);
   useEffect(() => {
     const header = headerRef.current;
     if (!header) return;
@@ -964,16 +964,6 @@ export function MobileShell({
     close();
     settings(page);
   };
-  const tools = [
-    ...builtinTools(database.available),
-    ...pinnedTools(host.prefs().pinnedTools).filter(
-      (t) => t.id !== "wb:export" || addonEnabled(host.prefs(), "record-export"),
-    ),
-  ];
-  const disabledTool = (id: string) =>
-    id.startsWith("builtin:")
-      ? snap.busy && ["builtin:continue", "builtin:regenerate", "builtin:impersonate"].includes(id)
-      : id !== "wb:export" && (!resolveTool(id) || !!resolveTool(id)?.disabled);
   return (
     <>
       <header
@@ -1267,7 +1257,7 @@ export function MobileShell({
                       <button
                         key={tool.id}
                         data-wb-busy={(tool.id === "builtin:database" && database.filling) || undefined}
-                        disabled={disabledTool(tool.id)}
+                        disabled={toolDisabled(tool.id)}
                         onClick={(e) => {
                           close();
                           activate(tool.id, e.currentTarget);

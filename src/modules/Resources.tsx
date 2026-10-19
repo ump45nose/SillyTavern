@@ -401,6 +401,35 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
       ))}
     </Select>
   );
+  // The panel's fold and the settings page's side column offer the same persona actions.
+  const manage = (
+    <>
+      <button disabled={edit.dirty} onClick={exportPersona}>
+        <Download size={14} />
+        导出
+      </button>
+      <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
+        <RefreshCw size={14} />
+        同步名称
+      </button>
+      <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
+        <ChartNoAxesColumn size={14} />
+        统计
+      </button>
+      <button onClick={() => action("#personas_backup")}>
+        <Download size={14} />
+        备份全部身份
+      </button>
+      <button onClick={() => action("#personas_restore")}>
+        <Upload size={14} />
+        恢复备份
+      </button>
+      <button className="is-danger" disabled={edit.dirty} onClick={() => action("#persona_delete_button")}>
+        <Trash2 size={14} />
+        删除
+      </button>
+    </>
+  );
   if (!deep) {
     // Board "PanelPersona": who uses this persona first (applies at once), then what it says, then the rest.
     const locks = [
@@ -519,36 +548,7 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
             </div>
           </section>
           <Fold title="管理与偏好" hint="导出 · 统计 · 删除">
-            <div className="wb-persona-manage">
-              <button disabled={edit.dirty} onClick={exportPersona}>
-                <Download size={14} />
-                导出
-              </button>
-              <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
-                <RefreshCw size={14} />
-                同步名称
-              </button>
-              <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
-                <ChartNoAxesColumn size={14} />
-                统计
-              </button>
-              <button onClick={() => action("#personas_backup")}>
-                <Download size={14} />
-                备份全部身份
-              </button>
-              <button onClick={() => action("#personas_restore")}>
-                <Upload size={14} />
-                恢复备份
-              </button>
-              <button
-                className="is-danger"
-                disabled={edit.dirty}
-                onClick={() => action("#persona_delete_button")}
-              >
-                <Trash2 size={14} />
-                删除
-              </button>
-            </div>
+            <div className="wb-persona-manage">{manage}</div>
             {[
               ["persona_show_notifications", "切换身份时显示通知"],
               ["persona_allow_multi_connections", "允许角色关联多个身份"],
@@ -641,32 +641,7 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
               </Select>
             </label>
           </section>
-          <div className="wb-persona-tools">
-            <button disabled={edit.dirty} onClick={exportPersona}>
-              <Download size={14} />
-              导出
-            </button>
-            <button disabled={edit.dirty} onClick={() => action("#sync_name_button")}>
-              <RefreshCw size={14} />
-              同步名称
-            </button>
-            <button disabled={edit.dirty} onClick={() => action("#PersonaManagement .user_stats_button")}>
-              <ChartNoAxesColumn size={14} />
-              统计
-            </button>
-            <button onClick={() => action("#personas_backup")}>
-              <Download size={14} />
-              备份全部身份
-            </button>
-            <button
-              className="is-danger"
-              disabled={edit.dirty}
-              onClick={() => action("#persona_delete_button")}
-            >
-              <Trash2 size={14} />
-              删除
-            </button>
-          </div>
+          <div className="wb-persona-tools">{manage}</div>
         </div>
         <div className="wb-persona-main">
           <label className="wb-persona-line">

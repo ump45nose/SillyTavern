@@ -88,6 +88,17 @@ export const connectionMethods = {
     node.dispatchEvent(new Event("change", { bubbles: true }));
     this.refresh();
   },
+  /** Puts API, provider and model back to an earlier `connectionControls()` reading, e.g. after a preset switch moved them. */
+  restoreConnectionControls(
+    this: HostAdapter,
+    state: Record<"main" | "provider" | "model", { id: string; value: string } | null>,
+  ) {
+    for (const control of [state.main, state.provider, state.model]) {
+      if (!control) continue;
+      const node = document.getElementById(control.id) as HTMLInputElement | HTMLSelectElement | null;
+      if (node && node.value !== control.value) this.setConnectionControl(control.id, control.value);
+    }
+  },
   watchConnectionControls(this: HostAdapter, callback: () => void) {
     const node = document.getElementById("rm_api_block");
     if (!node) return () => {};

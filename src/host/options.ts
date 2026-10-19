@@ -1,4 +1,5 @@
 /** Story options: the pure rules, free of the DOM and of SillyTavern. */
+import type { DbTable } from "./database";
 
 export interface StoryOption {
   title: string;
@@ -64,24 +65,17 @@ export function stripHistory(prompt: string, keepLast: boolean) {
   return prompt.replace(BLOCK, (block, at: number) => (at === keep ? block : ""));
 }
 
-/** One table as the database plug-in exports it: a header row, then the rows. */
-export interface Sheet {
-  name?: string;
-  content?: unknown[][];
-}
-
 const cell = (value: unknown) => (value == null ? "" : String(value).trim());
 
 /**
  * A table's rows as options. One row: each filled cell is an option (a column per option). Several
  * rows: each row is one, titled by its first filled column, the rest as `header：value` lines.
  */
-export function tableOptions(sheet: Sheet): StoryOption[] {
-  const [header = [], ...rows] = Array.isArray(sheet.content) ? sheet.content : [];
-  const columns = header
+export function tableOptions(table: Pick<DbTable, "columns" | "rows">): StoryOption[] {
+  const columns = table.columns
     .map((name, index) => ({ name: cell(name), index }))
     .filter((column) => column.name && column.name.toLowerCase() !== "row_id");
-  const filled = rows.filter((row) => Array.isArray(row) && columns.some((c) => cell(row[c.index])));
+  const filled = table.rows.map((row) => row.cells).filter((row) => columns.some((c) => cell(row[c.index])));
   if (filled.length === 1)
     return columns
       .map((c) => cell(filled[0][c.index]))

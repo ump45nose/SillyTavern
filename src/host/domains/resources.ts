@@ -142,11 +142,7 @@ export const resourcesMethods = {
         const manager = ctx().getPresetManager();
         if (manager.getAllPresets().includes(originalPreset))
           await manager.selectPreset(manager.findPreset(originalPreset));
-        for (const control of [connection.main, connection.provider, connection.model]) {
-          if (!control) continue;
-          const node = document.getElementById(control.id) as HTMLInputElement | HTMLSelectElement | null;
-          if (node && node.value !== control.value) this.setConnectionControl(control.id, control.value);
-        }
+        this.restoreConnectionControls(connection);
       }
       if (exports.length === 1)
         this.download(

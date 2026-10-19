@@ -195,6 +195,12 @@ export class HostCore {
       c.eventSource.removeListener(event, done);
     }
   }
+  /** POSTs a multipart form; the browser sets its Content-Type with the boundary, so the JSON one is dropped. */
+  upload(path: string, form: FormData) {
+    const headers = { ...ctx().getRequestHeaders() };
+    delete headers["Content-Type"];
+    return fetch(path, { method: "POST", headers, body: form });
+  }
   async request(path: string, body: Data) {
     const response = await fetch(path, {
       method: "POST",

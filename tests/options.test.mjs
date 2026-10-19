@@ -50,16 +50,20 @@ test("earlier replies' blocks leave the prompt; the instruction's example at the
 });
 
 test("a bound table becomes options: one row column by column, several rows row by row", () => {
-  const one = { name: "选项表", content: [[null, "选项一", "选项二", "选项三", "选项四"], [0, "追上去", "回村", "", "生火"]] };
+  const row = (id, ...cells) => ({ id: String(id), index: id + 1, cells });
+  const one = { columns: ["选项一", "选项二", "选项三", "选项四"], rows: [row(0, "追上去", "回村", "", "生火")] };
   assert.deepEqual(tableOptions(one), [
     { title: "追上去", detail: "" },
     { title: "回村", detail: "" },
     { title: "生火", detail: "" },
   ]);
-  const many = { name: "行动", content: [["row_id", "行动", "后果", "代价"], [0, "追上去", "找到他", "天黑"], [1, "回村", "", "错过"], [2, "", "", ""]] };
+  const many = {
+    columns: ["行动", "后果", "代价"],
+    rows: [row(0, "追上去", "找到他", "天黑"), row(1, "回村", "", "错过"), row(2, "", "", "")],
+  };
   assert.deepEqual(tableOptions(many), [
     { title: "追上去", detail: "后果：找到他\n代价：天黑" },
     { title: "回村", detail: "代价：错过" },
   ]);
-  assert.deepEqual(tableOptions({ name: "空" }), []);
+  assert.deepEqual(tableOptions({ columns: [], rows: [] }), []);
 });

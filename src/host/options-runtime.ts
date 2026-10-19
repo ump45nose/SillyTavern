@@ -1,6 +1,5 @@
 import type { HostAdapter } from "./adapter";
 import { ctx } from "./internals";
-import type { DbTable } from "./database";
 import {
   DEFAULT_OPTIONS_PROMPT,
   parseOptions,
@@ -33,12 +32,6 @@ const PROMPT = "noval_options",
   SYSTEM = 0,
   HOOKED = Symbol.for("workbench.options.formatter");
 const off: OptionsConfig = { source: "off", table: "" };
-
-/** A table back in the plug-in's shape: header row, then rows, row_id in column 0. */
-const asSheet = (table: DbTable) => ({
-  name: table.name,
-  content: [[null, ...table.columns], ...table.rows.map((row) => [row.id, ...row.cells])],
-});
 
 /**
  * A chat's story options: the model's `<options>` block (asked for by an injected prompt, hidden in
@@ -140,7 +133,7 @@ export class OptionsRuntime {
     const db = this.host.database.state,
       name = this.state.config.table,
       table = db.tables.find((t) => t.name === name);
-    this.table = table ? tableOptions(asSheet(table)) : [];
+    this.table = table ? tableOptions(table) : [];
     this.set({
       tables: db.tables.map((t) => t.name),
       error: !db.available
