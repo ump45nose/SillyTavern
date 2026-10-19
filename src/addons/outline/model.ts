@@ -16,6 +16,8 @@ export interface OutlineData {
   settings: {
     mode: "replace" | "caret";
     send: boolean;
+    /** Whether the current node also goes into every prompt, `depth` messages from the end. */
+    inject: { enabled: boolean; depth: number };
   };
   job?: {
     queue: string[];
@@ -26,7 +28,7 @@ export const emptyOutline = (): OutlineData => ({
   version: 1,
   nodes: [],
   selected: "",
-  settings: { mode: "caret", send: false },
+  settings: { mode: "caret", send: false, inject: { enabled: false, depth: 4 } },
 });
 export function normalizeOutline(value: any): OutlineData {
   if (!value || !Array.isArray(value.nodes)) return emptyOutline();
@@ -46,6 +48,13 @@ export function normalizeOutline(value: any): OutlineData {
       completed: Math.max(0, Math.min(100, Math.floor(Number(node.completed) || 0))),
     };
   });
+  // One node is the current one at a time; older data may hold several.
+  let current = false;
+  for (const node of nodes)
+    if (node.status === "active") {
+      if (current) node.status = "todo";
+      current = true;
+    }
   for (const node of nodes) {
     let next = node.parent,
       depth = 0;
@@ -63,6 +72,10 @@ export function normalizeOutline(value: any): OutlineData {
     settings: {
       mode: value.settings?.mode === "replace" ? "replace" : "caret",
       send: value.settings?.send === true,
+      inject: {
+        enabled: value.settings?.inject?.enabled === true,
+        depth: Math.max(0, Math.min(100, Math.floor(Number(value.settings?.inject?.depth ?? 4) || 0))),
+      },
     },
     job:
       value.job && Array.isArray(value.job.queue)
@@ -94,8 +107,7 @@ export function writingQueue(data: OutlineData, selected: string, subtree = fals
     .filter(eligible)
     .map((n) => n.id);
 }
-export function instruction(data: OutlineData, id: string) {
-  const node = data.nodes.find((n) => n.id === id)!;
+function backgrounds(data: OutlineData, node: OutlineNode) {
   const parents: OutlineNode[] = [];
   let parent = node.parent;
   while (parent) {
@@ -103,10 +115,56 @@ export function instruction(data: OutlineData, id: string) {
     parents.unshift(n);
     parent = n.parent;
   }
+  return parents.filter((n) => n.content.trim()).map((n) => `背景 · ${n.title}\n${n.content}`);
+}
+export function instruction(data: OutlineData, id: string) {
+  const node = data.nodes.find((n) => n.id === id)!;
+  return [...backgrounds(data, node), `写作节点 · ${node.title}\n${node.content}`].join("\n\n");
+}
+const isLeaf = (data: OutlineData, node: OutlineNode) => !data.nodes.some((n) => n.parent === node.id);
+/**
+ * The author moves the story along by hand. Making a node current returns the previous one to
+ * todo; finishing a node makes the next unfinished leaf, in reading order, the current one.
+ */
+export function advance(data: OutlineData, id: string, to: Status): OutlineData {
+  if (!data.nodes.some((n) => n.id === id)) return data;
+  let nodes = data.nodes.map((n) =>
+    n.id === id
+      ? { ...n, status: to, completed: to === "todo" ? 0 : n.completed }
+      : to === "active" && n.status === "active"
+        ? { ...n, status: "todo" as const }
+        : n,
+  );
+  if (to === "done" && !nodes.some((n) => n.status === "active")) {
+    const next = { ...data, nodes },
+      ordered = orderedNodes(next),
+      from = ordered.findIndex((n) => n.id === id),
+      following = [...ordered.slice(from + 1), ...ordered.slice(0, from)].find(
+        (n) => n.status !== "done" && isLeaf(next, n),
+      );
+    if (following) nodes = nodes.map((n) => (n.id === following.id ? { ...n, status: "active" } : n));
+  }
+  return { ...data, nodes };
+}
+/** What `{{outline}}` stands for: the current node with its chapters' background, and what comes next. */
+export function outlineContext(data: OutlineData) {
+  const node = data.nodes.find((n) => n.status === "active");
+  if (!node) return "";
+  const ordered = orderedNodes(data),
+    next = ordered.slice(ordered.indexOf(node) + 1).find((n) => n.status !== "done" && isLeaf(data, n));
   return [
-    ...parents.filter((n) => n.content.trim()).map((n) => `背景 · ${n.title}\n${n.content}`),
-    `写作节点 · ${node.title}\n${node.content}`,
+    ...backgrounds(data, node),
+    `当前节点 · ${node.title}${node.content.trim() ? `\n${node.content}` : ""}`,
+    ...(next ? [`下一节点 · ${next.title}`] : []),
   ].join("\n\n");
+}
+/** Another chat's outline as the start of a new story: the tree and its text, none of the progress. */
+export function reuseOutline(data: OutlineData): OutlineData {
+  return normalizeOutline({
+    ...emptyOutline(),
+    nodes: data.nodes.map((n) => ({ ...n, status: "todo", completed: 0 })),
+    selected: data.selected,
+  });
 }
 export function moveNode(data: OutlineData, id: string, target: string, inside: boolean): OutlineData {
   const node = data.nodes.find((n) => n.id === id),

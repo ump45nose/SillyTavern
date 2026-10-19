@@ -69,6 +69,10 @@ export interface TaskHost extends AddonHost {
   removeImage: (target: MessageTarget, url: string) => Promise<boolean>;
   request: (path: string, body: Data, signal: AbortSignal) => Promise<Response>;
   inputMode: (target: MessageTarget) => void;
+  /** The current character's or group's other chats; `data` is this add-on's metadata when the listing carries it. */
+  otherChats: () => Promise<{ name: string; data?: Data }[]>;
+  /** This add-on's metadata in another chat of the current character or group. */
+  chatMetadata: (name: string) => Promise<Data | undefined>;
   open: (view: "workspace" | "editor") => void;
   beforeClose: () => boolean;
   summary: () => Promise<null>; // Database add-on bridge reserved for a later integration.
