@@ -3150,8 +3150,7 @@ body.wb-rp[data-wb-rp-history] .wb-rp-user {
 }
 /* A cast tag (名字|表情:) leaves the speaker's name before the line, as in a script. On the RP band
    the name plate names a page's first voice, so only the later ones keep theirs. */
-.mes_text .wb-cast-tag::before {
-  content: attr(data-speaker);
+.mes_text [data-wb-speaker] {
   display: inline-block;
   margin-right: 0.5em;
   padding: 0 0.45em;
@@ -3164,8 +3163,11 @@ body.wb-rp[data-wb-rp-history] .wb-rp-user {
   color: var(--wb-accent, currentColor);
   background: color-mix(in srgb, var(--wb-accent, currentColor) 10%, transparent);
 }
-body.wb-rp:not([data-wb-rp-history]) .mes.wb-rp-current .wb-cast-tag[data-wb-lead]::before {
-  content: none;
+/* Shrunk rather than removed: the stage reads each tag's position to tell its page. */
+body.wb-rp:not([data-wb-rp-history]) .mes.wb-rp-current [data-wb-speaker][data-wb-lead] {
+  margin: 0;
+  padding: 0;
+  font-size: 0;
 }
 /* A world book's cast: two places, as in a visual novel. Each figure keeps its place while the other
    speaks; the one listening steps back a little and dims. */

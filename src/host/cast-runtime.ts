@@ -1,7 +1,17 @@
 import type { HostAdapter } from "./adapter";
-import type { ChatChange } from "./chat-observer";
-import { ctx, loadExtensionModule } from "./internals";
-import { castPrompt, isPathSafe, parseCastTag, spriteLabel, type CastName, type Sprite } from "./cast";
+import { ctx, loadExtensionModule, nativeNodes } from "./internals";
+import {
+  castPrompt,
+  isPathSafe,
+  markCastTags,
+  parseCastTag,
+  spriteLabel,
+  type CastName,
+  type Sprite,
+} from "./cast";
+
+let hookAdded = false,
+  marking = false;
 
 /** Chat metadata `workbenchRP.cast`: a world book and the titles of the entries that play. */
 export interface CastConfig {
@@ -50,21 +60,6 @@ function entriesOf(book: any): CastEntry[] {
     });
   }
   return entries;
-}
-
-/** Whether a text node begins a rendered line: at the start of its block, or just after a <br>. */
-function opensLine(node: Node, root: Element): boolean {
-  for (let at: Node | null = node; at && at !== root; at = at.parentNode) {
-    const before = at.previousSibling;
-    if (before)
-      return (
-        before.nodeName === "BR" ||
-        (before.nodeType === 3 && !before.textContent!.trim() && opensLine(before, root))
-      );
-    if (at.parentNode instanceof HTMLElement && getComputedStyle(at.parentNode).display !== "inline")
-      return true;
-  }
-  return true;
 }
 
 /**
@@ -237,33 +232,32 @@ export class CastRuntime {
     return ctx().extensionSettings.expressions?.fallback_expression;
   }
   /**
-   * Replaces each line-opening `名字|表情:` in rendered replies with an empty marker carrying the
-   * speaker and expression; the raw message keeps it, so editing and the model still see it.
+   * Marks the line-opening `名字|表情:` tags of replies as SillyTavern renders them; the raw message
+   * keeps them, so editing and the model still see them. SillyTavern's formatter has no way to
+   * remove a hook, so it is added once per page and stands idle while the workbench is unmounted.
+   * Replies already on screen were rendered without it and are rendered again once.
    */
-  mark(change: ChatChange | null, chat: HTMLElement) {
-    const scopes =
-      change?.nodes || !change
-        ? [chat]
-        : [...change.content]
-            .map((id) => chat.querySelector<HTMLElement>(`.mes[mesid="${id}"]`))
-            .filter(Boolean);
-    for (const scope of scopes)
-      for (const text of scope!.querySelectorAll<HTMLElement>('.mes:not([is_user="true"]) .mes_text')) {
-        if (!text.textContent?.includes("|")) continue;
-        const hits: [Text, NonNullable<ReturnType<typeof parseCastTag>>][] = [];
-        const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
-        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-          const tag = parseCastTag((node as Text).data);
-          if (tag && opensLine(node, text)) hits.push([node as Text, tag]);
-        }
-        for (const [node, tag] of hits) {
-          const marker = document.createElement("span");
-          marker.className = "wb-cast-tag";
-          marker.dataset.speaker = tag.speaker;
-          marker.dataset.expr = tag.expr;
-          node.deleteData(0, tag.length);
-          node.before(marker);
-        }
-      }
+  showTags() {
+    if (!hookAdded) {
+      ctx().messageFormatter.addHook((mes: string, at: { isUser: boolean; isReasoning: boolean }) =>
+        marking && !at.isUser && !at.isReasoning ? markCastTags(mes) : mes,
+      );
+      hookAdded = true;
+    }
+    marking = true;
+    const { chat, updateMessageBlock } = ctx();
+    for (const node of nativeNodes.chat!.querySelectorAll<HTMLElement>('.mes:not([is_user="true"])')) {
+      const id = Number(node.getAttribute("mesid"));
+      const message = chat[id];
+      if (
+        message &&
+        !message.is_user &&
+        (message.extra?.display_text ?? message.mes ?? "").split("\n").some(parseCastTag)
+      )
+        updateMessageBlock(id, message);
+    }
+    return () => {
+      marking = false;
+    };
   }
 }

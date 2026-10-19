@@ -182,14 +182,39 @@ try {
   await say(["张三|joy:「今天风大，我们上山看看吧。」", "李四|anger:「别去！山上要塌方了。」", prose, prose].join("\n")); await settle();
   assert.deepEqual(await figures(), ["张三/joy.webp speaking", "李四/anger.webp listening"]);
   assert.equal(await page.locator(".wb-rp-plate strong").textContent(), "张三"); assert.equal(await page.locator(".wb-rp-user").count(), 0, "two of the cast fill both places");
-  const shown = await page.locator(".mes.wb-rp-current .mes_text").evaluate(n => ({ text:n.innerText, labels:[...n.querySelectorAll(".wb-cast-tag")].map(t => getComputedStyle(t, "::before").content) }));
-  assert(!shown.text.includes("|joy") && !shown.text.includes("|anger"), shown.text); assert.deepEqual(shown.labels, ["none", '"李四"'], "the plate names the page's first voice; a later one carries its own label");
+  const shown = await page.locator(".mes.wb-rp-current .mes_text").evaluate(n => ({ text:n.innerText, labels:[...n.querySelectorAll("[data-wb-speaker]")].map(t => t.getBoundingClientRect().width < 1 ? "hidden" : t.textContent) }));
+  assert(!shown.text.includes("|joy") && !shown.text.includes("|anger"), shown.text); assert.deepEqual(shown.labels, ["hidden", "李四"], "the plate names the page's first voice; a later one carries its own label");
+  // The tags are marked by SillyTavern's own formatter hook, after its tag encoding, so that setting changes nothing.
+  assert.equal(await page.evaluate(() => {
+    const c = SillyTavern.getContext(), id = c.chat.length - 1, encode = c.powerUserSettings.encode_tags;
+    c.powerUserSettings.encode_tags = true; c.updateMessageBlock(id, c.chat[id]);
+    const count = document.querySelectorAll(`.mes[mesid="${id}"] .mes_text [data-wb-speaker]`).length;
+    c.powerUserSettings.encode_tags = encode; c.updateMessageBlock(id, c.chat[id]); return count;
+  }), 2, "tags are marked with SillyTavern's tag encoding on");
   assert.match(await page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value), /张三（joy、neutral）；李四（anger）/);
   await role("下一段对白或输入").click(); await settle();
   assert.deepEqual(await figures(), ["张三/joy.webp listening", "李四/anger.webp speaking"], "an untagged page continues the last voice before it");
   await say("三哥笑道「好，听你的。」"); await settle();
   assert.deepEqual(await figures(), ["张三/neutral.webp speaking", "李四/anger.webp listening"], "an untagged reply goes by its names; with no classifier, the neutral face");
   pass("a world-book cast tags each line: speaker and face per page, two places, names kept, prompt injected");
+  // Unmounted, the workbench marks nothing and what it marked still reads; mounted again, replies already
+  // on screen are rendered once more with their tags marked.
+  const unmounted = await page.evaluate(async () => {
+    const c = SillyTavern.getContext(), before = c.chat.length - 2;
+    workbench.unmount();
+    const msg = { name:c.name2, is_user:false, is_system:false, send_date:Date.now(), mes:"李四|anger:「谁在那儿？」", extra:{} };
+    c.chat.push(msg); c.addOneMessage(msg);
+    const text = id => document.querySelector(`.mes[mesid="${id}"] .mes_text`).textContent;
+    const result = { kept: text(before), raw: text(c.chat.length - 1) };
+    await workbench.mount();
+    result.marked = [...document.querySelectorAll(`.mes[mesid="${c.chat.length - 1}"] [data-wb-speaker]`)].map(n => n.dataset.wbSpeaker + "|" + n.dataset.wbExpr);
+    await c.deleteLastMessage();
+    return result;
+  });
+  await settle();
+  assert(unmounted.kept.startsWith("张三「今天风大") && unmounted.kept.includes("李四「别去") && !unmounted.kept.includes("|joy"), JSON.stringify(unmounted));
+  assert(unmounted.raw.includes("李四|anger"), JSON.stringify(unmounted)); assert.deepEqual(unmounted.marked, ["李四|anger"], JSON.stringify(unmounted));
+  pass("cast tags come from SillyTavern's formatter hook: idle while unmounted, names still readable, on-screen replies marked on mount");
   await role("RP 外观").click(); await page.locator(".wb-cast-open").click(); await page.locator(".wb-cast-list").waitFor();
   assert.deepEqual(await page.locator(".wb-cast-entry input").evaluateAll(ns => ns.map(n => [n.checked, n.disabled])), [[true,false],[true,false],[false,true]]);
   await page.getByLabel("为 李四 上传立绘").setInputFiles({ name:"neutral.webp", mimeType:"image/webp", buffer:fs.readFileSync("docs/design/rp-desktop/assets/r-user-character.webp") });

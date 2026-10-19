@@ -94,8 +94,16 @@ export function internal(name: Name): Promise<any> {
 /** Context functions the workbench cannot run without. */
 export function assertContext() {
   const c = ctx();
-  for (const key of ["getPresetManager", "getWorldInfoNames", "getRequestHeaders", "selectCharacterById"])
+  for (const key of [
+    "getPresetManager",
+    "getWorldInfoNames",
+    "getRequestHeaders",
+    "selectCharacterById",
+    "updateMessageBlock",
+  ])
     if (typeof c[key] !== "function") throw new Error(`当前酒馆缺少 ${key}，请使用已验证的版本。`);
+  if (typeof c.messageFormatter?.addHook !== "function")
+    throw new Error("当前酒馆缺少 messageFormatter，请使用已验证的版本。");
 }
 
 /** Third-party extension modules are loaded by path; they are not part of the checked surface. */

@@ -32,6 +32,24 @@ export function castTagsAsNames(text: string) {
     .join("\n");
 }
 
+/**
+ * The same tags in a rendered reply (SillyTavern's HTML after Markdown): a line starts the text, a
+ * newline, a <br> or a block, perhaps under inline tags. The name stays as text in a marker
+ * carrying the speaker and expression, so it reads even without the workbench's styles. Data
+ * attributes, not a class, because the message sanitizer renames every class.
+ */
+const HTML_TAG =
+  /(^|\n|<br\s*\/?>|<(?:p|li|div|blockquote|h[1-6]|td|th)\b[^>]*>)((?:\s|<[a-z][^>]*>)*)([^|\n:：<>"&]{1,24}?)[ \t]*\|[ \t]*([a-z_]+)[ \t]*[:：][ \t　]?/gi;
+
+export function markCastTags(html: string) {
+  if (!html.includes("|")) return html;
+  return html.replace(HTML_TAG, (whole, line: string, open: string, name: string, expr: string) => {
+    const speaker = name.trim();
+    if (!speaker) return whole;
+    return `${line}${open}<span data-wb-speaker="${speaker}" data-wb-expr="${expr.toLowerCase()}">${speaker}</span>`;
+  });
+}
+
 const QUOTES = '「『“"';
 
 /**

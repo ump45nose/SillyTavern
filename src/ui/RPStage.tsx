@@ -363,11 +363,11 @@ export function RPStage({
       block.style.setProperty("--wb-rp-page", block.clientHeight + "px");
       const count = Math.max(1, Math.round((block.scrollWidth + PAGE_GAP) / (block.clientWidth + PAGE_GAP))),
         origin = block.getBoundingClientRect().left - block.scrollLeft,
-        tags = [...block.querySelectorAll<HTMLElement>(".wb-cast-tag")],
+        tags = [...block.querySelectorAll<HTMLElement>("[data-wb-speaker]")],
         marks = tags.map((mark) => ({
           page: Math.floor((mark.getBoundingClientRect().left - origin + 1) / (block.clientWidth + PAGE_GAP)),
-          speaker: mark.dataset.speaker!,
-          expr: mark.dataset.expr!,
+          speaker: mark.dataset.wbSpeaker!,
+          expr: mark.dataset.wbExpr!,
         }));
       // The band's name plate already names a page's first voice; later voices carry their own.
       tags.forEach((tag, i) =>

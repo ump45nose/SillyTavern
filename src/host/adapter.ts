@@ -37,11 +37,8 @@ export class HostAdapter extends HostCore {
     this.chatObserver = new ChatObserver(nativeNodes.chat!);
     this.media = new MediaObserver();
     this.cast = new CastRuntime(this);
-    const chat = nativeNodes.chat!;
-    // Subscribed before any view, so every view reads replies with their cast tags already out.
-    this.cast.mark(null, chat);
     this.cleanup.push(
-      this.chatObserver.subscribe((change) => this.cast.mark(change, chat)),
+      this.cast.showTags(),
       () => this.chatObserver.disconnect(),
       () => this.media.disconnect(),
     );
