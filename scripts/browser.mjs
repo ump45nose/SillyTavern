@@ -47,13 +47,17 @@ export async function launch() {
     return chromium.launch({ executablePath, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--no-proxy-server'] });
 }
 
-export async function session(browser, { mobile = false, helper = true, probe = true, timings = true, recordVideo } = {}) {
+// The real database plug-in (龙血玄黄·数据库), when installed, auto-fills tables after every reply and injects
+// prompts, so a session serves it as an empty module unless asked; verify:database stands in for it with seedDatabase.
+// Serving the file (not editing settings) holds even where a check routes /api/settings itself.
+export async function session(browser, { mobile = false, helper = true, probe = true, database = false, timings = true, recordVideo } = {}) {
     const context = await browser.newContext({
         httpCredentials: credentials,
         viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 },
         isMobile: mobile, hasTouch: mobile,
         recordVideo,
     });
+    if (!database) await context.route('**/scripts/extensions/third-party/shujuku/index.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
     if (!helper || !probe) {
         // These flags are session-only test overrides; never persist them to the test account.
         await context.route('**/api/settings/save', route => route.fulfill({ json: {} }));

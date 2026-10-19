@@ -193,11 +193,19 @@ function stop(only = []) {
 }
 
 // Recreate the visual instance from scratch so screenshot baselines start from identical data.
+// Extensions installed by hand (e.g. the database plug-in) are kept; verifier sessions disable them.
 async function resetVisual() {
   stop(["visual"]);
   await new Promise((resolve) => setTimeout(resolve, 800));
+  const extensions = path.join(runtime, "visual/data/default-user/extensions"), kept = path.join(runtime, "visual-extensions");
+  fs.rmSync(kept, { recursive: true, force: true });
+  if (fs.existsSync(extensions)) fs.renameSync(extensions, kept);
   fs.rmSync(path.join(runtime, "visual"), { recursive: true, force: true });
   prepare();
+  for (const name of fs.existsSync(kept) ? fs.readdirSync(kept) : []) {
+    if (!fs.existsSync(path.join(extensions, name))) fs.renameSync(path.join(kept, name), path.join(extensions, name));
+  }
+  fs.rmSync(kept, { recursive: true, force: true });
   process.argv = [process.argv[0], process.argv[1], "start", "visual"];
   await start();
 }
