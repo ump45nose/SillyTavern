@@ -36,13 +36,14 @@ import type { ComposerPopup } from "./ComposerPopovers";
 import { ResourceControls } from "./Header";
 import { resourceLabels } from "../host/labels";
 import { ReadingSettings } from "./Reading";
+import { OptionsSheetList } from "./StoryOptions";
 import { toolIcon } from "./ToolIcon";
 import { useComposerTools } from "./useTools";
 import { useDatabase } from "./useDatabase";
 import { motionAllowed, usePresence } from "./Motion";
 import { bus } from "../host/bus";
 
-type Sheet = "management" | "tools" | HTMLElement | null;
+type Sheet = "management" | "tools" | "options" | HTMLElement | null;
 const resourceIcons = { connection: Plug, preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
 const interactive = "button,input,textarea,select,a,[contenteditable=true],iframe,video";
 export function MobileShell({
@@ -308,6 +309,12 @@ export function MobileShell({
     };
     const off = [
       bus.on("image-compose", image),
+      // The story options open over whatever is reading, never over a drawer or the editor.
+      bus.on("story-options", () => {
+        const now = latest.current;
+        if (host.options.state.items.length && !now.left && !now.panel && !now.editor && !now.sheet)
+          setSheet("options");
+      }),
       // A floor picked in the outline is also selected, so its tools are one tap away.
       bus.on("floor-jump", (id) => {
         const chat = document.getElementById("chat")!;
@@ -1152,7 +1159,15 @@ export function MobileShell({
             className={`wb-mobile-sheet wb-ui ${presence.value === "management" ? "is-management" : ""}`}
             role="dialog"
             aria-modal="true"
-            aria-label={sheet === "management" ? "会话管理" : sheet === "tools" ? "输入工具" : "最新回复操作"}
+            aria-label={
+              sheet === "management"
+                ? "会话管理"
+                : sheet === "tools"
+                  ? "输入工具"
+                  : sheet === "options"
+                    ? "剧情选项"
+                    : "最新回复操作"
+            }
             inert={presence.exiting}
             data-wb-exiting={presence.exiting || undefined}
           >
@@ -1163,7 +1178,9 @@ export function MobileShell({
                   ? "会话管理"
                   : presence.value === "tools"
                     ? "输入工具"
-                    : "最新回复"}
+                    : presence.value === "options"
+                      ? "剧情选项"
+                      : "最新回复"}
               </strong>
               <button aria-label="关闭工具面板" onClick={close}>
                 <X size={21} />
@@ -1247,6 +1264,16 @@ export function MobileShell({
                   <ReadingSettings host={host} row />
                 </div>
               </>
+            ) : presence.value === "options" ? (
+              <OptionsSheetList
+                host={host}
+                rp={rp}
+                onDone={close}
+                onConfig={(anchor) => {
+                  close();
+                  activate("builtin:options", anchor);
+                }}
+              />
             ) : presence.value === "tools" ? (
               <>
                 {rp && <div className="wb-mobile-tool-config">{resources}</div>}

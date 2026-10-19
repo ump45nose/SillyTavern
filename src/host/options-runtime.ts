@@ -2,20 +2,18 @@ import type { HostAdapter } from "./adapter";
 import { ctx } from "./internals";
 import {
   DEFAULT_OPTIONS_PROMPT,
+  optionText,
   parseOptions,
+  readOptionsConfig,
+  storedOptionsConfig,
   stripHistory,
   stripOptions,
   tableOptions,
+  type OptionAction,
+  type OptionsConfig,
   type StoryOption,
 } from "./options";
 
-export type OptionSource = "off" | "model" | "db";
-/** Chat metadata `workbenchOptions`: where this chat's options come from. */
-export interface OptionsConfig {
-  source: OptionSource;
-  /** The database table bound for the "db" source. */
-  table: string;
-}
 export interface OptionsState {
   config: OptionsConfig;
   /** The options for the latest reply; empty while a reply is generating or the user spoke last. */
@@ -31,14 +29,13 @@ const PROMPT = "noval_options",
   IN_CHAT = 1,
   SYSTEM = 0,
   HOOKED = Symbol.for("workbench.options.formatter");
-const off: OptionsConfig = { source: "off", table: "" };
 
 /**
  * A chat's story options: the model's `<options>` block (asked for by an injected prompt, hidden in
  * the text, left out of later prompts) or a bound table of the database plug-in.
  */
 export class OptionsRuntime {
-  state: OptionsState = { config: off, items: [], key: "", tables: [], error: "" };
+  state: OptionsState = { config: readOptionsConfig(undefined), items: [], key: "", tables: [], error: "" };
   private listeners = new Set<() => void>();
   private table: StoryOption[] = [];
   constructor(private host: HostAdapter) {
@@ -88,9 +85,7 @@ export class OptionsRuntime {
     return content;
   }
   config(): OptionsConfig {
-    const value = ctx().chatMetadata?.workbenchOptions;
-    const source = ["model", "db"].includes(value?.source) ? (value.source as OptionSource) : "off";
-    return { source, table: typeof value?.table === "string" ? value.table : "" };
+    return readOptionsConfig(ctx().chatMetadata?.workbenchOptions);
   }
   template() {
     return this.host.prefs().optionsPrompt || DEFAULT_OPTIONS_PROMPT;
@@ -115,12 +110,24 @@ export class OptionsRuntime {
     } else this.set({ tables: [] });
     this.update(true);
   }
-  async save(config: OptionsConfig) {
-    const meta = ctx().chatMetadata;
-    if (config.source === "off" && !config.table) delete meta.workbenchOptions;
-    else meta.workbenchOptions = { source: config.source, table: config.table };
+  /** Changes this chat's config; the fields left out keep their values. */
+  async save(patch: Partial<OptionsConfig>) {
+    const meta = ctx().chatMetadata,
+      value = storedOptionsConfig({ ...this.config(), ...patch });
+    if (value) meta.workbenchOptions = value;
+    else delete meta.workbenchOptions;
     await ctx().saveMetadata();
     this.load();
+  }
+  /**
+   * Chooses an option in a layout: its text goes into the native input and, when that layout sends,
+   * through the native send, as if the user had typed it and pressed send.
+   */
+  choose(option: StoryOption, layout: "novel" | "rp"): OptionAction {
+    const action = this.state.config[layout];
+    this.host.setInput(optionText(option));
+    if (action === "send") document.getElementById("send_but")!.click();
+    return action;
   }
   /** The prompt is the user's own across chats; empty brings the default back. */
   async savePrompt(text: string) {

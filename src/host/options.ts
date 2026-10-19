@@ -7,6 +7,41 @@ export interface StoryOption {
   detail: string;
 }
 
+export type OptionSource = "off" | "model" | "db";
+/** What a click on an option does: put its text in the input, or send it at once. */
+export type OptionAction = "fill" | "send";
+/** Chat metadata `workbenchOptions`: where this chat's options come from and what choosing one does. */
+export interface OptionsConfig {
+  source: OptionSource;
+  /** The database table bound for the "db" source. */
+  table: string;
+  /** Noval reads on and writes back, so it fills; RP plays as a choice, so it sends. */
+  novel: OptionAction;
+  rp: OptionAction;
+}
+const DEFAULTS: OptionsConfig = { source: "off", table: "", novel: "fill", rp: "send" };
+const action = (value: unknown, fallback: OptionAction): OptionAction =>
+  value === "fill" || value === "send" ? value : fallback;
+
+/** A chat's stored config with every field it lacks (or holds wrong) at its default. */
+export function readOptionsConfig(value: any): OptionsConfig {
+  return {
+    source: value?.source === "model" || value?.source === "db" ? value.source : "off",
+    table: typeof value?.table === "string" ? value.table : "",
+    novel: action(value?.novel, DEFAULTS.novel),
+    rp: action(value?.rp, DEFAULTS.rp),
+  };
+}
+/** What the chat stores: nothing while every field is at its default. */
+export function storedOptionsConfig(config: Partial<OptionsConfig>): OptionsConfig | undefined {
+  const value = readOptionsConfig(config);
+  return (Object.keys(DEFAULTS) as (keyof OptionsConfig)[]).every((key) => value[key] === DEFAULTS[key])
+    ? undefined
+    : value;
+}
+/** The text an option puts in the input: its detail says the move in full, else its title. */
+export const optionText = (option: StoryOption) => option.detail || option.title;
+
 const BLOCK = /<options\b[^>]*>[\s\S]*?<\/options>/gi;
 const OPEN = "<options";
 const MAX = 6;
