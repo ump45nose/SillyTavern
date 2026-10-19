@@ -62,7 +62,8 @@ export class HostAdapter extends HostCore {
       CHARACTER_RENAMED: ["characters"],
       CHARACTER_DELETED: ["characters"],
       CHARACTER_SELECTED: ["characters"],
-      SETTINGS_UPDATED: sliceNames,
+      // Settings never touch ctx().chat; rebuilding the chat index on every settings save is waste.
+      SETTINGS_UPDATED: sliceNames.filter((name) => name !== "chat"),
       MAIN_API_CHANGED: resource,
       OAI_PRESET_CHANGED_AFTER: resource,
       PRESET_CHANGED: resource,

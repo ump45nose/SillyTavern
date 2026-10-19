@@ -39,7 +39,6 @@ export function HostControl({
     node.dispatchEvent(new Event("input", { bubbles: true }));
     node.dispatchEvent(new Event("change", { bubbles: true }));
     redraw();
-    host.refresh();
   };
   const common = { "aria-label": label, disabled: node.disabled };
   if (node instanceof HTMLSelectElement) {
@@ -57,7 +56,6 @@ export function HostControl({
                   o.selected = e.target.checked;
                   node.dispatchEvent(new Event("change", { bubbles: true }));
                   redraw();
-                  host.refresh();
                 }}
               />
               {o.text}
@@ -94,7 +92,6 @@ export function HostControl({
         onChange={() => {
           node.click();
           redraw();
-          host.refresh();
         }}
       />
     );

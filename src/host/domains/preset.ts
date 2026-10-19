@@ -48,10 +48,18 @@ export const presetMethods = {
     if (!name || manager.getAllPresets().includes(name)) throw new Error("预设名称不能为空或重复");
     if (data) validatePreset(data);
     await manager.savePreset(name, data);
-    this.refresh();
+    this.invalidate("resources", "session");
     return manager.getSelectedPresetName();
   },
   async deletePreset(this: HostAdapter, name: string) {
+    try {
+      await this.removePreset(name);
+    } finally {
+      this.invalidate("resources", "session");
+    }
+  },
+  /** deletePreset without invalidating, for callers that delete several and invalidate once. */
+  async removePreset(this: HostAdapter, name: string) {
     const manager = ctx().getPresetManager(),
       { presets, preset_names } = manager.getPresetList();
     const wasActive = manager.getSelectedPresetName() === name;
@@ -71,11 +79,9 @@ export const presetMethods = {
       }
       select.html(previousOptions);
       await manager.selectPreset(previousSelection);
-      this.refresh();
       throw error;
     }
     if (wasActive && manager.getAllPresets().length) await manager.selectPreset(manager.getSelectedPreset());
-    this.refresh();
   },
   /**
    * The running chat-completion settings in the shape of preset `name`, or null when `name` is not
@@ -142,7 +148,7 @@ export const presetMethods = {
     const preset = { ...this.presetData(name), ...clone(o.getChatCompletionPreset(o.oai_settings)) };
     await ctx().getPresetManager().savePreset(name, preset);
     this.resourceVersions.preset++;
-    this.refresh();
+    this.invalidate("resources");
   },
   /** Reapplies the preset file to the running settings, dropping changes not written to it. */
   async revertPreset(this: HostAdapter) {
@@ -156,13 +162,13 @@ export const presetMethods = {
       window.jQuery("#settings_preset_openai").trigger("change");
     });
     this.resourceVersions.preset++;
-    this.refresh();
+    this.invalidate("resources");
   },
   async savePreset(this: HostAdapter, name: string, base: Data, draft: Data) {
     validatePreset(draft);
     const merged = mergeEdits(base, draft, this.presetData(name));
     await ctx().getPresetManager().savePreset(name, merged);
-    this.refresh();
+    this.invalidate("resources");
     return merged;
   },
   traceComposition(this: HostAdapter) {

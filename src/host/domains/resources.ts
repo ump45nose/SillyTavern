@@ -40,8 +40,9 @@ export const resourcesMethods = {
       }
       // Worldbooks are multi-select: navigation never disables another book.
     } finally {
+      // Selection lives in session; the switch's own events rebuild anything else it touched.
       this.busy = false;
-      this.refresh();
+      this.invalidate("session");
     }
     if (kind === "connection") await this.applyBinding();
   },
@@ -59,7 +60,7 @@ export const resourcesMethods = {
       originalPreset = ctx().getPresetManager().getSelectedPresetName(),
       exports: { name: string; data: Data }[] = [];
     this.resourceAction = true;
-    this.refresh();
+    this.invalidate("session");
     try {
       for (const id of [...new Set(ids)])
         try {
@@ -90,7 +91,7 @@ export const resourcesMethods = {
             }
             this.resourceVersions.world++;
           } else if (kind === "preset") {
-            if (action === "delete") await this.deletePreset(id);
+            if (action === "delete") await this.removePreset(id);
             else {
               const name = this.copyName(kind, item.name);
               await ctx().getPresetManager().savePreset(name, data);
@@ -134,7 +135,6 @@ export const resourcesMethods = {
           }
           if (action === "delete") this.drafts.delete(kind + ":" + id);
           done.push(id);
-          this.refresh();
         } catch (e) {
           errors.push({ id, message: e instanceof Error ? e.message : String(e) });
         }
@@ -168,8 +168,9 @@ export const resourcesMethods = {
       }
       return { done, created, errors };
     } finally {
+      // One rebuild for the whole batch.
       this.resourceAction = false;
-      this.refresh();
+      this.invalidate("resources", "session");
     }
   },
   async createResource(
@@ -189,7 +190,6 @@ export const resourcesMethods = {
       await this.world.updateWorldInfoList();
       await ctx().eventSource.emit(ctx().eventTypes.WORLDINFO_UPDATED, name, clone(book));
       this.resourceVersions.world++;
-      this.refresh();
       return name;
     }
     if (kind === "preset") return this.createPreset(name, data);

@@ -91,7 +91,6 @@ export const chatMethods = {
     if (ctx().groupId)
       await (await internal("groupChats")).openGroupChat(ctx().groupId, name.replace(/\.jsonl$/, ""));
     else await ctx().openCharacterChat(name.replace(/\.jsonl$/, ""));
-    this.refresh();
   },
   async jump(this: HostAdapter, id: number) {
     const selector = `#chat .mes[mesid="${id}"]`;
@@ -120,14 +119,12 @@ export const chatMethods = {
   async renameChat(this: HostAdapter, name: string, next: string) {
     if (this.isBusy()) throw new Error("生成中不能重命名聊天。");
     await ctx().renameChat(name.replace(/\.jsonl$/, ""), next.trim().replace(/\.jsonl$/, ""));
-    this.refresh();
   },
   async newChat(this: HostAdapter) {
     if (this.isBusy()) throw new Error("请先停止生成。");
     const script = await internal("script");
     await script.saveChatConditional();
     await script.doNewChat();
-    this.refresh();
   },
   async deleteChat(this: HostAdapter, name: string) {
     if (this.isBusy()) throw new Error("请先停止生成。");
@@ -154,7 +151,6 @@ export const chatMethods = {
       if (this.snapshot().chatName === file) await script.replaceCurrentChat();
       await c.eventSource.emit(c.eventTypes.CHAT_DELETED, file);
     }
-    this.refresh();
   },
   async importChat(this: HostAdapter, file: File) {
     if (this.isBusy()) throw new Error("请先停止生成。");
@@ -174,7 +170,7 @@ export const chatMethods = {
       : await (await internal("script")).importCharacterChat(form);
     if (!imported?.length) throw new Error("导入未成功，请检查文件格式和服务连接。");
     this.chatsVersion++;
-    this.refresh();
+    this.invalidate("session");
   },
   async exportChat(this: HostAdapter, name: string) {
     const script = await internal("script");

@@ -91,7 +91,7 @@ export const connectionMethods = {
     node.value = value;
     node.dispatchEvent(new Event("input", { bubbles: true }));
     node.dispatchEvent(new Event("change", { bubbles: true }));
-    this.refresh();
+    this.invalidate("session");
   },
   watchConnectionControls(this: HostAdapter, callback: () => void) {
     const node = document.getElementById("rm_api_block");
@@ -174,7 +174,7 @@ export const connectionMethods = {
       await this.persistSettings();
     } catch (error) {
       for (const key of Object.keys(patch)) if (profile[key] === next[key]) profile[key] = previous[key];
-      this.refresh();
+      this.invalidate("resources");
       throw error;
     }
     const option = [...document.querySelectorAll<HTMLOptionElement>("#connection_profiles option")].find(
@@ -182,6 +182,5 @@ export const connectionMethods = {
     );
     if (option) option.textContent = profile.name;
     await ctx().eventSource.emit(ctx().eventTypes.CONNECTION_PROFILE_UPDATED, profile);
-    this.refresh();
   },
 };
