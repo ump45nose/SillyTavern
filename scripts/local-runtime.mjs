@@ -18,6 +18,8 @@ const envPath = path.join(root, ".env");
 const offset = Number(process.env.WB_PORT_OFFSET ?? readEnv().WB_PORT_OFFSET ?? 0);
 const instances = { baseline: 32011 + offset, validation: 32012 + offset, visual: 32014 + offset };
 const mockPort = 32013 + offset;
+// WB_BIND_ADDRESS (e.g. 0.0.0.0 for tailnet / LAN) applies to the workbench instances; baseline stays on loopback.
+const exposed = ["validation", "visual"];
 
 function readEnv() {
   if (!fs.existsSync(envPath)) return {};
@@ -56,6 +58,8 @@ function prepare() {
     if (!fs.existsSync(config)) {
       fs.writeFileSync(config, `dataRoot: ${JSON.stringify(path.join(directory, "data"))}
 listen: false
+listenAddress:
+  ipv4: 127.0.0.1
 port: ${port}
 browserLaunch:
   enabled: false
@@ -112,6 +116,18 @@ extensions:
   console.log(`Prepared official ${lock.upstream.release} (${commit.slice(0, 12)}) on 127.0.0.1:${Object.values(instances).join("/")}.`);
 }
 
+// Re-applied on every start so changing WB_BIND_ADDRESS needs no reprepare; SillyTavern keeps these keys when it rewrites the file.
+function bind(name) {
+  const config = path.join(runtime, name, "config/config.yaml");
+  const address = exposed.includes(name) ? readEnv().WB_BIND_ADDRESS || "127.0.0.1" : "127.0.0.1";
+  const text = fs.readFileSync(config, "utf8")
+    .replace(/^listen: .*$/m, `listen: ${address !== "127.0.0.1"}`)
+    .replace(/^(listenAddress:\n  ipv4: ).*$/m, `$1${address}`);
+  if (!/^listenAddress:\n  ipv4: /m.test(text)) throw new Error(`${config} lacks listenAddress.ipv4`);
+  fs.writeFileSync(config, text, { mode: 0o600 });
+  return address;
+}
+
 function running() {
   if (!fs.existsSync(pidFile)) return {};
   const pids = JSON.parse(fs.readFileSync(pidFile, "utf8"));
@@ -146,6 +162,7 @@ async function start() {
   for (const [name] of Object.entries(instances)) {
     if (only.length && !only.includes(name)) continue;
     if (!pids[name]) {
+      console.log(`${name} listens on ${bind(name)}:${instances[name]}`);
       pids[name] = launch(name, process.execPath, ["server.js", "--configPath", path.join(runtime, name, "config/config.yaml")], { cwd: upstream, env: { ...process.env, NODE_ENV: "production" } });
     }
   }
