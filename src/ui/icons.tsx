@@ -207,6 +207,7 @@ export const Lightbulb = thin("Lightbulb", Lucide.Lightbulb);
 export const Link = thin("Link", Lucide.Link);
 export const ListMinus = thin("ListMinus", Lucide.ListMinus);
 export const Lock = thin("Lock", Lucide.Lock);
+export const LockOpen = thin("LockOpen", Lucide.LockOpen);
 export const MessageSquare = thin("MessageSquare", Lucide.MessageSquare);
 export const MessageSquareX = thin("MessageSquareX", Lucide.MessageSquareX);
 export const Minimize2 = thin("Minimize2", Lucide.Minimize2);
@@ -226,5 +227,6 @@ export const SquareArrowOutUpRight = thin("SquareArrowOutUpRight", Lucide.Square
 export const Tag = thin("Tag", Lucide.Tag);
 export const TextCursorInput = thin("TextCursorInput", Lucide.TextCursorInput);
 export const TextSearch = thin("TextSearch", Lucide.TextSearch);
+export const Table2 = thin("Table2", Lucide.Table2);
 
 export type { LucideIcon, LucideProps } from "lucide-react";

@@ -103,18 +103,6 @@ export function tableOptions(sheet: Sheet): StoryOption[] {
     .slice(0, MAX);
 }
 
-/** The tables of an export, by name; the export is an object of tables plus bookkeeping entries. */
-export function sheets(exported: unknown): Sheet[] {
-  if (!exported || typeof exported !== "object") return [];
-  return Object.values(exported as Record<string, unknown>).filter(
-    (value): value is Sheet =>
-      !!value &&
-      typeof value === "object" &&
-      typeof (value as Sheet).name === "string" &&
-      Array.isArray((value as Sheet).content),
-  );
-}
-
 /** The instruction injected while a chat takes its options from the model's replies. */
 export const DEFAULT_OPTIONS_PROMPT = [
   "[剧情选项] 正文写完后，另起一行输出 3–4 个供 {{user}} 选择的下一步行动，格式如下，整段只出现一次：",

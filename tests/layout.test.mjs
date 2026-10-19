@@ -11,7 +11,7 @@ const { outputFiles } = await build({
 const m = await import("data:text/javascript;base64," + Buffer.from(outputFiles[0].text).toString("base64"));
 
 const addons = { export: true, outline: true, "image-gen": true };
-const env = (over = {}) => ({ mode: "novel", mobile: false, width: 1496, addons, ...over });
+const env = (over = {}) => ({ mode: "novel", mobile: false, width: 1496, addons, database: true, ...over });
 const sizes = { left: 260, right: 460, rail: 180 };
 const still = { left: false, right: false };
 const run = (state, ...actions) => actions.reduce(m.reduce, state);
@@ -118,6 +118,16 @@ test("switching an add-on off closes its panel and editor and forgets it", () =>
   assert.equal(m.lastAvailablePanel(s), "character");
   assert.equal(m.reduce(s, { type: "panel", panel: "outline" }).panel, null);
   assert.equal(m.reduce(s, { type: "deep", deep: "outline" }).deep, null);
+});
+
+test("the database panel exists only while the plug-in does, and keeps the resource rail", () => {
+  assert.equal(m.reduce(m.initial(env({ database: false }), true), { type: "panel", panel: "database" }).panel, null);
+  let s = run(m.initial(env(), true), { type: "panel", panel: "database" });
+  assert.equal(s.panel, "database");
+  assert.equal(m.railVisible(s, still), true);
+  s = m.reduce(s, { type: "env", env: { database: false }, prefLeft: true });
+  assert.equal(s.panel, null);
+  assert.equal(m.lastAvailablePanel(s), "character");
 });
 
 test("settings close every other surface", () => {

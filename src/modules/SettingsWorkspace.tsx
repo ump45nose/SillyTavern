@@ -10,6 +10,7 @@ import {
   Save,
   Settings,
   SlidersHorizontal,
+  Table2,
   TextCursorInput,
   UserRound,
   UsersRound,
@@ -22,13 +23,15 @@ import { ReadingSettings } from "../ui/Reading";
 import { nativePages } from "./NativeSettings";
 import { bus, guards } from "../host/bus";
 import { settingsLabels } from "../host/labels";
+import { useDatabase } from "../ui/useDatabase";
 const ComponentSettings = lazyChunk(() => import("./ComponentSettings")),
   WorldBindings = lazyChunk(() => import("./WorldBindings")),
   Groups = lazyChunk(() => import("./Groups")),
   PersonaManager = lazyChunk(() => import("./PersonaManager")),
   ResourceManager = lazyChunk(() => import("./ResourceManager")),
   Resources = lazyChunk(() => import("./Resources")),
-  Characters = lazyChunk(() => import("./Characters"));
+  Characters = lazyChunk(() => import("./Characters")),
+  Database = lazyChunk(() => import("./Database"));
 const AddonSettings = lazyChunk(() => import("./AddonSettings"));
 const ToolSettings = lazyChunk(() => import("./ToolSettings")),
   StartupDiagnostics = lazyChunk(() => import("./StartupDiagnostics"));
@@ -43,6 +46,7 @@ export const settingsPages = (
     ["extensions", Puzzle],
     ["persona", UserRound],
     ["character", UsersRound],
+    ["database", Table2],
   ] as const
 ).map(([id, Icon]) => [id, settingsLabels[id], Icon] as const);
 export default function SettingsWorkspace({
@@ -64,6 +68,9 @@ export default function SettingsWorkspace({
   mobile?: boolean;
 }) {
   const snap = useHostSlices(host, withoutChat),
+    database = useDatabase(host),
+    // 数据库 is the database plug-in's page, listed while the plug-in is installed.
+    pages = settingsPages.filter(([id]) => id !== "database" || database.available),
     [closing, setClosing] = useState(false),
     [extensionId, setExtensionId] = useState("");
   const close = () => {
@@ -101,14 +108,16 @@ export default function SettingsWorkspace({
             ? ["身份编辑", "全局偏好"]
             : page === "character"
               ? ["全部角色", "群组"]
-              : [
-                  ...nativePages[page].sections.map((s) => s.label),
-                  ...(page === "settings"
-                    ? ["常用工具", "加载诊断"]
-                    : page === "extensions"
-                      ? ["工作台附加功能"]
-                      : []),
-                ];
+              : page === "database"
+                ? ["表格数据"]
+                : [
+                    ...nativePages[page].sections.map((s) => s.label),
+                    ...(page === "settings"
+                      ? ["常用工具", "加载诊断"]
+                      : page === "extensions"
+                        ? ["工作台附加功能"]
+                        : []),
+                  ];
   const groups = groupsOf(page);
   const active = groups.includes(group) ? group : groups[0],
     def = settingsPages.find((p) => p[0] === page)!,
@@ -200,7 +209,7 @@ export default function SettingsWorkspace({
       )}
       {mobile && listing ? (
         <div className="wb-settings-index">
-          {settingsPages.map(([id, label, Icon]) => (
+          {pages.map(([id, label, Icon]) => (
             <section key={id} aria-label={label}>
               <h3>
                 <Icon size={16} />
@@ -221,7 +230,7 @@ export default function SettingsWorkspace({
       ) : (
         <div className="wb-settings-layout">
           <nav className="wb-settings-nav" aria-label="设置分类">
-            {settingsPages.map(([id, label, Icon]) => (
+            {pages.map(([id, label, Icon]) => (
               <button
                 key={id}
                 aria-pressed={page === id}
@@ -257,7 +266,21 @@ export default function SettingsWorkspace({
             <Notice error={task.error} />
             <div className="wb-settings-body" key={page + ":" + active}>
               <Suspense fallback={<Loading />}>
-                {page === "extensions" && active === "工作台附加功能" ? (
+                {page === "database" ? (
+                  <Database
+                    host={host}
+                    // A phone keeps the records-and-form view: a grid would only scroll sideways.
+                    deep={!mobile}
+                    initial={positions.database}
+                    onSelection={(key) => setPositions((p) => ({ ...p, database: key }))}
+                    leave={() => {
+                      // The plug-in's window opens under this modal, so the workspace closes first.
+                      if (!guards.check({ preserveDrafts: true })) return false;
+                      onClose();
+                      return true;
+                    }}
+                  />
+                ) : page === "extensions" && active === "工作台附加功能" ? (
                   <AddonSettings host={host} />
                 ) : page === "settings" && active === "常用工具" ? (
                   <ToolSettings host={host} />

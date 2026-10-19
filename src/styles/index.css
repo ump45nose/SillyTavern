@@ -33,6 +33,7 @@
 @import "./components/addon.css";
 @import "./components/reading-settings.css";
 @import "./components/story-options.css";
+@import "./components/database.css";
 @import "./layouts/rp.css";
 @import "./layouts/settings.css";
 @import "./layouts/pwa.css";

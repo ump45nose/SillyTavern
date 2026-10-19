@@ -14,6 +14,7 @@ import { ctx, internal } from "./internals";
 import type { ChatObserver, MediaObserver } from "./chat-observer";
 import type { CastRuntime } from "./cast-runtime";
 import type { OptionsRuntime } from "./options-runtime";
+import type { DatabaseRuntime } from "./database-runtime";
 import { bus } from "./bus";
 
 export const defaults: Preferences = { left: true, bindings: {}, groups: {} };
@@ -72,6 +73,8 @@ export class HostCore {
   media!: MediaObserver;
   /** The chat's world-book cast on the RP stage. */
   cast!: CastRuntime;
+  /** The database plug-in's tables for this chat; `available` is false without the plug-in. */
+  database!: DatabaseRuntime;
   /** The chat's story options, from the model's replies or a database table. */
   options!: OptionsRuntime;
   listen(name: string, fn: (...args: any[]) => void) {

@@ -37,7 +37,8 @@ import type { LayoutMode } from "./LayoutSwitcher";
 import type { ComposerPopup } from "./ComposerPopovers";
 import { ResourceControls, resourceLabels } from "./Header";
 import { ReadingSettings } from "./Reading";
-import { composerTools, toolIcon } from "./ToolIcon";
+import { builtinTools, toolIcon } from "./ToolIcon";
+import { useDatabase } from "./useDatabase";
 import { motionAllowed, usePresence } from "./Motion";
 import { bus } from "../host/bus";
 
@@ -845,6 +846,7 @@ export function MobileShell({
   // Pulling the header down draws the session menu down with the finger. Once the menu is
   // up the header is inert, so the drag is followed on the document.
   const headerRef = useRef<HTMLElement>(null);
+  const database = useDatabase(host);
   useEffect(() => {
     const header = headerRef.current;
     if (!header) return;
@@ -968,7 +970,7 @@ export function MobileShell({
     settings(page);
   };
   const tools = [
-    ...composerTools,
+    ...builtinTools(database.available),
     ...pinnedTools(host.prefs().pinnedTools).filter(
       (t) => t.id !== "wb:export" || addonEnabled(host.prefs(), "record-export"),
     ),
@@ -1269,6 +1271,7 @@ export function MobileShell({
                     return (
                       <button
                         key={tool.id}
+                        data-wb-busy={(tool.id === "builtin:database" && database.filling) || undefined}
                         disabled={disabledTool(tool.id)}
                         onClick={(e) => {
                           close();
