@@ -6,7 +6,7 @@ const { code } = await transform(await readFile(new URL("../src/host/cast.ts", i
   loader: "ts",
   format: "esm",
 });
-const { parseCastTag, castTagsAsNames, markCastTags, matchSpeaker, pickSprite, castPrompt, isPathSafe, spriteLabel } =
+const { parseCastTag, castTagsAsNames, markCastTags, suggestLabel, stagedNotes, matchSpeaker, pickSprite, castPrompt, isPathSafe, spriteLabel } =
   await import("data:text/javascript;base64," + Buffer.from(code).toString("base64"));
 
 test("cast tags open a line with a name and an expression, in either colon", () => {
@@ -74,4 +74,13 @@ test("rendered replies mark tags that open a line, keeping the name as text", ()
   assert.equal(markCastTags("张三|joy: 走"), `${mark("张三", "joy")}走`);
   for (const html of ['<p>a"b|joy: x</p>', "<p><b>x</b>张三|joy: 行中</p>", "<p>|joy: 无名</p>"])
     assert.equal(markCastTags(html), html);
+});
+
+test("a batch of new images is labeled by file name and checked before it goes in", () => {
+  assert.equal(suggestLabel("Joy (1).png"), "joy");
+  assert.equal(suggestLabel("smile2.webp"), "smile");
+  assert.equal(suggestLabel("怒.png"), "");
+  assert.deepEqual(stagedNotes(["joy", "smile", "", "anger", "anger", "neutral"], ["neutral", "joy-2"]), [
+    "", "custom", "invalid", "repeat", "repeat", "replace",
+  ]);
 });

@@ -7,7 +7,14 @@ import { usePresence } from "./Motion";
 import { boundedPreference } from "../host/rp";
 import { CastPanel, CastSource } from "./RPCast";
 
-export function RPAppearance({ host }: { host: HostAdapter }) {
+export function RPAppearance({
+  host,
+  openPortraits,
+}: {
+  host: HostAdapter;
+  /** Opens a world-book entry at its portraits. */
+  openPortraits: (book: string, title: string) => void;
+}) {
   useHostSlices(host, ["prefs"]);
   const prefs = host.prefs(),
     [anchor, setAnchor] = useState<HTMLElement | null>(null),
@@ -45,7 +52,13 @@ export function RPAppearance({ host }: { host: HostAdapter }) {
           onClose={close}
         >
           {view === "cast" ? (
-            <CastPanel host={host} />
+            <CastPanel
+              host={host}
+              onManage={(book, title) => {
+                close();
+                openPortraits(book, title);
+              }}
+            />
           ) : (
             <div className="wb-pop-form">
               <span className="wb-pop-label">对白字体</span>

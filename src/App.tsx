@@ -115,7 +115,9 @@ export default function App({
     [width, setWidth] = useState(window.innerWidth),
     [renderedPanel, setRenderedPanel] = useState<Panel>(null),
     [railTarget, setRailTarget] = useState<HTMLElement | null>(null),
-    [externalError, setExternalError] = useState("");
+    [externalError, setExternalError] = useState(""),
+    // The entry the world panel opens on, at its portraits; n tells one request from the next.
+    [worldEntry, setWorldEntry] = useState<{ title: string; n: number }>();
   const prefs = host.prefs(),
     mobile = width < 1024,
     rp = prefs.layout === "rp";
@@ -450,9 +452,10 @@ export default function App({
   const content = (kind: Panel, independent = false) =>
     kind === "world" ? (
       <World
-        key={`world:${focusId}`}
+        key={`world:${focusId}:${worldEntry?.n ?? 0}`}
         host={host}
         initial={focusId}
+        entryTitle={worldEntry?.title}
         deep={independent}
         onSelection={(name) => {
           selectedIds.current.world = name;
@@ -790,6 +793,10 @@ export default function App({
           blocked={!mobile && width <= 1100 && !!(navigationShown || shown)}
           width={width}
           readingLayout={() => onLayout("novel")}
+          openPortraits={(book, title) => {
+            setWorldEntry({ title, n: Date.now() });
+            goPanel("world", book);
+          }}
           run={task.run}
           mobile={mobile}
         />

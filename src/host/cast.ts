@@ -119,8 +119,63 @@ export function isPathSafe(name: string) {
   );
 }
 
+/** SillyTavern's built-in expressions; any other label is the user's own. */
+export const EXPRESSIONS = [
+  "admiration",
+  "amusement",
+  "anger",
+  "annoyance",
+  "approval",
+  "caring",
+  "confusion",
+  "curiosity",
+  "desire",
+  "disappointment",
+  "disapproval",
+  "disgust",
+  "embarrassment",
+  "excitement",
+  "fear",
+  "gratitude",
+  "grief",
+  "joy",
+  "love",
+  "nervousness",
+  "neutral",
+  "optimism",
+  "pride",
+  "realization",
+  "relief",
+  "remorse",
+  "sadness",
+  "surprise",
+];
+
 /** The labels a file name gives, as SillyTavern reads them: `joy.png`, `joy-2.png`, `joy.alt.png`. */
 export function spriteLabel(fileName: string) {
   const stem = fileName.replace(/\.[^.]+$/, "").toLowerCase();
   return stem.match(/^(.+?)(?:[-.].*?)?$/)?.[1] ?? stem;
+}
+
+/** The label a new image starts with: its file name's, kept to the letters a tag can carry. */
+export function suggestLabel(fileName: string) {
+  return spriteLabel(fileName).replace(/[^a-z_]+/g, "");
+}
+
+/**
+ * What uploading a batch under these labels would do: a label a tag cannot carry, a label twice in
+ * the batch, an image it replaces (the folder holds `<label>.*`), a label of the user's own.
+ */
+export function stagedNotes(labels: string[], stems: string[]) {
+  return labels.map((label, i) =>
+    !/^[a-z_]+$/.test(label)
+      ? "invalid"
+      : labels.indexOf(label) !== i || labels.lastIndexOf(label) !== i
+        ? "repeat"
+        : stems.includes(label)
+          ? "replace"
+          : EXPRESSIONS.includes(label)
+            ? ""
+            : "custom",
+  );
 }

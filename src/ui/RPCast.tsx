@@ -1,5 +1,5 @@
-import React, { useState, useSyncExternalStore } from "react";
-import { ChevronRight, LoaderCircle, Plus, UsersRound, X } from "./icons";
+import React, { useSyncExternalStore } from "react";
+import { ChevronRight, UsersRound } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { useHostSlices } from "./common";
 import { Select } from "./Select";
@@ -61,30 +61,24 @@ export function CastSource({ host, onOpen }: { host: HostAdapter; onOpen: () => 
   );
 }
 
-/** Which entries play, and the expressions in each one's folder. */
-export function CastPanel({ host }: { host: HostAdapter }) {
+/** Which entries play; each one's images are managed in its world-book entry. */
+export function CastPanel({
+  host,
+  onManage,
+}: {
+  host: HostAdapter;
+  onManage: (book: string, title: string) => void;
+}) {
   const cast = useCast(host),
     config = cast.config,
-    [busy, setBusy] = useState(""),
     run = (pending: Promise<unknown>) => pending.catch((error) => host.report(error));
   if (!config) return null;
   const chosen = new Set(config.entries),
     save = (entries: string[]) => run(host.cast.save({ book: config.book, entries }));
-  const upload = async (name: string, files: File[]) => {
-    setBusy(name);
-    try {
-      await host.cast.upload(name, files);
-    } catch (error) {
-      host.report(error);
-    } finally {
-      setBusy("");
-    }
-  };
   return (
     <div className="wb-pop-form wb-cast">
       <p className="wb-cast-note">
-        勾选上场的条目。立绘放在 <code>characters/{config.book}/条目名/</code>
-        ，文件名就是表情：joy.png、anger-2.png。模型会在每段开头写「名字|表情:」。
+        勾选上场的条目。模型会在每段开头写「名字|表情:」，立绘在世界书条目的「立绘」页管理。
       </p>
       {!cast.entries.length ? (
         <p className="wb-cast-note">{cast.loading ? "正在读取世界书…" : "这本世界书还没有带标题的条目。"}</p>
@@ -111,45 +105,23 @@ export function CastPanel({ host }: { host: HostAdapter }) {
                   <strong>{entry.name}</strong>
                   {!!entry.aliases.length && <small>{entry.aliases.join("、")}</small>}
                 </label>
+                {member && (
+                  <span className="wb-cast-count">
+                    {member.sprites.length ? `${member.sprites.length} 张` : "无立绘"}
+                  </span>
+                )}
+                <button
+                  className="wb-cast-manage"
+                  aria-label={`管理 ${entry.name} 的立绘`}
+                  onClick={() => onManage(config.book, entry.name)}
+                >
+                  立绘
+                  <ChevronRight size={13} aria-hidden="true" />
+                </button>
                 {!entry.safe && (
                   <small className="wb-cast-hint">
                     标题含 / \ : * ? " &lt; &gt; | 或首尾的点、空格，改名后可上场
                   </small>
-                )}
-                {member && (
-                  <div className="wb-cast-faces">
-                    {member.sprites.map((sprite) => (
-                      <figure key={sprite.path}>
-                        <img src={sprite.path} alt="" loading="lazy" />
-                        <figcaption>{sprite.label}</figcaption>
-                        <button
-                          className="wb-icon"
-                          aria-label={`删除 ${entry.name} 的 ${sprite.label}`}
-                          title="删除"
-                          onClick={() => run(host.cast.remove(entry.name, sprite))}
-                        >
-                          <X size={11} />
-                        </button>
-                      </figure>
-                    ))}
-                    <label className="wb-cast-add" aria-busy={busy === entry.name}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        hidden
-                        disabled={!!busy}
-                        aria-label={`为 ${entry.name} 上传立绘`}
-                        onChange={(e) => {
-                          const files = [...(e.target.files || [])];
-                          e.target.value = "";
-                          if (files.length) void upload(entry.name, files);
-                        }}
-                      />
-                      {busy === entry.name ? <LoaderCircle size={15} /> : <Plus size={15} />}
-                      <span>{member.sprites.length ? "添加" : "上传立绘"}</span>
-                    </label>
-                  </div>
                 )}
               </li>
             );

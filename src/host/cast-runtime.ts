@@ -43,6 +43,10 @@ const PROMPT = "noval_cast",
   SYSTEM = 0;
 const idle: CastState = { entries: [], members: [], missing: [], loading: false, error: "" };
 const enc = encodeURIComponent;
+/** A sprite's file name without its extension: what the server matches to replace or delete it. */
+const stem = (sprite: Sprite) =>
+  decodeURIComponent(sprite.path.split("?")[0].split("/").pop()!).replace(/\.[^.]+$/, "");
+const extension = (fileName: string) => fileName.match(/\.[^.]+$/)?.[0].toLowerCase() ?? ".png";
 
 function entriesOf(book: any): CastEntry[] {
   const seen = new Set<string>(),
@@ -131,7 +135,8 @@ export class CastRuntime {
     await ctx().saveMetadata();
     await this.load();
   }
-  private async sprites(book: string, name: string): Promise<Sprite[]> {
+  /** The images in `characters/<book>/<entry>/`, with URLs escaped part by part. */
+  async sprites(book: string, name: string): Promise<Sprite[]> {
     const response = await fetch(`/api/sprites/get?name=${enc(`${book}/${name}`)}`, {
       headers: ctx().getRequestHeaders(),
     });
@@ -148,45 +153,85 @@ export class CastRuntime {
       };
     });
   }
-  /** Files named for their expression (`joy.png`, `joy-2.png`) go into the entry's folder. */
-  async upload(name: string, files: File[]) {
-    const book = this.state.config?.book;
-    if (!book) return;
-    for (const file of files) {
-      const label = spriteLabel(file.name);
-      if (!/^[a-z_]+$/.test(label))
-        throw new Error(`「${file.name}」需以英文表情名命名，例如 joy.png、anger-2.png。`);
-      const form = new FormData();
-      form.append("avatar", file);
-      form.append("name", `${book}/${name}`);
-      form.append("label", label);
-      form.append("spriteName", file.name.replace(/\.[^.]+$/, "").toLowerCase());
-      const headers = { ...ctx().getRequestHeaders() };
-      delete headers["Content-Type"];
-      const response = await fetch("/api/sprites/upload", { method: "POST", headers, body: form });
-      if (!response.ok) throw new Error(`上传「${file.name}」失败（HTTP ${response.status}）。`);
+  /**
+   * Each image goes in as `<label>.<ext>` (or under the file name it replaces, `joy-2`), replacing
+   * what was there; the file it came from only gives the extension. The server reads the label
+   * back from the file name.
+   */
+  async upload(
+    book: string,
+    name: string,
+    items: { file: Blob; fileName: string; label: string; stem?: string }[],
+  ) {
+    for (const item of items) {
+      if (!/^[a-z_]+$/.test(item.label))
+        throw new Error(`表情名「${item.label}」只能用小写英文字母和下划线。`);
+      await this.put(
+        book,
+        name,
+        item.label,
+        new File([item.file], (item.stem ?? item.label) + extension(item.fileName)),
+      );
     }
-    await this.refresh(name);
+    await this.touched(book);
   }
-  async remove(name: string, sprite: Sprite) {
-    const book = this.state.config?.book;
-    if (!book) return;
-    const file = decodeURIComponent(sprite.path.split("?")[0].split("/").pop()!);
+  async remove(book: string, name: string, sprite: Sprite) {
+    await this.drop(book, name, sprite);
+    await this.touched(book);
+  }
+  /** The image under another label: written there first, then taken off the old one. */
+  async relabel(book: string, name: string, sprite: Sprite, label: string) {
+    if (!/^[a-z_]+$/.test(label)) throw new Error(`表情名「${label}」只能用小写英文字母和下划线。`);
+    const file = await this.fetchSprite(sprite);
+    await this.put(book, name, label, new File([file], label + extension(file.name)));
+    await this.drop(book, name, sprite);
+    await this.touched(book);
+  }
+  /**
+   * An entry's images follow it to a new title. The server cannot move them, so each is copied to
+   * the new folder and only then taken off the old one; a failure stops there and leaves the old
+   * images in place. This chat's cast follows the new title too.
+   */
+  async move(book: string, from: string, to: string, progress?: (done: number, total: number) => void) {
+    const sprites = await this.sprites(book, from);
+    for (const [i, sprite] of sprites.entries()) {
+      progress?.(i, sprites.length);
+      const file = await this.fetchSprite(sprite);
+      await this.put(book, to, sprite.label, file);
+      await this.drop(book, from, sprite);
+    }
+    const config = this.config();
+    if (config?.book === book && config.entries.includes(from))
+      await this.save({ book, entries: config.entries.map((x) => (x === from ? to : x)) });
+    else await this.touched(book);
+    return sprites.length;
+  }
+  private async fetchSprite(sprite: Sprite) {
+    const response = await fetch(sprite.path, { headers: ctx().getRequestHeaders(), cache: "no-store" });
+    if (!response.ok) throw new Error(`读取立绘「${stem(sprite)}」失败（HTTP ${response.status}）。`);
+    return new File([await response.blob()], decodeURIComponent(sprite.path.split("?")[0].split("/").pop()!));
+  }
+  private async put(book: string, name: string, label: string, file: File) {
+    const form = new FormData();
+    form.append("avatar", file);
+    form.append("name", `${book}/${name}`);
+    form.append("label", label);
+    form.append("spriteName", file.name.replace(/\.[^.]+$/, ""));
+    const headers = { ...ctx().getRequestHeaders() };
+    delete headers["Content-Type"];
+    const response = await fetch("/api/sprites/upload", { method: "POST", headers, body: form });
+    if (!response.ok) throw new Error(`上传「${file.name}」失败（HTTP ${response.status}）。`);
+  }
+  private async drop(book: string, name: string, sprite: Sprite) {
     await this.host.request("/api/sprites/delete", {
       name: `${book}/${name}`,
       label: sprite.label,
-      spriteName: file.replace(/\.[^.]+$/, ""),
+      spriteName: stem(sprite),
     });
-    await this.refresh(name);
   }
-  /** Lists one member's images again after an upload or a removal. */
-  private async refresh(name: string) {
-    const book = this.state.config?.book;
-    if (!book || !this.state.members.some((member) => member.name === name)) return;
-    const sprites = await this.sprites(book, name),
-      members = this.state.members.map((member) => (member.name === name ? { ...member, sprites } : member));
-    this.prompt(members);
-    this.set({ ...this.state, members });
+  /** The stage and the prompt list the cast's images again when its book's images change. */
+  private async touched(book: string) {
+    if (this.state.config?.book === book) await this.load();
   }
   /** A member by its title or one of its keywords. */
   member(name: string | null | undefined) {

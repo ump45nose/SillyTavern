@@ -8,6 +8,8 @@ import type { Data } from "../host/types";
 import type { HostAdapter } from "../host/adapter";
 import { useTask, SearchBox, Notice, Empty, Field, useHostSlices, withoutChat } from "../ui/common";
 import { ResourcePicker } from "../ui/ResourcePicker";
+import { EntryPortraits } from "../ui/EntryPortraits";
+import { isPathSafe } from "../host/cast";
 const positions = [
   "角色定义之前",
   "角色定义之后",
@@ -22,12 +24,15 @@ export default function World({
   host,
   deep,
   initial,
+  entryTitle,
   managed,
   onSelection,
 }: {
   host: HostAdapter;
   deep?: boolean;
   initial?: string;
+  /** Opens on the entry with this title, at its portraits. */
+  entryTitle?: string;
   managed?: boolean;
   onSelection?: (name: string) => void;
 }) {
@@ -45,7 +50,8 @@ export default function World({
     [saved, setSaved] = useState(""),
     [scope, setScope] = useState("global"),
     [newKey, setNewKey] = useState<string | null>(null),
-    [filter, setFilter] = useState("all");
+    [filter, setFilter] = useState("all"),
+    [target, setTarget] = useState(entryTitle);
   useEffect(() => {
     onSelection?.(name);
   }, [name]);
@@ -80,9 +86,19 @@ export default function World({
           if (live) {
             setBase(clone(data));
             setDraft(clone(data));
-            setEntry((previous) =>
-              data.entries?.[previous] ? previous : (Object.keys(data.entries ?? {})[0] ?? ""),
+            const wanted =
+              target &&
+              Object.entries<Data>(data.entries ?? {}).find(
+                ([, e]) => String(e.comment ?? "").trim() === target,
+              )?.[0];
+            setEntry(
+              (previous) =>
+                wanted || (data.entries?.[previous] ? previous : (Object.keys(data.entries ?? {})[0] ?? "")),
             );
+            if (target) {
+              setTarget(undefined);
+              if (wanted) setTab("portraits");
+            }
             setJson(JSON.stringify(data, null, 2));
           }
         })
@@ -114,10 +130,21 @@ export default function World({
       if (!base || !draft) return;
       const candidate = tab === "json" ? JSON.parse(json) : draft;
       const result = await host.saveBook(name, base, candidate);
-      setBase(clone(result));
-      setDraft(clone(result));
-      setJson(JSON.stringify(result, null, 2));
-      setSaved("已保存");
+      // A renamed entry's portraits follow its title to the new folder; the book is saved either way.
+      let moved = 0;
+      try {
+        for (const [id, before] of Object.entries<Data>(base.entries ?? {})) {
+          const from = String(before.comment ?? "").trim(),
+            to = String(result.entries?.[id]?.comment ?? "").trim();
+          if (from && to && from !== to && isPathSafe(from) && isPathSafe(to))
+            moved += await host.cast.move(name, from, to);
+        }
+        setSaved(moved ? `已保存 · ${moved} 张立绘随改名移动` : "已保存");
+      } finally {
+        setBase(clone(result));
+        setDraft(clone(result));
+        setJson(JSON.stringify(result, null, 2));
+      }
     });
   const modeChange = (id: string, mode: string) => {
     if (!draft) return;
@@ -296,9 +323,15 @@ export default function World({
           <article className="wb-entry-card" aria-label={`编辑条目：${selected.comment || entry}`}>
             <div className="wb-entry-card-head">
               <div className="wb-entry-tabs" role="tablist" aria-label="条目内容">
-                {["content", "trigger", "json"].map((t) => (
+                {["content", "trigger", "portraits", "json"].map((t) => (
                   <button key={t} role="tab" aria-selected={tab === t} onClick={() => switchTab(t)}>
-                    {t === "content" ? "正文" : t === "trigger" ? "触发条件" : "完整 JSON"}
+                    {t === "content"
+                      ? "正文"
+                      : t === "trigger"
+                        ? "触发条件"
+                        : t === "portraits"
+                          ? "立绘"
+                          : "完整 JSON"}
                   </button>
                 ))}
               </div>
@@ -312,7 +345,14 @@ export default function World({
                 <Trash2 size={15} />
               </button>
             </div>
-            {tab === "json" ? (
+            {tab === "portraits" ? (
+              <EntryPortraits
+                host={host}
+                book={name}
+                title={String(base?.entries?.[entry]?.comment ?? "").trim()}
+                draftTitle={String(selected.comment ?? "")}
+              />
+            ) : tab === "json" ? (
               <textarea
                 className="wb-entry-text is-code"
                 aria-label="世界书 JSON"
@@ -392,7 +432,7 @@ export default function World({
                 </div>
               </>
             )}
-            {tab !== "json" && (
+            {(tab === "content" || tab === "trigger") && (
               <div className="wb-entry-params">
                 <label>
                   注入位置
@@ -534,6 +574,7 @@ export default function World({
             {[
               ["content", "正文"],
               ["trigger", "触发条件"],
+              ["portraits", "立绘"],
             ].map(([t, label]) => (
               <button key={t} aria-pressed={tab === t} onClick={() => switchTab(t)}>
                 {label}
@@ -544,7 +585,14 @@ export default function World({
             <Trash2 size={15} />
           </button>
         </header>
-        {tab === "trigger" ? (
+        {tab === "portraits" ? (
+          <EntryPortraits
+            host={host}
+            book={name}
+            title={String(base?.entries?.[entry]?.comment ?? "").trim()}
+            draftTitle={String(selected.comment ?? "")}
+          />
+        ) : tab === "trigger" ? (
           <div className="wb-wt-trigger">
             <Field label="激活方式">
               <Select value={activation(selected)} onChange={(e) => modeChange(entry, e.target.value)}>
@@ -577,7 +625,7 @@ export default function World({
           />
         )}
       </div>
-      {params}
+      {tab !== "portraits" && params}
     </div>
   );
   return (

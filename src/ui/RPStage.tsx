@@ -82,6 +82,7 @@ export function RPStage({
   blocked,
   width,
   readingLayout,
+  openPortraits,
   run,
   mobile = false,
 }: {
@@ -90,6 +91,7 @@ export function RPStage({
   blocked: boolean;
   width: number;
   readingLayout: () => void;
+  openPortraits: (book: string, title: string) => void;
   run: (fn: () => unknown) => unknown;
   /** Board "RpPwa": one figure, the dialogue box above the bottom edge, no separate input. */
   mobile?: boolean;
@@ -744,7 +746,7 @@ export function RPStage({
             </button>
           )}
           <span className="wb-rp-tools-rule" aria-hidden="true" />
-          <RPAppearance host={host} />
+          <RPAppearance host={host} openPortraits={openPortraits} />
           <button
             className="wb-rp-tool"
             aria-label="切换阅读布局"

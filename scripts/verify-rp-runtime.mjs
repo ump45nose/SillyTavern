@@ -217,15 +217,51 @@ try {
   pass("cast tags come from SillyTavern's formatter hook: idle while unmounted, names still readable, on-screen replies marked on mount");
   await role("RP 外观").click(); await page.locator(".wb-cast-open").click(); await page.locator(".wb-cast-list").waitFor();
   assert.deepEqual(await page.locator(".wb-cast-entry input").evaluateAll(ns => ns.map(n => [n.checked, n.disabled])), [[true,false],[true,false],[false,true]]);
-  await page.getByLabel("为 李四 上传立绘").setInputFiles({ name:"neutral.webp", mimeType:"image/webp", buffer:fs.readFileSync("docs/design/rp-desktop/assets/r-user-character.webp") });
-  await page.waitForFunction(() => document.querySelectorAll(".wb-cast-faces figure").length === 4);
-  assert.match(await page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value), /李四（anger、neutral）/);
-  await role("删除 李四 的 neutral").click(); await page.waitForFunction(() => document.querySelectorAll(".wb-cast-faces figure").length === 3);
-  await page.getByRole("button", { name:"外观", exact:true }).click(); await page.getByRole("button", { name:"角色卡 · 单人" }).click();
+  assert.deepEqual(await page.locator(".wb-cast-count").allTextContents(), ["2 张", "1 张"]);
+  pass("the cast page chooses entries and counts each one's images");
+  // Portraits live with the entry: the cast page opens 李四 in the world panel, at its 立绘 tab.
+  const grid = () => page.locator(".wb-portraits-grid .wb-portraits-label").allTextContents();
+  const portraitsOf = name => page.evaluate(async name => (await workbench.host.cast.sprites("RP阵容测试", name)).map(s => s.label).sort(), name);
+  const castPrompt = () => page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value);
+  await role("管理 李四 的立绘").click();
+  await page.locator(".wb-portraits-grid").waitFor(); await page.waitForFunction(() => document.querySelectorAll(".wb-portraits-grid .wb-portraits-label").length === 1);
+  assert.equal(await page.locator('.wb-entry-tabs [aria-selected="true"]').textContent(), "立绘"); assert.match(await page.locator(".wb-entry-card").getAttribute("aria-label"), /李四/);
+  const face = name => ({ name, mimeType:"image/webp", buffer:fs.readFileSync("docs/design/rp-desktop/assets/r-user-character.webp") });
+  await page.getByLabel("添加立绘").setInputFiles([face("Neutral.webp"), face("smile2.webp")]);
+  // Dropping onto the tab adds to the same list (a synthetic drop carries files, not folder entries).
+  const dropped = await page.evaluateHandle(async b64 => {
+    const data = new DataTransfer(); data.items.add(new File([Uint8Array.from(atob(b64), x => x.charCodeAt(0))], "anger.webp", { type:"image/webp" })); return data;
+  }, fs.readFileSync("docs/design/rp-desktop/assets/r-user-character.webp").toString("base64"));
+  await page.locator(".wb-portraits").dispatchEvent("dragover", { dataTransfer:dropped }); assert.equal(await page.locator(".wb-portraits-drop").count(), 1);
+  await page.locator(".wb-portraits").dispatchEvent("drop", { dataTransfer:dropped }); await page.waitForFunction(() => document.querySelectorAll(".wb-portraits-staged li").length === 3);
+  assert.deepEqual(await page.locator(".wb-portraits-staged li small").allTextContents(), ["", "自定义", "将替换"], "labels come from file names; a custom one and a replaced one are marked");
+  await page.getByLabel("smile2.webp 的表情名").fill("neutral");
+  assert.equal(await page.locator(".wb-portraits-staged footer .is-primary").isDisabled(), true, "a label twice in the batch blocks the upload");
+  await page.getByLabel("smile2.webp 的表情名").fill("smile"); await role("移出 anger.webp").click();
+  await role("上传 2 张").click(); await page.waitForFunction(() => !document.querySelector(".wb-portraits-staged") && document.querySelectorAll(".wb-portraits-grid .wb-portraits-label").length === 3);
+  assert.deepEqual((await grid()).sort(), ["anger", "neutral", "smile"]); assert.match(await castPrompt(), /李四（anger、neutral、smile）/);
+  await role("改 smile 的表情名").click(); await page.getByLabel("smile 的新表情名").fill("joy"); await page.keyboard.press("Enter");
+  await page.waitForFunction(() => [...document.querySelectorAll(".wb-portraits-grid .wb-portraits-label")].some(n => n.textContent === "joy"));
+  assert.deepEqual(await portraitsOf("李四"), ["anger", "joy", "neutral"]);
+  await role("删除 joy").click(); await role("确认删除 joy").click();
+  await page.waitForFunction(() => document.querySelectorAll(".wb-portraits-grid .wb-portraits-label").length === 2);
+  assert.deepEqual(await portraitsOf("李四"), ["anger", "neutral"]);
+  pass("the 立绘 tab adds a batch labeled by file name, checks it before upload, relabels and deletes in place");
+  // A renamed entry takes its portraits to the new folder, and this chat's cast follows the title.
+  await page.getByRole("tab", { name:"触发条件" }).click(); await page.locator(".wb-entry-trigger input").first().fill("李四郎");
+  await page.getByRole("tab", { name:"立绘" }).click(); assert.match(await page.locator(".wb-portraits-note").first().textContent(), /保存后，立绘会随条目改名移到「李四郎」/);
+  await role("保存").click(); await page.getByText("已保存 · 2 张立绘随改名移动").waitFor();
+  assert.deepEqual(await portraitsOf("李四郎"), ["anger", "neutral"]); assert.deepEqual(await portraitsOf("李四"), []);
+  assert.deepEqual(await page.evaluate(() => SillyTavern.getContext().chatMetadata.workbenchRP.cast.entries), ["张三", "李四郎"]); assert.match(await castPrompt(), /李四郎（anger、neutral）/);
+  await (await page.locator(".wb-entries .wb-entry-open").filter({ hasText:"王五/村长" })).click(); await page.getByRole("tab", { name:"立绘" }).click();
+  assert.match(await page.locator(".wb-portraits-note.is-warning").textContent(), /不能作为立绘文件夹名/);
+  pass("renaming an entry moves its portraits and this chat's cast; a title the server would alter says so");
+  await role("关闭右栏").click(); await settle();
+  await role("RP 外观").click(); await page.getByRole("button", { name:"角色卡 · 单人" }).click();
   await page.waitForFunction(() => !document.querySelector(".wb-rp-actor.is-cast"));
   assert.equal(await page.evaluate(() => SillyTavern.getContext().extensionPrompts.noval_cast.value === "" && !SillyTavern.getContext().chatMetadata.workbenchRP?.cast), true);
   await page.keyboard.press("Escape"); await page.evaluate(async () => { const c = SillyTavern.getContext(); await c.deleteLastMessage(); await c.deleteLastMessage(); }); await settle();
-  pass("the cast page chooses entries, uploads and removes faces; the card returns the stage and clears the prompt");
+  pass("the card returns the stage and clears the prompt");
   await withReducedMotion(page, async () => assert.equal(await css("#sheld", "transitionDuration"), "0s")); pass("reduced motion is honored and the account preference restored");
   await role("切换阅读布局").click(); await settle(); assert.equal(await has("wb-rp"), false); assert.equal(await page.locator(".wb-reading-bar").count(), 1);
   assert.equal(await page.evaluate(() => __rpNative.chat === document.getElementById("chat") && __rpNative.input === document.getElementById("send_textarea")), true);

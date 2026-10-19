@@ -274,8 +274,9 @@ export async function seedCast(page) {
             form.set('label', label);
             if (!(await fetch('/api/sprites/upload', { method: 'POST', headers: plain, body: form })).ok) throw new Error('cast sprite');
         }
-        // A run that stopped halfway may have left the face the cast page uploads.
-        await fetch('/api/sprites/delete', { method: 'POST', headers, body: JSON.stringify({ name: 'RP阵容测试/李四', label: 'neutral', spriteName: 'neutral' }) });
+        // A run that stopped halfway may have left what the portraits tab uploads, relabels or moves.
+        for (const [who, spriteName] of [['李四', 'neutral'], ['李四', 'smile'], ['李四', 'joy'], ['李四郎', 'anger'], ['李四郎', 'neutral'], ['李四郎', 'joy']])
+            await fetch('/api/sprites/delete', { method: 'POST', headers, body: JSON.stringify({ name: 'RP阵容测试/' + who, label: spriteName, spriteName }) });
         await workbench.host.cast.save({ book: 'RP阵容测试', entries: ['张三', '李四'] });
     }, { a: sprite('r-character.webp'), b: sprite('r-user-character.webp') });
 }
