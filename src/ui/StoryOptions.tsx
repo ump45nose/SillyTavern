@@ -101,7 +101,13 @@ export function ComposerOptions({ host, mobile }: { host: HostAdapter; mobile: b
         target = e.target as Element | null,
         option = latest.current.items[Number(digit[1]) - 1];
       if (!option || !input || input.value.trim()) return;
-      if (target !== input && target?.closest("input,textarea,select,[contenteditable=true]")) return;
+      // The composer's Markdown editor is the input too.
+      if (
+        target !== input &&
+        !target?.closest(".wb-composer-md") &&
+        target?.closest("input,textarea,select,[contenteditable=true]")
+      )
+        return;
       if (document.querySelector("dialog[open],.wb-popover,[role=listbox]")) return;
       e.preventDefault();
       latest.current.choose(option);

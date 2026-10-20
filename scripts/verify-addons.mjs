@@ -73,7 +73,7 @@ try {
   assert.ok(await page.locator('[data-wb-tool="wb:export"]').count());
   let release, requested = false;
   const gate = new Promise(resolve => { release = resolve; });
-  await page.route('**/addons/record-export/manifest.json', async route => { requested = true; await gate; await route.continue(); });
+  await page.route('**/addons/record-export/manifest.json', async route => { requested = true; await gate; await route.fallback(); });
   await page.locator('[data-wb-tool="wb:export"]').click();
   while (!requested) await page.waitForTimeout(20);
   await toggleRight(page); await settle(); release();
@@ -106,7 +106,7 @@ try {
   assert.deepEqual(test.errors, []);
 
   const failureTest = await protectedSession(); page = failureTest.page; let fail = true;
-  await page.route('**/addons/record-export/manifest.json', async route => fail ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : route.continue());
+  await page.route('**/addons/record-export/manifest.json', async route => fail ? route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }) : route.fallback());
   await ready(page, urls.validation); await page.waitForFunction(() => window.workbench?.mounted);
   await page.locator('[data-wb-tool="wb:export"]').click(); await page.getByRole('region', { name: '附加插件加载失败' }).waitFor();
   assert.equal(await page.evaluate(() => workbench.mounted && __addonWorkers.active === 0), true);
@@ -121,11 +121,11 @@ try {
   const versionTest = await protectedSession(); page = versionTest.page; let incompatible = true, missingEntry = true;
   const entryRequests = []; page.on('request', request => { if (/addons\/record-export\/index\.js/.test(request.url())) entryRequests.push(request.url()); });
   await page.route('**/addons/record-export/manifest.json', async route => {
-    if (!incompatible) return route.continue();
+    if (!incompatible) return route.fallback();
     const response = await route.fetch(), manifest = await response.json(); manifest.apiVersion = 2;
     await route.fulfill({ response, json: manifest });
   });
-  await page.route('**/addons/record-export/index.js?*', async route => missingEntry ? route.fulfill({ status: 404, contentType: 'text/javascript', body: '' }) : route.continue());
+  await page.route('**/addons/record-export/index.js?*', async route => missingEntry ? route.fulfill({ status: 404, contentType: 'text/javascript', body: '' }) : route.fallback());
   await ready(page, urls.validation); await page.waitForFunction(() => window.workbench?.mounted);
   await page.locator('[data-wb-tool="wb:export"]').click();
   await page.getByRole('region', { name: '附加插件加载失败' }).waitFor();

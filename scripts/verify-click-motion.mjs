@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {launch,session,ready,urls,createCharacter,withReducedMotion,openResource,openSettings} from './browser.mjs';
+import {launch,session,ready,urls,createCharacter,withReducedMotion,openResource,openSettings,fieldValue} from './browser.mjs';
 
 const dir='artifacts/click-motion';fs.mkdirSync(dir,{recursive:true});
 const checks=[],pass=(name,details)=>{checks.push({name,passed:true,details});console.log('PASS',name);};
@@ -39,8 +39,8 @@ try{
  }
  await openResource(page,'世界书详情');await settle();await page.locator('#wb-resource-rail .wb-rail-open').first().click();await settle();
  // The panel keeps one entry card open below the list (board PanelWorld); choosing a row swaps its contents in place.
- const card=page.locator('.wb-right .wb-entry-card');await card.waitFor();const firstText=await card.locator('textarea').inputValue();
- await page.locator('.wb-right .wb-entry-open').nth(1).click();await settle();assert.notEqual(await card.locator('textarea').inputValue(),firstText);
+ const card=page.locator('.wb-right .wb-entry-card');await card.waitFor();const firstText=await fieldValue(card.getByRole('textbox',{name:'世界书正文',exact:true}));
+ await page.locator('.wb-right .wb-entry-open').nth(1).click();await settle();assert.notEqual(await fieldValue(card.getByRole('textbox',{name:'世界书正文',exact:true})),firstText);
  await page.screenshot({path:dir+'/world-editor.png'});
  await openResource(page,'预设详情');await settle();
  await verify('prompt editor expands',page.locator('.wb-right .wb-prompt-open').first(),'.wb-right .wb-prompt-sheet','height');
