@@ -27,6 +27,7 @@ const {
   personaCodec,
   personaNames,
   outlineCodec,
+  tableCodec,
   SyncError,
 } = sync;
 
@@ -454,4 +455,53 @@ test("outline edits: new headings get ids, settings stay, errors carry lines", (
     lineOf(() => outlineCodec.parse(outline, "# A\n<!-- id: x -->\n# B\n<!-- id: x -->")),
     4,
   );
+});
+
+const table = {
+  key: "sheet_people",
+  name: "人物",
+  columns: ["姓名", "备注|说明"],
+  rows: [
+    { id: "r1", index: 1, cells: ["艾琳", "第一行\n第二行 | 含竖线 \\ 反斜杠"] },
+    { id: "", index: 2, cells: ["  前后空格  ", ""] },
+    { id: "r3", index: 3, cells: ["\t制表", "*星号*"] },
+  ],
+};
+
+test("database tables round-trip as Markdown tables keyed by row_id", () => {
+  const text = tableCodec.render(table);
+  assert.match(text, /^\| row_id \| 姓名 \| 备注\\\|说明 \|$/m);
+  assert.match(text, /^\| #2 \| /m);
+  assert.deepEqual(tableCodec.parse(table, text), table);
+  // Alignment padding and missing outer pipes are only formatting.
+  const lines = text.split("\n");
+  lines[2] = lines[2].replace("| r1 | 艾琳 |", "r1|   艾琳   |").replace(/ \|$/, "");
+  lines[1] = "|:---|---:|:-:|";
+  const loose = lines.join("\n");
+  assert.notEqual(loose, text);
+  assert.ok(!lines[2].startsWith("|") && !lines[2].endsWith("|"), lines[2]);
+  assert.deepEqual(tableCodec.parse(table, loose), table);
+});
+
+test("database edits update, insert and delete rows", () => {
+  const lines = tableCodec.render(table).split("\n");
+  lines[2] = lines[2].replace("艾琳", "艾琳娜");
+  lines.splice(3, 1); // the row without an id
+  lines.splice(4, 0, "|  | 新人 | 新备注 |");
+  const next = tableCodec.parse(table, lines.join("\n"));
+  assert.deepEqual(next.rows, [
+    { ...table.rows[0], cells: ["艾琳娜", table.rows[0].cells[1]] },
+    table.rows[2],
+    { id: "", index: 0, cells: ["新人", "新备注"] },
+  ]);
+});
+
+test("database parse errors carry the line", () => {
+  const text = tableCodec.render(table);
+  const at = (t) => lineOf(() => tableCodec.parse(table, t));
+  assert.equal(at(text.replace("| row_id | 姓名", "| row_id | 名字")), 1);
+  assert.equal(at(text.replace("| r3 |", "| r9 |")), 5);
+  assert.equal(at(text.replace("| r3 |", "| r1 |")), 5);
+  assert.equal(at(text.replace("| r3 | \\t制表 |", "| r3 |")), 5);
+  assert.equal(at(text + "备注文字\n"), 6);
 });

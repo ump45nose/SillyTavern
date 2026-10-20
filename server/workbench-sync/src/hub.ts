@@ -2,7 +2,16 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { sameData, type Data } from "../../../src/sync";
-import { NotFound, Refused, Space, type Entry, type Loaded, type Unit } from "./space";
+import {
+  NotFound,
+  PAGE_DATABASE,
+  Refused,
+  Space,
+  type DatabaseView,
+  type Entry,
+  type Loaded,
+  type Unit,
+} from "./space";
 import type { Directories } from "./st";
 
 /** The parts of an Express response the event streams use. */
@@ -22,6 +31,8 @@ interface Version {
 interface Page {
   id: string;
   stream: Stream;
+  /** The chat this page has open and its database tables, as last reported. */
+  database?: DatabaseView;
 }
 export interface Reply {
   status: "done" | "skip" | "error";
@@ -64,19 +75,20 @@ export class Hub {
   readonly recent: Recent[] = [];
 
   constructor(dirs: Directories) {
-    this.space = new Space(dirs);
+    this.space = new Space(dirs, () => this.pages.flatMap((p) => (p.database ? [p.database] : [])));
   }
 
   // ── Connections ──────────────────────────────────────────────
   attach(role: "page" | "ide", stream: Stream) {
     if (role === "page") {
-      const page = { id: crypto.randomUUID(), stream };
+      const page: Page = { id: crypto.randomUUID(), stream };
       this.pages.push(page);
       this.send(stream, "hello", { page: page.id, ...this.status() });
       this.broadcastStatus();
       return () => {
         this.pages = this.pages.filter((p) => p !== page);
         this.broadcastStatus();
+        if (page.database) this.later(PAGE_DATABASE);
       };
     }
     this.ides.add(stream);
@@ -102,9 +114,20 @@ export class Hub {
     for (const stream of [...this.ides, ...this.pages.map((p) => p.stream)])
       this.send(stream, "status", status);
   }
-  /** The page writes go to: the one connected last. */
-  private page() {
-    return this.pages.at(-1);
+  /** The page writes go to: the one connected last; for a database table, the page with its chat open. */
+  private page(unit: Unit) {
+    if (unit.kind !== "database") return this.pages.at(-1);
+    const { avatar, group, chat } = JSON.parse(unit.id);
+    return [...this.pages]
+      .reverse()
+      .find(({ database: d }) => d && d.chat === chat && d.avatar === avatar && d.group === group);
+  }
+  /** A page reports the chat it has open and that chat's database tables (null: none). */
+  setDatabase(pageId: string, view: Omit<DatabaseView, "time"> | null) {
+    const page = this.pages.find((p) => p.id === pageId);
+    if (!page) throw new NotFound("页面连接已断开。");
+    page.database = view ? { ...view, time: Date.now() } : undefined;
+    this.later(PAGE_DATABASE);
   }
   reply(request: string, reply: Reply) {
     const waiting = this.pending.get(request);
@@ -311,7 +334,7 @@ export class Hub {
         entry.ok = true;
         return entry.route;
       }
-      const page = this.page();
+      const page = this.page(unit);
       if (page) {
         const reply = await this.relay(page, unit, loaded.data, draft);
         if (reply.status === "done") entry.route = "page";
@@ -399,8 +422,10 @@ export class Hub {
     if (source === path.join(d.root, "settings.json")) return ["连接", "用户设定"];
     if (inside(d.worlds)) return ["世界书"];
     if (inside(d.openAI_Settings)) return ["预设"];
-    if (inside(d.characters)) return ["角色", "大纲"];
-    if (inside(d.chats) || inside(d.groupChats) || inside(d.groups)) return ["大纲"];
+    if (source === PAGE_DATABASE) return ["数据库"];
+    if (inside(d.characters)) return ["角色", "大纲", "数据库"];
+    if (inside(d.groups)) return ["大纲", "数据库"];
+    if (inside(d.chats) || inside(d.groupChats)) return ["大纲"];
     return [];
   }
   private later(source: string) {

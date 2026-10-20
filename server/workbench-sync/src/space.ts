@@ -9,13 +9,17 @@ import {
   presetCodec,
   profileCodec,
   profileNames,
+  tableCodec,
   uniqueNames,
   worldCodec,
   SyncError,
   type Data,
+  type SyncTable,
 } from "../../../src/sync";
 import { normalizeOutline } from "../../../src/addons/outline/model";
 import { firstLine, st, writeAtomic, type Directories } from "./st";
+
+const OPEN_CHAT = "打开该聊天后可同步：数据库只同步工作台页面里已打开的聊天。";
 
 export class NotFound extends Error {
   constructor(message = "文件不存在。") {
@@ -33,7 +37,17 @@ export class Refused extends Error {
 }
 
 export const AREAS = ["世界书", "角色", "预设", "连接", "用户设定", "大纲", "数据库"] as const;
-export type Kind = "world" | "character" | "preset" | "connection" | "persona" | "outline";
+export type Kind = "world" | "character" | "preset" | "connection" | "persona" | "outline" | "database";
+/** Database tables live in the page that has their chat open; their units use this as `source`. */
+export const PAGE_DATABASE = "page:database";
+/** What a workbench page reports: the open chat and its database tables. */
+export interface DatabaseView {
+  avatar?: string;
+  group?: string;
+  chat: string;
+  tables: SyncTable[];
+  time: number;
+}
 
 /** One resource as the workbench page saves it, and where its readable files live. */
 export interface Unit {
@@ -79,7 +93,10 @@ const settingsCache = new Map<string, { mtime: number; size: number; data: Data 
 
 /** One user's data as a tree of readable files. Nothing is mirrored: every read renders from the source. */
 export class Space {
-  constructor(readonly dirs: Directories) {}
+  constructor(
+    readonly dirs: Directories,
+    private databases: () => DatabaseView[] = () => [],
+  ) {}
 
   async characters() {
     const list: { avatar: string; name: string; card: Data; mtime: number }[] = [];
@@ -281,8 +298,34 @@ export class Space {
       });
     }
     if (area === "数据库") {
-      if (!rest.length) return dirs([]);
-      throw new NotFound("数据库只同步页面里已打开的聊天。");
+      const owners = await this.owners(),
+        placed = this.databases().flatMap((view) => {
+          const owner = owners.find((o) => (view.group ? o.group === view.group : o.avatar === view.avatar));
+          return owner ? [{ view, dir: owner.dir }] : [];
+        }),
+        here = placed.filter((p) => p.dir === rest[0]);
+      if (!rest.length) return dirs([...new Set(placed.map((p) => p.dir))]);
+      if (!here.length) throw new NotFound(OPEN_CHAT);
+      if (rest.length === 1) return dirs([...new Set(here.map((p) => p.view.chat))]);
+      const view = here.find((p) => p.view.chat === rest[1])?.view;
+      if (!view) throw new NotFound(OPEN_CHAT);
+      const names = uniqueNames(
+          view.tables,
+          (t) => t.key,
+          (t) => t.name,
+          (t) => t.key,
+        ),
+        file = (t: SyncTable) => names.get(t.key)!.stem + ".md";
+      if (rest.length === 2) return files(view.tables.map(file));
+      const table = rest.length === 3 && view.tables.find((t) => file(t) === rest[2]);
+      if (!table) throw new NotFound("没有这张表；表由数据库插件的模板决定。");
+      return unit({
+        kind: "database",
+        id: JSON.stringify({ avatar: view.avatar, group: view.group, chat: view.chat, table: table.key }),
+        path: `数据库/${rest.join("/")}`,
+        single: true,
+        source: PAGE_DATABASE,
+      });
     }
     throw new NotFound();
   }
@@ -329,6 +372,13 @@ export class Space {
           files: one(personaCodec.render(data, unit.id, !!unit.explicit)),
         };
       }
+      case "database": {
+        const { avatar, group, chat, table } = JSON.parse(unit.id),
+          view = this.databases().find((v) => v.chat === chat && v.avatar === avatar && v.group === group),
+          found = view?.tables.find((t) => t.key === table);
+        if (!view || !found) throw new NotFound(OPEN_CHAT);
+        return { data: structuredClone(found), mtime: view.time, files: one(tableCodec.render(found)) };
+      }
       case "outline": {
         const header = JSON.parse((await firstLine(unit.source)) || "{}"),
           data = normalizeOutline(header.chat_metadata?.workbench_addons?.outline);
@@ -358,6 +408,8 @@ export class Space {
         return personaCodec.parse(data, unit.id, unit.stem!, !!unit.explicit, text);
       case "outline":
         return outlineCodec.parse(data as any, text);
+      case "database":
+        return tableCodec.parse(data as SyncTable, text);
     }
   }
   remove(unit: Unit, loaded: Loaded, rel: string): Data {
@@ -380,6 +432,9 @@ export class Space {
   /** Writes a resource straight into SillyTavern's files, for when no workbench page is open. */
   async saveDisk(unit: Unit, draft: Data) {
     switch (unit.kind) {
+      case "database":
+        // The tables are the database plug-in's, inside the page; only the page can write them.
+        throw new Refused(OPEN_CHAT, 409);
       case "world":
       case "preset":
         return writeAtomic(unit.source, JSON.stringify(draft, null, 4));

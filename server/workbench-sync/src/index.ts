@@ -13,7 +13,7 @@ export const info = {
   id: "workbench-sync",
   name: "Noval · Workbench Sync",
   description:
-    "Reads and writes world books, characters, presets, connections, personas and outlines as readable files.",
+    "Reads and writes world books, characters, presets, connections, personas, outlines and database tables as readable files.",
 };
 const VERSION = "1";
 
@@ -134,6 +134,32 @@ export async function init(router: Router) {
     route(async (req) => {
       const reply = req.body as Reply & { request?: string };
       if (!hubOf(req).reply(text(reply?.request), reply)) throw new NotFound("写入请求已超时。");
+      return { ok: true };
+    }, false),
+  );
+  router.post(
+    "/page-state",
+    route(async (req) => {
+      const db = req.body?.database;
+      const table = (t: any) =>
+        typeof t?.key === "string" &&
+        typeof t.name === "string" &&
+        Array.isArray(t.columns) &&
+        Array.isArray(t.rows);
+      if (
+        db !== null &&
+        (typeof db?.chat !== "string" || !Array.isArray(db.tables) || !db.tables.every(table))
+      )
+        throw new Refused("database 应为 null 或 {chat, tables: [{key, name, columns, rows}]}。");
+      hubOf(req).setDatabase(
+        text(req.body?.page),
+        db && {
+          avatar: typeof db.avatar === "string" ? db.avatar : undefined,
+          group: typeof db.group === "string" ? db.group : undefined,
+          chat: db.chat,
+          tables: db.tables,
+        },
+      );
       return { ok: true };
     }, false),
   );

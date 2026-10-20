@@ -9,3 +9,4 @@ export { characterCodec, mirrorCard } from "./character";
 export { presetCodec } from "./preset";
 export { profileCodec, profileNames, personaCodec, personaNames } from "./settings";
 export { outlineCodec } from "./outline";
+export { tableCodec, type SyncTable } from "./database";
