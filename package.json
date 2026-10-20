@@ -33,6 +33,7 @@
     "verify:rp": "node scripts/verify-rp-runtime.mjs",
     "verify:database": "node scripts/verify-database-runtime.mjs",
     "verify:database-real": "node scripts/verify-database-real.mjs",
+    "verify:sync": "node scripts/verify-sync.mjs",
     "verify:addons": "node scripts/verify-addons.mjs",
     "verify:utilities": "node scripts/verify-utility-tools.mjs",
     "benchmark:startup": "node scripts/benchmark-startup-readonly.mjs",

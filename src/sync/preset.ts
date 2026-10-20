@@ -19,23 +19,23 @@ const hidden = ["prompts", "prompt_order", "proxy_password"];
 /** Parameters with names on the preset page; the rest go under 「其他」 with their own keys. */
 const params: Field[] = (
   [
-    ["temperature", "温度"],
-    ["top_p", "Top P"],
-    ["top_k", "Top K"],
-    ["top_a", "Top A"],
-    ["min_p", "Min P"],
-    ["frequency_penalty", "频率惩罚"],
-    ["presence_penalty", "存在惩罚"],
-    ["repetition_penalty", "重复惩罚"],
-    ["openai_max_tokens", "最大回复 Token"],
-    ["openai_max_context", "上下文 Token 上限"],
-    ["stream_openai", "流式传输"],
-    ["show_thoughts", "请求思维链"],
-    ["reasoning_effort", "思考强度"],
-    ["seed", "随机种子"],
-    ["n", "回复数量"],
+    ["temperature", "温度", "number"],
+    ["top_p", "Top P", "number"],
+    ["top_k", "Top K", "number"],
+    ["top_a", "Top A", "number"],
+    ["min_p", "Min P", "number"],
+    ["frequency_penalty", "频率惩罚", "number"],
+    ["presence_penalty", "存在惩罚", "number"],
+    ["repetition_penalty", "重复惩罚", "number"],
+    ["openai_max_tokens", "最大回复 Token", "number"],
+    ["openai_max_context", "上下文 Token 上限", "number"],
+    ["stream_openai", "流式传输", "boolean"],
+    ["show_thoughts", "请求思维链", "boolean"],
+    ["reasoning_effort", "思考强度", "string"],
+    ["seed", "随机种子", "number"],
+    ["n", "回复数量", "number"],
   ] as const
-).map(([key, name]) => ({ name, path: [key], type: "any" }));
+).map(([key, name, type]) => ({ name, path: [key], type }));
 const promptFields: Field[] = [
   {
     name: "角色",
