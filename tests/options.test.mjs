@@ -6,7 +6,16 @@ const { code } = await transform(await readFile(new URL("../src/host/options.ts"
   loader: "ts",
   format: "esm",
 });
-const { parseOptions, stripOptions, stripHistory, tableOptions, DEFAULT_OPTIONS_PROMPT } = await import(
+const {
+  parseOptions,
+  stripOptions,
+  stripHistory,
+  tableOptions,
+  readOptionsConfig,
+  storedOptionsConfig,
+  optionText,
+  DEFAULT_OPTIONS_PROMPT,
+} = await import(
   "data:text/javascript;base64," + Buffer.from(code).toString("base64")
 );
 
@@ -66,4 +75,30 @@ test("a bound table becomes options: one row column by column, several rows row 
     { title: "回村", detail: "代价：错过" },
   ]);
   assert.deepEqual(tableOptions({ columns: [], rows: [] }), []);
+});
+
+test("choosing fills the input in Noval and sends in RP unless the chat says otherwise", () => {
+  const defaults = { source: "off", table: "", novel: "fill", rp: "send" };
+  assert.deepEqual(readOptionsConfig(undefined), defaults);
+  // A chat saved before the actions existed keeps its source and gets the defaults.
+  assert.deepEqual(readOptionsConfig({ source: "db", table: "选项表" }), { ...defaults, source: "db", table: "选项表" });
+  assert.deepEqual(readOptionsConfig({ source: "model", novel: "send", rp: "fill" }), {
+    ...defaults,
+    source: "model",
+    novel: "send",
+    rp: "fill",
+  });
+  assert.deepEqual(readOptionsConfig({ source: "x", table: 3, novel: "go", rp: null }), defaults);
+});
+
+test("a chat stores its config only while something differs from the defaults", () => {
+  assert.equal(storedOptionsConfig({ source: "off", table: "" }), undefined);
+  assert.equal(storedOptionsConfig({ source: "off", table: "", novel: "fill", rp: "send" }), undefined);
+  assert.deepEqual(storedOptionsConfig({ source: "off", rp: "fill" }), { source: "off", table: "", novel: "fill", rp: "fill" });
+  assert.deepEqual(storedOptionsConfig({ source: "model", table: "" }), { source: "model", table: "", novel: "fill", rp: "send" });
+});
+
+test("an option puts its detail in the input, or its title when it has none", () => {
+  assert.equal(optionText({ title: "追上去", detail: "踩着脚印追进林子。" }), "踩着脚印追进林子。");
+  assert.equal(optionText({ title: "原地生火", detail: "" }), "原地生火");
 });

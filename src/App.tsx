@@ -856,7 +856,7 @@ export default function App({
           <Shortcuts host={host} />
         </Dialog>
       )}
-      {!rp && <ComposerOptions host={host} />}
+      {!rp && <ComposerOptions host={host} mobile={mobile} />}
       {optionsAnchor && (
         <OptionsPopover host={host} anchor={optionsAnchor} onClose={() => setOptionsAnchor(null)} />
       )}

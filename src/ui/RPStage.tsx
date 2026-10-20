@@ -28,7 +28,7 @@ import { ReadingPresentation } from "./Reading";
 import { beginImage } from "./AddonControls";
 import { addonEnabled } from "../addons/catalog";
 import { RPAppearance } from "./RPAppearance";
-import { OptionsPopover, useStoryOptions } from "./StoryOptions";
+import { OptionsPopover, useRPChoices } from "./StoryOptions";
 import { motionAllowed } from "./Motion";
 import { bus } from "../host/bus";
 import { actionLabels } from "../host/labels";
@@ -647,7 +647,16 @@ export function RPStage({
     band.addEventListener("wheel", wheel, { passive: false });
     return () => band.removeEventListener("wheel", wheel);
   }, [mobile, history]);
-  const options = useStoryOptions(host, () => reply()),
+  // A story option that fills the input from the phone's sheet turns the band into it, as 回应 does.
+  const replyNow = useRef(reply);
+  replyNow.current = reply;
+  useEffect(() => bus.on("rp-reply", () => replyNow.current()), []);
+  const options = useRPChoices(host, {
+      ending: atEnd && !compose && !!current && !current.user,
+      blocked: isHidden || history || !!current?.editing || expanded,
+      mobile,
+      onFill: reply,
+    }),
     [optionsAnchor, setOptionsAnchor] = useState<HTMLElement | null>(null);
   const tools = (
     <div className="wb-rp-tools" role="toolbar" aria-label="对白工具">
@@ -684,6 +693,7 @@ export function RPStage({
               {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
           )}
+          {options.tag}
         </>
       ) : current?.editing ? (
         <>
@@ -878,10 +888,8 @@ export function RPStage({
         inert={isHidden || history}
         aria-label="RP 对白与输入"
       >
-        {!expanded && options.detail && <div className="wb-rp-option-detail">{options.detail}</div>}
-        {!expanded && (!!replies.length || !!options.items.length) && (
+        {!expanded && !!replies.length && (
           <div className="wb-rp-replies" role="group" aria-label="建议回应">
-            {options.chips}
             {replies.map((qr) => (
               <button
                 key={qr.key}
@@ -942,6 +950,7 @@ export function RPStage({
               </>
             )}
             {(!mobile || !current?.editing) && tools}
+            {!current?.editing && options.tag}
             {!current?.editing && (
               <button className="wb-rp-reply" aria-label="快进到你的回应" title="直接回应" onClick={reply}>
                 <PencilLine size={15} />
@@ -952,6 +961,7 @@ export function RPStage({
         )}
         {compose && !mobile && sendRow && createPortal(tools, sendRow)}
       </section>
+      {options.overlay}
       {optionsAnchor && (
         <OptionsPopover host={host} anchor={optionsAnchor} onClose={() => setOptionsAnchor(null)} />
       )}

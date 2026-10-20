@@ -45,6 +45,8 @@ export interface Preferences {
   theme?: "light" | "dark" | "system";
   /** The instruction asking the model for story options; empty is the default one. */
   optionsPrompt?: string;
+  /** Noval's story options card is folded to its title line. */
+  optionsCollapsed?: boolean;
   /** Reveal a sidebar while the pointer rests at the window edge (default on). */
   edgeHover?: boolean;
   /** Markdown fields (composer, outline, long character / world / persona text) preview as you type (default on). */

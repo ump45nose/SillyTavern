@@ -24,6 +24,10 @@ export interface BusEvents {
   "settings-group": { group: string; extension?: string };
   /** The phone's compose band was pulled down: the RP stage returns to the dialogue. */
   "rp-dialogue": undefined;
+  /** Show the latest reply's story options (the phone opens its options sheet). */
+  "story-options": undefined;
+  /** A story option filled the input: the RP band turns into it. */
+  "rp-reply": undefined;
 }
 type Name = keyof BusEvents;
 type Handler<K extends Name> = (payload: BusEvents[K]) => void;
