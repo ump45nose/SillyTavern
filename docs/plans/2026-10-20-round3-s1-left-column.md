@@ -35,3 +35,12 @@
 - [x] CSS：desk.css、outline/style.css；验证脚本断言
 - [x] browser.mjs 路由当前检出的构建
 - [x] 门禁与 verify:*、三种宽度截图
+
+## 验证记录
+
+- check、test（93 通过）、format:check、build 通过。
+- verify:workbench、home、addons、writing-addons、pwa、interactions、rp 全部通过（共用 32012，串行）。
+- verify:styles：本机没有 `artifacts/baseline-c6`，改为在临时工作树按 bdef9d291 快照基线（32014）再比对。
+  - `panel-world-entry`、`m-panel-image-scene` 两个状态在基线和本分支都点击超时，与本改动无关，所以 snap 步骤以 1 退出；比对单独执行。
+  - 差异只在左栏：折叠的区不再带着内层 6px 底部留白（桌面 42→36px，手机 50→44px），以及新增的包装层。均为预期。
+- 截图脚本（1366 / 1440 / 1920，240 层 + 40 条历史）：楼层区单独展开时阅读楼层可见；展开历史后楼层自动收起并带标记；点楼层标题后互换；收起楼层后历史恢复；滚到顶部渲染第 1 层；大纲（空）+ 楼层同时展开时都显示。
