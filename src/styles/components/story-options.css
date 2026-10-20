@@ -236,7 +236,7 @@
   }
 
   /* Phone, Noval: a tag over the composer pill opens the options sheet. */
-  body.wb-mobile .wb-story-options {
+  body.wb-mobile .wb-story-options:not(:empty) {
     display: flex;
     padding: 0 12px 8px;
   }
