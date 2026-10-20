@@ -6,6 +6,7 @@ import { useDatabase } from "./useDatabase";
 import { useComposerTools } from "./useTools";
 import type { ComposerPopup } from "./ComposerPopovers";
 import type { HostAdapter } from "../host/adapter";
+import { useMdLive } from "./md/MdField";
 /** Decorate native controls in-place: event handlers, selection and plugin nodes stay owned by ST. */
 /** The composer card's smallest height: grip, two lines of text and the tool row (board "Main"). */
 const COMPOSER_MIN = 124;
@@ -38,6 +39,24 @@ export function Composer({
   const slots = Math.max(0, Math.floor((available + 5) / 39)),
     visible = actions.slice(0, actions.length > slots ? Math.max(0, slots - 1) : slots),
     overflow = actions.slice(visible.length);
+  const live = useMdLive();
+  // The live Markdown editor over the native textarea (its chunk loads on first use).
+  useEffect(() => {
+    if (!live) return;
+    let closed = false,
+      unbind: (() => void) | undefined;
+    // Without the chunk the native textarea simply stays as it is.
+    import("./md/composer").then(
+      ({ bindComposer }) => {
+        if (!closed) unbind = bindComposer(document.getElementById("send_textarea") as HTMLTextAreaElement);
+      },
+      (error) => console.error("[Workbench] Markdown editor failed to load", error),
+    );
+    return () => {
+      closed = true;
+      unbind?.();
+    };
+  }, [live]);
   const [ratio, setRatio] = useState(Math.min(0.6, Math.max(0.2, host.prefs().inputRatio ?? 0.2)));
   const ratioRef = useRef(ratio),
     drag = useRef<{ y: number; ratio: number; height: number; pinned: boolean } | null>(null),

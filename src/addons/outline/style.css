@@ -445,7 +445,7 @@
     display: grid;
     gap: 12px;
   }
-  .wb-addon-view .wb-ot-markdown textarea {
+  .wb-addon-view .wb-ot-markdown :is(textarea, .wb-md) {
     min-height: 240px;
     padding: 14px 16px;
     border: 0;
@@ -456,10 +456,10 @@
       monospace;
     resize: vertical;
   }
-  .wb-addon-view .wb-ot-markdown textarea:focus {
+  .wb-addon-view .wb-ot-markdown :is(textarea:focus, .wb-md:focus-within) {
     box-shadow: 0 0 0 1px var(--wb-ring);
   }
-  .is-editor .wb-ot-markdown textarea {
+  .is-editor .wb-ot-markdown :is(textarea, .wb-md) {
     height: calc(100vh - 440px);
     min-height: 260px;
   }

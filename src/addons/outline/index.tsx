@@ -35,6 +35,7 @@ import {
 import "./style.css";
 import { bus } from "../../host/bus";
 import { useLeaveGuard } from "../../ui/common";
+import { MdField } from "../../ui/md/MdField";
 export { createRuntime };
 export const apiVersion = 2,
   id = "outline";
@@ -559,12 +560,12 @@ export function Workspace(props: AddonViewProps) {
                 </button>
               </div>
               <div className={`wb-ot-markdown ${preview ? "with-preview" : ""}`}>
-                <textarea
-                  aria-label="Markdown 节点内容"
+                <MdField
+                  label="Markdown 节点内容"
                   value={draft.content}
-                  onChange={(e) => {
+                  onChange={(content) => {
                     run("pause");
-                    setDraft({ ...draft, content: e.target.value });
+                    setDraft({ ...draft, content });
                   }}
                   placeholder="使用 Markdown 写下这一步发生的事…"
                 />

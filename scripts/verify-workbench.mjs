@@ -10,6 +10,7 @@ import {
   save,
   artifacts,
   mockApi,
+  fieldValue,
 } from "./browser.mjs";
 const browser = await launch(),
   report = { checkedAt: new Date().toISOString(), checks: [] };
@@ -98,7 +99,7 @@ try {
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "HTTP 500" }).waitFor();
   assert.equal(
-    await page.getByLabel("世界书正文").inputValue(),
+    await fieldValue(page.getByLabel("世界书正文")),
     "这份失败草稿不能丢失",
   );
   await page.unroute("**/api/worldinfo/edit");

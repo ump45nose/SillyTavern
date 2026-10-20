@@ -47,6 +47,8 @@ export interface Preferences {
   optionsPrompt?: string;
   /** Reveal a sidebar while the pointer rests at the window edge (default on). */
   edgeHover?: boolean;
+  /** Markdown fields (composer, outline, long character / world / persona text) preview as you type (default on). */
+  mdLive?: boolean;
   bindings: Record<string, string>;
   groups: Record<string, string>;
 }

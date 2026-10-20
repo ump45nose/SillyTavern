@@ -57,6 +57,7 @@ import type { HostAdapter } from "./host/adapter";
 import type { Panel, Resource, SettingsPage } from "./host/types";
 import { useTask, IconButton, Dialog, Loading, useHostSlices, withoutChat } from "./ui/common";
 import { bus, guards } from "./host/bus";
+import { mdLive } from "./ui/md/MdField";
 import { panelLabels } from "./host/labels";
 import {
   available,
@@ -148,6 +149,7 @@ export default function App({
   const sizes = useMemo(readSizes, [width]);
   const leftShown = leftVisible(s, sizes);
   const edgeHover = !mobile && prefs.edgeHover !== false;
+  useLayoutEffect(() => mdLive.set(prefs.mdLive !== false), [prefs.mdLive]);
   useScrollbars();
   const hover = useSidebarHover(
     edgeHover && !focus && !workspace && !deep && !help && !document.querySelector("dialog[open]"),

@@ -34,6 +34,7 @@ import { ResourceRailContext } from "../ui/ResourcePicker";
 import { SaveBar } from "../ui/ResourceControls";
 import { useTokenCounts } from "../ui/tokens";
 import { guards } from "../host/bus";
+import { MdField } from "../ui/md/MdField";
 
 export default function Characters(props: {
   host: HostAdapter;
@@ -603,11 +604,11 @@ function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
         {changed(key) && <i className="wb-ce-dirty" aria-label="已修改" />}
         {tokens[key] !== undefined && <small>{tokens[key].toLocaleString()} tokens</small>}
       </span>
-      <textarea
-        aria-label={label}
+      <MdField
+        label={label}
         rows={rows}
         value={draft[key] ?? ""}
-        onChange={(e) => put({ [key]: e.target.value })}
+        onChange={(value) => put({ [key]: value })}
       />
     </label>
   );
@@ -776,13 +777,11 @@ function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
                   {changed("alternate_greetings") && <i className="wb-ce-dirty" aria-label="已修改" />}
                   <small>以单独一行 --- 分隔</small>
                 </span>
-                <textarea
-                  aria-label="备选开场白（以单独一行 --- 分隔）"
+                <MdField
+                  label="备选开场白（以单独一行 --- 分隔）"
                   rows={8}
                   value={(draft.alternate_greetings || []).join("\n---\n")}
-                  onChange={(e) =>
-                    put({ alternate_greetings: e.target.value.split(/\n---\n/).filter(Boolean) })
-                  }
+                  onChange={(value) => put({ alternate_greetings: value.split(/\n---\n/).filter(Boolean) })}
                 />
               </label>
             </>
@@ -794,11 +793,11 @@ function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
               {field("post_history_instructions", "历史后指令", 3, false)}
               <label className="wb-ce-field">
                 <span className="wb-ce-label">深度提示词</span>
-                <textarea
-                  aria-label="深度提示词"
+                <MdField
+                  label="深度提示词"
                   rows={3}
                   value={draft.extensions?.depth_prompt?.prompt || ""}
-                  onChange={(e) => depth({ prompt: e.target.value })}
+                  onChange={(prompt) => depth({ prompt })}
                 />
               </label>
               <div className="wb-ce-row">

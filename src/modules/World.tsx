@@ -18,6 +18,7 @@ import {
 } from "../ui/common";
 import { ResourcePicker } from "../ui/ResourcePicker";
 import { EntryPortraits } from "../ui/EntryPortraits";
+import { MdField } from "../ui/md/MdField";
 import { isPathSafe } from "../host/cast";
 const positions = [
   "角色定义之前",
@@ -359,11 +360,11 @@ export default function World({
               </div>
             ) : (
               <>
-                <textarea
+                <MdField
                   className="wb-entry-text"
-                  aria-label="世界书正文"
+                  label="世界书正文"
                   value={selected.content ?? ""}
-                  onChange={(e) => update({ content: e.target.value })}
+                  onChange={(content) => update({ content })}
                 />
                 <div className="wb-entry-keys">
                   <span>关键词</span>
@@ -589,11 +590,11 @@ export default function World({
             </label>
           </div>
         ) : (
-          <textarea
+          <MdField
             className="wb-wt-content"
-            aria-label="世界书正文"
+            label="世界书正文"
             value={selected.content ?? ""}
-            onChange={(e) => update({ content: e.target.value })}
+            onChange={(content) => update({ content })}
           />
         )}
       </div>

@@ -376,7 +376,7 @@ export function MobileShell({
         x: t.clientX,
         y: t.clientY,
         t: e.timeStamp,
-        draft: input.contains(target),
+        draft: input.contains(target) || !!target.closest(".wb-composer-md"),
         // RP's band may rise to just under the header.
         room: rp
           ? stage.getBoundingClientRect().top - (headerRef.current?.getBoundingClientRect().bottom ?? 0) - 16

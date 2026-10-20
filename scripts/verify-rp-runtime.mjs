@@ -61,7 +61,8 @@ try {
 
   const input = page.locator("#send_textarea"), draft = "WB_RP_DRAFT **MD**\n<story>{{char}}</story>";
   assert.equal(await role("展开 RP 输入区").count(), 0); await role("快进到你的回应").click(); await settle(); assert.equal(await flag("wb-rp-compose"), true);
-  assert.equal(await page.evaluate(() => document.activeElement === document.getElementById("send_textarea")), true);
+  // The input has focus: the native textarea, or the Markdown editor laid over it.
+  assert.equal(await page.evaluate(() => document.activeElement === document.getElementById("send_textarea") || !!document.activeElement?.closest(".wb-composer-md")), true);
   await input.fill(draft); const before = (await page.locator("#sheld").boundingBox()).height;
   await role("展开 RP 输入区").click(); await page.waitForTimeout(70); const halfway = (await page.locator("#sheld").boundingBox()).height;
   await settle(); const after = (await page.locator("#sheld").boundingBox()).height;
@@ -101,11 +102,13 @@ try {
   await role(`对白第 ${pages} 段`).click(); await settle(); await role("下一段对白或输入").click(); await settle();
   assert.equal(await flag("wb-rp-compose"), true);
   // Composing, the wheel scrolls a long draft first; a fresh turn back at its top returns to the dialogue.
-  const kept = await input.inputValue(); await input.fill("WB_RP_WHEEL\n".repeat(120)); await input.evaluate(n => { n.scrollTop = n.scrollHeight; });
+  // What scrolls is the Markdown editor over the input when it is on, else the textarea itself.
+  const draftBox = page.locator("#send_textarea[data-wb-md] + .wb-composer-md .cm-scroller, #send_textarea:not([data-wb-md])");
+  const kept = await input.inputValue(); await input.fill("WB_RP_WHEEL\n".repeat(120)); await draftBox.evaluate(n => { n.scrollTop = n.scrollHeight; });
   const field = await input.boundingBox(); await page.mouse.move(field.x + 60, field.y + 40);
   await page.mouse.wheel(0, -120); await settle(); assert.equal(await flag("wb-rp-compose"), true);
-  assert(await input.evaluate(n => n.scrollTop < n.scrollHeight - n.clientHeight - 1));
-  await input.fill(kept); await input.evaluate(n => { n.scrollTop = 0; }); await page.waitForTimeout(400);
+  assert(await draftBox.evaluate(n => n.scrollTop < n.scrollHeight - n.clientHeight - 1));
+  await input.fill(kept); await draftBox.evaluate(n => { n.scrollTop = 0; }); await page.waitForTimeout(400);
   await page.mouse.wheel(0, -120); await settle(); assert.equal(await flag("wb-rp-compose"), false);
   assert.equal(await role(`对白第 ${pages} 段`).getAttribute("aria-current"), "true");
   pass("long messages page by lines without scrollbars; keys, the wheel, clicks and dots turn pages, the last page continues into input and the wheel turns back out of it", { pages, step });

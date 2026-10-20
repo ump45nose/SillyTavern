@@ -248,8 +248,9 @@
     color: var(--wb-ink-1);
     font: 15px/1.95 var(--wb-font-reading);
     resize: none;
+    max-height: none;
   }
-  .wb-ui :is(.wb-persona-line input, .wb-persona-desc):focus {
+  .wb-ui :is(.wb-persona-line input:focus, .wb-persona-desc:is(:focus, :focus-within)) {
     outline: none;
     border-color: var(--wb-ring);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--wb-ring) 18%, transparent);

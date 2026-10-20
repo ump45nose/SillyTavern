@@ -788,6 +788,17 @@ export function ReadingForm({ host }: { host: HostAdapter }) {
               onChange={(v) => host.preference({ edgeHover: v })}
             />
           </div>
+          <div className="wb-reading-row">
+            <span>
+              Markdown 实时预览
+              <small>输入框、大纲与设定长文本边写边显示效果，正在编辑的行显示源码</small>
+            </span>
+            <Switch
+              label="Markdown 实时预览"
+              checked={p.mdLive !== false}
+              onChange={(v) => host.preference({ mdLive: v })}
+            />
+          </div>
         </section>
       </div>
       <aside className="wb-reading-preview" aria-label="实时预览">

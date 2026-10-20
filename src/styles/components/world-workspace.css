@@ -405,7 +405,7 @@
     font: 14.5px/1.85 var(--wb-font-reading);
     resize: vertical;
   }
-  .wb-ui :is(.wb-wt-content, .wb-wt-json):focus {
+  .wb-ui :is(.wb-wt-content, .wb-wt-json):is(:focus, :focus-within) {
     outline: none;
     border-color: var(--wb-ring);
     background: var(--wb-surface-1);

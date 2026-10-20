@@ -57,6 +57,11 @@ export async function session(browser, { mobile = false, helper = true, probe = 
         isMobile: mobile, hasTouch: mobile,
         recordVideo,
     });
+    // The instances link the main checkout's extension; serve this checkout's, so a worktree tests its own build.
+    await context.route('**/scripts/extensions/third-party/workbench-probe/**', route => {
+        const file = path.join(root, 'extension', decodeURIComponent(new URL(route.request().url()).pathname.split('/workbench-probe/')[1]));
+        return fs.existsSync(file) ? route.fulfill({ path: file }) : route.fulfill({ status: 404, body: '' });
+    });
     if (!database) await context.route('**/scripts/extensions/third-party/shujuku/index.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
     if (!helper || !probe) {
         // These flags are session-only test overrides; never persist them to the test account.
@@ -361,3 +366,8 @@ export async function seedDatabase(page) {
         workbench.host.database.read();
     });
 }
+
+/** The text of a field: a textarea's value, or a Markdown editor's document. The editor's view is
+ *  reached the way EditorView.findFromDOM does it in the pinned @codemirror/view. */
+export const fieldValue = (locator) =>
+    locator.evaluate(n => (n instanceof HTMLTextAreaElement || n instanceof HTMLInputElement ? n.value : n.cmTile.root.view.state.doc.toString()));

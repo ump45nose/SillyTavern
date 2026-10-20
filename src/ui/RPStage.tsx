@@ -618,7 +618,9 @@ export function RPStage({
       const now = performance.now(),
         delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX,
         direction = Math.sign(delta),
-        field = (e.target as Element).closest<HTMLElement>("textarea,input,select,[contenteditable=true]");
+        hit = (e.target as Element).closest<HTMLElement>("textarea,input,select,[contenteditable=true]"),
+        // A Markdown editor scrolls in its scroller, not in its content node.
+        field = hit?.closest<HTMLElement>(".cm-scroller") ?? hit;
       if (field) {
         const scrolls =
           direction > 0 ? field.scrollTop + field.clientHeight < field.scrollHeight - 1 : field.scrollTop > 0;

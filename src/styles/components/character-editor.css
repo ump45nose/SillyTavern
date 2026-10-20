@@ -351,7 +351,7 @@
     border-radius: 50%;
     background: var(--wb-accent);
   }
-  .wb-ui .wb-ce-field textarea {
+  .wb-ui .wb-ce-field :is(textarea, .wb-md) {
     width: 100%;
     min-height: 0;
     padding: 12px 16px;
@@ -369,10 +369,10 @@
       background-color var(--wb-duration-fast),
       box-shadow var(--wb-duration-fast);
   }
-  .wb-ui .wb-ce-field.is-reading textarea {
+  .wb-ui .wb-ce-field.is-reading :is(textarea, .wb-md) {
     font: 14.5px/1.85 var(--wb-font-reading);
   }
-  .wb-ui .wb-ce-field textarea:focus {
+  .wb-ui .wb-ce-field :is(textarea:focus, .wb-md:focus-within) {
     outline: none;
     border-color: var(--wb-ring);
     background: var(--wb-surface-1);

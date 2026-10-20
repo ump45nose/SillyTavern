@@ -28,6 +28,7 @@ import { actionLabels, resourceLabels } from "../host/labels";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
 import { bus, guards } from "../host/bus";
+import { MdField } from "../ui/md/MdField";
 const safeToLeave = () => guards.check();
 export default function Resources({
   host,
@@ -488,12 +489,12 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
               <span>用户描述</span>
               <small>{(draft.description ?? "").length} 字</small>
             </div>
-            <textarea
+            <MdField
               className="wb-persona-text"
-              aria-label="用户描述"
+              label="用户描述"
               rows={6}
               value={draft.description ?? ""}
-              onChange={(e) => change("description", e.target.value)}
+              onChange={(value) => change("description", value)}
             />
           </section>
           <section className="wb-card wb-persona-fields-card" aria-label="名称与注入">
@@ -656,12 +657,12 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
               onChange={(e) => change("title", e.target.value)}
             />
           </label>
-          <textarea
+          <MdField
             className="wb-persona-desc"
-            aria-label="用户描述"
+            label="用户描述"
             placeholder="写下你在故事里是谁：身份、性格、说话方式……"
             value={draft.description ?? ""}
-            onChange={(e) => change("description", e.target.value)}
+            onChange={(value) => change("description", value)}
           />
           <small className="wb-persona-count">
             {(draft.description ?? "").length} 字
