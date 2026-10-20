@@ -7,3 +7,4 @@ artifacts/
 extension/dist/
 .DS_Store
 server/workbench-sync/dist/
+ide/vscode/dist/

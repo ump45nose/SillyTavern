@@ -281,7 +281,11 @@ export class Hub {
         unit.single ? path.posix.basename(from) : opened.rel,
         rel,
       );
-      return { route: await this.commit(from, unit, opened.loaded, draft, [parentOf(from)]) };
+      const route = await this.commit(from, unit, opened.loaded, draft, [parentOf(from)]);
+      // The IDE carries on with the file under its new name, at this version.
+      await this.open(to);
+      const after = this.versions.get(to);
+      return { route, ...(after ? { version: tag(after) } : {}) };
     });
   }
   private checkBase(file: string, current: string | undefined, base: string) {
