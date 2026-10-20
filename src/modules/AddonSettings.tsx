@@ -3,6 +3,7 @@ import type { HostAdapter } from "../host/adapter";
 import { addons, addonEnabled } from "../addons/catalog";
 import { Switch } from "../ui/ResourceControls";
 import { useHostSlices } from "../ui/common";
+import SyncStatus from "./SyncStatus";
 export default function AddonSettings({ host }: { host: HostAdapter }) {
   useHostSlices(host, ["prefs"]);
   const prefs = host.prefs();
@@ -46,6 +47,7 @@ export default function AddonSettings({ host }: { host: HostAdapter }) {
             </article>
           );
         })}
+        <SyncStatus host={host} />
       </div>
     </section>
   );

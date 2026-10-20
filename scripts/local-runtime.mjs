@@ -20,6 +20,8 @@ const instances = { baseline: 32011 + offset, validation: 32012 + offset, visual
 const mockPort = 32013 + offset;
 // WB_BIND_ADDRESS (e.g. 0.0.0.0 for tailnet / LAN) applies to the workbench instances; baseline stays on loopback.
 const exposed = ["validation", "visual"];
+// The workbench instances load server plug-ins (workbench-sync for IDE sync); baseline stays official.
+const withPlugins = ["validation", "visual"];
 
 function readEnv() {
   if (!fs.existsSync(envPath)) return {};
@@ -69,7 +71,7 @@ basicAuthUser:
   username: ${JSON.stringify(env.WB_USERNAME)}
   password: ${JSON.stringify(env.WB_PASSWORD)}
 enableUserAccounts: false
-enableServerPlugins: false
+enableServerPlugins: ${withPlugins.includes(name)}
 enableServerPluginsAutoUpdate: false
 extensions:
   enabled: true
@@ -116,7 +118,7 @@ extensions:
   console.log(`Prepared official ${lock.upstream.release} (${commit.slice(0, 12)}) on 127.0.0.1:${Object.values(instances).join("/")}.`);
 }
 
-// Re-applied on every start so changing WB_BIND_ADDRESS or the credentials in .env needs no reprepare;
+// Re-applied on every start so changing WB_BIND_ADDRESS, the credentials in .env or the plug-in switch needs no reprepare;
 // SillyTavern keeps these keys when it rewrites the file.
 function applyEnv(name) {
   const env = readEnv();
@@ -127,6 +129,7 @@ function applyEnv(name) {
     [/^(listenAddress:\n  ipv4: ).*$/m, `$1${address}`],
     [/^(basicAuthUser:\n  username: ).*$/m, `$1${JSON.stringify(env.WB_USERNAME)}`],
     [/^(basicAuthUser:\n  username: .*\n  password: ).*$/m, `$1${JSON.stringify(env.WB_PASSWORD)}`],
+    [/^enableServerPlugins: .*$/m, `enableServerPlugins: ${withPlugins.includes(name)}`],
   ];
   let text = fs.readFileSync(config, "utf8");
   for (const [pattern, value] of keys) {
