@@ -4,6 +4,7 @@ import { ChatObserver, MediaObserver } from "./chat-observer";
 import { CastRuntime } from "./cast-runtime";
 import { OptionsRuntime } from "./options-runtime";
 import { DatabaseRuntime } from "./database-runtime";
+import { SyncRelay } from "./sync-relay";
 import { guards, type Guard } from "./bus";
 import { HostCore, defaults, sliceNames } from "./core";
 import type { Slice } from "./types";
@@ -28,6 +29,8 @@ type Mixin<T> = { [K in keyof T]: OmitThisParameter<T[K]> };
  * behaviour in ./domains; callers keep using one object.
  */
 export class HostAdapter extends HostCore {
+  /** IDE sync through the workbench-sync server plug-in; idle when the plug-in is not loaded. */
+  sync!: SyncRelay;
   async init() {
     this.generating = Boolean(ctx().streamingProcessor);
     [this.world, this.personas, this.openai] = await Promise.all([
@@ -132,9 +135,11 @@ export class HostAdapter extends HostCore {
     void this.cast.load();
     this.database = new DatabaseRuntime(this);
     this.options = new OptionsRuntime(this);
+    this.sync = new SyncRelay(this);
     this.cleanup.push(
       () => this.options.dispose(),
       () => this.database.dispose(),
+      () => this.sync.dispose(),
     );
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
