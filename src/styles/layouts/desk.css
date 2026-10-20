@@ -819,7 +819,25 @@
   .wb-nav-toggle[aria-expanded="true"] .wb-nav-caret {
     transform: none;
   }
-  .wb-nav-section > .wb-fold-body > div {
+  /* A section the column had no room for: its title row carries a dot until it gets the focus again. */
+  .wb-nav-auto {
+    width: 5px;
+    height: 5px;
+    margin-left: auto;
+    border-radius: 50%;
+    background: var(--wb-accent);
+    opacity: 0.7;
+  }
+  .wb-nav-auto + .wb-nav-caret {
+    margin-left: 0;
+  }
+  /* Planned by Navigation (planSections): without a limit a section shows its whole body. */
+  .wb-nav-section > .wb-fold-body.is-open > .wb-nav-scroll {
+    max-height: var(--wb-nav-max, none);
+    scrollbar-width: thin;
+    scrollbar-color: var(--wb-line-1) transparent;
+  }
+  .wb-nav-body {
     padding-bottom: 6px;
   }
   .wb-nav-list {
@@ -833,7 +851,9 @@
     align-items: center;
     gap: 10px;
     width: 100%;
+    /* Fixed: the floor list is windowed on this height (Navigation's FloorList). */
     height: 30px;
+    min-height: 0;
     padding: 0 var(--wb-space-2);
     border: 0;
     border-radius: var(--wb-radius-md);
@@ -862,6 +882,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .wb-floor-list {
+    box-sizing: border-box;
+  }
   .wb-floor-number {
     flex: none;
     width: 28px;
@@ -874,20 +897,6 @@
     padding: 0 var(--wb-space-2);
     color: var(--wb-ink-3);
     font-size: var(--wb-text-xs);
-  }
-  .wb-nav-more {
-    margin: 2px 0 0;
-    padding: 4px var(--wb-space-2);
-    border: 0;
-    border-radius: var(--wb-radius-sm);
-    background: transparent;
-    color: var(--wb-accent-text);
-    font: inherit;
-    font-size: var(--wb-text-xs);
-    cursor: pointer;
-  }
-  .wb-nav-more:is(:hover, :focus-visible) {
-    background: var(--wb-hover);
   }
   .wb-nav-footer {
     flex: none;
