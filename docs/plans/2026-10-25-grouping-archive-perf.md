@@ -103,7 +103,7 @@
 - [x] D1 settings.json 清理（2026-10-26 生产执行，备份 `backups/settings-cleanup-20261026-002618/`）
 - [x] W4 上下文裁剪（05e4dd712）
 - [x] W6 说话人着色（e196e14e1）
-- [x] F1 P-A 前端 perf 扩展（合并 1fb4b0624；预设面板一项在已连接聊天补全的实例上多一次计数，F1 排查中）
+- [x] F1 P-A 前端 perf 扩展（合并 1fb4b0624；renderDebounced 绕过补丁的问题已修，集成实例 `verify:perf` 13/13）
 - [x] F2 P-B 服务端缓存（合并 a55cebc43）
 - [ ] F3 W3 分组与归档
 - [ ] F4 W1 + W2 工作台性能与条目详情
