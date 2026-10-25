@@ -124,6 +124,7 @@
 - 提前解遮罩：工作台会挂载时不提前（APP_INITIALIZED 时遮罩仍在）；禁用工作台后在 SETTINGS_LOADED 即解除。注意 1.19.0 的启动遮罩是 `loader.show({slug:'app-init'})`，cocktail 用的 `ctx.hideLoader()` 对它无效，这里直接 hide 该句柄；工作台加载判断用 `window.workbench || window.workbenchStartup`（SETTINGS_LOADED 时工作台 bundle 可能仍在 import）。
 - gzip：经局域网地址访问时 >64 KB 的 settings 保存以 `Content-Encoding: gzip` 发出、服务端完整写入并可读回，小请求不压缩；压缩请求失败时自动以未压缩重发并成功（worldinfo/edit 实测）。回环地址不压缩。
 - 预设：`render(true)` 立即重绘列表，连续 3 次切换只做 1 次后台 dry-run，完成后再刷新计数；关闭后恢复原生（先 dry-run 再画）。
+- 预设（修正，集成实例 offset 600 上发现）：`promptManager` 在 getSettings → changeMainAPI 里构造、早于扩展加载，实例的 `renderDebounced`（CHAT_LOADED / MESSAGE_RECEIVED / 模型切换走它）绑定的是原生 render，绕过补丁、仍先 dry-run 再画。现把它换成同样 1 s 防抖、动态派发到 `render` 的版本（卸载时还原）。`verify:perf` 增加该路径：开启时防抖结束即重绘、只 1 次 dry-run；关闭后恢复原生。offset 600（已连 mock、开着角色聊天）13 项全部通过。
 - 抽屉：inline-drawer 开合用一个 WAAPI 动画、无 jQuery 高度逐帧；关闭后恢复 jQuery slideToggle。
 - 正则：面板打开时单个与批量开关都不重载聊天，收起面板后重载一次；关闭模块后切换立即重载（原生）。
 - 世界书拖拽：拖动中条目不动，只有影子与指示线、无 jQuery UI 占位；松手一次重排并经原生 stop 回调保存 displayIndex（服务端读回顺序一致）；关闭后 jQuery UI sortable 接管。

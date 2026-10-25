@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
-import { launch, session, ready, urls, createCharacter } from './browser.mjs';
+import path from 'node:path';
+import { launch, session as baseSession, ready, urls, createCharacter, root } from './browser.mjs';
 
 // verify:perf — the wb-perf extension (perf-extension/) on the local validation instance:
 // each module's switch takes effect, switching everything off leaves native behaviour, and the
@@ -15,6 +16,17 @@ const BOOK = 'WbPerfFixture';
 const lan = process.env.WB_LAN_HOST ?? Object.values(os.networkInterfaces()).flat()
     .find(i => i?.family === 'IPv4' && !i.internal && /^(192\.168|10)\.|^172\.(1[6-9]|2\d|3[01])\./.test(i.address))?.address;
 const lanUrl = lan && urls.validation.replace(/\/\/[^:]+:/, `//${lan}:`);
+
+// Shared instances link wb-perf to whichever checkout prepared them; serve this checkout's copy.
+const perfDir = path.join(root, 'perf-extension');
+async function session(browser) {
+    const result = await baseSession(browser);
+    await result.context.route('**/scripts/extensions/third-party/wb-perf/**', route => {
+        const file = path.join(perfDir, decodeURIComponent(new URL(route.request().url()).pathname.split('/wb-perf/')[1]));
+        return file.startsWith(perfDir + path.sep) && fs.existsSync(file) ? route.fulfill({ path: file }) : route.fulfill({ status: 404, body: '' });
+    });
+    return result;
+}
 
 const regexScript = (id, name) => ({ id, scriptName: name, findRegex: '/wbperf-never-matches/g', replaceString: '', trimStrings: [], placement: [2], disabled: false, markdownOnly: true, promptOnly: false, runOnEdit: true, substituteRegex: 0, minDepth: null, maxDepth: null });
 
@@ -145,32 +157,37 @@ try {
     await createCharacter(page);
     await page.waitForFunction(() => document.querySelectorAll('#chat .mes').length > 0);
 
-    // Module 1: render(true) draws at once; the dry-run runs once in the background.
-    const presetProbe = () => page.evaluate(async () => {
+    // Module 1: render(true) draws at once; the dry-run runs once in the background. 'chat' goes through
+    // renderDebounced, the path CHAT_LOADED / MESSAGE_RECEIVED / model changes take.
+    const presetProbe = path => page.evaluate(async path => {
         const pm = (await import('/scripts/openai.js')).promptManager, sleep = ms => new Promise(r => setTimeout(r, ms));
         const tryGenerate = pm.tryGenerate, items = pm.renderPromptManagerListItems;
         let tries = 0, renders = 0;
         pm.tryGenerate = () => { tries++; return sleep(1500); };
         pm.renderPromptManagerListItems = function (...args) { renders++; return items.apply(this, args); };
         try {
-            // Let renders started by chat loading finish first, so only the three calls below are counted.
-            for (let seen = -1; seen !== tries + renders;) { seen = tries + renders; await sleep(2000); }
+            // Let renders started by chat loading (1 s debounced) finish first, so only the calls below are counted.
+            for (let seen = -1; seen !== tries + renders;) { seen = tries + renders; await sleep(2500); }
             tries = 0; renders = 0;
-            pm.render(true); pm.render(true); pm.render(true);
-            await sleep(500); const early = renders;
+            if (path === 'chat') pm.renderDebounced();
+            else { pm.render(true); pm.render(true); pm.render(true); }
+            // Toggles: 500 ms in; chat: 500 ms after the 1 s debounce. Either way before a 1.5 s dry-run could end.
+            await sleep(path === 'chat' ? 1500 : 500); const early = renders;
             await sleep(2500);
             return { early, renders, tries };
         } finally {
             pm.tryGenerate = tryGenerate;
             delete pm.renderPromptManagerListItems;
         }
-    });
-    const presetOn = await presetProbe();
-    assert(presetOn.early >= 1 && presetOn.tries === 1 && presetOn.renders > presetOn.early, JSON.stringify(presetOn));
+    }, path);
+    const presetOn = { toggle: await presetProbe('toggle'), chat: await presetProbe('chat') };
+    assert(presetOn.toggle.early >= 1 && presetOn.toggle.tries === 1 && presetOn.toggle.renders > presetOn.toggle.early, JSON.stringify(presetOn));
+    assert(presetOn.chat.early >= 1 && presetOn.chat.tries === 1 && presetOn.chat.renders > presetOn.chat.early, JSON.stringify(presetOn));
     await setModule(page, 'presetDryRun', false);
-    const presetOff = await presetProbe();
-    assert(presetOff.early === 0 && presetOff.tries === 3, JSON.stringify(presetOff));
-    pass('preset panel: the list redraws before the token dry-run, three quick toggles cost one dry-run; off restores native', { on: presetOn, off: presetOff });
+    const presetOff = { toggle: await presetProbe('toggle'), chat: await presetProbe('chat') };
+    assert(presetOff.toggle.early === 0 && presetOff.toggle.tries === 3, JSON.stringify(presetOff));
+    assert(presetOff.chat.early === 0 && presetOff.chat.tries === 1, JSON.stringify(presetOff));
+    pass('preset panel: toggles and chat-driven re-renders redraw before the token dry-run, three quick toggles cost one dry-run; off restores native', { on: presetOn, off: presetOff });
 
     // Module 3: inline drawers animate with Web Animations instead of jQuery height steps.
     await page.locator('#extensions-settings-button .drawer-toggle').click();
