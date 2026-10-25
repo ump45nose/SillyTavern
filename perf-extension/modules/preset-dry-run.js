@@ -6,23 +6,31 @@
  * 做 dry-run token 计数再画列表，开关条目要等计数结束才变化。这里先 render(false) 立即画 UI，dry-run
  * 防抖、单飞放到后台，完成后再 render(false) 刷新计数。只补 prototype.render；BaiBai 补的
  * makeDraggable / renderPromptManagerListItems / getPromptCollection 都是实例级，互不干涉。
+ *
+ * 实例的 renderDebounced（CHAT_LOADED / MESSAGE_RECEIVED / 模型切换等走它）在构造时绑定了 render，而
+ * openai.js 的 promptManager 在 getSettings → changeMainAPI 里构造，早于扩展加载，绑定的是原生 render。
+ * 这里把它换成同样 1 s 防抖、按 pm.render 动态派发的版本，这些路径才会走上面的补丁。BaiBai 切预设时
+ * 临时把 renderDebounced 换成空函数、之后还原成它当时读到的那个，与此不冲突。
  */
 const DEBOUNCE_MS = 250;
 
-let PromptManager = null, script = null, groups = null, utils = null;
+let PromptManager = null, script = null, groups = null, utils = null, openai = null, constants = null;
 
 export default {
     id: 'presetDryRun',
     title: '预设面板：先切换 UI，后台补齐 token 计数',
     async probe() {
-        [{ PromptManager }, script, groups, utils] = await Promise.all([
+        [{ PromptManager }, script, groups, utils, openai, constants] = await Promise.all([
             import('/scripts/PromptManager.js'),
             import('/script.js'),
             import('/scripts/group-chats.js'),
             import('/scripts/utils.js'),
+            import('/scripts/openai.js'),
+            import('/scripts/constants.js'),
         ]);
         if (typeof PromptManager?.prototype?.render !== 'function') return '找不到 PromptManager.prototype.render';
-        if (typeof utils.waitUntilCondition !== 'function') return '找不到 utils.waitUntilCondition';
+        if (typeof utils.waitUntilCondition !== 'function' || typeof utils.debounce !== 'function') return '找不到 utils.waitUntilCondition / debounce';
+        if (typeof constants.debounce_timeout?.relaxed !== 'number') return '找不到 debounce_timeout.relaxed';
         return null;
     },
     install() {
@@ -58,9 +66,14 @@ export default {
             schedule(this);
         }
         proto.render = render;
+        // Built before this extension loaded (see header); an instance built later binds the patched render itself.
+        const pm = openai.promptManager, nativeDebounced = pm?.renderDebounced;
+        const renderDebounced = pm && utils.debounce(() => pm.render(), constants.debounce_timeout.relaxed);
+        if (pm) pm.renderDebounced = renderDebounced;
         return () => {
             active = false;
             if (proto.render === render) proto.render = original;
+            if (pm && pm.renderDebounced === renderDebounced) pm.renderDebounced = nativeDebounced;
         };
     },
 };
