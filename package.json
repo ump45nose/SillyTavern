@@ -37,6 +37,7 @@
     "verify:sync": "node scripts/verify-sync.mjs",
     "verify:addons": "node scripts/verify-addons.mjs",
     "verify:utilities": "node scripts/verify-utility-tools.mjs",
+    "verify:placeholders": "node scripts/verify-placeholders.mjs",
     "benchmark:startup": "node scripts/benchmark-startup-readonly.mjs",
     "verify:writing-addons": "node scripts/verify-writing-addons.mjs",
     "verify:pwa": "node scripts/verify-pwa-runtime.mjs",

@@ -38,6 +38,7 @@ import { AddonTasks, MessageImageControls, ImageInputMode } from "./ui/AddonCont
 import AddonWorkspace from "./ui/AddonWorkspace";
 import { ResourceRailContext } from "./ui/ResourcePicker";
 import { ClickFeedback, usePresence } from "./ui/Motion";
+import { PlaceholderPrompt } from "./ui/PlaceholderPrompt";
 import { Header } from "./ui/Header";
 import { Composer } from "./ui/Composer";
 import { ComposerOptions, OptionsPopover } from "./ui/StoryOptions";
@@ -502,6 +503,7 @@ export default function App({
   return (
     <>
       <ClickFeedback />
+      <PlaceholderPrompt host={host} />
       <AddonTasks host={host} />
       <MessageImageControls host={host} />
       <ImageInputMode host={host} />
