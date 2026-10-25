@@ -100,19 +100,26 @@
 
 - [x] 总体计划、关键决定确认
 - [x] W0 入库（d16858477）
-- [ ] D1 settings.json 遗留键清理
-- [ ] W4 上下文裁剪
-- [ ] W6 说话人着色
-- [ ] F1 P-A 前端 perf 扩展
-- [ ] F2 P-B 服务端缓存
+- [x] D1 settings.json 清理（2026-10-26 生产执行，备份 `backups/settings-cleanup-20261026-002618/`）
+- [x] W4 上下文裁剪（05e4dd712）
+- [x] W6 说话人着色（e196e14e1）
+- [x] F1 P-A 前端 perf 扩展（合并 1fb4b0624；预设面板一项在已连接聊天补全的实例上多一次计数，F1 排查中）
+- [x] F2 P-B 服务端缓存（合并 a55cebc43）
 - [ ] F3 W3 分组与归档
 - [ ] F4 W1 + W2 工作台性能与条目详情
-- [ ] F5 W5 占位符变量
+- [x] F5 W5 占位符变量（合并 a00f83fe3）
 - [ ] 合并、全量验证、部署
 
 ## 实测记录
 
-（各工作包完成后在此追加。）
+### 集成分支：D1 / W4 / W6
+
+- D1：删除 11 个已卸载扩展的遗留键（st_bme、LittleWhiteBox、Amily2、World-Book-Assistant、story_workspace、customModels 等，约 120 KB）与 4 个已停用且路线图标为「已处置」的酒馆助手脚本（角色卡管理、自动标签检查、聊天记录导出、SoliUmbra，约 980 KB）。停容器 → 原子写回（4 空格缩进，与 ST 一致）→ 启动；settings.json 8.34 MB → 7.16 MB；重启后 32001 返回 401（Basic Auth）、workbench-sync 已加载。保留在用脚本与占位符系统源码（W5 参考）。「世界书切换器」脚本仍启用，W3 上线后可停用。
+- W4（实测，本地 32612）：`verify:context-limit` 3 项通过——设置页开关与条数写入偏好；楼层列表淡化不发送的楼层，起点在倒数第 3 条未隐藏楼层；接 mock 模型生成时请求只含最近 3 条，隐藏楼层不计，聊天文件保留全部楼层。首次启动迁移 Extension-MessageLimit 设置（生产为开启、5 条、后台也限制）。
+- W6（实测）：`verify:speaker-colors` 4 项通过——角色颜色只作用于该角色对白；persona 按头像匹配（名字不可靠：fixture 的 `name1` 与 persona 名不同）；`#fff700` 在纸色主题被压暗、深色主题保持明亮；清除恢复主题色；RP 布局同样生效。只用手动颜色，没有做头像取色（生产配置只用手动色，原取色已失效）。
+- 合并后：`npm run check`、`npm test`（148 项）、`npm run build` 通过；`verify:speaker-colors` / `verify:context-limit` / `verify:placeholders` 全部通过。
+- 本地 `.env` 注意：从主检出复制的 `WB_MOCK_API` 指向 32013，换端口偏移后要改成 32013+偏移，否则生成返回 502。
+- 已知旧问题：`verify:workbench` 第 3 项「角色描述」定位到两个元素（F2、F5 在 cad6ec8c0 上复现），与本轮改动无关，待修脚本。
 
 ### F2 P-B 服务端缓存
 
