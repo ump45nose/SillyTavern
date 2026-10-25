@@ -541,6 +541,8 @@ export default function World({
     if (!shown[next]) return;
     event.preventDefault();
     setEntry(shown[next][0]);
+    // The focused row may leave the rendered window; the table keeps the keys.
+    (event.currentTarget as HTMLElement).focus({ preventScroll: true });
     tableWindow.reveal(next);
   };
   const params = selected && (
@@ -780,7 +782,7 @@ export default function World({
               </button>
             </div>
             <div className={`wb-wt-body ${selected ? "has-detail" : ""}`}>
-              <div className="wb-wt-table" role="table" aria-label="条目" onKeyDown={tableKey}>
+              <div className="wb-wt-table" role="table" aria-label="条目" tabIndex={-1} onKeyDown={tableKey}>
                 <div className="wb-wt-row is-head" role="row">
                   <span role="columnheader" aria-label="启用" />
                   <span role="columnheader">条目</span>

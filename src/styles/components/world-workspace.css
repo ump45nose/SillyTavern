@@ -247,6 +247,9 @@
     scroll-padding-top: 36px;
     scrollbar-width: thin;
   }
+  .wb-wt-table:focus {
+    outline: none;
+  }
   .wb-wt-row {
     display: grid;
     grid-template-columns: 54px minmax(120px, 1.2fr) minmax(120px, 1.6fr) minmax(96px, 0.9fr) 52px 56px 64px;
