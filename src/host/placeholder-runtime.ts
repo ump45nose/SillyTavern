@@ -21,7 +21,7 @@ export interface PlaceholderRequest {
 
 const DEBOUNCE = 600,
   INPUT = "send_textarea",
-  HOOKED = Symbol.for("workbench.placeholders.inject");
+  HOOKED = Symbol.for("workbench.placeholders.command");
 const isInput = (node: EventTarget | null) =>
   node instanceof HTMLElement && (node.id === INPUT || !!node.closest(".wb-composer-md"));
 const pending = (text: string) => text.includes("{@");
@@ -73,7 +73,7 @@ export class PlaceholderRuntime {
       e.stopImmediatePropagation();
       void this.flush(true);
     });
-    this.disposers.push(this.wrapInject(), () => clearTimeout(this.timer));
+    this.disposers.push(this.wrapInject(), this.wrapButtons(), () => clearTimeout(this.timer));
   }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -196,16 +196,15 @@ export class PlaceholderRuntime {
       this.busy = false;
     }
   }
-  /** `/inject` expands its text first, as the script's interception did; the original callback comes back on dispose. */
-  private wrapInject() {
-    const command = ctx().SlashCommandParser?.commands?.inject;
+  /**
+   * `/inject` expands its text first, as the script's interception did; `/buttons` gets the script's
+   * toolbar. Each original callback comes back on dispose.
+   */
+  private wrapCommand(name: "inject" | "buttons", wrap: (original: Callback) => Callback) {
+    const command = ctx().SlashCommandParser?.commands?.[name];
     if (!command || command[HOOKED]) return () => {};
-    const original = command.callback;
-    const runtime = this;
-    const wrapped = async function (this: unknown, args: unknown, value: unknown) {
-      const text = typeof value === "string" && pending(value) ? await runtime.expand(value) : value;
-      return original.call(this, args, text);
-    };
+    const original: Callback = command.callback,
+      wrapped = wrap(original);
     command.callback = wrapped;
     command[HOOKED] = true;
     return () => {
@@ -213,4 +212,58 @@ export class PlaceholderRuntime {
       delete command[HOOKED];
     };
   }
+  private wrapInject() {
+    const runtime = this;
+    return this.wrapCommand(
+      "inject",
+      (original) =>
+        async function (this: unknown, args, value) {
+          const text = typeof value === "string" && pending(value) ? await runtime.expand(value) : value;
+          return original.call(this, args, text);
+        },
+    );
+  }
+  /** SillyTavern builds and opens the /buttons popup before its callback first awaits. */
+  private wrapButtons() {
+    return this.wrapCommand(
+      "buttons",
+      (original) =>
+        function (this: unknown, args, value) {
+          const result = original.call(this, args, value);
+          const box = [
+            ...document.querySelectorAll<HTMLElement>("dialog[open] .scrollable-buttons-container"),
+          ].at(-1);
+          if (box) buttonsToolbar(box);
+          return result;
+        },
+    );
+  }
+}
+
+type Callback = (this: unknown, args: unknown, value: unknown) => unknown;
+const SEPARATOR = "--------";
+/**
+ * The script's quick-reply toolbar: in a /buttons menu, the buttons before a `--------` label form a
+ * row that stays at the top while the list scrolls, the separator becomes a rule, and a 发送 button
+ * moves next to the popup's own controls.
+ */
+export function buttonsToolbar(box: HTMLElement) {
+  const buttons = [...box.querySelectorAll<HTMLElement>(".menu_button")],
+    at = buttons.findIndex((b) => b.textContent?.trim() === SEPARATOR),
+    tools = buttons.slice(0, at);
+  if (at < 0 || tools.length < 2) return;
+  box.classList.add("wb-buttons-toolbar");
+  buttons[at].classList.add("wb-buttons-sep");
+  const send = tools.find((b) => b.textContent?.includes("发送")),
+    controls = box.closest("dialog")?.querySelector(".popup-controls"),
+    moved = send && controls ? send : null;
+  if (moved) {
+    moved.classList.add("wb-buttons-send");
+    controls!.prepend(moved);
+  }
+  const row = tools.filter((b) => b !== moved);
+  row.forEach((b) => {
+    b.classList.add("wb-buttons-tool");
+    b.style.setProperty("--wb-tool-width", `calc(${100 / row.length}% - 4px)`);
+  });
 }

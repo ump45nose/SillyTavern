@@ -35,13 +35,13 @@ export default function PlaceholderSettings({ host }: { host: HostAdapter }) {
         <div>
           <h3>占位符变量</h3>
           <p>
-            输入框、快速回复写入输入框的文本和 /inject 中的 <code>{"{@变量}"}</code>{" "}
-            按角色卡保存，随酒馆设置跨设备同步。
+            输入框、快速回复写入输入框的文本和 /inject 中的{" "}
+            <span className="wb-placeholder-name">{"{@变量}"}</span> 按角色卡保存，随酒馆设置跨设备同步。
           </p>
         </div>
         <label className="wb-check">
           <input type="checkbox" checked={inputOn} onChange={(e) => runtime.setInputOn(e.target.checked)} />
-          输入弹窗（本页有效，同 <code>{"{@input:toggle}"}</code>）
+          输入弹窗（本页有效，同 <span className="wb-placeholder-name">{"{@input:toggle}"}</span>）
         </label>
       </header>
       <div className="wb-placeholder-scope">
@@ -60,12 +60,11 @@ export default function PlaceholderSettings({ host }: { host: HostAdapter }) {
           清空
         </button>
       </div>
-      <div className="wb-placeholder-table" role="table" aria-label="变量">
+      <div className="wb-placeholder-table" role="group" aria-label="变量">
         {Object.entries(vars).map(([n, v]) => (
-          <div key={n} className="wb-placeholder-row" role="row">
-            <code role="cell">{n}</code>
+          <div key={n} className="wb-placeholder-row">
+            <span className="wb-placeholder-name">{n}</span>
             <input
-              role="cell"
               aria-label={`变量 ${n} 的值`}
               value={v}
               onChange={(e) => save({ ...vars, [n]: e.target.value })}

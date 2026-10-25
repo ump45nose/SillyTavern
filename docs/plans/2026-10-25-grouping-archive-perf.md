@@ -113,3 +113,30 @@
 ## 实测记录
 
 （各工作包完成后在此追加。）
+
+### F5 W5 占位符变量（分支 `worktree-agent-abccf3bbb3b7e5fe5`）
+
+实现：`src/host/placeholders.ts`（纯函数展开）、`src/host/placeholder-runtime.ts`（输入框 / `/inject` / `/buttons` 接入与存储）、`src/ui/PlaceholderPrompt.tsx`（输入弹窗）、`src/modules/PlaceholderSettings.tsx`（用户设置 → 占位符变量）。变量存 `extensionSettings.workbench.placeholders[作用域]`，作用域为角色头像文件名 / `group:<id>` / `default`。
+
+与原脚本（生产 settings 中 tavern_helper 脚本 #3）对照后的行为说明：
+
+- 超级菜单不走 `/inject` 为主，而是 `/setinput {{input}}<…{@变量…}>` 写进输入框再 `/run` 菜单，展开发生在原生 `/buttons` 弹窗仍打开时。工作台弹窗用 `showModal`，叠在原生弹窗之上可正常操作，关闭后原生弹窗继续可用。
+- 原脚本的 Tab 是打开变量管理器；这里 Tab 改为立即展开（管理器在用户设置里）。Enter / 发送按钮遇到未展开的完整占位符时先展开、不发送，避免把原始 `{@…}` 发出去。
+- `{@toast:…}` / `{@confirm:…}` 在原脚本里被 `{@名:默认}` 先吞掉、只输出文字；这里按保留名的本意弹提示。超级菜单未使用这两个命令。
+- 原脚本按 `characterId`（数组下标，下标 0 会落到 default）分组，这里改按角色头像文件名，不受角色列表顺序影响；旧 localStorage 数据不迁移。
+- 快速回复工具栏样式需要：它作用于 `/buttons` 弹窗（不是输入框底栏），超级菜单 35 条里每个菜单都用 `--------` 分隔导航按钮。实现为包装 `/buttons` 命令、处理刚打开的弹窗，不用全局 MutationObserver；样式在 `native-bridge.css`。
+
+实测：
+
+- `npm run check`、`npm test`（130 项，新增 13 项占位符单测）、`npm run build` 通过。
+- 差分对照（只在本地 artifacts 运行，不入库）：抽出原脚本 `replaceTextAsync` 加桩，与新实现在超级菜单全部 189 段含占位符文本 × 2 种变量状态 × 弹窗开 / 关 × 3 种回答（空 / 填写 / 取消）共 2268 例比较文本、变量与弹窗开关，0 差异。
+- `npm run verify:placeholders`（新增，端口偏移 500 本地实例）7 项通过，合成菜单与真实「👑超级菜单」导出（`WB_QR_SET=…`）各跑一遍：`/buttons` 工具栏；控制菜单 `⚙️@角色指定` 在原生弹窗上方弹出 7 个输入、设定名字后输入框为 `<>`；`🤝男女主汇合` 展开为已存名字；`👨切换主角-男主` 的 `/inject` 注入内容已展开；Enter / Tab 立即展开且不发送；重载后变量仍在并可展开；设置面板查看 / 编辑 / 删除。
+- `verify:compat` 10 项通过（本地实例补装酒馆助手、`.env` 的模拟模型端口改为偏移后端口后）。
+- `verify:workbench`：在「角色描述」处因 `getByLabel('角色描述')` 同时匹配世界书条目模板的隐藏复选框与角色编辑器 Markdown 字段而失败；用改动前基线 cad6ec8c0 单独构建复跑，同一位置同样失败，属既有问题，与本工作包无关，未修。
+
+推断 / 未验证：
+
+- 「换浏览器后变量仍在」以「重载后从酒馆设置读回」验证，未用第二个浏览器实测；存储位置是随设置同步的 `extension_settings`，推断成立。
+- 手机布局、中文输入法组合输入（compositionstart/end 期间不展开）未做自动化验证，只有代码路径。
+- 切到「原生」布局时工作台卸载，占位符随之停用（原脚本不依赖布局）；未处理。
+- `/buttons` 的说明文字中的 `{@男主:男主}` 与原脚本一样原样显示，未展开。
