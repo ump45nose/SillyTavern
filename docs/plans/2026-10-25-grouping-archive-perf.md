@@ -158,3 +158,26 @@
 - 生产 Docker 环境中按真实路径导入是否得到同一模块实例：本地已验证（命中计数增长、日志确认已安装），生产部署后请查看容器日志里的 `response cache on`，并在刷新后检查 `/info` 的 `hits` 是否增长。
 - BaiBai 的 baibaoku 404 回退：本地没有安装 BaiBai。本插件不注册也不拦截该路径，按推断互不影响。
 - 浏览器真实页面多标签：只用两个 HTTP 会话模拟。`verify:workbench` 在第 3 项（「角色描述」定位器同时匹配复选框和 Markdown 编辑器）失败，去掉插件后同样复现，是 Markdown 编辑器上线后验证脚本未更新的旧问题，与本工作包无关，需要另行修复脚本。
+### F1 P-A 前端 perf 扩展（2026-10-26，分支 worktree-agent-a266e078f2139266b）
+
+产出：`perf-extension/`（6 个模块，设置在 `extension_settings.wbPerf`，扩展面板「Workbench 性能优化」一个总开关 + 每模块开关），`scripts/deploy.mjs` 同步到生产 `extensions/wb-perf/` 并探活，`scripts/local-runtime.mjs` 给验证/视觉实例链接 `wb-perf`，`npm run verify:perf`。
+
+实测（本机 1.19.0 验证实例，offset 100；`npm run check && npm test && npm run build` 通过，`verify:perf` 13 项全部通过、无页面错误）：
+- 6 个模块在 1.19.0 全部安装成功（版本门禁 + 符号探测），面板列出 6 项。
+- 启动预取：avatars/characters/backgrounds 三个列表加载时并行发出、各只请求一次，原生调用拿到的角色数与服务端一致。
+- 提前解遮罩：工作台会挂载时不提前（APP_INITIALIZED 时遮罩仍在）；禁用工作台后在 SETTINGS_LOADED 即解除。注意 1.19.0 的启动遮罩是 `loader.show({slug:'app-init'})`，cocktail 用的 `ctx.hideLoader()` 对它无效，这里直接 hide 该句柄；工作台加载判断用 `window.workbench || window.workbenchStartup`（SETTINGS_LOADED 时工作台 bundle 可能仍在 import）。
+- gzip：经局域网地址访问时 >64 KB 的 settings 保存以 `Content-Encoding: gzip` 发出、服务端完整写入并可读回，小请求不压缩；压缩请求失败时自动以未压缩重发并成功（worldinfo/edit 实测）。回环地址不压缩。
+- 预设：`render(true)` 立即重绘列表，连续 3 次切换只做 1 次后台 dry-run，完成后再刷新计数；关闭后恢复原生（先 dry-run 再画）。
+- 抽屉：inline-drawer 开合用一个 WAAPI 动画、无 jQuery 高度逐帧；关闭后恢复 jQuery slideToggle。
+- 正则：面板打开时单个与批量开关都不重载聊天，收起面板后重载一次；关闭模块后切换立即重载（原生）。
+- 世界书拖拽：拖动中条目不动，只有影子与指示线、无 jQuery UI 占位；松手一次重排并经原生 stop 回调保存 displayIndex（服务端读回顺序一致）；关闭后 jQuery UI sortable 接管。
+- 总开关关闭：document/window 上来自 wb-perf 脚本的监听器 5 → 0（CDP 检查），`PromptManager.prototype.render`、`$.fn.slideToggle`、`fetch` 均恢复原生，面板外无 `wb-perf` 元素/类。
+
+推断（读代码得出，未在真实环境复现）：
+- 生产（192.168.31.201）上 BaiBai 的 gzip 因私网地址跳过，本扩展会压缩 LAN 请求；两者同时生效时 BaiBai 先压缩的请求带 `Content-Encoding`，本扩展跳过，不会二次压缩。
+- 与 BaiBai 共存：本扩展只补 `PromptManager.prototype.render`，不碰实例级 `makeDraggable` / `renderPromptManagerListItems` / `getPromptCollection`，不拦截 `#show_more_messages`。
+
+未验证：
+- 与 ST-BaiBai-Tools 实际共存（本机未安装 BaiBai）。
+- 生产部署与探活（按要求未部署）；部署后需在生产卸载 cocktail，避免同类补丁叠加。
+- 版本门禁上限 1.20.0（不含）以外的酒馆版本。

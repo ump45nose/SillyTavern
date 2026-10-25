@@ -1,4 +1,4 @@
-// 部署工作台到 fn 生产（192.168.31.201:32001）：构建 → 门禁 → 前端扩展 rsync →
+// 部署工作台到 fn 生产（192.168.31.201:32001）：构建 → 门禁 → 前端扩展与性能扩展 rsync →
 // 服务端插件比对更新（变更则重启容器）→ HTTP 探活。数据卷与凭据不触碰。
 // 用法：npm run deploy [-- --skip-build|--skip-check|--no-restart|--dry]
 import { spawnSync } from "node:child_process";
@@ -35,6 +35,9 @@ if (!flags.has("--skip-check")) {
 // 1) 前端扩展：整目录同步（extensions/workbench 无用户数据，--delete 安全）
 const front = run("rsync", ["-a", "--delete", "extension/", `${SSH}:${REMOTE_ROOT}/extensions/workbench/`], { inherit: true });
 if (front.status !== 0) throw new Error("前端扩展同步失败");
+// 1b) 性能扩展：独立扩展目录 extensions/wb-perf（同样无用户数据，设置存在 settings.json 的 wbPerf 下）
+const perf = run("rsync", ["-a", "--delete", "perf-extension/", `${SSH}:${REMOTE_ROOT}/extensions/wb-perf/`], { inherit: true });
+if (perf.status !== 0) throw new Error("性能扩展同步失败");
 
 // 2) 服务端插件：内容有变化才更新并重启容器
 const pluginLocal = path.join(root, "server/workbench-sync/dist/index.mjs");
@@ -71,9 +74,10 @@ if (!dry) {
   };
   await new Promise((r) => setTimeout(r, restarted ? 4000 : 500));
   const a = await probe(`${BASE_URL}/scripts/extensions/third-party/workbench/manifest.json`, (s) => s === 200 || s === 401);
+  const p = await probe(`${BASE_URL}/scripts/extensions/third-party/wb-perf/manifest.json`, (s) => s === 200 || s === 401);
   const b = await probe(`${BASE_URL}/api/plugins/workbench-sync/info`, (s) => s !== 404);
   const c = ssh(`docker ps --filter name=^/${CONTAINER}$ --filter status=running --format '{{.Status}}'`);
   console.log(`✓ 容器: ${(c.stdout || "").trim() || "未运行!"}`);
-  if (!a || !b) throw new Error("探活未通过");
+  if (!a || !p || !b) throw new Error("探活未通过");
 }
 console.log(restarted ? "部署完成（容器已重启，刷新页面生效）" : "部署完成（刷新页面生效）");
