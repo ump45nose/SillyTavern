@@ -143,6 +143,16 @@ export class HostAdapter extends HostCore {
     );
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
+    // The context limit replaces Extension-MessageLimit: its setting comes over once.
+    const messageLimit = c.extensionSettings.messageLimit;
+    if (messageLimit && !c.extensionSettings.workbench.contextLimit) {
+      c.extensionSettings.workbench.contextLimit = {
+        enabled: !!messageLimit.enabled,
+        limit: Number(messageLimit.limit) || 10,
+        quiet: !!messageLimit.quietPrompts,
+      };
+      c.saveSettingsDebounced();
+    }
     // Speaker colors replace Dialogue-Colorizer: its per-character / per-persona colors come over once.
     const colorizer = c.extensionSettings["SillyTavern-Dialogue-Colorizer"];
     if (colorizer && !c.extensionSettings.workbench.speakerColors) {

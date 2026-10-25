@@ -37,6 +37,8 @@ const indexMessage = (m: Data, id: number): MessageIndex => ({
   name: m.name,
   is_user: m.is_user,
   send_date: m.send_date,
+  // Hidden floors (/hide, system notes) are never sent to the model.
+  ...(m.is_system ? { hidden: true } : {}),
   preview: messagePreview(m.mes),
 });
 

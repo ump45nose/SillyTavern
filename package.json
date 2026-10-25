@@ -44,6 +44,7 @@
     "verify:layout-controls": "node scripts/verify-layout-controls.mjs",
     "verify:stale": "node scripts/verify-stale-chunk.mjs",
     "verify:speaker-colors": "node scripts/verify-speaker-colors.mjs",
+    "verify:context-limit": "node scripts/verify-context-limit.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "verify:styles": "npm run build && node scripts/visual/computed.mjs snap artifacts/visual/check && node scripts/visual/computed.mjs diff ${WB_STYLE_BASELINE:-artifacts/baseline-c6/computed} artifacts/visual/check"

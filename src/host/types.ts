@@ -1,3 +1,4 @@
+import type { ContextLimit } from "./context-limit";
 export type Resource = "connection" | "preset" | "world" | "persona";
 export type Panel = Resource | "character" | "trace" | "export" | "outline" | "database" | "image-gen" | null;
 export type SettingsPage =
@@ -51,6 +52,8 @@ export interface Preferences {
   edgeHover?: boolean;
   /** Markdown fields (composer, outline, long character / world / persona text) preview as you type (default on). */
   mdLive?: boolean;
+  /** How many chat messages a generation sends (replaces Extension-MessageLimit). */
+  contextLimit?: ContextLimit;
   /** Dialogue (quote) colors by `character:<avatar>` / `persona:<avatar>`; unset speakers follow the theme. */
   speakerColors?: Record<string, string>;
   bindings: Record<string, string>;
@@ -62,6 +65,7 @@ export interface MessageIndex {
   name: string;
   is_user: boolean;
   send_date?: string | number;
+  hidden?: boolean;
   /** Plain text start of the message (tags stripped, whitespace collapsed), at most 120 characters. */
   preview: string;
 }
