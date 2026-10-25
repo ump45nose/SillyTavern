@@ -60,7 +60,7 @@ export default function ResourceManager({
     task.run(async () => {
       if (!org) return;
       const on = shelf === "list",
-        result = host.archiveResources(org, valid, on);
+        result = await host.archiveResources(org, valid, on);
       onSelection(result.errors.map((e) => e.id));
       setMessage(`已${on ? "归档" : "恢复"} ${result.done.length} 个${label}`);
       if (result.errors.length)
@@ -331,7 +331,7 @@ export default function ResourceManager({
               if (!grouping.trim()) return;
               setGrouping(null);
               task.run(async () => {
-                host.setResourceGroup(org, valid, grouping);
+                await host.setResourceGroup(org, valid, grouping);
                 setMessage(`已移入分组「${grouping.trim()}」`);
               });
             }}
@@ -357,7 +357,7 @@ export default function ResourceManager({
                 onClick={() => {
                   setGrouping(null);
                   task.run(async () => {
-                    host.setResourceGroup(org, valid, "");
+                    await host.setResourceGroup(org, valid, "");
                     setMessage(kind === "connection" ? "已恢复按模型分组" : `已移出分组`);
                   });
                 }}
@@ -456,7 +456,7 @@ function GroupHeader({
           onClick={() => {
             const next = prompt("分组名称", name);
             if (next && next.trim() && next.trim() !== name)
-              run(async () => host.renameResourceGroup(kind, name, next));
+              run(() => host.renameResourceGroup(kind, name, next));
           }}
         >
           <PencilLine size={13} />
@@ -476,7 +476,7 @@ function GroupHeader({
                   : `解散分组「${title}」，其中的世界书变为未分组？`,
               )
             )
-              run(async () => host.setResourceGroup(kind, ids, ""));
+              run(() => host.setResourceGroup(kind, ids, ""));
           }}
         >
           <X size={13} />

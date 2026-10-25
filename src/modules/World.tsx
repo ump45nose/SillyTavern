@@ -233,7 +233,7 @@ export default function World({
                   task.run(() =>
                     scope === "global" ? host.toggleBooks(ids, on) : host.toggleCharacterBooks(ids, on),
                   ),
-                restore: (id) => task.run(async () => void host.archiveResources("world", [id], false)),
+                restore: (id) => task.run(() => host.archiveResources("world", [id], false)),
                 top: (
                   <div className="wb-rail-segment" role="group" aria-label="世界书启用范围">
                     {[

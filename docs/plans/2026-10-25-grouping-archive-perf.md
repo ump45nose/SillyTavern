@@ -113,3 +113,23 @@
 ## 实测记录
 
 （各工作包完成后在此追加。）
+
+### F3 W3 分组与归档
+
+实现要点：
+- 数据：`prefs.worldGroups`（书名 → 组名）、`prefs.archived.{world,connection}`；连接沿用 `prefs.groups`。`Item` 增加 `group` / `archived`，由 `buildResources` 写入。纯函数在 `src/host/organize.ts`（分组排序、列表顺序、补丁、清理），宿主方法在 `src/host/domains/organize.ts`（`resourceUsage`、`archiveResources`、`setResourceGroup`、`renameResourceGroup`、`savePreference`、`pruneOrganization`）。
+- 归档与分组是显式操作，立即 `persistSettings` 并等待确认（失败回滚），不走防抖保存：运行时验证发现防抖保存在归档后立刻刷新会丢失。
+- 在用判定：全局启用、任一角色卡主世界书或附加世界书、当前聊天绑定、任一人设绑定；当前连接。宿主层同样拒绝，不只是按钮禁用。
+- 启动时与工作台内批量删除后清理不存在的键；启动时世界书列表为空则不清理世界书键（防止未加载时误删）。酒馆原生改名世界书后分组随旧名被清理（工作台无改名入口）。
+- 界面：资源栏分组可折叠 + 组头整组启停 + 底部「已归档 N」折叠可恢复；顶栏下拉与手机 RP 选择框分组、排除归档、世界书组头整组启停，≥9 项时出现搜索；手机面板标题选择器（无资源栏）分组 + 组头启停；独立编辑页「未归档 / 已归档」切换、分组标题（选整组 / 重命名 / 解散）、批量「分组」「归档 / 恢复」，在用项禁用归档并列出原因；「下一个」与快捷键按分组顺序跳过归档项。
+
+实测（本地 offset 300 实例，Chrome headless）：
+- `npm run check`、`npm test`（124 项，含新增 `tests/organize.test.mjs` 7 项）、`npm run build`、`format:check` 通过。
+- 新增 `npm run verify:grouping`（`scripts/verify-grouping.mjs`）10/10 PASS：编辑页分组移入 / 重命名 / 解散；在用（全局、角色卡）不能归档并说明原因、宿主同样拒绝；归档进入已归档；资源栏分组、隐藏归档、整组启停不波及归档书；资源栏恢复；顶栏下拉分组与整组启停；当前连接不能归档、归档连接离开下拉、Alt+Shift+N 跳过归档连接；刷新后分组与归档保持；手机面板选择器与 RP 选择框；删除世界书后键被清理。截图：`artifacts/grouping-{rail,chooser,manager,manager-archived,phone-picker,phone-chooser}.png`。
+- `verify:pwa` 18/18 PASS。
+- `verify:workbench`、`verify:resources`、`verify:interactions` 在本环境中途失败，失败点与本改动无关，且在基线提交 cad6ec8c0 的构建上以相同位置失败（已实测对照）：`getByLabel('角色描述')` 命中隐藏的原生 checkbox、`getByLabel('流式传输')` 命中 5 个元素、作者注释角色选项 `User` 不存在。三者在失败点之后的步骤未执行。
+
+推断 / 未验证：
+- 上述三个 verify 失败点之后的步骤（含它们对资源列表的其他覆盖）未执行；需在修好这些脚本或在主检出环境中复跑。
+- 连接的分组标题操作（重命名自动按模型分组、解散恢复按模型分组）只有代码路径与单测，运行时验证只覆盖了世界书。
+- 未在生产数据（64 本）上看过分组后的列表观感。

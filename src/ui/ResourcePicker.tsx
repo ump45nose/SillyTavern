@@ -198,8 +198,19 @@ export function ResourcePicker({
             <div className="wb-picker-list">
               {sections.map((section) => (
                 <React.Fragment key={section.name || "all"}>
-                  {extras?.grouped && sections.length > 1 && (
-                    <p className="wb-caption">{section.name || ungroupedLabel}</p>
+                  {extras?.grouped && (sections.length > 1 || section.name) && (
+                    <p className="wb-caption wb-picker-group">
+                      {multiple && extras.groupToggle && (
+                        <GroupCheck
+                          rows={section.items}
+                          selected={multiple.selected}
+                          disabled={disabled}
+                          title={section.name || ungroupedLabel}
+                          toggle={extras.groupToggle}
+                        />
+                      )}
+                      {section.name || ungroupedLabel}
+                    </p>
                   )}
                   {section.items.map((x) => (
                     <div key={x.id} className={`wb-resource-choice ${id === x.id ? "is-active" : ""}`}>
@@ -335,21 +346,12 @@ function ResourceRail({
     return (
       <div className="wb-rail-group">
         {multiple && extras.groupToggle && (
-          <input
-            type="checkbox"
-            aria-label={`整组启用 ${title}`}
-            title={on === rows.length ? "整组停用" : "整组启用"}
-            checked={on === rows.length}
-            ref={(node) => {
-              if (node) node.indeterminate = on > 0 && on < rows.length;
-            }}
+          <GroupCheck
+            rows={rows}
+            selected={multiple.selected}
             disabled={disabled}
-            onChange={(e) =>
-              extras.groupToggle!(
-                rows.map((x) => x.id),
-                e.target.checked,
-              )
-            }
+            title={title}
+            toggle={extras.groupToggle}
           />
         )}
         <button
@@ -439,5 +441,41 @@ function ResourceRail({
         </button>
       )}
     </nav>
+  );
+}
+
+/** A group's checkbox: checked when every row is enabled, mixed when some are; switches them all. */
+export function GroupCheck({
+  rows,
+  selected,
+  disabled,
+  title,
+  toggle,
+}: {
+  rows: Item[];
+  selected: string[];
+  disabled: boolean;
+  title: string;
+  toggle: (ids: string[], on: boolean) => void;
+}) {
+  const on = rows.filter((x) => selected.includes(x.id)).length,
+    all = on === rows.length;
+  return (
+    <input
+      type="checkbox"
+      aria-label={`整组启用 ${title}`}
+      title={all ? "整组停用" : "整组启用"}
+      checked={all}
+      ref={(node) => {
+        if (node) node.indeterminate = on > 0 && !all;
+      }}
+      disabled={disabled}
+      onChange={(e) =>
+        toggle(
+          rows.map((x) => x.id),
+          e.target.checked,
+        )
+      }
+    />
   );
 }

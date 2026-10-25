@@ -1,5 +1,5 @@
 import type { HostAdapter } from "../adapter";
-import type { Data } from "../types";
+import type { Data, Preferences } from "../types";
 import { ctx } from "../internals";
 import { groupName, withArchived, withGroup, withoutStale, type Organized } from "../organize";
 
@@ -25,7 +25,7 @@ export const organizeMethods = {
     return uses;
   },
   /** Archives or restores; items in use stay unarchived and come back as errors. */
-  archiveResources(this: HostAdapter, kind: Organized, ids: string[], on: boolean) {
+  async archiveResources(this: HostAdapter, kind: Organized, ids: string[], on: boolean) {
     const done: string[] = [],
       errors: { id: string; message: string }[] = [];
     for (const id of ids) {
@@ -33,19 +33,36 @@ export const organizeMethods = {
       if (uses.length) errors.push({ id, message: `正在使用（${uses.join("、")}），不能归档` });
       else done.push(id);
     }
-    if (done.length) this.preference(withArchived(this.prefs(), kind, done, on));
+    if (done.length) await this.savePreference(withArchived(this.prefs(), kind, done, on));
     return { done, errors };
   },
   /** Moves items into `group`; "" takes them out (connections then group by model again). */
-  setResourceGroup(this: HostAdapter, kind: Organized, ids: string[], group: string) {
-    this.preference(withGroup(this.prefs(), kind, ids, groupName(group)));
+  async setResourceGroup(this: HostAdapter, kind: Organized, ids: string[], group: string) {
+    await this.savePreference(withGroup(this.prefs(), kind, ids, groupName(group)));
   },
   /** Renames a group as the lists show it, including a connection group that is only a model name. */
-  renameResourceGroup(this: HostAdapter, kind: Organized, from: string, to: string) {
+  async renameResourceGroup(this: HostAdapter, kind: Organized, from: string, to: string) {
     const ids = this.snapshot()
       .resources[kind].filter((x) => (x.group ?? "") === from)
       .map((x) => x.id);
-    this.setResourceGroup(kind, ids, to);
+    await this.setResourceGroup(kind, ids, to);
+  },
+  /**
+   * Explicit organizing actions are saved at once and confirmed, unlike the debounced UI preferences:
+   * a reload right after archiving must not lose it. A failed save puts the previous values back.
+   */
+  async savePreference(this: HostAdapter, patch: Partial<Preferences>) {
+    const settings = ctx().extensionSettings.workbench,
+      previous = Object.fromEntries(Object.keys(patch).map((k) => [k, settings[k]]));
+    Object.assign(settings, patch);
+    this.invalidate("prefs");
+    try {
+      await this.persistSettings();
+    } catch (error) {
+      Object.assign(settings, previous);
+      this.invalidate("prefs");
+      throw error;
+    }
   },
   /** Forgets groups and archive marks of books and profiles that no longer exist. */
   pruneOrganization(this: HostAdapter) {

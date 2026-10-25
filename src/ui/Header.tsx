@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import type { HostSnapshot, Item, Panel, Resource } from "../host/types";
 import { Empty, IconButton, SearchBox } from "./common";
 import { groupItems, ungroupedLabel, unarchived } from "../host/organize";
+import { GroupCheck } from "./ResourcePicker";
 import { resourceLabels } from "../host/labels";
 import { usePresence } from "./Motion";
 const pillIcons = { connection: Plug, preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
@@ -66,7 +67,7 @@ function chooserSections(kind: Resource, items: Item[], bound: string, query = "
     })),
   ];
 }
-/** A group caption's checkbox: checked when every book is on, mixed when some are. */
+/** A world group caption's checkbox in the choosers: enabled books are the selection. */
 function GroupToggle({
   section,
   disabled,
@@ -76,25 +77,13 @@ function GroupToggle({
   disabled: boolean;
   select: (kind: Resource, id: string | string[], enabled: boolean) => void;
 }) {
-  const on = section.items.filter((x) => x.active).length,
-    all = on === section.items.length;
   return (
-    <input
-      type="checkbox"
-      aria-label={`整组启用 ${section.caption}`}
-      title={all ? "整组停用" : "整组启用"}
-      checked={all}
-      ref={(node) => {
-        if (node) node.indeterminate = on > 0 && !all;
-      }}
+    <GroupCheck
+      rows={section.items}
+      selected={section.items.filter((x) => x.active).map((x) => x.id)}
       disabled={disabled}
-      onChange={(e) =>
-        select(
-          "world",
-          section.items.map((x) => x.id),
-          e.target.checked,
-        )
-      }
+      title={section.caption ?? ""}
+      toggle={(ids, on) => select("world", ids, on)}
     />
   );
 }

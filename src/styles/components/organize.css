@@ -213,3 +213,18 @@
     font-size: var(--wb-text-sm);
   }
 }
+
+@layer wb.components {
+  /* ── Title picker popup (phones and the independent editors) ── */
+  .wb-resource-menu .wb-picker-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wb-resource-menu .wb-picker-group input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--wb-accent);
+  }
+}

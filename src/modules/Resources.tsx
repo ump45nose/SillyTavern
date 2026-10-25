@@ -103,7 +103,7 @@ export default function Resources({
     },
     connection: {
       grouped: true,
-      restore: (id) => task.run(async () => void host.archiveResources("connection", [id], false)),
+      restore: (id) => task.run(() => host.archiveResources("connection", [id], false)),
       create: { label: "新建连接配置", run: () => nativeAction("#create_connection_profile") },
     },
     persona: {
