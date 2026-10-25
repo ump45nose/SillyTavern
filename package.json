@@ -22,6 +22,7 @@
     "verify:compat": "node scripts/verify-workbench-compat.mjs",
     "benchmark:chat": "node scripts/benchmark-chat.mjs",
     "benchmark:hotpaths": "node scripts/benchmark-hotpaths.mjs",
+    "benchmark:world": "node scripts/benchmark-world-scale.mjs",
     "verify:home": "node scripts/verify-home-implementation.mjs",
     "verify:resources": "node scripts/verify-resource-sidebars.mjs",
     "verify:interactions": "node scripts/verify-interactions-runtime.mjs",

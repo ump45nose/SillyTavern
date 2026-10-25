@@ -444,11 +444,14 @@
     list-style: none;
     scrollbar-width: thin;
   }
+  /* Rows are exactly PANEL_ROW (World.tsx) tall, so a long book's list can be windowed. */
   .wb-entry {
     display: flex;
     align-items: center;
     gap: 10px;
+    height: 42px;
     min-height: 42px;
+    box-sizing: border-box;
     padding: 0 8px;
     border-radius: 9px;
     --wb-mode-tone: var(--wb-success);
@@ -550,6 +553,10 @@
     font-size: var(--wb-text-xs);
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+  .wb-entries-gap {
+    margin: 0;
+    padding: 0;
   }
   .wb-entries-empty {
     padding: 14px 8px;
