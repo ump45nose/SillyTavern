@@ -51,6 +51,8 @@ export interface Preferences {
   edgeHover?: boolean;
   /** Markdown fields (composer, outline, long character / world / persona text) preview as you type (default on). */
   mdLive?: boolean;
+  /** Dialogue (quote) colors by `character:<avatar>` / `persona:<avatar>`; unset speakers follow the theme. */
+  speakerColors?: Record<string, string>;
   bindings: Record<string, string>;
   groups: Record<string, string>;
 }

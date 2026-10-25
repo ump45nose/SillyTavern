@@ -50,6 +50,7 @@ import { Operations, shortcutAction, shortcutHint } from "./host/operations";
 import { Shortcuts } from "./ui/Shortcuts";
 import { RPStage } from "./ui/RPStage";
 import { MobileShell } from "./ui/MobileShell";
+import { useSpeakerColors } from "./ui/SpeakerColor";
 import { useMobileViewport } from "./ui/useMobileViewport";
 import { useDatabase } from "./ui/useDatabase";
 import type { LayoutMode } from "./ui/LayoutSwitcher";
@@ -121,6 +122,7 @@ export default function App({
     [worldEntry, setWorldEntry] = useState<{ title: string; n: number }>(),
     [optionsAnchor, setOptionsAnchor] = useState<HTMLElement | null>(null);
   const database = useDatabase(host);
+  useSpeakerColors(host, snap);
   const prefs = host.prefs(),
     mobile = width < 1024,
     rp = prefs.layout === "rp";

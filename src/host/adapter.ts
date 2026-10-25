@@ -143,6 +143,19 @@ export class HostAdapter extends HostCore {
     );
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
+    // Speaker colors replace Dialogue-Colorizer: its per-character / per-persona colors come over once.
+    const colorizer = c.extensionSettings["SillyTavern-Dialogue-Colorizer"];
+    if (colorizer && !c.extensionSettings.workbench.speakerColors) {
+      const speakerColors: Record<string, string> = {};
+      for (const [kind, settings] of [
+        ["character", colorizer.charColorSettings],
+        ["persona", colorizer.personaColorSettings],
+      ])
+        for (const [id, color] of Object.entries<string>(settings?.colorOverrides ?? {}))
+          speakerColors[`${kind}:${id}`] = color;
+      c.extensionSettings.workbench.speakerColors = speakerColors;
+      c.saveSettingsDebounced();
+    }
     const guard: Guard = ({ preserveDrafts }) => {
       if (this.resourceAction) return false;
       if (preserveDrafts || !this.dirtyDraftKeys().length) return true;

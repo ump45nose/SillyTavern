@@ -25,6 +25,7 @@ import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat }
 import { useTokenCounts } from "../ui/tokens";
 import { Check, Fold, SaveBar, Switch, useDraft } from "../ui/ResourceControls";
 import { actionLabels, resourceLabels } from "../host/labels";
+import { SpeakerColor } from "../ui/SpeakerColor";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
 import { bus, guards } from "../host/bus";
@@ -547,6 +548,10 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
                 ))}
               </Select>
             </div>
+            <div className="wb-card-row">
+              <span className="wb-card-label">对白颜色</span>
+              <SpeakerColor host={host} kind="persona" id={id} />
+            </div>
           </section>
           <Fold title="管理与偏好" hint="导出 · 统计 · 删除">
             <div className="wb-persona-manage">{manage}</div>
@@ -641,6 +646,10 @@ function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep
                 ))}
               </Select>
             </label>
+            <div className="wb-persona-card-row">
+              <span>对白颜色</span>
+              <SpeakerColor host={host} kind="persona" id={id} />
+            </div>
           </section>
           <div className="wb-persona-tools">{manage}</div>
         </div>
