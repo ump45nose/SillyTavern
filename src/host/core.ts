@@ -237,16 +237,25 @@ export class HostCore {
     const c = ctx(),
       manager = c.getPresetManager(),
       profiles = c.extensionSettings.connectionManager?.profiles ?? [],
-      groups = this.slice("prefs").groups,
+      prefs = this.slice("prefs"),
+      groups = prefs.groups,
+      worldGroups = prefs.worldGroups ?? {},
+      archivedConnections = new Set(prefs.archived?.connection),
+      archivedBooks = new Set(prefs.archived?.world),
       personas = c.powerUserSettings.personas ?? {};
     return {
       connection: profiles
-        .map((p: Data) => ({
-          id: p.id,
-          name: p.name,
-          detail: groups[p.id] || p.model || p.api || "其他模型",
-          data: p,
-        }))
+        .map((p: Data) => {
+          const group = groups[p.id] || p.model || p.api || "其他模型";
+          return {
+            id: p.id,
+            name: p.name,
+            detail: group,
+            group,
+            archived: archivedConnections.has(p.id),
+            data: p,
+          };
+        })
         .sort(
           (a: Item, b: Item) =>
             (a.detail ?? "").localeCompare(b.detail ?? "") || a.name.localeCompare(b.name),
@@ -260,6 +269,8 @@ export class HostCore {
         id: name,
         name,
         active: this.world?.selected_world_info.includes(name),
+        group: worldGroups[name] || "",
+        archived: archivedBooks.has(name),
       })),
       persona: Object.entries(personas).map(([id, name]) => ({
         id,

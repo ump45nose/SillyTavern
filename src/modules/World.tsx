@@ -20,6 +20,7 @@ import { ResourcePicker } from "../ui/ResourcePicker";
 import { EntryPortraits } from "../ui/EntryPortraits";
 import { MdField } from "../ui/md/MdField";
 import { isPathSafe } from "../host/cast";
+import { unarchived } from "../host/organize";
 const positions = [
   "角色定义之前",
   "角色定义之后",
@@ -227,6 +228,12 @@ export default function World({
                   ),
               }}
               extras={{
+                grouped: true,
+                groupToggle: (ids, on) =>
+                  task.run(() =>
+                    scope === "global" ? host.toggleBooks(ids, on) : host.toggleCharacterBooks(ids, on),
+                  ),
+                restore: (id) => task.run(async () => void host.archiveResources("world", [id], false)),
                 top: (
                   <div className="wb-rail-segment" role="group" aria-label="世界书启用范围">
                     {[
@@ -245,7 +252,7 @@ export default function World({
                     ))}
                   </div>
                 ),
-                caption: `已启用 ${enabledBooks.length} · 共 ${snap.resources.world.length} 本`,
+                caption: `已启用 ${enabledBooks.length} · 共 ${unarchived(snap.resources.world).length} 本`,
                 create: {
                   label: "新建世界书",
                   run: () => {

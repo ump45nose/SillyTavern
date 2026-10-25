@@ -37,6 +37,7 @@ import { addonManager } from "./addons/runtime";
 import { AddonTasks, MessageImageControls, ImageInputMode } from "./ui/AddonControls";
 import AddonWorkspace from "./ui/AddonWorkspace";
 import { ResourceRailContext } from "./ui/ResourcePicker";
+import { listOrder } from "./host/organize";
 import { ClickFeedback, usePresence } from "./ui/Motion";
 import { Header } from "./ui/Header";
 import { Composer } from "./ui/Composer";
@@ -285,7 +286,8 @@ export default function App({
   };
   const next = (kind: Resource) =>
     task.run(async () => {
-      const items = snap.resources[kind];
+      // Archived items are skipped; books and profiles follow their list groups.
+      const items = listOrder(snap.resources[kind]);
       if (!items.length) {
         goPanel(kind);
         return;
@@ -520,7 +522,9 @@ export default function App({
           open={openPopup}
           activate={activateTool}
           select={(kind, id, enabled) => {
-            void task.run(() => (kind === "world" ? host.toggleBook(id, enabled) : host.select(kind, id)));
+            void task.run(() =>
+              kind === "world" ? host.toggleBooks([id].flat(), enabled) : host.select(kind, String(id)),
+            );
           }}
           focus={focus}
           toggleFocus={toggleFocus}
@@ -572,8 +576,8 @@ export default function App({
             }
             select={(kind, id, enabled) =>
               task.run(async () => {
-                if (kind === "world") await host.toggleBook(id, enabled);
-                else await host.select(kind, id);
+                if (kind === "world") await host.toggleBooks([id].flat(), enabled);
+                else await host.select(kind, String(id));
               })
             }
           />
