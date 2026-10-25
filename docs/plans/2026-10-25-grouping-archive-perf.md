@@ -113,3 +113,48 @@
 ## 实测记录
 
 （各工作包完成后在此追加。）
+
+### F2 P-B 服务端缓存
+
+**实现**（`server/workbench-sync/src/cache.ts`，入口 `index.ts`、`st.ts`）：
+
+- 拦截方式：插件按同一文件 URL 导入 `src/endpoints/settings.js` 与 `characters.js`（Node 按真实路径解析，得到 server-startup 已挂载的同一模块实例），在它们导出的 Express router 栈头插入路由层。不改 ST 源文件；这两个 router 挂在 Basic Auth、登录、CSRF 中间件之后，中间件链不受影响。router 不像 1.19.0 的（找不到 `/get` / `/all` 路由）就不安装，并打日志说明。
+- 缓存键为「用户 handle + 端点」。有效性用指纹判断，指纹由每个文件的名称、inode、大小和 mtime 组成：settings 取 settings.json 加上 settings/get 读取的 12 个目录；characters 取 characters 目录加上 chats 下一层。write-file-atomic 每次写入都换新 inode，同一毫秒内同样大小的重写也能识别。
+- 立即失效：
+  - settings router 上除 `/get`、`/get-snapshots` 外的请求，characters router 上除 `/all`、`/get`、`/chats`、`/export` 外的请求，都在请求开始和结束时各失效一次该用户的缓存。
+  - 插件自身的 PUT `/file`、`/delete`、`/rename` 同样在写入前后失效。
+  - 回源过程中如果发生了失效，这次回源结果不入缓存（用代际计数判断）。
+  - 只缓存 200 的字符串响应。
+- 命中时直接返回预压缩字节（br 质量 4 / gzip，与 compression 1.8.1 的协商偏好一致），并带 `Vary: Accept-Encoding`。已带 Content-Encoding 的响应，ST 的 compression 中间件会原样放行，所以每次刷新不再重复压缩约 5 MB。每种编码每个条目只压缩一次。
+- 日志：`workbench-sync: cache hit|miss <端点> [用户] <原始大小> → <编码> <压缩后大小> in N ms · hits / misses`。`/api/plugins/workbench-sync/info` 新增 `cache: {on, hits, misses, bytes}`。
+- 冷启动时缓存为空，直接回源；插件 `exit` 时移除插入的路由层。
+
+**实测**（本地 validation 32212 带插件，baseline 32211 为官方无插件；用 probe 键把 settings.json 撑到 5.96 MB，测完已恢复）：
+
+| 项目 | 结果 |
+| --- | --- |
+| settings/get 客户端总耗时（7 次中位数） | baseline 106.0 ms；validation 首次回源 116.2 ms，命中 36.0 ms |
+| settings/get 服务端处理耗时（插件日志） | 回源 42–51 ms（不含压缩）；命中 2–3 ms，首次命中含一次压缩约 17 ms |
+| characters/all（31 KB） | 回源 35.6 ms，命中 8.0 ms |
+| 保存设置后立即 get | 拿到新值 |
+| 新建 / 删除世界书后 get | `world_names` 立即反映 |
+| 保存 / 删除 OpenAI 预设后 get | `openai_setting_names` 立即反映 |
+| 两个会话交替保存与刷新（4 轮） | 每轮读到对方刚写的值，无脏读 |
+| 新建 / 删除角色后 characters/all | 立即反映 |
+| br 编码走真实 compression 中间件 | 回源与命中解码结果一致，没有二次压缩 |
+| 重启实例后 | 首次回源、第二次命中，响应一致 |
+| 单元测试 `tests/cache.test.mjs` | 8 项通过：指纹覆盖与排除、编码协商、命中与失效、写路由失效、回源竞态丢弃、500 不缓存、多用户隔离、安装拒绝与撤销 |
+| `npm run check` / `npm test` / `npm run build` | 通过（125 项） |
+| `verify:sync` | 10 PASS（插件写入路径加失效包装后 IDE 同步正常） |
+
+**推断**：
+
+- probe 填充内容重复度高，gzip 后只有 34 KB。真实 settings.json 的压缩率低得多，所以命中时省下的压缩开销应该比上面的测量更大；客户端总耗时的改善幅度要以真实数据为准。
+- V1 格式角色卡缺少 `chat` 字段时，ST 每次 `/all` 都会用当前时间生成默认聊天名；缓存后这个值在缓存有效期内保持不变。这不影响已有聊天。
+- 只要聊天文件有变化（每条消息），characters/all 的缓存就会失效，所以它主要在空闲后刷新时起作用；settings/get 是刷新的主要开销，不受聊天写入影响。
+
+**未验证**：
+
+- 生产 Docker 环境中按真实路径导入是否得到同一模块实例：本地已验证（命中计数增长、日志确认已安装），生产部署后请查看容器日志里的 `response cache on`，并在刷新后检查 `/info` 的 `hits` 是否增长。
+- BaiBai 的 baibaoku 404 回退：本地没有安装 BaiBai。本插件不注册也不拦截该路径，按推断互不影响。
+- 浏览器真实页面多标签：只用两个 HTTP 会话模拟。`verify:workbench` 在第 3 项（「角色描述」定位器同时匹配复选框和 Markdown 编辑器）失败，去掉插件后同样复现，是 Markdown 编辑器上线后验证脚本未更新的旧问题，与本工作包无关，需要另行修复脚本。
