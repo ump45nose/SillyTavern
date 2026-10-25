@@ -5,6 +5,7 @@ import { CastRuntime } from "./cast-runtime";
 import { OptionsRuntime } from "./options-runtime";
 import { DatabaseRuntime } from "./database-runtime";
 import { SyncRelay } from "./sync-relay";
+import { PlaceholderRuntime } from "./placeholder-runtime";
 import { guards, type Guard } from "./bus";
 import { HostCore, defaults, sliceNames } from "./core";
 import type { Slice } from "./types";
@@ -31,6 +32,8 @@ type Mixin<T> = { [K in keyof T]: OmitThisParameter<T[K]> };
 export class HostAdapter extends HostCore {
   /** IDE sync through the workbench-sync server plug-in; idle when the plug-in is not loaded. */
   sync!: SyncRelay;
+  /** `{@变量}` placeholders in the composer and `/inject`. */
+  placeholders!: PlaceholderRuntime;
   async init() {
     this.generating = Boolean(ctx().streamingProcessor);
     [this.world, this.personas, this.openai] = await Promise.all([
@@ -143,6 +146,8 @@ export class HostAdapter extends HostCore {
     );
     // Same settings object as the host; this contains no connection credentials.
     c.extensionSettings.workbench ??= clone(defaults);
+    this.placeholders = new PlaceholderRuntime(this);
+    this.cleanup.push(() => this.placeholders.dispose());
     const guard: Guard = ({ preserveDrafts }) => {
       if (this.resourceAction) return false;
       if (preserveDrafts || !this.dirtyDraftKeys().length) return true;

@@ -53,6 +53,8 @@ export interface Preferences {
   mdLive?: boolean;
   bindings: Record<string, string>;
   groups: Record<string, string>;
+  /** Placeholder variables by scope: a character's avatar file, `group:<id>`, or "default". */
+  placeholders?: Record<string, { name: string; vars: Record<string, string> }>;
 }
 /** One chat floor as the workbench lists it; the message body stays in SillyTavern's chat array. */
 export interface MessageIndex {
