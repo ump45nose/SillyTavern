@@ -6,7 +6,7 @@ import { OptionsRuntime } from "./options-runtime";
 import { DatabaseRuntime } from "./database-runtime";
 import { SyncRelay } from "./sync-relay";
 import { guards, type Guard } from "./bus";
-import { HostCore, defaults, sliceNames } from "./core";
+import { HostCore, defaults } from "./core";
 import type { Slice } from "./types";
 import { draftsMethods } from "./domains/drafts";
 import { chatMethods } from "./domains/chat";
@@ -65,8 +65,6 @@ export class HostAdapter extends HostCore {
       CHARACTER_RENAMED: ["characters"],
       CHARACTER_DELETED: ["characters"],
       CHARACTER_SELECTED: ["characters"],
-      // Settings never touch ctx().chat; rebuilding the chat index on every settings save is waste.
-      SETTINGS_UPDATED: sliceNames.filter((name) => name !== "chat"),
       MAIN_API_CHANGED: resource,
       OAI_PRESET_CHANGED_AFTER: resource,
       PRESET_CHANGED: resource,
@@ -102,6 +100,9 @@ export class HostAdapter extends HostCore {
         if (name === "CONNECTION_PROFILE_UPDATED") this.resourceVersions.connection++;
         this.invalidate(...slices);
       });
+    // Fired after every settings write, debounced ones included, which mostly change nothing shown:
+    // rebuild what a write may have touched and notify only what changed. Settings never touch ctx().chat.
+    this.listen("SETTINGS_UPDATED", () => this.revalidate("characters", "prefs", "session", "resources"));
     // These carry the floor id, so only that entry of the chat index is rebuilt.
     for (const name of [
       "MESSAGE_SENT",

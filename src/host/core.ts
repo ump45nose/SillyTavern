@@ -23,8 +23,35 @@ export const sliceNames: Slice[] = ["session", "characters", "resources", "chat"
 /** Slices built from another slice go stale with it. */
 const dependents: Partial<Record<Slice, Slice[]>> = {
   characters: ["session"],
+};
+/**
+ * Slices partly built from another one, rebuilt with it and notified only when they came out different:
+ * resources read the connection groups from prefs, and most preference writes leave them as they were.
+ */
+const derived: Partial<Record<Slice, Slice[]>> = {
   prefs: ["resources"],
 };
+/** Sources before the slices built from them. */
+const buildOrder: Slice[] = ["characters", "prefs", "session", "resources", "chat"];
+/**
+ * What a slice shows, taken when it is built, so a rebuild can tell whether anything changed. Items carry
+ * the host's own object as `data` (a character card, a connection profile): those count by identity,
+ * everything else by value. The host edits those objects in place, so a character's favourite and bound
+ * book, which lists show, are read into the signature; other in-place card edits arrive with
+ * CHARACTER_EDITED, which invalidates.
+ */
+type Signature = { text: string; refs: unknown[] };
+function signature(name: Slice, value: unknown): Signature {
+  const refs: unknown[] = [];
+  const text = JSON.stringify(value, function (key, v) {
+    if (key !== "data" || !v || typeof v !== "object") return v;
+    refs.push(v);
+    return name === "characters" ? [v.data?.extensions?.fav ?? v.fav, v.data?.extensions?.world] : undefined;
+  });
+  return { text, refs };
+}
+const sameSignature = (a: Signature, b: Signature) =>
+  a.text === b.text && a.refs.length === b.refs.length && a.refs.every((v, i) => v === b.refs[i]);
 
 export const messagePreview = (text: unknown) =>
   String(text ?? "")
@@ -58,6 +85,8 @@ export class HostCore {
   sliceListeners = new Map(sliceNames.map((name) => [name, new Set<() => void>()]));
   sliceVersions = Object.fromEntries(sliceNames.map((name) => [name, 0])) as Record<Slice, number>;
   sliceCache: Partial<Slices> = {};
+  /** Signatures of the cached slices that rebuilds compare against (all but the chat index). */
+  private signatures: Partial<Record<Slice, Signature>> = {};
   version = 0;
   cache: HostSnapshot | null = null;
   world: any;
@@ -103,7 +132,10 @@ export class HostCore {
   sliceRevision = (name: Slice) => this.sliceVersions[name];
   /** Everything may have changed. */
   refresh = () => this.invalidate(...sliceNames);
-  /** Marks slices (and the slices built from them) stale; they rebuild on next read. */
+  /**
+   * Marks slices (and the slices built from them) stale; they rebuild on next read. Slices only partly
+   * built from them (`derived`) are rebuilt now and notify only if they changed.
+   */
   invalidate(...names: Slice[]) {
     const stale = new Set<Slice>();
     const add = (name: Slice) => {
@@ -116,7 +148,36 @@ export class HostCore {
       delete this.sliceCache[name];
       this.sliceVersions[name]++;
     }
-    this.notify(stale);
+    const built = new Set(
+      [...stale].flatMap((name) => derived[name] ?? []).filter((name) => !stale.has(name)),
+    );
+    this.notify(new Set([...stale, ...this.rebuild(buildOrder.filter((name) => built.has(name)))]));
+  }
+  /**
+   * Rebuilds cached slices and notifies only those that changed, for events that may or may not have
+   * touched them (SillyTavern's settings save fires after every debounced write).
+   */
+  revalidate(...names: Slice[]) {
+    const changed = this.rebuild(buildOrder.filter((name) => names.includes(name)));
+    if (changed.size) this.notify(changed);
+  }
+  /** Rebuilds the cached ones among `names`, in build order; returns the ones that changed. */
+  private rebuild(names: Slice[]) {
+    const changed = new Set<Slice>(),
+      cache = this.sliceCache as Slices;
+    for (const name of names) {
+      // A slice nobody has read since it went stale rebuilds on its next read anyway.
+      const before = this.signatures[name];
+      if (!(name in this.sliceCache) || !before) continue;
+      const next = this.build(name),
+        after = signature(name, next);
+      if (sameSignature(before, after)) continue;
+      (cache as Record<Slice, unknown>)[name] = next;
+      this.signatures[name] = after;
+      this.sliceVersions[name]++;
+      changed.add(name);
+    }
+    return changed;
   }
   /** Re-indexes one floor after send, receive, edit or swipe without rebuilding the others. */
   updateMessage(id: number) {
@@ -139,7 +200,10 @@ export class HostCore {
   }
   slice<K extends Slice>(name: K): Slices[K] {
     const cache = this.sliceCache as Slices;
-    if (!(name in this.sliceCache)) cache[name] = this.build(name);
+    if (!(name in this.sliceCache)) {
+      cache[name] = this.build(name);
+      if (name !== "chat") this.signatures[name] = signature(name, cache[name]);
+    }
     return cache[name];
   }
   private build<K extends Slice>(name: K): Slices[K] {
