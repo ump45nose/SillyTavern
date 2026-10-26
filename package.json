@@ -24,6 +24,7 @@
     "benchmark:hotpaths": "node scripts/benchmark-hotpaths.mjs",
     "verify:home": "node scripts/verify-home-implementation.mjs",
     "verify:resources": "node scripts/verify-resource-sidebars.mjs",
+    "verify:grouping": "node scripts/verify-grouping.mjs",
     "verify:interactions": "node scripts/verify-interactions-runtime.mjs",
     "verify:fidelity": "node scripts/verify-design-fidelity.mjs",
     "review:fidelity": "node scripts/build-design-review.mjs",

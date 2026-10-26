@@ -20,6 +20,7 @@ import { extensionsMethods } from "./domains/extensions";
 import { personaMethods } from "./domains/persona";
 import { connectionMethods } from "./domains/connection";
 import { nativeMethods } from "./domains/native";
+import { organizeMethods } from "./domains/organize";
 export { nativeNodes } from "./internals";
 
 /** Domain methods are written with `this: HostAdapter`; the mixed-in surface drops that parameter. */
@@ -184,6 +185,7 @@ export class HostAdapter extends HostCore {
       guards.hold(() => this.resourceAction || this.dirtyDraftKeys().length > 0),
     );
     this.refresh();
+    this.pruneOrganization();
   }
   destroy() {
     this.cleanup.forEach((fn) => fn());
@@ -202,7 +204,8 @@ export interface HostAdapter
     Mixin<typeof extensionsMethods>,
     Mixin<typeof personaMethods>,
     Mixin<typeof connectionMethods>,
-    Mixin<typeof nativeMethods> {}
+    Mixin<typeof nativeMethods>,
+    Mixin<typeof organizeMethods> {}
 
 // Non-enumerable, like methods declared in the class body.
 for (const methods of [
@@ -217,6 +220,7 @@ for (const methods of [
   personaMethods,
   connectionMethods,
   nativeMethods,
+  organizeMethods,
 ])
   for (const [name, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(methods)))
     Object.defineProperty(HostAdapter.prototype, name, { ...descriptor, enumerable: false });

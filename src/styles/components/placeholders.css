@@ -33,7 +33,11 @@
     width: 100%;
   }
   .wb-ui .wb-placeholder-name {
-    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font:
+      12px/1.5 ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      monospace;
     color: var(--wb-ink);
     overflow-wrap: anywhere;
   }

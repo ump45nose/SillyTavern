@@ -20,6 +20,10 @@ export interface Item {
   active?: boolean;
   image?: string;
   data?: Data;
+  /** The list group: a connection's explicit group or its model; a book's group, "" when it has none. */
+  group?: string;
+  /** Hidden from the side rail, top choosers and "next"; listed under 已归档 in the manager. */
+  archived?: boolean;
 }
 export interface Preferences {
   left: boolean;
@@ -57,9 +61,14 @@ export interface Preferences {
   /** Dialogue (quote) colors by `character:<avatar>` / `persona:<avatar>`; unset speakers follow the theme. */
   speakerColors?: Record<string, string>;
   bindings: Record<string, string>;
+  /** Connection profile id → group name; profiles without one group by model. */
   groups: Record<string, string>;
   /** Placeholder variables by scope: a character's avatar file, `group:<id>`, or "default". */
   placeholders?: Record<string, { name: string; vars: Record<string, string> }>;
+  /** World book name → group name (one group per book). */
+  worldGroups?: Record<string, string>;
+  /** Archived connection profile ids and world book names. */
+  archived?: { connection?: string[]; world?: string[] };
 }
 /** One chat floor as the workbench lists it; the message body stays in SillyTavern's chat array. */
 export interface MessageIndex {

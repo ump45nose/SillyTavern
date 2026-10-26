@@ -52,20 +52,13 @@
     font: inherit;
     font-size: var(--wb-text-sm);
   }
-  .wb-rail-caption,
-  .wb-rail-group {
+  .wb-rail-caption {
     margin: 0;
     padding: 2px 4px 0;
     color: var(--wb-ink-3);
     font-size: var(--wb-text-xs);
   }
-  .wb-rail-group {
-    padding: 6px 10px 2px;
-    letter-spacing: 0.04em;
-  }
-  .wb-rail-group:first-child {
-    padding-top: 0;
-  }
+  /* Group headers: components/organize.css. */
   .wb-rail-scroll {
     flex: 1;
     min-height: 0;
