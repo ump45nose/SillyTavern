@@ -106,9 +106,10 @@
 - [x] F1 P-A 前端 perf 扩展（合并 1fb4b0624；renderDebounced 绕过补丁的问题已修，集成实例 `verify:perf` 13/13）
 - [x] F2 P-B 服务端缓存（合并 a55cebc43）
 - [x] F3 W3 分组与归档（合并 1a1991adf；集成实例 `verify:grouping` 10/10，`verify:workbench` 10/10，W4/W5/W6 复验通过）
-- [x] F4 W1 + W2 工作台性能与条目详情（合并后见下方集成复验）
+- [x] F4 W1 + W2 工作台性能与条目详情（合并 a60c6ab40，无代码冲突；集成复验见下）
 - [x] F5 W5 占位符变量（合并 a00f83fe3）
-- [ ] 合并、全量验证、部署
+- [x] 合并、全量验证（2026-10-26，见「全量集成复验」）
+- [ ] 部署生产
 
 ## 实测记录
 
@@ -277,3 +278,16 @@
 - 没有在生产实例上测（按约定只读）。
 - ↑/↓ 切换条目用临时脚本实测过：300 条的书，从第 2 条开始连按 200 次 ↓ 到第 202 条，再按 150 次 ↑ 回到第 52 条，渲染行数一直在 20–30 行，表格跟随滚动。这个检查没有写进 verify 脚本。
 - 手机端只在 Playwright 移动视口下看过截图，没有在真机上看。
+
+### 全量集成复验（F1–F5 全部合并后，2026-10-26）
+
+环境：本地 offset 600 实例，无头 Chrome，`WB_HELPER_SOURCE` 指向主检出的锁定 JS-Slash-Runner（未设置时 compat / rp 会因 `TavernHelper is not defined` 中断，属环境缺失）。
+
+实测：
+- `npm run check`、`npm test`（156/156）、`npm run build`、`format:check` 通过。
+- verify：grouping 10、workbench 10、speaker-colors 4、context-limit 3、placeholders 7、perf 13、compat 10、rp 36、pwa 18，全部通过。pwa 首轮在「左半屏点击翻回」处失败一次，安装助手后重跑通过，未复现。
+- `benchmark:world`（合成 3189 条）：深度编辑打开 697 ms / 22 行；滚动帧中位 16.6 ms；选中 126 ms；输入 p95 32 ms；侧栏打开 326 ms / 16 行；设置保存分片通知 0；全程无长任务、无页面错误。与 F4 分支数据一致。
+- 截图（`artifacts/f4-merged/`，未入库）：桌面主从布局与 F3 的「未归档 / 已归档」切换并存；表格内 ↓ 40 次从条目 3 到条目 43，表格跟随；760px 宽时详情为全屏覆盖层带返回。
+
+未验证：`verify:resources`、`verify:interactions` 的既有定位器失败未修，未复跑。
+
