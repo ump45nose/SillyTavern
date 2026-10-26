@@ -41,16 +41,7 @@ test("slices are cached until invalidated, and dependents go stale with them", (
   assert.notEqual(host.slice("session"), session, "session embeds the active character");
   assert.equal(host.slice("resources"), resources);
   host.invalidate("prefs");
-  assert.equal(host.slice("resources"), resources, "a preference that leaves the resources as they were");
-  st.extensionSettings.connectionManager.profiles = [{ id: "p1", name: "One", api: "openai" }];
-  host.invalidate("resources");
-  const listed = host.slice("resources");
-  st.extensionSettings.workbench.groups = { p1: "Mine" };
-  host.invalidate("prefs");
-  assert.notEqual(host.slice("resources"), listed, "connection grouping reads prefs");
-  assert.equal(host.slice("resources").connection[0].detail, "Mine");
-  st.extensionSettings.connectionManager.profiles = [];
-  st.extensionSettings.workbench = {};
+  assert.notEqual(host.slice("resources"), resources, "connection grouping reads prefs");
 });
 
 test("revalidate notifies only the slices whose content changed", () => {

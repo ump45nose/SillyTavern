@@ -23,12 +23,6 @@ export const sliceNames: Slice[] = ["session", "characters", "resources", "chat"
 /** Slices built from another slice go stale with it. */
 const dependents: Partial<Record<Slice, Slice[]>> = {
   characters: ["session"],
-};
-/**
- * Slices partly built from another one, rebuilt with it and notified only when they came out different:
- * resources read the connection groups from prefs, and most preference writes leave them as they were.
- */
-const derived: Partial<Record<Slice, Slice[]>> = {
   prefs: ["resources"],
 };
 /** Sources before the slices built from them. */
@@ -132,10 +126,7 @@ export class HostCore {
   sliceRevision = (name: Slice) => this.sliceVersions[name];
   /** Everything may have changed. */
   refresh = () => this.invalidate(...sliceNames);
-  /**
-   * Marks slices (and the slices built from them) stale; they rebuild on next read. Slices only partly
-   * built from them (`derived`) are rebuilt now and notify only if they changed.
-   */
+  /** Marks slices (and the slices built from them) stale; they rebuild on next read. */
   invalidate(...names: Slice[]) {
     const stale = new Set<Slice>();
     const add = (name: Slice) => {
@@ -148,10 +139,7 @@ export class HostCore {
       delete this.sliceCache[name];
       this.sliceVersions[name]++;
     }
-    const built = new Set(
-      [...stale].flatMap((name) => derived[name] ?? []).filter((name) => !stale.has(name)),
-    );
-    this.notify(new Set([...stale, ...this.rebuild(buildOrder.filter((name) => built.has(name)))]));
+    this.notify(stale);
   }
   /**
    * Rebuilds cached slices and notifies only those that changed, for events that may or may not have
