@@ -109,7 +109,8 @@
 - [x] F4 W1 + W2 工作台性能与条目详情（合并 a60c6ab40，无代码冲突；集成复验见下）
 - [x] F5 W5 占位符变量（合并 a00f83fe3）
 - [x] 合并、全量验证（2026-10-26，见「全量集成复验」）
-- [ ] 部署生产
+- [x] 部署生产（2026-10-26，见「生产部署」）
+- [ ] 生产清理：卸载 cocktail，停用 Extension-MessageLimit、Dialogue-Colorizer、世界书切换器脚本（待用户确认）
 
 ## 实测记录
 
@@ -290,4 +291,14 @@
 - 截图（`artifacts/f4-merged/`，未入库）：桌面主从布局与 F3 的「未归档 / 已归档」切换并存；表格内 ↓ 40 次从条目 3 到条目 43，表格跟随；760px 宽时详情为全屏覆盖层带返回。
 
 未验证：`verify:resources`、`verify:interactions` 的既有定位器失败未修，未复跑。
+
+### 生产部署（2026-10-26）
+
+- `npm run deploy`：build、check 通过；前端扩展同步到 `extensions/workbench/`，性能扩展同步到 `extensions/wb-perf/`；服务端插件 fa92a24a → 11611338，容器已重启。
+- 容器日志：`workbench-sync: response cache on for /api/settings/get and /api/characters/all`，无错误。
+- 带认证探测（凭据在 NAS 上读取，不出机）：两个扩展 manifest 返回新版本（workbench 0.4.0、wb-perf）；连续三次 `/api/settings/get` 分别为 1.10 s / 0.36 s / 0.017 s（3.48 MB）；`/info` 报告 `cache: {on: true, hits: 2, misses: 1}`。
+- 部署脚本修正：重启后原来固定等 4 s 就探测，服务端仍在加载插件，探测报 ECONNREFUSED；改为轮询到能连接（最多 90 s）再探测。改后的重跑走的是「插件无变化」分支，重启分支的等待未实测。
+- 首次部署被本机网络挡住：Claude Code 的进程只能访问路由器和本机，访问 NAS 报 No route to host；完全退出并重开 Claude 后恢复。
+
+未验证：生产页面上的工作台功能（分组归档、主从布局、对白着色、上下文裁剪、占位符）没有在生产页面里实际操作，需要刷新后人工确认。
 

@@ -72,7 +72,12 @@ if (!dry) {
       return false;
     }
   };
-  await new Promise((r) => setTimeout(r, restarted ? 4000 : 500));
+  // 重启后服务端要先跑完插件自动更新与加载才开始监听，等它接受连接（最多 90 s）再探
+  for (let i = 0; i < 90; i++) {
+    const up = await fetch(BASE_URL).then(() => true, () => false);
+    if (up) break;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
   const a = await probe(`${BASE_URL}/scripts/extensions/third-party/workbench/manifest.json`, (s) => s === 200 || s === 401);
   const p = await probe(`${BASE_URL}/scripts/extensions/third-party/wb-perf/manifest.json`, (s) => s === 200 || s === 401);
   const b = await probe(`${BASE_URL}/api/plugins/workbench-sync/info`, (s) => s !== 404);
