@@ -299,17 +299,14 @@ export class HostCore {
       personas = c.powerUserSettings.personas ?? {};
     return {
       connection: profiles
-        .map((p: Data) => {
-          const group = groups[p.id] || p.model || p.api || "其他模型";
-          return {
-            id: p.id,
-            name: p.name,
-            detail: group,
-            group,
-            archived: archivedConnections.has(p.id),
-            data: p,
-          };
-        })
+        .map((p: Data) => ({
+          id: p.id,
+          name: p.name,
+          detail: p.model || p.api || "",
+          group: groups[p.id] || "",
+          archived: archivedConnections.has(p.id),
+          data: p,
+        }))
         .sort(
           (a: Item, b: Item) =>
             (a.detail ?? "").localeCompare(b.detail ?? "") || a.name.localeCompare(b.name),

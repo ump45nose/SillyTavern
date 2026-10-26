@@ -358,11 +358,11 @@ export default function ResourceManager({
                   setGrouping(null);
                   task.run(async () => {
                     await host.setResourceGroup(org, valid, "");
-                    setMessage(kind === "connection" ? "已恢复按模型分组" : `已移出分组`);
+                    setMessage("已移出分组");
                   });
                 }}
               >
-                {kind === "connection" ? "恢复按模型分组" : "移出分组"}
+                移出分组
               </button>
               <span className="wb-grow" />
               <button type="button" onClick={() => setGrouping(null)}>
@@ -424,8 +424,6 @@ function GroupHeader({
 }) {
   const title = name || ungroupedLabel,
     picked = ids.filter((i) => selection.includes(i)).length;
-  // A connection group may only be its model's name; dissolving matters only where a group was set by hand.
-  const explicit = kind === "connection" ? ids.some((i) => host.prefs().groups[i]) : !!name;
   return (
     <div className="wb-manager-group">
       <input
@@ -462,7 +460,7 @@ function GroupHeader({
           <PencilLine size={13} />
         </button>
       )}
-      {explicit && (
+      {name && (
         <button
           className="wb-manager-icon"
           aria-label={`解散分组 ${title}`}
@@ -470,11 +468,7 @@ function GroupHeader({
           disabled={disabled}
           onClick={() => {
             if (
-              confirm(
-                kind === "connection"
-                  ? `解散分组「${title}」，其中的连接恢复按模型分组？`
-                  : `解散分组「${title}」，其中的世界书变为未分组？`,
-              )
+              confirm(`解散分组「${title}」，其中的${kind === "connection" ? "连接" : "世界书"}变为未分组？`)
             )
               run(() => host.setResourceGroup(kind, ids, ""));
           }}

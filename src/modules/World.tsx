@@ -126,7 +126,7 @@ export default function World({
             const covered =
               deep &&
               (document.body.classList.contains("wb-mobile") ||
-                (workspace.current?.clientWidth ?? 1e4) <= 860);
+                (workspace.current?.clientWidth ?? 1e4) <= 520);
             setEntry(
               (previous) =>
                 wanted ||

@@ -36,11 +36,11 @@ export const organizeMethods = {
     if (done.length) await this.savePreference(withArchived(this.prefs(), kind, done, on));
     return { done, errors };
   },
-  /** Moves items into `group`; "" takes them out (connections then group by model again). */
+  /** Moves items into `group`; "" takes them out of any group. */
   async setResourceGroup(this: HostAdapter, kind: Organized, ids: string[], group: string) {
     await this.savePreference(withGroup(this.prefs(), kind, ids, groupName(group)));
   },
-  /** Renames a group as the lists show it, including a connection group that is only a model name. */
+  /** Renames a group: moves every item in it to the new name. */
   async renameResourceGroup(this: HostAdapter, kind: Organized, from: string, to: string) {
     const ids = this.snapshot()
       .resources[kind].filter((x) => (x.group ?? "") === from)

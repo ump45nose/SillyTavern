@@ -20,7 +20,7 @@ export interface Item {
   active?: boolean;
   image?: string;
   data?: Data;
-  /** The list group: a connection's explicit group or its model; a book's group, "" when it has none. */
+  /** The list group the user chose; "" when it has none. */
   group?: string;
   /** Hidden from the side rail, top choosers and "next"; listed under 已归档 in the manager. */
   archived?: boolean;

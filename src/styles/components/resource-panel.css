@@ -1415,7 +1415,14 @@
     flex: 1;
     min-width: 0;
   }
+  .wb-connection-models {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+  }
   .wb-connection-pick > :is(input, .wb-select),
+  .wb-connection-pick .wb-connection-models > :is(input, .wb-select),
   .wb-connection-pick .wb-select-trigger {
     font-family: var(--wb-font-mono);
   }

@@ -386,11 +386,12 @@
   }
   .wb-wt-editor-main > header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 14px;
+    gap: 8px 14px;
   }
   .wb-ui .wb-wt-name {
-    flex: 1;
+    flex: 1 1 140px;
     min-width: 0;
     height: 34px;
     min-height: 34px;
@@ -587,16 +588,23 @@
     margin-top: auto;
   }
 
-  /* A narrow workspace lays the detail over the table, with a way back to the list. */
+  /* A narrower workspace keeps the list beside the detail, down to the entry and its tokens. */
   @container wb-wt (max-width: 860px) {
     .wb-wt-body.has-detail {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: minmax(200px, 0.75fr) minmax(0, 1.25fr);
+      gap: 12px;
     }
     .wb-wt-body.has-detail .wb-wt-row {
-      grid-template-columns: 54px minmax(120px, 1.2fr) minmax(120px, 1.6fr) minmax(96px, 0.9fr) 52px 56px 64px;
+      grid-template-columns: 54px minmax(0, 1fr) 56px;
     }
-    .wb-wt-body.has-detail .wb-wt-row > :is(:nth-child(3), :nth-child(4), :nth-child(5)) {
-      display: block;
+    .wb-wt-body.has-detail .wb-wt-row > :is(:nth-child(3), :nth-child(4), :nth-child(5), :nth-child(6)) {
+      display: none;
+    }
+  }
+  /* Only where the two cannot sit side by side does the detail cover the list, with a way back. */
+  @container wb-wt (max-width: 520px) {
+    .wb-wt-body.has-detail {
+      grid-template-columns: minmax(0, 1fr);
     }
     .wb-wt-detail {
       position: absolute;

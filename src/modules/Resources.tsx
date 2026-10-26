@@ -252,10 +252,10 @@ function ProfileEditor({ host, id }: { host: HostAdapter; id: string }) {
         <button disabled={edit.dirty} onClick={() => task.run(() => host.select("connection", id))}>
           应用此{actionLabels.connectionProfile}
         </button>
-        <Field label="模型分组">
+        <Field label="分组">
           <input
             value={host.prefs().groups[id] || ""}
-            placeholder="按模型自动分组"
+            placeholder="未分组"
             onChange={(e) => host.preference({ groups: { ...host.prefs().groups, [id]: e.target.value } })}
           />
         </Field>
