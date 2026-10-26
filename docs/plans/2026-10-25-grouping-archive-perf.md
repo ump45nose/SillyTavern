@@ -105,7 +105,7 @@
 - [x] W6 说话人着色（e196e14e1）
 - [x] F1 P-A 前端 perf 扩展（合并 1fb4b0624；renderDebounced 绕过补丁的问题已修，集成实例 `verify:perf` 13/13）
 - [x] F2 P-B 服务端缓存（合并 a55cebc43）
-- [ ] F3 W3 分组与归档
+- [x] F3 W3 分组与归档（合并 1a1991adf；集成实例 `verify:grouping` 10/10，`verify:workbench` 10/10，W4/W5/W6 复验通过）
 - [ ] F4 W1 + W2 工作台性能与条目详情
 - [x] F5 W5 占位符变量（合并 a00f83fe3）
 - [ ] 合并、全量验证、部署
