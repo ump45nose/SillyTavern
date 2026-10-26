@@ -165,16 +165,21 @@ try {
     const ms = await page.evaluate(async () => {
       const c = SillyTavern.getContext(),
         frame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-      const samples = [];
+      const versions = () => Object.values(workbench.host.sliceVersions).reduce((a, b) => a + b, 0);
+      const samples = [],
+        sync = [],
+        before = versions();
       for (let i = 0; i < 5; i++) {
         const start = performance.now();
-        await c.eventSource.emit(c.eventTypes.SETTINGS_UPDATED);
+        const emitted = c.eventSource.emit(c.eventTypes.SETTINGS_UPDATED);
+        sync.push(performance.now() - start);
+        await emitted;
         await frame();
         samples.push(performance.now() - start);
       }
-      return samples;
+      return { samples, sync, notified: versions() - before };
     });
-    return { emitToFrameMs: stats(ms) };
+    return { emitToFrameMs: stats(ms.samples), syncMs: stats(ms.sync), sliceNotifications: ms.notified };
   });
   // Leave without saving the typed text.
   const revert = ws.getByRole("button", { name: "还原", exact: true });
@@ -204,16 +209,21 @@ try {
     const ms = await page.evaluate(async () => {
       const c = SillyTavern.getContext(),
         frame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-      const samples = [];
+      const versions = () => Object.values(workbench.host.sliceVersions).reduce((a, b) => a + b, 0);
+      const samples = [],
+        sync = [],
+        before = versions();
       for (let i = 0; i < 5; i++) {
         const start = performance.now();
-        await c.eventSource.emit(c.eventTypes.SETTINGS_UPDATED);
+        const emitted = c.eventSource.emit(c.eventTypes.SETTINGS_UPDATED);
+        sync.push(performance.now() - start);
+        await emitted;
         await frame();
         samples.push(performance.now() - start);
       }
-      return samples;
+      return { samples, sync, notified: versions() - before };
     });
-    return { emitToFrameMs: stats(ms) };
+    return { emitToFrameMs: stats(ms.samples), syncMs: stats(ms.sync), sliceNotifications: ms.notified };
   });
 
   // Clean up the benchmark books.
