@@ -110,7 +110,8 @@
 - [x] F5 W5 占位符变量（合并 a00f83fe3）
 - [x] 合并、全量验证（2026-10-26，见「全量集成复验」）
 - [x] 部署生产（2026-10-26，见「生产部署」）
-- [ ] 生产清理：卸载 cocktail，停用 Extension-MessageLimit、Dialogue-Colorizer、世界书切换器脚本（待用户确认）
+- [x] 生产清理：卸载 cocktail，停用 Extension-MessageLimit、Dialogue-Colorizer（2026-10-26）
+- [ ] 停用世界书切换器脚本（用户试完分组后再定）
 
 ## 实测记录
 
@@ -299,6 +300,8 @@
 - 带认证探测（凭据在 NAS 上读取，不出机）：两个扩展 manifest 返回新版本（workbench 0.4.0、wb-perf）；连续三次 `/api/settings/get` 分别为 1.10 s / 0.36 s / 0.017 s（3.48 MB）；`/info` 报告 `cache: {on: true, hits: 2, misses: 1}`。
 - 部署脚本修正：重启后原来固定等 4 s 就探测，服务端仍在加载插件，探测报 ECONNREFUSED；改为轮询到能连接（最多 90 s）再探测。改后的重跑走的是「插件无变化」分支，重启分支的等待未实测。
 - 首次部署被本机网络挡住：Claude Code 的进程只能访问路由器和本机，访问 NAS 报 No route to host；完全退出并重开 Claude 后恢复。
+
+生产清理（用户确认后执行）：备份 `backups/extension-cleanup-20261026-125756/`（settings.json 与整个 cocktail 目录）；停容器 → `extensions/cocktail` 移入备份目录 → `disabledExtensions` 追加 `third-party/Extension-MessageLimit`、`third-party/SillyTavern-Dialogue-Colorizer`（原子写入）→ 启动容器。两者的设置键保留，供工作台首次加载时迁移（messageLimit：开、5 条、含后台；人设颜色 2 个）。清理时工作台尚未迁移（`workbench.contextLimit` / `speakerColors` 都不存在）。cocktail-plus 原本就是停用状态，未动。
 
 未验证：生产页面上的工作台功能（分组归档、主从布局、对白着色、上下文裁剪、占位符）没有在生产页面里实际操作，需要刷新后人工确认。
 
