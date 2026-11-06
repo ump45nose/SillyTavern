@@ -25,7 +25,7 @@ import { clone, validatePreset } from "../host/model";
 import { useTask, Notice, Empty, Field, IconButton, useHostSlices, withoutChat } from "../ui/common";
 import { useTokenCounts } from "../ui/tokens";
 import { Check, Fold, SaveBar, Switch, useDraft } from "../ui/ResourceControls";
-import { actionLabels, resourceLabels } from "../host/labels";
+import { actionLabels, connectionLabel, resourceLabels } from "../host/labels";
 import { SpeakerColor } from "../ui/SpeakerColor";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
@@ -147,9 +147,7 @@ export default function Resources({
             {current && snap.current[kind] === id && (
               <span className={`wb-status-chip ${kind === "connection" && !snap.online ? "is-off" : ""}`}>
                 {kind === "connection"
-                  ? snap.online
-                    ? "已连接"
-                    : "未连接"
+                  ? connectionLabel(snap.online)
                   : kind === "preset"
                     ? "运行中"
                     : "使用中"}

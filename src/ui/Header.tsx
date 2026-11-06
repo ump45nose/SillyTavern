@@ -5,7 +5,7 @@ import type { HostSnapshot, Item, Panel, Resource } from "../host/types";
 import { Empty, IconButton, SearchBox } from "./common";
 import { grouped, groupItems, ungroupedLabel, unarchived } from "../host/organize";
 import { GroupCheck } from "./ResourcePicker";
-import { resourceLabels } from "../host/labels";
+import { connectionLabel, resourceLabels } from "../host/labels";
 import { usePresence } from "./Motion";
 import { resourceIcons } from "./resources";
 /** The popover's way into the full panel, named after what the panel lets you do there. */
@@ -209,7 +209,10 @@ function ResourcePills({
           selected = all.find((x) => x.id === snap.current[kind]),
           sections = chooserSections(kind, all, bound, chooser === kind ? query : "");
         const Icon = resourceIcons[kind];
-        const value = selected?.name || (kind === "connection" ? model || "未连接" : "未选择");
+        const value =
+          kind === "connection"
+            ? connectionLabel(snap.online, selected?.name, model)
+            : selected?.name || "未选择";
         const active = items.filter((x) => x.active);
         const count = kind === "world" ? active.length : 0;
         const shown = kind === "world" ? active[0]?.name || "未启用" : value;
@@ -364,7 +367,10 @@ export function ResourceControls({
         const all = snap.resources[kind],
           items = unarchived(all),
           selected = all.find((x) => x.id === snap.current[kind]);
-        const value = selected?.name || (kind === "connection" ? model : "未选择");
+        const value =
+          kind === "connection"
+            ? connectionLabel(snap.online, selected?.name, model)
+            : selected?.name || "未选择";
         const count = kind === "world" ? items.filter((x) => x.active).length : 0;
         return (
           <div className={`wb-selector ${panel === kind || chooser === kind ? "is-active" : ""}`} key={kind}>

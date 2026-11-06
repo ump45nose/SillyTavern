@@ -2,6 +2,7 @@ import React, { useEffect, useReducer } from "react";
 import { FlaskConical, PlugZap, RefreshCw } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { useTask, Notice, useHostSlices, withoutChat } from "../ui/common";
+import { connectionLabel } from "../host/labels";
 import ConnectionFields from "./ConnectionFields";
 import { Select } from "../ui/Select";
 
@@ -102,7 +103,7 @@ export function ConnectionRuntime({ host }: { host: HostAdapter }) {
               测试
             </button>
           )}
-          <small className={snap.online ? "is-online" : ""}>{snap.online ? "已连接" : "未连接"}</small>
+          <small className={snap.online ? "is-online" : ""}>{connectionLabel(snap.online)}</small>
         </div>
       </section>
       <Notice error={task.error} />
