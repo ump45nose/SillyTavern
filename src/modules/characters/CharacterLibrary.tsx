@@ -3,9 +3,10 @@ import React, { useState } from "react";
 import { Star, Plus, Download, Search } from "../../ui/icons";
 import type { HostAdapter } from "../../host/adapter";
 import type { Item } from "../../host/types";
-import { useTask, SearchBox, Notice, Empty, useHostSlices, withoutChat } from "../../ui/common";
+import { useTask, SearchBox, Notice, Empty, TriCheck, useHostSlices, withoutChat } from "../../ui/common";
+import { toggleIds } from "../../ui/lists";
 import { guards } from "../../host/bus";
-import { favorite, plain } from "./shared";
+import { favorite, matchCharacter, plain } from "./shared";
 import { CharacterEditor } from "./CharacterEditor";
 /** The first few names, then the total, so a long selection still fits a confirmation. */
 const nameList = (items: Item[], shown = 8) => {
@@ -66,9 +67,7 @@ export function CharacterLibrary({ host }: { host: HostAdapter }) {
         (filter !== "favorite" || favorite(x)) &&
         (filter !== "current" || x.active) &&
         (!filter.startsWith("tag:") || tagsOf(x).includes(filter.slice(4))) &&
-        `${x.name} ${x.detail} ${plain(x.data?.data?.description ?? x.data?.description)}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
+        matchCharacter(query, x),
     )
     .sort((a, b) =>
       sort === "recent"
@@ -87,7 +86,6 @@ export function CharacterLibrary({ host }: { host: HostAdapter }) {
   ];
   // Batch actions take only the selected cards still in view, never ones a filter or search hides.
   const chosen = list.filter((x) => selected.includes(x.id)),
-    all = list.length > 0 && chosen.length === list.length,
     count = chosen.length;
   const report = (verb: string, done: number, failed: { id: string; message: string }[]) => {
     setMessage(`已${verb} ${done} 个角色${failed.length ? `，${failed.length} 个失败` : ""}`);
@@ -116,14 +114,11 @@ export function CharacterLibrary({ host }: { host: HostAdapter }) {
   const batch = (
     <div className={`wb-character-bulk ${count ? "is-active" : ""}`}>
       <label className="wb-check">
-        <input
-          aria-label="选择当前结果"
-          type="checkbox"
-          checked={all}
-          ref={(n) => {
-            if (n) n.indeterminate = count > 0 && !all;
-          }}
-          onChange={(e) => setSelected(e.target.checked ? list.map((x) => x.id) : [])}
+        <TriCheck
+          label="选择当前结果"
+          count={count}
+          total={list.length}
+          onChange={(on) => setSelected(on ? list.map((x) => x.id) : [])}
         />
         {count ? `已选 ${count} 个角色` : "全选"}
       </label>
@@ -262,9 +257,10 @@ export function CharacterLibrary({ host }: { host: HostAdapter }) {
                       type="checkbox"
                       aria-label={`选择 ${x.name}`}
                       checked={on}
-                      onChange={(e) =>
-                        setSelected((v) => (e.target.checked ? [...v, x.id] : v.filter((id) => id !== x.id)))
-                      }
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSelected((v) => toggleIds(v, [x.id], checked));
+                      }}
                     />
                   </label>
                   <button

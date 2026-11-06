@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { PencilLine, Plus, Search, Upload, SquareArrowOutUpRight, X } from "../ui/icons";
+import { useEffect, useState } from "react";
+import { PencilLine, Plus, Upload, SquareArrowOutUpRight, X } from "../ui/icons";
 import { grouped, groupItems, organized, ungroupedLabel } from "../host/organize";
 import type { HostAdapter } from "../host/adapter";
 import type { Item } from "../host/types";
-import { Dialog, Empty, Notice, useTask, useHostSlices, withoutChat } from "../ui/common";
+import { Dialog, Empty, Notice, TriCheck, useTask, useHostSlices, withoutChat } from "../ui/common";
+import { ManagerList } from "../ui/ManagerList";
+import { matchItem, toggleIds } from "../ui/lists";
 import Resources from "./Resources";
 import World from "./World";
-import { guards } from "../host/bus";
 import { resourceLabels } from "../host/labels";
 type Kind = "preset" | "connection" | "world";
 export default function ResourceManager({
@@ -41,12 +42,8 @@ export default function ResourceManager({
     groupKind = grouped(kind) ? kind : null,
     archivedCount = org ? items.filter((i) => i.archived).length : 0,
     shown = org ? items.filter((i) => !!i.archived === (shelf === "archived")) : items,
-    filtered = shown.filter((i) => `${i.name} ${i.group ?? ""}`.toLowerCase().includes(query.toLowerCase()));
-  const all = useRef<HTMLInputElement>(null),
-    valid = selection.filter((s) => shown.some((i) => i.id === s));
-  useEffect(() => {
-    if (all.current) all.current.indeterminate = valid.length > 0 && valid.length < shown.length;
-  }, [valid.length, shown.length]);
+    filtered = shown.filter((i) => matchItem(query, i));
+  const valid = selection.filter((s) => shown.some((i) => i.id === s));
   useEffect(() => {
     if (shelf === "archived" && !archivedCount) setShelf("list");
   }, [shelf, archivedCount]);
@@ -79,9 +76,6 @@ export default function ResourceManager({
   useEffect(() => {
     onPosition(id);
   }, [id]);
-  const browse = (next: string) => {
-    if (guards.check({ preserveDrafts: true })) setId(next);
-  };
   const batch = (action: "copy" | "delete" | "export") =>
     task.run(async () => {
       const result = await host.batchResource(kind, valid, action);
@@ -121,6 +115,24 @@ export default function ResourceManager({
     const name = prompt(`新${label}名称`);
     if (name) task.run(async () => setId(await host.createResource(kind, name)));
   };
+  const sections = (
+    groupKind && shelf === "list" ? groupItems(filtered) : [{ name: "", items: filtered }]
+  ).map((group, _, groups) => ({
+    key: group.name || "all",
+    header: groupKind && shelf === "list" && (groups.length > 1 || group.name) && (
+      <GroupHeader
+        host={host}
+        kind={groupKind}
+        name={group.name}
+        ids={group.items.map((i) => i.id)}
+        selection={valid}
+        disabled={task.busy}
+        onSelection={onSelection}
+        run={task.run}
+      />
+    ),
+    items: group.items,
+  }));
   return (
     <div className={`wb-resource-manager manage-${kind}`}>
       <Notice error={task.error} />
@@ -130,181 +142,150 @@ export default function ResourceManager({
         </p>
       )}
       <div className="wb-manager-grid">
-        <aside className="wb-manager-resources">
-          <header className="wb-manager-head">
-            <h3>{label}</h3>
-            <span className="wb-grow" />
-            {kind !== "connection" && (
-              <label className="wb-upload-button wb-manager-icon" title={`导入${label}`}>
-                <Upload size={15} />
-                <input
-                  type="file"
-                  accept=".json"
-                  aria-label={`导入${label}`}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file)
-                      task.run(async () =>
-                        setId(
-                          await host.createResource(
-                            kind,
-                            file.name.replace(/\.json$/i, ""),
-                            JSON.parse(await file.text()),
+        <ManagerList
+          title={label}
+          actions={
+            <>
+              {kind !== "connection" && (
+                <label className="wb-upload-button wb-manager-icon" title={`导入${label}`}>
+                  <Upload size={15} />
+                  <input
+                    type="file"
+                    accept=".json"
+                    aria-label={`导入${label}`}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file)
+                        task.run(async () =>
+                          setId(
+                            await host.createResource(
+                              kind,
+                              file.name.replace(/\.json$/i, ""),
+                              JSON.parse(await file.text()),
+                            ),
                           ),
-                        ),
-                      );
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            )}
-            <button
-              className="wb-manager-icon is-raised"
-              aria-label={`新建${label}`}
-              title={`新建${label}`}
-              disabled={task.busy || snap.busy}
-              onClick={create}
-            >
-              <Plus size={15} />
-            </button>
-          </header>
-          <div className={`wb-batch-toolbar ${valid.length ? "is-active" : ""}`}>
-            <label className="wb-check">
-              <input
-                ref={all}
-                type="checkbox"
-                aria-label={`全选${label}`}
-                checked={!!shown.length && valid.length === shown.length}
-                disabled={task.busy || !shown.length}
-                onChange={(e) => onSelection(e.target.checked ? shown.map((i) => i.id) : [])}
-              />
-              {valid.length ? `已选 ${valid.length}` : "全选"}
-            </label>
-            <small className={valid.length ? "is-selected" : ""} role="status">
-              已选 {valid.length} / {shown.length}
-            </small>
-            <div className="wb-batch-actions">
-              {groupKind && shelf === "list" && (
-                <button disabled={!valid.length || task.busy} onClick={() => setGrouping("")}>
-                  分组
-                </button>
+                        );
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               )}
-              {org && (
-                <button
-                  disabled={!valid.length || task.busy || !!blocked.length}
-                  title={blocked.length ? "使用中的不能归档" : undefined}
-                  onClick={archive}
-                >
-                  {shelf === "list" ? "归档" : "恢复"}
-                </button>
-              )}
-              <button disabled={!valid.length || task.busy || snap.busy} onClick={() => batch("copy")}>
-                复制
-              </button>
-              <button disabled={!valid.length || task.busy} onClick={() => batch("export")}>
-                导出
-              </button>
               <button
-                className="is-danger"
-                disabled={!valid.length || task.busy || snap.busy}
-                onClick={() => setConfirmDelete(true)}
+                className="wb-manager-icon is-raised"
+                aria-label={`新建${label}`}
+                title={`新建${label}`}
+                disabled={task.busy || snap.busy}
+                onClick={create}
               >
-                删除
+                <Plus size={15} />
               </button>
-              <button
-                className="wb-manager-icon"
-                aria-label="取消资源选择"
-                title="取消选择"
-                disabled={!valid.length || task.busy}
-                onClick={() => onSelection([])}
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-          {!!blocked.length && (
-            <p className="wb-batch-hint" role="status">
-              正在使用，不能归档：{blocked.join("；")}
-            </p>
-          )}
-          <label className="wb-search">
-            <Search size={15} />
-            <input
-              aria-label={`搜索全部${label}`}
-              placeholder={`搜索${label}`}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-          {org && (
-            <div className="wb-rail-segment wb-manager-shelf" role="group" aria-label={`${label}列表范围`}>
-              <button aria-pressed={shelf === "list"} onClick={() => setShelf("list")}>
-                未归档 {items.length - archivedCount}
-              </button>
-              <button
-                aria-pressed={shelf === "archived"}
-                disabled={!archivedCount}
-                onClick={() => setShelf("archived")}
-              >
-                已归档 {archivedCount}
-              </button>
-            </div>
-          )}
-          <div className="wb-manager-list">
-            {(groupKind && shelf === "list" ? groupItems(filtered) : [{ name: "", items: filtered }]).map(
-              (group, _, groups) => (
-                <div className="wb-manager-section" key={group.name || "all"}>
-                  {groupKind && shelf === "list" && (groups.length > 1 || group.name) && (
-                    <GroupHeader
-                      host={host}
-                      kind={groupKind}
-                      name={group.name}
-                      ids={group.items.map((i) => i.id)}
-                      selection={valid}
-                      disabled={task.busy}
-                      onSelection={onSelection}
-                      run={task.run}
-                    />
+            </>
+          }
+          toolbar={
+            <>
+              <div className={`wb-batch-toolbar ${valid.length ? "is-active" : ""}`}>
+                <label className="wb-check">
+                  <TriCheck
+                    label={`全选${label}`}
+                    count={valid.length}
+                    total={shown.length}
+                    disabled={task.busy || !shown.length}
+                    onChange={(on) => onSelection(on ? shown.map((i) => i.id) : [])}
+                  />
+                  {valid.length ? `已选 ${valid.length}` : "全选"}
+                </label>
+                <small className={valid.length ? "is-selected" : ""} role="status">
+                  已选 {valid.length} / {shown.length}
+                </small>
+                <div className="wb-batch-actions">
+                  {groupKind && shelf === "list" && (
+                    <button disabled={!valid.length || task.busy} onClick={() => setGrouping("")}>
+                      分组
+                    </button>
                   )}
-                  {group.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`wb-manager-row ${id === item.id ? "is-editing" : ""} ${valid.includes(item.id) ? "is-selected" : ""}`}
+                  {org && (
+                    <button
+                      disabled={!valid.length || task.busy || !!blocked.length}
+                      title={blocked.length ? "使用中的不能归档" : undefined}
+                      onClick={archive}
                     >
-                      <label>
-                        <input
-                          type="checkbox"
-                          aria-label={`选择 ${item.name}`}
-                          checked={valid.includes(item.id)}
-                          disabled={task.busy}
-                          onChange={(e) =>
-                            onSelection(
-                              e.target.checked ? [...valid, item.id] : valid.filter((s) => s !== item.id),
-                            )
-                          }
-                        />
-                      </label>
-                      <button
-                        aria-label={`编辑 ${item.name}`}
-                        aria-pressed={id === item.id}
-                        disabled={task.busy}
-                        onClick={() => browse(item.id)}
-                      >
-                        <strong>{item.name}</strong>
-                        <small>{item.archived ? "已归档" : rowDetail(item)}</small>
-                      </button>
-                    </div>
-                  ))}
+                      {shelf === "list" ? "归档" : "恢复"}
+                    </button>
+                  )}
+                  <button disabled={!valid.length || task.busy || snap.busy} onClick={() => batch("copy")}>
+                    复制
+                  </button>
+                  <button disabled={!valid.length || task.busy} onClick={() => batch("export")}>
+                    导出
+                  </button>
+                  <button
+                    className="is-danger"
+                    disabled={!valid.length || task.busy || snap.busy}
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    删除
+                  </button>
+                  <button
+                    className="wb-manager-icon"
+                    aria-label="取消资源选择"
+                    title="取消选择"
+                    disabled={!valid.length || task.busy}
+                    onClick={() => onSelection([])}
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-              ),
-            )}
-            {!items.length && <Empty>还没有{label}</Empty>}
-          </div>
-          <button className="wb-editor-slot" disabled>
-            <SquareArrowOutUpRight size={14} />
-            外部编辑器 · 预留
-          </button>
-        </aside>
+              </div>
+              {!!blocked.length && (
+                <p className="wb-batch-hint" role="status">
+                  正在使用，不能归档：{blocked.join("；")}
+                </p>
+              )}
+            </>
+          }
+          search={{
+            value: query,
+            onChange: setQuery,
+            placeholder: `搜索${label}`,
+            label: `搜索全部${label}`,
+            iconSize: 15,
+          }}
+          filters={
+            org && (
+              <div className="wb-rail-segment wb-manager-shelf" role="group" aria-label={`${label}列表范围`}>
+                <button aria-pressed={shelf === "list"} onClick={() => setShelf("list")}>
+                  未归档 {items.length - archivedCount}
+                </button>
+                <button
+                  aria-pressed={shelf === "archived"}
+                  disabled={!archivedCount}
+                  onClick={() => setShelf("archived")}
+                >
+                  已归档 {archivedCount}
+                </button>
+              </div>
+            )
+          }
+          sections={sections}
+          editing={id}
+          onEdit={setId}
+          selection={{ ids: valid, onChange: onSelection }}
+          disabled={task.busy}
+          rowLabel={(item) => `编辑 ${item.name}`}
+          row={(item) => (
+            <>
+              <strong>{item.name}</strong>
+              <small>{item.archived ? "已归档" : rowDetail(item)}</small>
+            </>
+          )}
+          empty={!items.length && <Empty>还没有{label}</Empty>}
+          footer={
+            <button className="wb-editor-slot" disabled>
+              <SquareArrowOutUpRight size={14} />
+              外部编辑器 · 预留
+            </button>
+          }
+        />
         <div className="wb-manager-editor" inert={task.busy}>
           {kind === "world" ? (
             <World key={id} host={host} initial={id} deep />
@@ -427,21 +408,12 @@ function GroupHeader({
     picked = ids.filter((i) => selection.includes(i)).length;
   return (
     <div className="wb-manager-group">
-      <input
-        type="checkbox"
-        aria-label={`选择分组 ${title}`}
-        checked={picked === ids.length}
-        ref={(node) => {
-          if (node) node.indeterminate = picked > 0 && picked < ids.length;
-        }}
+      <TriCheck
+        label={`选择分组 ${title}`}
+        count={picked}
+        total={ids.length}
         disabled={disabled}
-        onChange={(e) =>
-          onSelection(
-            e.target.checked
-              ? [...new Set([...selection, ...ids])]
-              : selection.filter((i) => !ids.includes(i)),
-          )
-        }
+        onChange={(on) => onSelection(toggleIds(selection, ids, on))}
       />
       <strong>{title}</strong>
       <small>{ids.length}</small>

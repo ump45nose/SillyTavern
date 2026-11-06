@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Lock, LockOpen, Plus, RefreshCw, Search, Settings2, Table2, Trash2, X } from "../ui/icons";
+import { Lock, LockOpen, Plus, RefreshCw, Settings2, Table2, Trash2, X } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import {
   changedCells,
@@ -15,7 +15,7 @@ import {
 } from "../host/database";
 import type { DatabaseState } from "../host/database-runtime";
 import { guards } from "../host/bus";
-import { Empty, Notice, useLeaveGuard, useTask } from "../ui/common";
+import { Empty, Notice, SearchBox, useLeaveGuard, useTask } from "../ui/common";
 import { SaveBar } from "../ui/ResourceControls";
 import { ResourcePicker, ResourceRailContext } from "../ui/ResourcePicker";
 import { useDatabase } from "../ui/useDatabase";
@@ -131,15 +131,7 @@ export default function Database({
             <h2>{table.name}</h2>
             <small>{meta}</small>
             <span className="wb-grow" />
-            <label className="wb-search">
-              <Search size={15} />
-              <input
-                aria-label="搜索行"
-                placeholder="搜索行"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
+            <SearchBox value={query} onChange={setQuery} placeholder="搜索行" iconSize={15} />
             <button className="wb-db-add" onClick={() => openRow(NEW)}>
               <Plus size={15} />
               新增行
@@ -195,15 +187,13 @@ export default function Database({
       )}
       {note}
       {!single && table.rows.length > 6 && (
-        <label className="wb-panel-search">
-          <Search size={15} />
-          <input
-            aria-label="搜索行"
-            placeholder="搜索行"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
+        <SearchBox
+          className="wb-panel-search"
+          value={query}
+          onChange={setQuery}
+          placeholder="搜索行"
+          iconSize={15}
+        />
       )}
       {!single && (
         <ul className={`wb-db-rows ${current || open === NEW ? "is-shared" : ""}`} aria-label="行">

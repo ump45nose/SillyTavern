@@ -98,25 +98,62 @@ export function Empty({
     </div>
   );
 }
+/** A search field; `label` names the input when the placeholder alone would not. */
 export function SearchBox({
   value,
   onChange,
   placeholder = "搜索…",
+  label = placeholder,
+  className = "wb-search",
+  iconSize = 16,
 }: {
   value: string;
   onChange: (s: string) => void;
   placeholder?: string;
+  label?: string;
+  className?: string;
+  iconSize?: number;
 }) {
   return (
-    <label className="wb-search">
-      <Search size={16} />
+    <label className={className}>
+      <Search size={iconSize} />
       <input
-        aria-label={placeholder}
+        aria-label={label}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
     </label>
+  );
+}
+/** A checkbox for a set of `total` items: checked when all are chosen, mixed when only some are. */
+export function TriCheck({
+  count,
+  total,
+  label,
+  title,
+  disabled = false,
+  onChange,
+}: {
+  count: number;
+  total: number;
+  label: string;
+  title?: string;
+  disabled?: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <input
+      type="checkbox"
+      aria-label={label}
+      title={title}
+      checked={total > 0 && count === total}
+      ref={(node) => {
+        if (node) node.indeterminate = count > 0 && count < total;
+      }}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.checked)}
+    />
   );
 }
 export function useTask() {

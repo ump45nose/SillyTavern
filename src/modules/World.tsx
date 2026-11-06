@@ -353,15 +353,14 @@ export default function World({
           </button>
         </header>
         <Notice error={task.error} />
-        <label className="wb-panel-search">
-          <Search size={15} />
-          <input
-            aria-label="搜索条目"
-            placeholder="搜索条目名或关键词"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
+        <SearchBox
+          className="wb-panel-search"
+          iconSize={15}
+          label="搜索条目"
+          placeholder="搜索条目名或关键词"
+          value={query}
+          onChange={setQuery}
+        />
         <ul className="wb-entries" aria-label="条目" ref={panelWindow.ref}>
           {panelWindow.before > 0 && <li className="wb-entries-gap" style={{ height: panelWindow.before }} />}
           {panelShown.slice(panelWindow.first, panelWindow.last).map(([id, e]) => (

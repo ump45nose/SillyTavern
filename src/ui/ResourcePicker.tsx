@@ -1,8 +1,9 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Plus, RotateCcw, Search } from "./icons";
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Plus, RotateCcw } from "./icons";
 import type { Item } from "../host/types";
-import { Empty, SearchBox } from "./common";
+import { Empty, SearchBox, TriCheck } from "./common";
+import { matchItem } from "./lists";
 import { Select } from "./Select";
 import { usePresence } from "./Motion";
 import { groupItems, ungroupedLabel } from "../host/organize";
@@ -103,7 +104,7 @@ export function ResourcePicker({
     button.current?.focus();
   };
   const matches = items
-    .filter((x) => `${x.name} ${x.detail} ${x.group ?? ""}`.toLowerCase().includes(query.toLowerCase()))
+    .filter((x) => matchItem(query, x))
     .sort((a, b) => (sortable ? a.name.localeCompare(b.name, "zh") * (sort === "name" ? 1 : -1) : 0));
   // Archived items never show as choices; the rail lists them in a fold of their own.
   const list = matches.filter((x) => !x.archived),
@@ -377,15 +378,14 @@ function ResourceRail({
       inert={exiting}
     >
       {extras.top}
-      <label className="wb-rail-search">
-        <Search size={14} />
-        <input
-          aria-label={`搜索${label}`}
-          placeholder="搜索"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </label>
+      <SearchBox
+        className="wb-rail-search"
+        iconSize={14}
+        label={`搜索${label}`}
+        placeholder="搜索"
+        value={query}
+        onChange={setQuery}
+      />
       {extras.caption && <p className="wb-rail-caption">{extras.caption}</p>}
       <div className="wb-rail-scroll">
         {sections.map(({ name, items: rows }) => (
@@ -458,22 +458,18 @@ export function GroupCheck({
   title: string;
   toggle: (ids: string[], on: boolean) => void;
 }) {
-  const on = rows.filter((x) => selected.includes(x.id)).length,
-    all = on === rows.length;
+  const on = rows.filter((x) => selected.includes(x.id)).length;
   return (
-    <input
-      type="checkbox"
-      aria-label={`整组启用 ${title}`}
-      title={all ? "整组停用" : "整组启用"}
-      checked={all}
-      ref={(node) => {
-        if (node) node.indeterminate = on > 0 && !all;
-      }}
+    <TriCheck
+      label={`整组启用 ${title}`}
+      title={on === rows.length ? "整组停用" : "整组启用"}
+      count={on}
+      total={rows.length}
       disabled={disabled}
-      onChange={(e) =>
+      onChange={(next) =>
         toggle(
           rows.map((x) => x.id),
-          e.target.checked,
+          next,
         )
       }
     />

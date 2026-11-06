@@ -11,17 +11,16 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   MessageSquarePlus,
-  Search,
   Expand,
   ChevronDown,
 } from "../../ui/icons";
 import type { HostAdapter } from "../../host/adapter";
 import type { Item } from "../../host/types";
-import { useTask, Notice, Empty, useHostSlices, withoutChat, Dialog } from "../../ui/common";
+import { useTask, Notice, Empty, SearchBox, useHostSlices, withoutChat, Dialog } from "../../ui/common";
 import { ResourceRailContext } from "../../ui/ResourcePicker";
 import { guards } from "../../host/bus";
 import { Popover } from "../../ui/Popover";
-import { favorite, plain } from "./shared";
+import { favorite, matchCharacter, plain } from "./shared";
 import { CharacterEditor } from "./CharacterEditor";
 const fieldTabs = [
   ["description", "描述"],
@@ -50,11 +49,7 @@ export function CharacterPanel({
   const data = item?.data?.data ?? item?.data ?? {};
   const portrait = item?.image ? `/characters/${encodeURIComponent(item.id)}` : undefined;
   const list = snap.characters
-    .filter((x) =>
-      `${x.name} ${x.detail} ${(x.data?.data?.tags || []).join(" ")}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-    )
+    .filter((x) => matchCharacter(query, x))
     .sort((a, b) => Number(favorite(b)) - Number(favorite(a)) || a.name.localeCompare(b.name, "zh"));
   const create = () => {
     setPickerAnchor(null);
@@ -74,15 +69,14 @@ export function CharacterPanel({
   );
   const listNav = (
     <nav className={`wb-ui wb-rail wb-character-nav ${rail ? "" : "is-inline"}`} aria-label="角色列表">
-      <label className="wb-rail-search">
-        <Search size={14} />
-        <input
-          aria-label="搜索角色"
-          placeholder="搜索角色或标签"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </label>
+      <SearchBox
+        className="wb-rail-search"
+        iconSize={14}
+        label="搜索角色"
+        placeholder="搜索角色或标签"
+        value={query}
+        onChange={setQuery}
+      />
       <div className="wb-rail-scroll">
         <ul className="wb-rail-list">
           {list.map((x) => (
