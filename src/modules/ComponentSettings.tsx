@@ -1,6 +1,7 @@
 import type { HostAdapter } from "../host/adapter";
 import NativeSettings from "./NativeSettings";
-import { InstalledExtensions, ReadingForm } from "./DesignedSettings";
+import { InstalledExtensions } from "./InstalledExtensions";
+import { ReadingForm } from "./ReadingForm";
 import { bus } from "../host/bus";
 /** Lease whole native components. Their lists, local actions and dynamic editors remain owned by the host. */
 export default function ComponentSettings({

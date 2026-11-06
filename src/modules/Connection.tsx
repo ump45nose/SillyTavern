@@ -2,7 +2,7 @@ import React, { useEffect, useReducer } from "react";
 import { FlaskConical, PlugZap, RefreshCw } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { useTask, Notice, useHostSlices, withoutChat } from "../ui/common";
-import DesignedSettings from "./DesignedSettings";
+import ConnectionFields from "./ConnectionFields";
 import { Select } from "../ui/Select";
 
 export function ConnectionRuntime({ host }: { host: HostAdapter }) {
@@ -106,7 +106,7 @@ export function ConnectionRuntime({ host }: { host: HostAdapter }) {
         </div>
       </section>
       <Notice error={task.error} />
-      <DesignedSettings host={host} />
+      <ConnectionFields host={host} />
     </>
   );
 }
