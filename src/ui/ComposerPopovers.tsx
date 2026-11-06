@@ -17,6 +17,7 @@ import { Popover } from "./Popover";
 import { Empty, Loading, Notice, useTask, useHostSlices } from "./common";
 import { toolIcon } from "./ToolIcon";
 import { useComposerTools } from "./useTools";
+import { uniqueReplies } from "./chatData";
 const NativeSettings = lazyChunk(() => import("../modules/NativeSettings"));
 export type ComposerPopup = {
   kind: "menu" | "tools" | "quick" | "chat" | "files" | "rename" | "pinned" | "tool";
@@ -81,7 +82,7 @@ export function ComposerPopovers({
       host.report(e);
     }
   };
-  const replies = [...new Map(host.quickReplies().map((x: any) => [x.key, x])).values()] as any[],
+  const replies = uniqueReplies(host.quickReplies()),
     groups = [...new Set(replies.map((x) => x.set))],
     selected = groups.includes(group) ? group : groups[0];
   // A "tool" popup always opens on its native editor, so only the other kinds need a title of their own.
