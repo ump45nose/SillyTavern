@@ -1,6 +1,6 @@
 # C 阶段：架构整改记录
 
-每一步都跑 `npm run check`、`npm test`、`npm run verify:styles`，以及 16 个 `verify:*` 脚本（`node scripts/verify-all.mjs <dir>`，再用 `scripts/verify-compare.mjs` 与基线比对）。
+每一步都跑 `npm run check`、`npm test`、`npm run verify:styles`，以及全部回归脚本：`npm run regression -- <目录>`（`scripts/verify-all.mjs`）从 `package.json` 枚举 `verify` 和所有 `verify:*`（`verify:styles` 除外）逐个运行，每个脚本一份日志；再用 `npm run regression:compare -- <基线目录> <目录>`（`scripts/verify-compare.mjs`）按 PASS 行和首个错误与基线比对。下表的 16/16 是 C 阶段当时的脚本数。
 
 | 提交 | 内容 | 验收 |
 | --- | --- | --- |

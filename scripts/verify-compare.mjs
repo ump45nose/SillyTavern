@@ -6,6 +6,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 const [base, current] = process.argv.slice(2).map((dir) => path.resolve(dir));
+if (!base || !current) {
+  console.log("usage: verify-compare.mjs <baseDir> <currentDir>");
+  process.exit(2);
+}
 const read = (dir, name) => {
   const file = path.join(dir, name);
   if (!fs.existsSync(file)) return null;

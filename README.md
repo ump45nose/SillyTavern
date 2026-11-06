@@ -97,7 +97,7 @@ npm run deploy -- --no-restart                # 插件更新但不重启（下�
 
 
 ```bash
-npm run check              # TypeScript、观察器与测试模型语法
+npm run check              # TypeScript，以及扩展、服务端插件、脚本与测试模型的语法
 npm test                   # 保存冲突 / 数据保留 / Trace 单元测试
 npm run verify             # 原生生成、助手、回退、停用与手机挂载回归
 npm run verify:workbench    # 工作台配置、编辑、布局与 Trace
@@ -110,6 +110,9 @@ npm run verify:preferences  # 两侧留白、选中样式和自定义快捷键�
 npm run verify:rp           # RP 原生发送、流式、翻段、iframe、显隐与阅读模式回归
 npm run verify:addons       # 按需加载、启停保存、关闭释放、缺失文件与重试；不写账号数据
 npm run verify:utilities    # 常用工具、右栏 XML 导出、RP 共用与加载诊断；不写账号数据
+npm run regression -- <目录> # 串行运行 verify 与全部 verify:*（verify:styles 除外），每个脚本一份日志
+npm run regression:compare -- <基线目录> <目录> # 按 PASS 行和首个错误比对两次回归，少了 PASS 即失败
+npm run visual:seed         # local-runtime.mjs reset-visual 后为 visual 实例写入确定性数据，供 verify:styles 采样
 npm run benchmark:startup   # 保留 HTTP 缓存的打开／刷新测量；不写账号数据
 npm run benchmark          # 冷 / 热启动对照；结束恢复隔离实例设置
 npm run benchmark:chat     # 400 条内存合成消息的渲染与滚动对照
