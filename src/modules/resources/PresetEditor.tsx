@@ -217,7 +217,6 @@ export function PresetEditor({
   );
   const promptActions = (
     <div className="wb-prompts-actions">
-      {" "}
       {scopes.length > 1 && (
         <Select aria-label="提示词作用范围" value={scope} onChange={(e) => setScope(Number(e.target.value))}>
           {scopes.map((s, i) => (
@@ -447,7 +446,6 @@ export function PresetEditor({
   );
   const saveBars = (
     <>
-      {" "}
       <SaveBar
         dirty={edit.dirty || !!advanced}
         busy={task.busy}

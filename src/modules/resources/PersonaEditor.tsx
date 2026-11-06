@@ -38,6 +38,7 @@ export function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: strin
   const { draft, change } = edit,
     options = host.personaOptions(id),
     tokens = useTokenCounts(host, deep ? [["description", draft.description ?? ""]] : []);
+  /** Clicks a native button that acts on the persona in use, so this one is put in use first. */
   const action = (selector: string) =>
     task.run(async () => {
       if (id !== snap.current.persona) await host.select("persona", id);
@@ -208,11 +209,11 @@ export function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: strin
         <ChartNoAxesColumn size={14} />
         统计
       </button>
-      <button onClick={() => action("#personas_backup")}>
+      <button onClick={() => task.run(() => host.click("#personas_backup"))}>
         <Download size={14} />
         备份全部身份
       </button>
-      <button onClick={() => action("#personas_restore")}>
+      <button onClick={() => task.run(() => host.click("#personas_restore"))}>
         <Upload size={14} />
         恢复备份
       </button>
