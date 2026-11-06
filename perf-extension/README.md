@@ -19,6 +19,6 @@ SillyTavern 1.19.0 前端性能扩展，Noval · Workbench 的配套扩展，也
 
 ## 来源与致谢
 
-模块改编自 [cocktail](https://github.com/Lianues/cocktail)（作者 Limerence）与 [ST-BaiBai-Tools](https://github.com/baibai-git/ST-BaiBai-Tools)（作者 柏柏），每个模块文件头部注明了具体来源。
+模块改编自 [cocktail](https://github.com/Lianues/cocktail)（作者 Limerence）与 [ST-BaiBai-Tools](https://github.com/baibai-git/ST-BaiBai-Tools)（作者 柏柏），每个模块文件头部注明了具体来源。逐个模块的来源文件、原作者和原项目的许可状态见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 本仓库由 [ump45nose/SillyTavern](https://github.com/ump45nose/SillyTavern) 的 `main` 分支 `perf-extension/` 目录自动发布，请在源仓库提交修改。
