@@ -156,6 +156,12 @@ export function TriCheck({
     />
   );
 }
+/** The files chosen in a file input; the input is cleared so that choosing the same file again still counts. */
+export function takeFiles(event: React.ChangeEvent<HTMLInputElement>) {
+  const files = [...(event.target.files ?? [])];
+  event.target.value = "";
+  return files;
+}
 export function useTask() {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");

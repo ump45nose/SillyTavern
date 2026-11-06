@@ -6,7 +6,7 @@ import type { Item } from "../../host/types";
 import { useTask, SearchBox, Notice, Empty, TriCheck, useHostSlices, withoutChat } from "../../ui/common";
 import { toggleIds } from "../../ui/lists";
 import { guards } from "../../host/bus";
-import { favorite, matchCharacter, plain } from "./shared";
+import { characterCreation, favorite, matchCharacter, plain } from "./shared";
 import { CharacterEditor } from "./CharacterEditor";
 /** The first few names, then the total, so a long selection still fits a confirmation. */
 const nameList = (items: Item[], shown = 8) => {
@@ -74,10 +74,7 @@ export function CharacterLibrary({ host }: { host: HostAdapter }) {
         ? Number(b.data?.date_last_chat ?? 0) - Number(a.data?.date_last_chat ?? 0)
         : a.name.localeCompare(b.name, "zh"),
     );
-  const create = () => {
-    const name = prompt("角色名称");
-    if (name) task.run(async () => setEditing(await host.createCharacter(name)));
-  };
+  const creation = characterCreation(host, task, setEditing);
   const chips: [string, string][] = [
     ["all", "全部"],
     ["favorite", "收藏"],
@@ -183,16 +180,10 @@ export function CharacterLibrary({ host }: { host: HostAdapter }) {
                 type="file"
                 accept=".png,.json,.yaml,.yml,.charx,.byaf"
                 multiple
-                onChange={(e) => {
-                  const files = [...(e.target.files || [])];
-                  e.target.value = "";
-                  task.run(async () => {
-                    for (const file of files) await host.importCharacter(file);
-                  });
-                }}
+                onChange={creation.importCards}
               />
             </label>
-            <button className="wb-library-create" disabled={task.busy} onClick={create}>
+            <button className="wb-library-create" disabled={task.busy} onClick={creation.create}>
               <Plus size={15} />
               新建
             </button>

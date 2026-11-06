@@ -4,7 +4,7 @@ import { MessageSquarePlus, ImagePlus } from "../../ui/icons";
 import type { HostAdapter } from "../../host/adapter";
 import type { Data } from "../../host/types";
 import { sameData } from "../../host/model";
-import { useTask, Notice, Empty, Field } from "../../ui/common";
+import { useTask, Notice, Empty, Field, takeFiles } from "../../ui/common";
 import { SaveBar, useAsyncDraft } from "../../ui/ResourceControls";
 import { useTokenCounts } from "../../ui/tokens";
 import { MdField } from "../../ui/md/MdField";
@@ -110,7 +110,7 @@ export function CharacterEditor({ host, id }: { host: HostAdapter; id: string })
               type="file"
               accept="image/*"
               onChange={(e) => {
-                const file = e.target.files?.[0];
+                const [file] = takeFiles(e);
                 if (file) task.run(() => host.characterAvatar(id, file));
               }}
             />

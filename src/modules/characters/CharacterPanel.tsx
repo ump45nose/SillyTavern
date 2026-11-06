@@ -20,7 +20,7 @@ import { useTask, Notice, Empty, SearchBox, useHostSlices, withoutChat, Dialog }
 import { ResourceRailContext } from "../../ui/ResourcePicker";
 import { guards } from "../../host/bus";
 import { Popover } from "../../ui/Popover";
-import { favorite, matchCharacter, plain } from "./shared";
+import { characterCreation, favorite, matchCharacter, plain } from "./shared";
 import { CharacterEditor } from "./CharacterEditor";
 const fieldTabs = [
   ["description", "描述"],
@@ -51,10 +51,10 @@ export function CharacterPanel({
   const list = snap.characters
     .filter((x) => matchCharacter(query, x))
     .sort((a, b) => Number(favorite(b)) - Number(favorite(a)) || a.name.localeCompare(b.name, "zh"));
+  const creation = characterCreation(host, task, setEditing);
   const create = () => {
     setPickerAnchor(null);
-    const name = prompt("角色名称");
-    if (name) task.run(async () => setEditing(await host.createCharacter(name)));
+    creation.create();
   };
   const star = (x: Item, className: string) => (
     <button
@@ -123,13 +123,7 @@ export function CharacterPanel({
             type="file"
             accept=".png,.json,.yaml,.yml,.charx,.byaf"
             multiple
-            onChange={(e) => {
-              const files = [...(e.target.files || [])];
-              e.target.value = "";
-              task.run(async () => {
-                for (const file of files) await host.importCharacter(file);
-              });
-            }}
+            onChange={creation.importCards}
           />
         </label>
         <button className="wb-rail-tool" aria-label="群组" title="群组" onClick={() => onManage?.("群组")}>
