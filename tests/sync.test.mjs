@@ -638,6 +638,28 @@ test("database edits update, insert and delete rows", () => {
   ]);
 });
 
+test("a row_id that reads like a position gets one more leading backslash", () => {
+  const clash = {
+    ...table,
+    rows: [
+      { id: "#2", index: 1, cells: ["真名", ""] },
+      { id: "", index: 2, cells: ["无名", ""] },
+      { id: "\\#3", index: 3, cells: ["反斜杠", ""] },
+    ],
+  };
+  const text = tableCodec.render(clash);
+  assert.deepEqual(text.split("\n").slice(2, 5), [
+    "| \\\\#2 | 真名 |  |",
+    "| #2 | 无名 |  |",
+    "| \\\\\\\\#3 | 反斜杠 |  |",
+  ]);
+  assert.deepEqual(tableCodec.parse(clash, text), clash);
+  assert.deepEqual(tableCodec.parse(clash, text.replace("真名", "改名")).rows, [
+    { ...clash.rows[0], cells: ["改名", ""] },
+    ...clash.rows.slice(1),
+  ]);
+});
+
 test("database parse errors carry the line", () => {
   const text = tableCodec.render(table);
   const at = (t) => lineOf(() => tableCodec.parse(table, t));

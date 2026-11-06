@@ -64,8 +64,12 @@ function readCells(line: string): string[] {
   return cells;
 }
 const rowLine = (cells: string[]) => `| ${cells.map(writeCell).join(" | ")} |`;
-/** Rows without a row_id are named by position, as `#3`. */
-const keyOf = (row: SyncTable["rows"][number]) => row.id || `#${row.index}`;
+/**
+ * Rows without a row_id are named by position, as `#3`; a row_id that reads like one gets one more
+ * leading backslash.
+ */
+const keyOf = (row: SyncTable["rows"][number]) =>
+  !row.id ? `#${row.index}` : /^\\*#\d+$/.test(row.id) ? "\\" + row.id : row.id;
 
 /**
  * 数据库/<角色>/<聊天>/<表名>.md: a Markdown table whose first column is row_id. Editing cells
