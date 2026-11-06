@@ -141,10 +141,8 @@ export default function SettingsWorkspace({
     const dialog = ref.current!,
       previous = document.activeElement as HTMLElement;
     dialog.showModal();
-    document.body.classList.add("wb-settings-open");
     return () => {
       dialog.close();
-      document.body.classList.remove("wb-settings-open");
       previous?.focus();
     };
   }, []);
