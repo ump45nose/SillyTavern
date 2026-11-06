@@ -126,6 +126,28 @@ test("syncHidden re-indexes only the floors whose hidden flag changed", () => {
   assert.equal(host.slice("chat")[0].hidden, undefined);
 });
 
+test("listen warns once about an event SillyTavern lacks, and returns the removal either way", (t) => {
+  const listeners = new Map();
+  st.eventTypes = { CHAT_CHANGED: "chat_id_changed" };
+  st.eventSource = {
+    on: (event, fn) => listeners.set(event, fn),
+    removeListener: (event, fn) => listeners.get(event) === fn && listeners.delete(event),
+  };
+  const warn = t.mock.method(console, "warn", () => {});
+  const host = new HostCore();
+  const fn = () => {};
+  const off = host.listen("CHAT_CHANGED", fn);
+  assert.equal(listeners.get("chat_id_changed"), fn);
+  off();
+  assert.equal(listeners.size, 0);
+  assert.equal(host.cleanup.length, 1, "destroy removes it too");
+  host.listen("NO_SUCH_EVENT", fn)();
+  host.listen("NO_SUCH_EVENT", fn);
+  assert.equal(warn.mock.callCount(), 1);
+  assert.match(warn.mock.calls[0].arguments[0], /NO_SUCH_EVENT/);
+  assert.equal(host.cleanup.length, 1);
+});
+
 test("snapshot assembles the slices and keeps identity until something changes", () => {
   const host = new HostCore();
   const snap = host.snapshot();

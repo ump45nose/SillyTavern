@@ -52,6 +52,12 @@ const outlineWriters = new Set();
 const host = {
   prefs: () => ({ addons: {} }),
   subscribe: (fn) => (notify.add(fn), () => notify.delete(fn)),
+  listen(name, fn) {
+    const event = st.eventTypes[name];
+    if (!event) return () => {};
+    st.eventSource.on(event, fn);
+    return () => st.eventSource.removeListener(event, fn);
+  },
   report: (error) => assert.fail(error),
   sync: { handleOutline: (write) => (outlineWriters.add(write), () => outlineWriters.delete(write)) },
 };

@@ -45,14 +45,7 @@ export class AddonBridge {
   } | null = null;
   private completionTimers = new Set<ReturnType<typeof setTimeout>>();
   constructor(private host: HostAdapter) {
-    const on = (name: string, fn: (...args: any[]) => void) => {
-      const c = context(),
-        event = c.eventTypes[name];
-      if (event) {
-        c.eventSource.on(event, fn);
-        this.cleanup.push(() => c.eventSource.removeListener(event, fn));
-      }
-    };
+    const on = (name: string, fn: (...args: any[]) => void) => this.cleanup.push(host.listen(name, fn));
     on("CHAT_CHANGED", () => {
       this.cycle = null;
       this.chatChanges.forEach((fn) => fn());

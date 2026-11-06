@@ -49,7 +49,10 @@ const modules = {
       "setPersonaLockState",
     ],
   ],
-  openai: ["/scripts/openai.js", ["promptManager"]],
+  openai: [
+    "/scripts/openai.js",
+    ["promptManager", "settingsToUpdate", "oai_settings", "getChatCompletionPreset"],
+  ],
   groupChats: [
     "/scripts/group-chats.js",
     [
@@ -91,7 +94,7 @@ export function internal(name: Name): Promise<any> {
   return pending;
 }
 
-/** Context functions the workbench cannot run without. */
+/** Context functions the workbench calls unguarded; checked at mount, like the module exports above. */
 export function assertContext() {
   const c = ctx();
   for (const key of [
@@ -100,6 +103,24 @@ export function assertContext() {
     "getRequestHeaders",
     "selectCharacterById",
     "updateMessageBlock",
+    "setExtensionPrompt",
+    "deleteMessage",
+    "saveMetadata",
+    "saveSettingsDebounced",
+    "getCurrentChatId",
+    "getCharacters",
+    "getThumbnailUrl",
+    "registerMacro",
+    "unregisterMacro",
+    "timestampToMoment",
+    "openCharacterChat",
+    "renameChat",
+    "reloadCurrentChat",
+    "reloadWorldInfoEditor",
+    "getChatCompletionModel",
+    "stopGeneration",
+    "generate",
+    "appendMediaToMessage",
   ])
     if (typeof c[key] !== "function") throw new Error(`当前酒馆缺少 ${key}，请使用已验证的版本。`);
   if (typeof c.messageFormatter?.addHook !== "function")

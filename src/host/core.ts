@@ -18,6 +18,8 @@ import type { DatabaseRuntime } from "./database-runtime";
 import { bus } from "./bus";
 
 export const defaults: Preferences = { left: true, bindings: {}, groups: {} };
+/** Event names this SillyTavern does not have; each is warned about once per page. */
+const missingEvents = new Set<string>();
 
 export const sliceNames: Slice[] = ["session", "characters", "resources", "chat", "prefs"];
 /** Slices built from another slice go stale with it. */
@@ -102,13 +104,21 @@ export class HostCore {
   database!: DatabaseRuntime;
   /** The chat's story options, from the model's replies or a database table. */
   options!: OptionsRuntime;
+  /** Listens until destroy; the returned function stops earlier, for listeners with a shorter life. */
   listen(name: string, fn: (...args: any[]) => void) {
     const c = ctx(),
       event = c.eventTypes[name];
-    if (event) {
-      c.eventSource.on(event, fn);
-      this.cleanup.push(() => c.eventSource.removeListener(event, fn));
+    if (!event) {
+      if (!missingEvents.has(name)) {
+        missingEvents.add(name);
+        console.warn(`[Workbench] SillyTavern has no ${name} event; what it would refresh stays stale.`);
+      }
+      return () => {};
     }
+    const off = () => c.eventSource.removeListener(event, fn);
+    c.eventSource.on(event, fn);
+    this.cleanup.push(off);
+    return off;
   }
   /** Notified on every change; prefer subscribeSlice for anything rendered often. */
   subscribe = (fn: () => void) => {

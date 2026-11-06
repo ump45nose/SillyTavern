@@ -70,7 +70,6 @@ export class HostAdapter extends HostCore {
       CHARACTER_EDITED: ["characters"],
       CHARACTER_RENAMED: ["characters"],
       CHARACTER_DELETED: ["characters"],
-      CHARACTER_SELECTED: ["characters"],
       MAIN_API_CHANGED: resource,
       OAI_PRESET_CHANGED_AFTER: resource,
       PRESET_CHANGED: resource,
