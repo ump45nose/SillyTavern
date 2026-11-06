@@ -794,10 +794,6 @@
     align-items: center;
     margin: 0 0 20px;
   }
-  .wb-designed-actions > button[aria-pressed="true"] {
-    background: var(--wb-selected);
-    color: var(--wb-accent);
-  }
   .wb-designed-section {
     margin-bottom: 25px;
   }
@@ -883,45 +879,6 @@
   }
   .wb-reading-sample p span {
     color: var(--wb-accent);
-  }
-  .wb-designed-gallery {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 13px;
-  }
-  .wb-designed-gallery article {
-    overflow: hidden;
-    border: 1px solid var(--wb-line);
-    border-radius: 9px;
-    background: var(--wb-surface);
-  }
-  .wb-background-preview {
-    display: block;
-    width: 100%;
-    height: 154px;
-    min-height: 154px;
-    border: 0;
-    border-radius: 0;
-    background-size: cover;
-    background-position: center;
-    padding: 0;
-  }
-  .wb-designed-gallery strong {
-    font-size: 13px;
-    font-weight: 500;
-    padding: 12px;
-    display: block;
-  }
-  .wb-designed-gallery .wb-designed-actions {
-    margin: 0;
-    padding: 0 8px 8px;
-  }
-  .wb-designed-gallery .wb-designed-actions button {
-    width: 28px;
-    padding: 5px;
-  }
-  .wb-designed-settings.page-extensions > .wb-search {
-    margin-bottom: 12px;
   }
   .wb-group-layout {
     display: grid;
@@ -1021,12 +978,6 @@
     border: 0;
     background: var(--wb-soft);
   }
-
-  @media (max-width: 1100px) {
-    .wb-designed-gallery {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
   body.wb-active .wb-ui input[type="range"] {
     appearance: none !important;
     -webkit-appearance: none !important;
@@ -1057,13 +1008,6 @@
     align-self: start;
     max-height: calc(100vh - 240px);
     overflow: auto;
-  }
-  .wb-designed-gallery .wb-background-preview.is-current {
-    outline: 2px solid var(--wb-accent);
-    outline-offset: -3px;
-  }
-  .wb-designed-gallery .wb-background-preview:is(:hover, :focus-visible) {
-    filter: brightness(0.97);
   }
   .wb-ui .wb-designed-actions > button:is(:hover, :focus-visible),
   .wb-ui .wb-group-member > button:is(:hover, :focus-visible) {
