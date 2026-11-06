@@ -1,7 +1,6 @@
 import { MAX_IMAGE_BYTES } from './security.js';
 
 export const MAX_PNG_FILE_BYTES = MAX_IMAGE_BYTES;
-export const MAX_PNG_METADATA_BYTES = 512 * 1024;
 export const MAX_IMAGE_DIMENSION = 16_384;
 export const MAX_IMAGE_PIXELS = 40_000_000;
 export const MAX_PNG_CHUNKS = 4_096;
@@ -13,13 +12,9 @@ export const MAX_TIFF_VALUE_BYTES = 4 * 1024 * 1024;
 export const MAX_TIFF_REFERENCED_BYTES = MAX_IMAGE_BYTES;
 export const MAX_ANIMATED_FRAMES = 4_096;
 export const MAX_ANIMATED_FRAME_PIXELS = 200_000_000;
-const MAX_DECODED_PNG_BYTES = 128 * 1024 * 1024;
 const MAX_WEBP_CHUNKS = 4_096;
 
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
-const textDecoder = new TextDecoder();
-const latin1Decoder = new TextDecoder('latin1');
-const textEncoder = new TextEncoder();
 
 function asBytes(value) {
     if (value instanceof Uint8Array) return value;

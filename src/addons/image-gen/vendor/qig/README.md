@@ -9,7 +9,7 @@ Selected upstream libraries, trimmed from upstream 5915f096 to the code Workbenc
 Removed from the upstream files:
 
 - `a1111-runtime.js`: everything except `normalizeA1111BaseUrl` and `A1111_REQUEST_TIMEOUT_MS` (numeric parsing, base64 helpers, reference image materialization, model refresh check, ADetailer unit).
-- `image-metadata.js`: PNG scanline validation (`validateImageData`), PNG text and structured metadata read/write, generation parameter parsing and `sanitizeServerSubfolder`; `detectImageFormat` and its format checks remain.
+- `image-metadata.js`: PNG scanline validation (`validateImageData`), PNG text and structured metadata read/write with their size limits and text codecs, generation parameter parsing and `sanitizeServerSubfolder`; `detectImageFormat` and its format checks remain.
 - `provider-adapters.js`: `isNovelAICompatibleProxyUrl`, `getGptImageApiUrl`, provider error parsing and the GPT Image route retry (`requestGptImageWithRouteRetry` and its helpers).
 - `comfyui-backend.js`: settings and model list normalization, `renderComfyWorkflow`, workflow component discovery, object_info combo parsing, override pruning, capability detection and WebSocket message parsing.
 - `security.js`: credential field detection, URL credential redaction, `sanitizeReproducibleModel`, `readResponseJson` and `replaceSelectOptions`.
