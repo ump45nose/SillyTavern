@@ -34,6 +34,9 @@ globalThis.fetch = async () => {
   throw new TypeError("network disabled in tests");
 };
 const plugin = await import("../server/resource-center-link/index.mjs");
+const { version } = JSON.parse(
+  fs.readFileSync(new URL("../server/resource-center-link/package.json", import.meta.url)),
+);
 const load = (file) => import(pathToFileURL(path.join(tavern, file)).href);
 const { router: settings } = await load("src/endpoints/settings.js");
 const { router: chat } = await load("src/endpoints/backends/chat-completions.js");
@@ -87,6 +90,7 @@ test("a journal without its key is quarantined at startup and the plugin still l
     const res = routeResponse();
     await router.routes["GET /status"]({ user: user("bob"), body: {} }, res);
     assert.equal(res.code, undefined);
+    assert.equal(res.body.version, version);
     assert.equal(res.body.configured, false);
     assert.match(res.body.coverage, /state\.enc\.corrupt-/);
   } finally {

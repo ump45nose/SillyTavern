@@ -11,6 +11,7 @@ export const info = {
   name: "AI 资源中心联动",
   description: "原生连接双向同步、凭据交付及真实调用元数据采集",
 };
+const { version } = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const cleanError = (e) =>
   e?.status
@@ -420,7 +421,7 @@ export class Session {
   }
   status() {
     return {
-      version: "2.0.0",
+      version,
       configured: !!this.s.config,
       url: this.s.config?.url || "",
       instanceId: this.s.config?.instanceId || "",
