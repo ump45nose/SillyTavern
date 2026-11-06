@@ -593,6 +593,8 @@ export async function init(router) {
         s.s.config = before;
         throw e;
       }
+      // The only note an unpaired journal carries is the quarantine notice asking for this pairing.
+      if (!before) s.s.coverage = null;
       s.save();
       await s.refresh();
       s.observe();

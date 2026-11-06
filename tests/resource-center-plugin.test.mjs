@@ -73,7 +73,7 @@ function nativeResponse() {
   });
 }
 
-test("a journal without its key is quarantined at startup and the plugin still loads", async (t) => {
+test("a journal without its key is quarantined at startup and pairing again clears the notice", async (t) => {
   t.mock.method(console, "warn", () => {});
   const dir = path.join(data, "bob", "resource-center-link");
   fs.mkdirSync(dir, { recursive: true });
@@ -93,6 +93,23 @@ test("a journal without its key is quarantined at startup and the plugin still l
     assert.equal(res.body.version, version);
     assert.equal(res.body.configured, false);
     assert.match(res.body.coverage, /state\.enc\.corrupt-/);
+    const center = {
+      "/api/v2/rp/identity": { instanceId: "fn", userId: "bob" },
+      "/api/v2/rp/connections": { items: [] },
+      "/api/v2/rp/inventory": { items: [] },
+    };
+    t.mock.method(globalThis, "fetch", async (url) => {
+      const body = center[new URL(url).pathname];
+      if (!body) throw new Error(`unexpected request ${url}`);
+      return Response.json(body);
+    });
+    const paired = routeResponse();
+    const pairing = { url: "http://center.test", rpToken: "rp", connectorToken: "c", instanceId: "fn" };
+    await router.routes["POST /configure"]({ user: user("bob"), body: pairing }, paired);
+    assert.equal(paired.code, undefined);
+    assert.equal(paired.body.configured, true);
+    assert.equal(paired.body.error, "");
+    assert.equal(paired.body.coverage, null);
   } finally {
     await plugin.exit();
   }
