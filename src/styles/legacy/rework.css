@@ -26,62 +26,6 @@
     pointer-events: auto;
     transform: none;
   }
-  .wb-ui.wb-resource-menu.is-rail {
-    position: static;
-    width: 100%;
-    height: 100%;
-    max-height: none;
-    padding: 10px;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    animation: none;
-  }
-  .wb-resource-menu.is-rail > .wb-search {
-    min-height: 34px;
-    margin-bottom: 10px;
-  }
-  .wb-resource-menu.is-rail .wb-search input {
-    min-height: 32px;
-    padding: 6px 5px;
-    font-size: 11px;
-  }
-  .wb-resource-menu.is-rail .wb-search svg {
-    width: 14px;
-    height: 14px;
-    margin-left: 7px;
-    flex: none;
-  }
-  .wb-resource-menu.is-rail .wb-picker-list {
-    flex: 1;
-  }
-  .wb-resource-menu.is-rail .wb-resource-choice {
-    gap: 6px;
-    min-height: 49px;
-  }
-  .wb-resource-menu.is-rail .wb-picker-copy strong {
-    font-size: 12px;
-  }
-  .wb-resource-menu.is-rail .wb-picker-copy small {
-    font-size: 10px;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-  }
-  .wb-resource-menu.is-rail .wb-resource-choice > svg {
-    display: none;
-  }
-  .wb-resource-menu.is-rail .wb-resource-choice img {
-    width: 24px;
-    height: 24px;
-  }
-  .wb-resource-menu.is-rail .wb-picker-apply {
-    width: 16px;
-  }
-  .wb-resource-menu.is-rail .wb-caption {
-    margin: 6px 3px 9px;
-    font-size: 10px;
-    line-height: 1.7;
-  }
   .wb-right .wb-resource-title[aria-expanded="true"] > svg {
     transform: none;
   }

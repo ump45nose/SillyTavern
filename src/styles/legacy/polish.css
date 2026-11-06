@@ -39,46 +39,12 @@
   .wb-settings-nav > button[aria-pressed="true"] {
     border-color: color-mix(in srgb, var(--wb-accent) 20%, var(--wb-line));
   }
-  /* One quiet list surface, with complete names available on hover. */
+  /* One quiet list surface. */
   .wb-resource-rail {
     background: var(--wb-paper);
   }
-  .wb-resource-menu.is-rail {
-    background: transparent;
-  }
-  .wb-resource-menu.is-rail .wb-resource-choice {
-    border-radius: 7px;
-    margin-bottom: 3px;
-    padding: 7px 5px;
-  }
-  .wb-resource-menu.is-rail .wb-picker-copy {
-    min-width: 0;
-    gap: 3px;
-  }
-  .wb-resource-menu.is-rail .wb-picker-copy strong {
-    width: 100%;
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    overflow-wrap: normal;
-    line-height: 1.6;
-  }
-  .wb-resource-menu.is-rail .wb-picker-copy small {
-    width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .wb-resource-menu.is-rail .wb-search {
-    background: var(--wb-surface);
-  }
   .wb-right .wb-resource-title {
     font-size: 16px;
-  }
-  .wb-right :is(.wb-prompt-row) .wb-icon:focus-visible {
-    background: transparent;
-    outline-offset: -2px;
   }
   body.wb-active .wb-ui input[type="range"] {
     height: 22px !important;
@@ -167,8 +133,5 @@
   }
   .wb-settings-workspace[data-wb-exiting="true"]::backdrop {
     background: transparent;
-  }
-  .wb-resource-menu.is-rail .wb-picker-list {
-    animation: wb-value-in 220ms ease;
   }
 }
