@@ -12,14 +12,6 @@
     padding: 0;
     border: 0;
   }
-  .wb-world.is-deep:not(.is-managed) {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
-
-  /* The book column only shows outside the settings workspace (its list column picks books there). */
-  .wb-world.is-deep.is-managed .wb-book-column {
-    display: none;
-  }
   .wb-world.is-deep .wb-book-column {
     display: flex;
     flex-direction: column;

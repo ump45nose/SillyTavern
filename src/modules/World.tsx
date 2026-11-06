@@ -64,7 +64,6 @@ export default function World({
   deep,
   initial,
   entryTitle,
-  managed,
   onSelection,
 }: {
   host: HostAdapter;
@@ -72,7 +71,6 @@ export default function World({
   initial?: string;
   /** Opens on the entry with this title, at its portraits. */
   entryTitle?: string;
-  managed?: boolean;
   onSelection?: (name: string) => void;
 }) {
   const mobile = useMobileLayout();
@@ -84,7 +82,6 @@ export default function World({
     [draft, setDraft] = useState<Data | null>(cached?.draft ?? null),
     [entry, setEntry] = useState<string>(cached?.extra?.entry ?? ""),
     [query, setQuery] = useState(""),
-    [bookQuery, setBookQuery] = useState(""),
     [tab, setTab] = useState(cached?.extra?.tab ?? "content"),
     [json, setJson] = useState(cached?.extra?.json ?? ""),
     [saved, setSaved] = useState(""),
@@ -755,26 +752,7 @@ export default function World({
       editorContent
     );
   return (
-    <fieldset disabled={task.busy} className={`wb-world is-deep ${managed ? "is-managed" : ""}`}>
-      {/* In the settings workspace its list column picks books, so this column stays hidden there. */}
-      <section className="wb-book-column">
-        <h3>世界书</h3>
-        <SearchBox value={bookQuery} onChange={setBookQuery} placeholder="搜索世界书" />
-        <p className="wb-caption">全局启用 · 可多选</p>
-        {snap.resources.world
-          .filter((x) => x.name.toLowerCase().includes(bookQuery.toLowerCase()))
-          .map((b) => (
-            <div key={b.id} className={`wb-book-row ${name === b.id ? "is-active" : ""}`}>
-              <input
-                type="checkbox"
-                aria-label={`启用世界书 ${b.name}`}
-                checked={b.active}
-                onChange={(e) => task.run(() => host.toggleBook(b.id, e.target.checked))}
-              />
-              <button onClick={() => choose(b.id)}>{b.name}</button>
-            </div>
-          ))}
-      </section>
+    <fieldset disabled={task.busy} className="wb-world is-deep">
       <section className="wb-wt" ref={workspace}>
         <header className="wb-wt-head">
           <h2>{name || "世界书"}</h2>
