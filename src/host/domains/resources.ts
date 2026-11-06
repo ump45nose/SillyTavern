@@ -53,11 +53,9 @@ export const resourcesMethods = {
     action: "copy" | "delete" | "export",
   ) {
     if (this.isBusy()) throw new Error("请等待生成或切换完成。");
-    const connection = this.connectionControls();
     const done: string[] = [],
       created: string[] = [],
       errors: { id: string; message: string }[] = [],
-      originalPreset = ctx().getPresetManager().getSelectedPresetName(),
       exports: { name: string; data: Data }[] = [];
     this.resourceAction = true;
     this.invalidate("session");
@@ -94,7 +92,7 @@ export const resourcesMethods = {
             if (action === "delete") await this.removePreset(id);
             else {
               const name = this.copyName(kind, item.name);
-              await ctx().getPresetManager().savePreset(name, data);
+              await this.writePresetFile(name, data);
               created.push(name);
             }
             this.resourceVersions.preset++;
@@ -138,12 +136,6 @@ export const resourcesMethods = {
         } catch (e) {
           errors.push({ id, message: e instanceof Error ? e.message : String(e) });
         }
-      if (kind === "preset" && action === "copy") {
-        const manager = ctx().getPresetManager();
-        if (manager.getAllPresets().includes(originalPreset))
-          await manager.selectPreset(manager.findPreset(originalPreset));
-        this.restoreConnectionControls(connection);
-      }
       if (exports.length === 1)
         this.download(
           new Blob([JSON.stringify(exports[0].data, null, 2)], { type: "application/json" }),

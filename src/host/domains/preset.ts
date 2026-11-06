@@ -5,6 +5,20 @@ import { ctx } from "../internals";
 import { emptyPreset } from "../empty-preset";
 import { withPresetGroup } from "../organize";
 
+/**
+ * Where preset `name` sits in a preset manager's list: names are an array for keyed APIs (text
+ * completion) and a name-to-index map for the others.
+ */
+export function presetIndex(manager: any, name: string): number | undefined {
+  const { preset_names } = manager.getPresetList(),
+    index = Array.isArray(preset_names)
+      ? preset_names.indexOf(name)
+      : Object.hasOwn(preset_names, name)
+        ? preset_names[name]
+        : -1;
+  return index >= 0 ? index : undefined;
+}
+
 /** Presets, preset bindings to connections/models, and prompt token composition. */
 export const presetMethods = {
   model(this: HostAdapter) {
@@ -34,11 +48,31 @@ export const presetMethods = {
     }
   },
   presetData(this: HostAdapter, name: string) {
-    const m = ctx().getPresetManager();
-    const { presets, preset_names } = m.getPresetList();
-    const i = Array.isArray(preset_names) ? preset_names.indexOf(name) : preset_names[name];
-    if (i === undefined || i < 0) throw new Error("预设不存在");
-    return clone(presets[i]);
+    const m = ctx().getPresetManager(),
+      i = presetIndex(m, name);
+    if (i === undefined) throw new Error("预设不存在");
+    return clone(m.getPresetList().presets[i]);
+  },
+  /**
+   * Writes a preset file and the page's copy of it. SillyTavern's own list update would select the
+   * preset and apply the file over the running settings; here a new preset joins the list unselected.
+   */
+  async writePresetFile(this: HostAdapter, name: string, data: Data) {
+    const manager = ctx().getPresetManager();
+    await manager.savePreset(name, data, { skipUpdate: true });
+    const { presets, preset_names } = manager.getPresetList(),
+      index = presetIndex(manager, name);
+    if (index !== undefined) {
+      presets[index] = clone(data);
+      return;
+    }
+    presets.push(clone(data));
+    const value = presets.length - 1;
+    if (Array.isArray(preset_names)) preset_names[value] = name;
+    else preset_names[name] = value;
+    window
+      .jQuery(manager.select)
+      .append(new Option(name, Array.isArray(preset_names) ? name : String(value)));
   },
   async createPreset(this: HostAdapter, name: string, data?: Data) {
     const manager = ctx().getPresetManager();
@@ -95,13 +129,13 @@ export const presetMethods = {
       .find("option")
       .filter((_: number, option: HTMLOptionElement) => option.text === name)
       .remove();
-    if (Array.isArray(preset_names)) {
-      const index = preset_names.indexOf(name);
-      if (index >= 0) {
+    const index = presetIndex(manager, name);
+    if (index !== undefined) {
+      if (Array.isArray(preset_names)) {
         preset_names.splice(index, 1);
         presets.splice(index, 1);
-      }
-    } else delete preset_names[name];
+      } else delete preset_names[name];
+    }
     const next = manager.getAllPresets()[0];
     if (wasActive && next) await manager.selectPreset(manager.findPreset(next));
     this.drafts.delete("preset:" + name);
@@ -207,10 +241,16 @@ export const presetMethods = {
     this.resourceVersions.preset++;
     this.invalidate("resources");
   },
+  /**
+   * Saves a preset file draft. The running preset goes through SillyTavern's list update, which
+   * applies the saved file to the running settings; any other preset is only written.
+   */
   async savePreset(this: HostAdapter, name: string, base: Data, draft: Data) {
     validatePreset(draft);
-    const merged = mergeEdits(base, draft, this.presetData(name));
-    await ctx().getPresetManager().savePreset(name, merged);
+    const manager = ctx().getPresetManager(),
+      merged = mergeEdits(base, draft, this.presetData(name));
+    if (manager.getSelectedPresetName() === name) await manager.savePreset(name, merged);
+    else await this.writePresetFile(name, merged);
     this.invalidate("resources");
     return merged;
   },

@@ -1,6 +1,6 @@
 import type { HostAdapter } from "./adapter";
 import type { Data } from "./types";
-import { clone, mergeEdits, sameData, validatePreset } from "./model";
+import { mergeEdits, sameData, validatePreset } from "./model";
 import { changedCells } from "./database";
 import type { SyncTable } from "../sync/database";
 import { ctx } from "./internals";
@@ -168,20 +168,15 @@ export class SyncRelay {
     return { status: "done" };
   }
   /**
-   * Writes the preset file without SillyTavern's list update, which would select the preset and
-   * reapply the file over the running settings. For the running preset, IDE changes reach the
-   * running settings only where those still equal the file; other fields are reported as conflicts.
+   * Writes the file without applying it (writePresetFile). For the running preset, IDE changes reach
+   * the running settings only where those still equal the file; other fields are reported as conflicts.
    */
   private async preset(name: string, base: Data, draft: Data): Promise<Reply> {
     validatePreset(draft);
     const host = this.host,
-      manager = ctx().getPresetManager(),
       running = host.runningPreset(name),
       merged = mergeEdits(base, draft, host.presetData(name));
-    await manager.savePreset(name, merged, { skipUpdate: true });
-    const { presets, preset_names } = manager.getPresetList(),
-      index = Array.isArray(preset_names) ? preset_names.indexOf(name) : preset_names[name];
-    if (index !== undefined && index >= 0) presets[index] = clone(merged);
+    await host.writePresetFile(name, merged);
     const changed = Object.keys({ ...base, ...draft }).filter((k) => !sameData(base[k], draft[k])),
       conflicts: string[] = [];
     if (running) {
