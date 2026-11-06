@@ -1368,6 +1368,19 @@ function PresetEditor({
       />
     </Field>
   );
+  const importDraft = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file)
+      task.run(async () => {
+        const value = JSON.parse(await file.text());
+        validatePreset(value);
+        if (confirm("用文件内容替换当前草稿？保存后才会应用。")) {
+          edit.setDraft(value);
+          setAdvanced("");
+        }
+      });
+  };
   const bindingChecks = (
     <>
       {(["connection", "model"] as const).map((scope) => (
@@ -1438,19 +1451,7 @@ function PresetEditor({
               <label className="wb-upload-button">
                 <Upload size={15} />
                 导入到草稿
-                <input
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file)
-                      task.run(async () => {
-                        const value = JSON.parse(await file.text());
-                        validatePreset(value);
-                        edit.setDraft(value);
-                      });
-                  }}
-                />
+                <input type="file" accept=".json,application/json" onChange={importDraft} />
               </label>
             </div>
             <Fold title="编辑 JSON" initial={!!advanced}>
@@ -1600,23 +1601,7 @@ function PresetEditor({
                 onOpenChange={(open) => setActiveMore(open ? "advanced" : "")}
               >
                 <Field label="从文件替换当前草稿">
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = "";
-                      if (file)
-                        task.run(async () => {
-                          const value = JSON.parse(await file.text());
-                          validatePreset(value);
-                          if (confirm("用文件内容替换当前草稿？保存后才会应用。")) {
-                            edit.setDraft(value);
-                            setAdvanced("");
-                          }
-                        });
-                    }}
-                  />
+                  <input type="file" accept=".json,application/json" onChange={importDraft} />
                 </Field>
                 {json}
               </Fold>
