@@ -23,7 +23,8 @@ export function createRuntime(host: TaskHost): AddonRuntime {
     pauseRequested = false,
     loopActive = false;
   const key = host.snapshot().chatKey,
-    listeners = new Set<() => void>();
+    listeners = new Set<() => void>(),
+    sends = new Set<AbortController>();
   const emit = () => {
     version++;
     listeners.forEach((fn) => fn());
@@ -108,6 +109,7 @@ export function createRuntime(host: TaskHost): AddonRuntime {
   }
   const stop = () => {
     controller?.abort();
+    sends.forEach((send) => send.abort());
     task = { status: data.job ? "paused" : "idle", label: "任务已停止 · 可继续剩余节点" };
     emit();
   };
@@ -148,7 +150,16 @@ export function createRuntime(host: TaskHost): AddonRuntime {
       if (!id) return;
       const text = instruction(data, id);
       host.insert(text, data.settings.mode);
-      if (data.settings.send) await host.write(host.input(), new AbortController().signal, true);
+      if (!data.settings.send) return;
+      const send = new AbortController();
+      sends.add(send);
+      try {
+        await host.write(host.input(), send.signal, true);
+      } catch (error) {
+        if (!send.signal.aborted) throw error;
+      } finally {
+        sends.delete(send);
+      }
       return;
     }
     pause(); // An edit during a running round prevents dispatch of another round.
@@ -211,6 +222,7 @@ export function createRuntime(host: TaskHost): AddonRuntime {
     dispose: () => {
       disposed = true;
       controller?.abort();
+      sends.forEach((send) => send.abort());
       off();
       listeners.clear();
     },

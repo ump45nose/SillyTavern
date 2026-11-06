@@ -12,6 +12,11 @@ import { ctx, stopEvent } from '../core.js';
 
 const LISTS = '#saved_regex_scripts, #saved_scoped_scripts, #saved_preset_scripts';
 const CHECK_MS = 400;
+// Matched against the templates rather than the page: script rows only exist once a script does.
+const TEMPLATE_SELECTORS = {
+    dropdown: ['.regex_settings .inline-drawer-content', '#saved_regex_scripts', '#saved_scoped_scripts', '#saved_preset_scripts', '#bulk_enable_regex', '#bulk_disable_regex', '#regex_scoped_toggle', '#regex_preset_toggle'],
+    scriptTemplate: ['.regex-script-label .regex_bulk_checkbox', '.regex-script-label .disable_regex', '.regex-script-label .regex-toggle-on', '.regex-script-label .regex-toggle-off'],
+};
 
 let engine = null;
 
@@ -40,6 +45,16 @@ async function saveTypes(types, { grant }) {
     c.saveSettingsDebounced();
 }
 
+async function missingSelectors() {
+    const names = Object.keys(TEMPLATE_SELECTORS);
+    const html = await Promise.all(names.map(name => ctx().renderExtensionTemplateAsync('regex', name)));
+    return names.flatMap((name, i) => {
+        const template = document.createElement('template');
+        template.innerHTML = html[i] ?? '';
+        return TEMPLATE_SELECTORS[name].filter(selector => !template.content.querySelector(selector));
+    });
+}
+
 const reportSaveError = error => {
     console.error('[wb-perf] regex save failed', error);
     globalThis.toastr?.error(String(error?.message ?? error), '正则保存失败');
@@ -54,6 +69,9 @@ export default {
         const missing = needed.filter(name => typeof engine[name] !== 'function');
         if (missing.length || !engine.SCRIPT_TYPES) return '正则引擎缺少 ' + (missing.join('、') || 'SCRIPT_TYPES');
         if (typeof ctx().reloadCurrentChat !== 'function') return '找不到 reloadCurrentChat';
+        if (typeof ctx().renderExtensionTemplateAsync !== 'function') return '找不到 renderExtensionTemplateAsync';
+        const absent = await missingSelectors();
+        if (absent.length) return '正则面板缺少 ' + absent.join('、');
         return null;
     },
     install() {
@@ -74,10 +92,10 @@ export default {
             if (ctx().getCurrentChatId()) void ctx().reloadCurrentChat();
         };
         const toggleOne = (label, disabled) => {
-            const found = findScript(label.id);
-            if (!found) return false;
+            const found = findScript(label.id), box = label.querySelector('.disable_regex');
+            if (!found || !box) return false;
             found.script.disabled = disabled;
-            label.querySelector('.disable_regex').checked = disabled;
+            box.checked = disabled;
             void saveTypes(new Set([found.type]), { grant: true }).catch(reportSaveError);
             markDirty();
             return true;
@@ -97,15 +115,16 @@ export default {
             const enable = bulk.id === 'bulk_enable_regex';
             const labels = [...document.querySelectorAll(`#regex_container .regex-script-label`)]
                 .filter(l => l.querySelector('.regex_bulk_checkbox')?.checked);
-            const changes = labels.map(l => ({ label: l, found: findScript(l.id) }))
+            const changes = labels.map(l => ({ box: l.querySelector('.disable_regex'), found: findScript(l.id) }))
                 .filter(x => x.found && !!x.found.script.disabled === enable);
-            // Nothing to change: the native handler shows its own warning.
-            if (!changes.length) return;
+            // Nothing to change: the native handler shows its own warning. A row missing its checkbox leaves
+            // the whole batch to the native handler.
+            if (!changes.length || changes.some(x => !x.box)) return;
             stopEvent(event);
             const types = new Set();
-            for (const { label, found } of changes) {
+            for (const { box, found } of changes) {
                 found.script.disabled = !enable;
-                label.querySelector('.disable_regex').checked = !enable;
+                box.checked = !enable;
                 types.add(found.type);
             }
             void saveTypes(types, { grant: false }).catch(reportSaveError);
