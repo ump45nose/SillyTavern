@@ -46,7 +46,9 @@ export const characterMethods = {
     this.invalidate("characters");
   },
   async duplicateCharacter(this: HostAdapter, id: string) {
-    const data = await (await this.request("/api/characters/duplicate", { avatar_url: id })).json();
+    const data = await (
+      await this.request("/api/characters/duplicate", { avatar_url: id }, "复制角色失败")
+    ).json();
     await ctx().getCharacters();
     this.invalidate("characters");
     return data.path;
@@ -93,10 +95,11 @@ export const characterMethods = {
     return this.saveCharacter(item.id, base, draft);
   },
   async exportCharacter(this: HostAdapter, id: string) {
-    const response = await this.request("/api/characters/export", {
-      avatar_url: id,
-      format: "png",
-    });
+    const response = await this.request(
+      "/api/characters/export",
+      { avatar_url: id, format: "png" },
+      "导出角色失败",
+    );
     this.download(await response.blob(), id);
   },
   /**
@@ -114,10 +117,7 @@ export const characterMethods = {
     try {
       for (const id of ids) {
         const index = c.characters.findIndex((x: Data) => x.avatar === id);
-        await this.request("/api/characters/delete", {
-          avatar_url: id,
-          delete_chats: false,
-        });
+        await this.request("/api/characters/delete", { avatar_url: id, delete_chats: false }, "删除角色失败");
         for (const key of [`AlertWI_${id}`, `AlertRegex_${id}`, `mediaWarningShown:${id}`])
           c.accountStorage.removeItem(key);
         delete c.tagMap[id];
@@ -147,10 +147,11 @@ export const characterMethods = {
         if (!card) throw new Error("角色已不存在。");
         const tags: string[] = card.data?.tags ?? [];
         if (tags.includes(name)) continue;
-        await this.request("/api/characters/merge-attributes", {
-          avatar: id,
-          data: { tags: [...new Set([...tags, name])] },
-        });
+        await this.request(
+          "/api/characters/merge-attributes",
+          { avatar: id, data: { tags: [...new Set([...tags, name])] } },
+          "添加标签失败",
+        );
         saved = true;
       }
     } finally {

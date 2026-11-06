@@ -147,7 +147,7 @@ export class AddonBridge {
     const c = context();
     if (this.disposed || key !== this.key() || !c.getCurrentChatId())
       throw new Error("聊天已切换或尚未保存。");
-    await this.host.saveChatFile(metadata, messages);
+    await this.host.saveChatFile(metadata, messages, "聊天保存失败，结果未写入");
     if (this.disposed || key !== this.key()) throw new Error("聊天已切换，结果未写入当前聊天。");
   }
   private serial<T>(fn: () => Promise<T>): Promise<T> {
@@ -347,7 +347,11 @@ export class AddonBridge {
         if (!avatar) return [];
         // The listing reads only each file's first line, so one request carries every chat's metadata.
         const data = await (
-          await host.request("/api/characters/chats", { avatar_url: avatar, metadata: true })
+          await host.request(
+            "/api/characters/chats",
+            { avatar_url: avatar, metadata: true },
+            "读取聊天列表失败",
+          )
         ).json();
         if (data.error) throw new Error("读取聊天列表失败。");
         return host
@@ -367,6 +371,7 @@ export class AddonBridge {
             c.groupId
               ? { id: name }
               : { ch_name: character?.name, file_name: name, avatar_url: character?.avatar },
+            "读取聊天失败",
           )
         ).json();
         const data = Array.isArray(lines) ? lines[0]?.chat_metadata?.workbench_addons?.[id] : undefined;

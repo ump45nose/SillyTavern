@@ -97,7 +97,7 @@ export const groupMethods = {
     return this.groups();
   },
   async deleteGroup(this: HostAdapter, id: string) {
-    await this.request("/api/groups/delete", { id });
+    await this.request("/api/groups/delete", { id }, "删除群组失败");
     const module = await internal("groupChats");
     if (ctx().groupId === id) await module.resetSelectedGroup();
     await module.getGroups();

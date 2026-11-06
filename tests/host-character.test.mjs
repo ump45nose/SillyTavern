@@ -40,9 +40,9 @@ function setup(failing = "") {
   const host = {
     ...characterMethods,
     snapshot: () => ({ character: { id: "open.png" } }),
-    async request(path, body) {
+    async request(path, body, failure) {
       log.requests.push([path, body]);
-      if (body.avatar_url === failing) throw new Error("保存或读取失败（HTTP 500），草稿已保留。");
+      if (body.avatar_url === failing) throw new Error(`${failure}（HTTP 500）。`);
     },
     invalidate: (name) => log.invalidated.push(name),
   };
@@ -75,7 +75,7 @@ test("each deleted card gets SillyTavern's cleanup and delete event; the open ch
 
 test("a failed delete stops the batch but still saves and reloads after the ones that went through", async () => {
   const { host, log } = setup("b.png");
-  await assert.rejects(host.deleteCharacters(["a.png", "b.png"]), /HTTP 500/);
+  await assert.rejects(host.deleteCharacters(["a.png", "b.png"]), /^Error: 删除角色失败（HTTP 500）。$/);
   assert.deepEqual(log.emitted, [["characterDeleted", 1, "a.png"]]);
   assert.deepEqual(Object.keys(st.tagMap), ["open.png", "b.png"]);
   assert.deepEqual([log.saves, log.reloads, log.invalidated], [1, 1, ["characters"]]);

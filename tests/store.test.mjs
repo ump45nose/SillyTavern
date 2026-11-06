@@ -159,6 +159,14 @@ test("snapshot assembles the slices and keeps identity until something changes",
   assert.equal(host.snapshot().characters, snap.characters);
 });
 
+test("a failed request names what failed, or keeps the editor's draft message by default", async (t) => {
+  st.getRequestHeaders = () => ({});
+  t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 404 }));
+  const host = new HostCore();
+  await assert.rejects(host.request("/api/x", {}), /^Error: 保存或读取失败（HTTP 404），草稿已保留。$/);
+  await assert.rejects(host.request("/api/x", {}, "删除聊天失败"), /^Error: 删除聊天失败（HTTP 404）。$/);
+});
+
 test("previews strip markup and collapse whitespace", () => {
   assert.equal(messagePreview("<b>a</b>\n\n  b"), "a b");
   assert.equal(messagePreview(undefined), "");

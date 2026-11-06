@@ -285,13 +285,19 @@ export class HostCore {
     delete headers["Content-Type"];
     return fetch(path, { method: "POST", headers, body: form });
   }
-  async request(path: string, body: Data) {
+  /** `failure` names what failed; without it the error assumes an editor's load or save, whose draft stays. */
+  async request(path: string, body: Data, failure?: string) {
     const response = await fetch(path, {
       method: "POST",
       headers: ctx().getRequestHeaders(),
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`保存或读取失败（HTTP ${response.status}），草稿已保留。`);
+    if (!response.ok)
+      throw new Error(
+        failure
+          ? `${failure}（HTTP ${response.status}）。`
+          : `保存或读取失败（HTTP ${response.status}），草稿已保留。`,
+      );
     return response;
   }
   snapshot(): HostSnapshot {

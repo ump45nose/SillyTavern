@@ -215,11 +215,11 @@ export class CastRuntime {
     if (!response.ok) throw new Error(`上传「${file.name}」失败（HTTP ${response.status}）。`);
   }
   private async drop(book: string, name: string, sprite: Sprite) {
-    await this.host.request("/api/sprites/delete", {
-      name: `${book}/${name}`,
-      label: sprite.label,
-      spriteName: stem(sprite),
-    });
+    await this.host.request(
+      "/api/sprites/delete",
+      { name: `${book}/${name}`, label: sprite.label, spriteName: stem(sprite) },
+      `删除立绘「${stem(sprite)}」失败`,
+    );
   }
   /** The stage and the prompt list the cast's images again when its book's images change. */
   private async touched(book: string) {
