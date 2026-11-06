@@ -5,7 +5,9 @@ import type { AddonId } from "../addons/catalog";
 import type { MessageTarget, StoryReply, TaskHost } from "../addons/types";
 import { ctx as context, internal } from "./internals";
 import { bus, guards } from "./bus";
-const credentialField = /^(?:key|api[-_]?key|token|secret|password|authorization|credentials?)$/i;
+import { isSensitiveKey } from "./secrets";
+// Add-on settings name their API key `key`; the shared rule leaves `key` to world info keywords.
+const credentialField = { test: (key: string) => /^key$/i.test(key) || isSensitiveKey(key) };
 function safeMetadata(value: any): any {
   if (Array.isArray(value)) return value.map(safeMetadata);
   if (value && typeof value === "object")

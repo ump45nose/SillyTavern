@@ -1,7 +1,9 @@
 /**
  * Readable files for SillyTavern resources, shared by the workbench-sync server plug-in and the
  * tests. Pure: no DOM, no Node. Every codec round-trips: rendering a resource and writing the files
- * back gives the same resource.
+ * back gives the same resource. Keys the files leave out, such as credentials, keep their stored
+ * values, and so do values a file cannot show exactly (a null text, a line break in a heading) while
+ * the file still shows them as rendered.
  */
 export { SyncError, splitFront, parseYaml, fileStem, uniqueNames, sameData, type Data } from "./text";
 export { worldCodec } from "./world";

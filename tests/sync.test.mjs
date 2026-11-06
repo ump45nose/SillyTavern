@@ -28,6 +28,7 @@ const {
   personaNames,
   outlineCodec,
   tableCodec,
+  splitFront,
   SyncError,
 } = sync;
 
@@ -147,6 +148,42 @@ test("world entry edits keep unlisted fields; new files create entries; uid coll
   assert.throws(() => worldCodec.rename(book, "灯塔.md", "条目 1.md"), SyncError);
 });
 
+test("front matter files keep the body's line breaks; only the header is normalized", () => {
+  const crlf = { ...book, entries: { ...book.entries, 0: entry(0, { content: "第一行\r\n第二行\r\n" }) } };
+  roundTrip(worldCodec, crlf);
+  // An editor that saves the whole file with CRLF: the header still reads, the body is kept as sent.
+  const text = worldCodec.files(crlf).get("灯塔.md").replace(/\r?\n/g, "\r\n");
+  const written = worldCodec.write(crlf, "灯塔.md", text.replace("顺序: 100", "顺序: 7"));
+  assert.deepEqual([written.entries[0].order, written.entries[0].content], [7, "第一行\r\n第二行\r\n"]);
+  assert.equal(
+    lineOf(() => worldCodec.write(book, "灯塔.md", "---\r\nuid: 0\r\n顺序: 高\r\n---\r\n")),
+    3,
+  );
+  assert.deepEqual(
+    [
+      splitFront("---\r\n---\r\n正文\r\n"),
+      splitFront("---\r\nuid: 1\r\n---"),
+      splitFront("---\nuid: 1\n---\n\r\n"),
+      splitFront("正文\r\n"),
+    ].map(({ yaml, body }) => [yaml.data, body]),
+    [
+      [{}, "正文\r\n"],
+      [{ uid: 1 }, ""],
+      [{ uid: 1 }, "\r\n"],
+      [{}, "正文\r\n"],
+    ],
+  );
+  roundTrip(presetCodec, {
+    ...preset,
+    prompts: preset.prompts.map((p) => (p.identifier === "x1" ? { ...p, content: "短句。\r\n再一句。" } : p)),
+  });
+  const persona = { name: "旅人", description: "一个旅人。\r\n来自远方。", position: 0, depth: 2, role: 0 };
+  assert.deepEqual(
+    personaCodec.parse(persona, "user.png", "旅人", false, personaCodec.render(persona, "user.png", false)),
+    persona,
+  );
+});
+
 const card = {
   name: "林晚",
   description: "图书管理员。",
@@ -196,6 +233,28 @@ test("character cards round-trip as 角色卡.yaml, field files and numbered gre
   roundTrip(characterCodec, card);
   const sparse = { name: "空", extensions: {} };
   roundTrip(characterCodec, sparse);
+});
+
+test("character files left as rendered keep the stored values: null, non-text and line breaks", () => {
+  const stored = {
+    ...card,
+    personality: null,
+    scenario: null,
+    creator_notes: 3,
+    description: "图书管理员。\r\n话不多。",
+    alternate_greetings: ["早。", null],
+  };
+  assert.equal(characterCodec.files(stored).get("性格.md"), "");
+  roundTrip(characterCodec, stored);
+  assert.equal(characterCodec.write(stored, "性格.md", "温和").personality, "温和");
+  assert.equal(
+    characterCodec.write(stored, "角色描述.md", "图书管理员。\r\n改过").description,
+    "图书管理员。\r\n改过",
+  );
+  assert.deepEqual(characterCodec.write(stored, "备选开场白/02.md", "晚上好。").alternate_greetings, [
+    "早。",
+    "晚上好。",
+  ]);
 });
 
 test("character edits: yaml keys, greeting append and removal, ordered numbering", () => {
@@ -265,10 +324,10 @@ test("presets round-trip; prompts follow the global order; the proxy password st
       "提示词/04-未排序.md",
     ],
   );
-  assert.doesNotMatch(files.get("参数.yaml"), /proxy_password|never-shown/);
+  assert.doesNotMatch(files.get("参数.yaml"), /proxy_password|never-shown|custom_url/);
   assert.match(
     files.get("参数.yaml"),
-    /^温度: 1\nTop P: 0.9\n上下文 Token 上限: 8192\n流式传输: true\n其他:\n  custom_url: /,
+    /^温度: 1\nTop P: 0.9\n上下文 Token 上限: 8192\n流式传输: true\n其他:\n  names_behavior: 0\n$/,
   );
   assert.match(
     files.get("提示词/03-风格_语气.md"),
@@ -308,6 +367,74 @@ test("preset edits: params, other keys, prompt switches, new prompts and refusal
     ),
     3,
   );
+});
+
+test("SillyTavern's sensitive preset fields stay out of the files and keep their stored values", () => {
+  const sensitive = {
+    ...preset,
+    reverse_proxy: "https://u:p@proxy.example/v1",
+    custom_include_headers: "Authorization: Bearer sk-x",
+    custom_include_body: "api_key: sk-body",
+    custom_exclude_body: "hidden_field",
+    azure_base_url: "https://azure-host.example",
+    azure_deployment_name: "azure-deploy",
+    vertexai_region: "vertex-region",
+    vertexai_express_project_id: "vertex-project",
+    workers_ai_account_id: "workers-account",
+    vertexai_auth_mode: "express",
+    bypass_status_check: false,
+  };
+  const files = presetCodec.files(sensitive);
+  assert.doesNotMatch(
+    [...files.values()].join("\n"),
+    /reverse_proxy|proxy_password|custom_url|custom_include|custom_exclude|azure_|vertexai_region|vertexai_express|workers_ai|u:p@|proxy\.example|sk-x|sk-body|hidden_field|azure-|vertex-|workers-|example\.invalid|never-shown/,
+  );
+  assert.match(files.get("参数.yaml"), /\n  vertexai_auth_mode: express\n  bypass_status_check: false\n$/);
+  roundTrip(presetCodec, sensitive);
+  const edited = presetCodec.write(
+    sensitive,
+    "参数.yaml",
+    files
+      .get("参数.yaml")
+      .replace("温度: 1", "温度: 0.5")
+      .replace("vertexai_auth_mode: express", "vertexai_auth_mode: full"),
+  );
+  assert.deepEqual(edited, { ...sensitive, temperature: 0.5, vertexai_auth_mode: "full" });
+  assert.throws(
+    () => presetCodec.write(sensitive, "参数.yaml", "其他:\n  reverse_proxy: https://elsewhere.example\n"),
+    /不能写 reverse_proxy/,
+  );
+  assert.throws(
+    () => presetCodec.write(sensitive, "参数.yaml", "其他:\n  custom_include_headers: 'X: 1'\n"),
+    /不能写 custom_include_headers/,
+  );
+});
+
+test("yaml values still as rendered keep the stored value, even one the field would refuse", () => {
+  const seeded = { ...preset, seed: null, n: "2" };
+  assert.match(presetCodec.files(seeded).get("参数.yaml"), /\n随机种子: null\n回复数量: "2"\n/);
+  roundTrip(presetCodec, seeded);
+  const params = presetCodec.files(seeded).get("参数.yaml");
+  assert.deepEqual(presetCodec.write(seeded, "参数.yaml", params.replace("温度: 1", "温度: 0.5")), {
+    ...seeded,
+    temperature: 0.5,
+  });
+  assert.equal(
+    presetCodec.write(seeded, "参数.yaml", params.replace("随机种子: null", "随机种子: 7")).seed,
+    7,
+  );
+  assert.equal(
+    lineOf(() => presetCodec.write({ ...preset, seed: 5 }, "参数.yaml", "随机种子: null\n")),
+    1,
+  );
+  assert.equal(
+    lineOf(() => presetCodec.write(seeded, "参数.yaml", params.replace('回复数量: "2"', "回复数量: 两个"))),
+    6,
+  );
+  roundTrip(characterCodec, { ...card, creator: null, tags: ["原创", 1] });
+  // Inverted and labelled fields compare as shown: 启用: false still turns the entry off.
+  const off = worldCodec.files(book).get("灯塔.md").replace("启用: true", "启用: false");
+  assert.equal(worldCodec.write(book, "灯塔.md", off).entries[0].disable, true);
 });
 
 test("connection profiles and personas round-trip without secrets", () => {
@@ -432,6 +559,21 @@ test("outlines round-trip as headings with an attribute line under each", () => 
   assert.deepEqual(outlineCodec.parse(outline, "").nodes, []);
 });
 
+test("outline titles show line breaks as spaces; a heading left as rendered keeps the title", () => {
+  const titled = {
+    ...outline,
+    nodes: outline.nodes.map((n) =>
+      n.id === "a" ? { ...n, title: "相遇\n雨夜" } : n.id === "c" ? { ...n, title: "第二章\r\n终章" } : n,
+    ),
+  };
+  const text = outlineCodec.render(titled);
+  assert.match(text, /\n## 相遇 雨夜\n<!-- id: a [\s\S]*\n# 第二章 终章\n<!-- id: c /);
+  assert.deepEqual(outlineCodec.parse(titled, text), titled);
+  assert.equal(outlineCodec.render(outlineCodec.parse(titled, text)), text);
+  const renamed = outlineCodec.parse(titled, text.replace("## 相遇 雨夜", "## 重逢"));
+  assert.equal(renamed.nodes.find((n) => n.id === "a").title, "重逢");
+});
+
 test("outline edits: new headings get ids, settings stay, errors carry lines", () => {
   const text = outlineCodec.render(outline) + "\n## 新节点\n内容";
   const next = outlineCodec.parse(outline, text);
@@ -493,6 +635,28 @@ test("database edits update, insert and delete rows", () => {
     { ...table.rows[0], cells: ["艾琳娜", table.rows[0].cells[1]] },
     table.rows[2],
     { id: "", index: 0, cells: ["新人", "新备注"] },
+  ]);
+});
+
+test("a row_id that reads like a position gets one more leading backslash", () => {
+  const clash = {
+    ...table,
+    rows: [
+      { id: "#2", index: 1, cells: ["真名", ""] },
+      { id: "", index: 2, cells: ["无名", ""] },
+      { id: "\\#3", index: 3, cells: ["反斜杠", ""] },
+    ],
+  };
+  const text = tableCodec.render(clash);
+  assert.deepEqual(text.split("\n").slice(2, 5), [
+    "| \\\\#2 | 真名 |  |",
+    "| #2 | 无名 |  |",
+    "| \\\\\\\\#3 | 反斜杠 |  |",
+  ]);
+  assert.deepEqual(tableCodec.parse(clash, text), clash);
+  assert.deepEqual(tableCodec.parse(clash, text.replace("真名", "改名")).rows, [
+    { ...clash.rows[0], cells: ["改名", ""] },
+    ...clash.rows.slice(1),
   ]);
 });
 

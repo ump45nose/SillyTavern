@@ -50,11 +50,63 @@ test('limits observation to same-origin, selected POST endpoints', async () => {
 
 test('redacts credentials but keeps model parameters, text and XML intact', () => {
     assert.deepEqual(redact({ ...body, api_key: 'secret', nested: { Authorization: 'Bearer secret' },
-        custom_include_headers: 'X-Token: secret', custom_url: 'https://user:secret@example.test/v1?api_key=secret' }), {
+        custom_include_headers: 'X-Token: secret', custom_url: 'https://user:secret@example.test/v1',
+        image_url: { url: 'https://user:secret@example.test/v1?api_key=secret&size=2' } }), {
         ...body, api_key: '[redacted]', nested: { Authorization: '[redacted]' },
-        custom_include_headers: '[redacted]', custom_url: 'https://redacted:redacted@example.test/v1?api_key=%5Bredacted%5D',
+        custom_include_headers: '[redacted]', custom_url: '[redacted]',
+        image_url: { url: 'https://redacted:redacted@example.test/v1?api_key=%5Bredacted%5D&size=2' },
     });
     assert.equal(snapshot({ text: 'x'.repeat(150_000) }).truncated, true);
+});
+
+const proxied = {
+    messages: [{ role: 'user', content: '代理是 https://alice:hunter2@proxy.example/v1 吗？' }],
+    max_tokens: 300, max_completion_tokens: 300,
+    reverse_proxy: 'https://alice:hunter2@proxy.example/v1', proxy_password: 'proxy-pass-1',
+    custom_url: 'https://bob:custom-pass@custom.example/v1',
+    custom_include_headers: 'Authorization: Bearer sk-header-1', custom_include_body: 'api_key: sk-body-1',
+    custom_exclude_body: 'internal-secret-1',
+};
+const textCompletion = { prompt: '原文', max_new_tokens: 200, api_server: 'http://carol:tc-pass@127.0.0.1:5000/v1' };
+const leaked = /hunter2|proxy-pass-1|custom-pass|sk-header-1|sk-body-1|internal-secret-1|tc-pass|alice|bob|carol/;
+
+test('proxy passwords, custom headers and URL user info stay out of records and exports', async () => {
+    const listeners = new Map();
+    const context = {
+        eventTypes: Object.fromEntries(['GENERATION_STARTED', 'WORLD_INFO_ACTIVATED', 'CHAT_COMPLETION_SETTINGS_READY',
+            'GENERATE_AFTER_DATA', 'GENERATION_ENDED'].map(x => [x, x])),
+        eventSource: {
+            on(event, fn) { (listeners.get(event) ?? listeners.set(event, []).get(event)).push(fn); },
+            removeListener(event, fn) { listeners.set(event, listeners.get(event).filter(x => x !== fn)); },
+        },
+    };
+    const emit = (name, ...args) => listeners.get(name)?.forEach(fn => fn(...args));
+    const host = { location, fetch: () => Promise.resolve(new Response()) };
+    const trace = createTrace(context, host);
+    emit('GENERATION_STARTED', 'normal', {}, false);
+    emit('WORLD_INFO_ACTIVATED', [{ uid: 1, key: ['灯塔'], keysecondary: [], content: '海边的灯塔。' }]);
+    emit('CHAT_COMPLETION_SETTINGS_READY', structuredClone(proxied));
+    await host.fetch(path, { method: 'POST', body: JSON.stringify(proxied) });
+    emit('GENERATION_ENDED');
+    emit('GENERATION_STARTED', 'normal', {}, false);
+    emit('GENERATE_AFTER_DATA', structuredClone(textCompletion), false);
+    await host.fetch('/api/backends/text-completions/generate', { method: 'POST', body: JSON.stringify(textCompletion) });
+    const [chat, text] = trace.records;
+    for (const record of trace.records) assert.doesNotMatch(JSON.stringify(record, null, 2), leaked);
+    for (const recorded of [chat.body, chat.assembled]) {
+        assert.equal(recorded.max_tokens, 300);
+        assert.equal(recorded.max_completion_tokens, 300);
+        for (const key of ['reverse_proxy', 'proxy_password', 'custom_url', 'custom_include_headers', 'custom_include_body',
+            'custom_exclude_body']) assert.equal(recorded[key], '[redacted]', key);
+        assert.equal(recorded.messages[0].content, '代理是 https://redacted:redacted@proxy.example/v1 吗？');
+    }
+    assert.deepEqual(chat.worldInfo[0].key, ['灯塔']);
+    for (const recorded of [text.body, text.assembled]) {
+        assert.equal(recorded.api_server, 'http://redacted:redacted@127.0.0.1:5000/v1');
+        assert.equal(recorded.max_new_tokens, 200);
+        assert.equal(recorded.prompt, '原文');
+    }
+    trace.destroy();
 });
 
 test('restore does not overwrite a later plugin wrapper and disables a retained observer', async () => {
