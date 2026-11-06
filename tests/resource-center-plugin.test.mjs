@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { Journal } from "../server/resource-center-link/journal.mjs";
 
 // The plugin imports the tavern's own modules from the server root, which it finds through process.cwd().
 const tavern = fs.mkdtempSync(path.join(os.tmpdir(), "rc-plugin-"));
@@ -125,5 +126,34 @@ test("the native settings save observer never throws into the tavern", async (t)
     assert.ok(fs.readdirSync(dave).some((f) => f.startsWith("state.enc.corrupt-")));
   } finally {
     await plugin.exit();
+  }
+});
+
+test("journal write failures do not fail a generation request or the shutdown", async (t) => {
+  t.mock.method(console, "warn", () => {});
+  const root = path.join(data, "erin");
+  const journal = new Journal(root);
+  journal.state.config = { url: "http://center.test", rpToken: "rp", connectorToken: "c", instanceId: "fn" };
+  journal.save();
+  globalThis.tavernUsers = async () => ["erin"];
+  await plugin.init(pluginRouter());
+  // From here on every journal write fails, as with a full disk.
+  const blocker = path.join(root, "resource-center-link", "state.enc.next");
+  fs.mkdirSync(blocker);
+  t.after(() => fs.rmSync(blocker, { recursive: true, force: true }));
+  try {
+    for (const body of [
+      { chat_completion_source: "unsupported" },
+      { chat_completion_source: "openai", model: "gpt-test", stream: false },
+    ]) {
+      const req = { path: "/generate", headers: { "x-arc-client": "2" }, user: user("erin"), body };
+      const res = nativeResponse();
+      let passed = 0;
+      assert.doesNotThrow(() => chat.stack[0](req, res, () => passed++), body.chat_completion_source);
+      assert.equal(passed, 1);
+      assert.doesNotThrow(() => res.end('{"choices":[{"message":{"content":"hi"},"finish_reason":"stop"}]}'));
+    }
+  } finally {
+    await assert.doesNotReject(plugin.exit());
   }
 });

@@ -175,7 +175,7 @@ export class Session {
       for (const k of removed) delete known[k];
     }
     this.save();
-    void this.flush();
+    this.flush().catch((e) => warn("flush", e));
   }
   async request(route, body, connector = false) {
     const c = this.s.config;
@@ -333,7 +333,11 @@ export class Session {
       }
     } catch (e) {
       this.s.error = cleanError(e);
-      this.save();
+      try {
+        this.save();
+      } catch (e) {
+        warn("journal", e);
+      }
     } finally {
       this.busy = false;
     }
@@ -478,14 +482,14 @@ export class Session {
     }
     this.observe();
     if (this.s.prepared?.job.id === id) throw new Error("原生回读尚未匹配，保存未确认");
-    void this.flush();
+    this.flush().catch((e) => warn("flush", e));
     return { saved: true };
   }
   report(event) {
     const old = this.s.calls[event.eventId];
     this.s.calls[event.eventId] = { event, revision: (old?.revision || 0) + 1, acknowledged: false };
     this.save();
-    void this.flush();
+    this.flush().catch((e) => warn("flush", e));
   }
 }
 function session(req) {
@@ -690,8 +694,7 @@ export async function init(router) {
     try {
       facts = requestFacts(req.body, s.manager(), util);
     } catch {
-      s.s.coverage = "本次请求协议尚未采集，未推测调用归属";
-      s.save();
+      s.cover("本次请求协议尚未采集，未推测调用归属");
       return next();
     }
     const rawId = String(req.headers["x-arc-request-id"] || ""),
@@ -828,7 +831,7 @@ export async function init(router) {
     for (const s of sessions.values())
       try {
         for (const f of s.finalizers?.values() || []) if (f.ended()) f.finish(true);
-        if (tick % 30 === 0) void s.flush();
+        if (tick % 30 === 0) s.flush().catch((e) => warn("flush", e));
       } catch (e) {
         warn("timer", e);
       }
@@ -839,6 +842,13 @@ export async function init(router) {
 export async function exit() {
   clearInterval(timer);
   for (const fn of detach.splice(0)) fn();
-  for (const s of sessions.values()) if (s.s.config) s.save();
+  // A rejected exit hook keeps the tavern's shutdown handler from ever reaching process.exit().
+  for (const s of sessions.values())
+    if (s.s.config)
+      try {
+        s.save();
+      } catch (e) {
+        warn("journal", e);
+      }
   sessions.clear();
 }
