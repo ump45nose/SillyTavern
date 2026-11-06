@@ -33,7 +33,7 @@ export default function Groups({ host }: { host: HostAdapter }) {
       </header>
       <Notice error={task.error} />
       <div className="wb-group-layout">
-        <aside>
+        <aside data-wb-local>
           <SearchBox value={query} onChange={setQuery} placeholder="搜索群组" />
           {groups
             .filter((g: Data) => g.name.toLowerCase().includes(query.toLowerCase()))
