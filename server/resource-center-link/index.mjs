@@ -19,6 +19,10 @@ const cleanError = (e) =>
         .replace(/\bsk-[\w-]+/g, "[凭据已隐藏]")
         .slice(0, 200);
 const warn = (where, e) => console.warn(`resource-center-link: ${where}: ${cleanError(e)}`);
+// No status means the center was not reached; these statuses describe the center rather than the entry.
+const unavailable = (e) => !e?.status || [401, 408, 429, 502, 503, 504].includes(e.status);
+const RETRY_LIMIT = 8;
+const CALL_LIMIT = 500;
 const sessions = new Map();
 const detach = [];
 let timer;
@@ -189,12 +193,18 @@ export class Session {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: AbortSignal.timeout(12000),
     });
-    const result = await response.json();
-    if (!response.ok)
-      throw Object.assign(new Error(`中心请求未完成（HTTP ${response.status}）`), {
-        status: response.status,
-      });
-    return result;
+    const failed = (message) =>
+      Object.assign(new Error(`${message}（HTTP ${response.status}）`), { status: response.status });
+    if (!response.ok) {
+      response.body?.cancel().catch(() => {});
+      throw failed("中心请求未完成");
+    }
+    try {
+      return await response.json();
+    } catch (e) {
+      if (e?.name !== "SyntaxError") throw e;
+      throw failed("中心响应无法解析");
+    }
   }
   remember(b) {
     this.s.mappings[b.nativeConnectionId] = b;
@@ -208,6 +218,7 @@ export class Session {
         const nativeId =
           q.body.nativeConnectionId || (q.kind === "legacy-save" ? q.body.profileId : undefined);
         if (nativeId && this.s.problems[nativeId]?.connection) continue;
+        if (q.retryAt > Date.now()) continue;
         try {
           let result;
           if (q.kind === "inventory") {
@@ -318,18 +329,34 @@ export class Session {
             this.s.problems[nativeId || q.eventId] = { error: cleanError(e) };
             continue;
           }
-          throw e;
+          if (unavailable(e)) throw e;
+          this.s.error = cleanError(e);
+          if (this.retry(q)) {
+            this.s.queue = this.s.queue.filter((x) => x.eventId !== q.eventId);
+            this.s.problems[nativeId || q.eventId] = { error: cleanError(e), event: q };
+          }
+          this.save();
         }
       }
       for (const [id, row] of Object.entries(this.s.calls)) {
-        if (row.acknowledged) continue;
+        if (row.acknowledged || row.retryAt > Date.now()) continue;
         const revision = row.revision;
-        const result = await this.request("/api/v2/ingest/rp-calls", { events: [row.event] });
-        if (result.acknowledgedIds?.includes(id) && this.s.calls[id]?.revision === revision) {
+        let acknowledged = false;
+        try {
+          const result = await this.request("/api/v2/ingest/rp-calls", { events: [row.event] });
+          acknowledged = !!result.acknowledgedIds?.includes(id);
+        } catch (e) {
+          if (unavailable(e)) throw e;
+        }
+        if (this.s.calls[id]?.revision !== revision) continue;
+        if (acknowledged) {
           if (row.event.result === "pending") row.acknowledged = true;
           else delete this.s.calls[id];
-          this.save();
+        } else if (this.retry(row)) {
+          delete this.s.calls[id];
+          this.s.coverage = "部分调用元数据未被中心接收，已停止重试";
         }
+        this.save();
       }
     } catch (e) {
       this.s.error = cleanError(e);
@@ -341,6 +368,12 @@ export class Session {
     } finally {
       this.busy = false;
     }
+  }
+  /** Counts a failed delivery and schedules the next one; true once the item should be given up. */
+  retry(item) {
+    item.attempts = (item.attempts || 0) + 1;
+    item.retryAt = Date.now() + Math.min(30000 * 2 ** (item.attempts - 1), 30 * 60000);
+    return item.attempts >= RETRY_LIMIT;
   }
   async refresh() {
     const result = await this.request("/api/v2/rp/connections");
@@ -488,6 +521,12 @@ export class Session {
   report(event) {
     const old = this.s.calls[event.eventId];
     this.s.calls[event.eventId] = { event, revision: (old?.revision || 0) + 1, acknowledged: false };
+    const others = Object.keys(this.s.calls).filter((id) => id !== event.eventId),
+      excess = others.length + 1 - CALL_LIMIT;
+    if (excess > 0) {
+      for (const id of others.slice(0, excess)) delete this.s.calls[id];
+      this.s.coverage = "调用元数据积压超过上限，已丢弃最早的记录";
+    }
     this.save();
     this.flush().catch((e) => warn("flush", e));
   }
