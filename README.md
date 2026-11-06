@@ -54,10 +54,14 @@
 资源中心联动是独立扩展：`resource-center-extension/` 安装到酒馆扩展目录，
 `server/resource-center-link/` 安装到 `plugins/resource-center-link/`，开启服务端插件后重启。
 支持酒馆 1.19.0 和 Node.js 22 以上，不依赖工作台。
-`npm run build:resource-center` 生成独立安装包；`npm run deploy:resource-center -- --dry` 查看本机部署目标。
+`npm run build:resource-center` 生成独立安装包（版本取自插件 `package.json`，须与扩展 `manifest.json` 一致）；
+`npm run deploy:resource-center -- --dry` 查看本机部署目标。
 扩展设置使用中心 `/api/v2/access` 签发的两种凭据：`rp`（`rpRegistration=true`）与
 `connector`（`target=sillytavern`），两者绑定同一 `sourceId/rpInstanceId/rpUserId`。
-配置及待发事件保存在酒馆用户数据目录的加密日志，保存同步不访问模型上游。
+配置、中心凭据及待发事件（含待交付的连接凭据）保存在酒馆用户数据目录的 `resource-center-link/state.enc`，保存同步不访问模型上游。
+密钥 `vault.key` 就在同一目录，加密只防误读、不防同目录泄露：酒馆的用户数据备份会把密钥连同密文一起导出；
+中心下发的 Gemini／Anthropic 凭据写入酒馆原生反代口令，明文保存在 `settings.json` 的 `proxies[].password`。
+日志无法解密时改名为 `state.enc.corrupt-<时间>` 隔离，以空状态继续，需重新配对。
 关闭页面时只补交已有事件，中心下发等待开页应用；真实调用仅上传元数据。
 工作台安装时支持归档原因联动；恢复显示不会恢复连接可用性。
 

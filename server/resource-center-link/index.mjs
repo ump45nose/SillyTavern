@@ -11,6 +11,7 @@ export const info = {
   name: "AI 资源中心联动",
   description: "原生连接双向同步、凭据交付及真实调用元数据采集",
 };
+const { version } = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const cleanError = (e) =>
   e?.status
@@ -18,6 +19,11 @@ const cleanError = (e) =>
     : String(e?.message || "操作未完成")
         .replace(/\bsk-[\w-]+/g, "[凭据已隐藏]")
         .slice(0, 200);
+const warn = (where, e) => console.warn(`resource-center-link: ${where}: ${cleanError(e)}`);
+// No status means the center was not reached; these statuses describe the center rather than the entry.
+const unavailable = (e) => !e?.status || [401, 408, 429, 502, 503, 504].includes(e.status);
+const RETRY_LIMIT = 8;
+const CALL_LIMIT = 500;
 const sessions = new Map();
 const detach = [];
 let timer;
@@ -39,12 +45,17 @@ function attach(router, handler) {
     }
   });
 }
-class Session {
+export class Session {
   constructor(dirs, user) {
     this.dirs = dirs;
     this.user = user;
     this.journal = new Journal(dirs.root);
     this.s = this.journal.state;
+    if (this.journal.quarantined) {
+      const name = path.basename(this.journal.quarantined);
+      this.s.coverage = `资源中心日志无法解密，已隔离为 ${name}，请重新配对`;
+      console.warn(`resource-center-link: journal of ${user} moved to ${name}: ${this.journal.problem}`);
+    }
     this.busy = false;
     this.active = 0;
     for (const row of Object.values(this.s.calls))
@@ -58,6 +69,15 @@ class Session {
   }
   save() {
     this.journal.save();
+  }
+  /** Coverage notes are best effort: failing to persist one must not fail the native request. */
+  cover(note) {
+    this.s.coverage = note;
+    try {
+      this.save();
+    } catch (e) {
+      warn("journal", e);
+    }
   }
   manager() {
     return new host.secrets.SecretManager(this.dirs);
@@ -160,7 +180,7 @@ class Session {
       for (const k of removed) delete known[k];
     }
     this.save();
-    void this.flush();
+    this.flush().catch((e) => warn("flush", e));
   }
   async request(route, body, connector = false) {
     const c = this.s.config;
@@ -174,12 +194,18 @@ class Session {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: AbortSignal.timeout(12000),
     });
-    const result = await response.json();
-    if (!response.ok)
-      throw Object.assign(new Error(`中心请求未完成（HTTP ${response.status}）`), {
-        status: response.status,
-      });
-    return result;
+    const failed = (message) =>
+      Object.assign(new Error(`${message}（HTTP ${response.status}）`), { status: response.status });
+    if (!response.ok) {
+      response.body?.cancel().catch(() => {});
+      throw failed("中心请求未完成");
+    }
+    try {
+      return await response.json();
+    } catch (e) {
+      if (e?.name !== "SyntaxError") throw e;
+      throw failed("中心响应无法解析");
+    }
   }
   remember(b) {
     this.s.mappings[b.nativeConnectionId] = b;
@@ -193,6 +219,7 @@ class Session {
         const nativeId =
           q.body.nativeConnectionId || (q.kind === "legacy-save" ? q.body.profileId : undefined);
         if (nativeId && this.s.problems[nativeId]?.connection) continue;
+        if (q.retryAt > Date.now()) continue;
         try {
           let result;
           if (q.kind === "inventory") {
@@ -303,25 +330,51 @@ class Session {
             this.s.problems[nativeId || q.eventId] = { error: cleanError(e) };
             continue;
           }
-          throw e;
-        }
-      }
-      for (const [id, row] of Object.entries(this.s.calls)) {
-        if (row.acknowledged) continue;
-        const revision = row.revision;
-        const result = await this.request("/api/v2/ingest/rp-calls", { events: [row.event] });
-        if (result.acknowledgedIds?.includes(id) && this.s.calls[id]?.revision === revision) {
-          if (row.event.result === "pending") row.acknowledged = true;
-          else delete this.s.calls[id];
+          if (unavailable(e)) throw e;
+          this.s.error = cleanError(e);
+          if (this.retry(q)) {
+            this.s.queue = this.s.queue.filter((x) => x.eventId !== q.eventId);
+            this.s.problems[nativeId || q.eventId] = { error: cleanError(e), event: q };
+          }
           this.save();
         }
       }
+      for (const [id, row] of Object.entries(this.s.calls)) {
+        if (row.acknowledged || row.retryAt > Date.now()) continue;
+        const revision = row.revision;
+        let acknowledged = false;
+        try {
+          const result = await this.request("/api/v2/ingest/rp-calls", { events: [row.event] });
+          acknowledged = !!result.acknowledgedIds?.includes(id);
+        } catch (e) {
+          if (unavailable(e)) throw e;
+        }
+        if (this.s.calls[id]?.revision !== revision) continue;
+        if (acknowledged) {
+          if (row.event.result === "pending") row.acknowledged = true;
+          else delete this.s.calls[id];
+        } else if (this.retry(row)) {
+          delete this.s.calls[id];
+          this.s.coverage = "部分调用元数据未被中心接收，已停止重试";
+        }
+        this.save();
+      }
     } catch (e) {
       this.s.error = cleanError(e);
-      this.save();
+      try {
+        this.save();
+      } catch (e) {
+        warn("journal", e);
+      }
     } finally {
       this.busy = false;
     }
+  }
+  /** Counts a failed delivery and schedules the next one; true once the item should be given up. */
+  retry(item) {
+    item.attempts = (item.attempts || 0) + 1;
+    item.retryAt = Date.now() + Math.min(30000 * 2 ** (item.attempts - 1), 30 * 60000);
+    return item.attempts >= RETRY_LIMIT;
   }
   async refresh() {
     const result = await this.request("/api/v2/rp/connections");
@@ -368,7 +421,7 @@ class Session {
   }
   status() {
     return {
-      version: "2.0.0",
+      version,
       configured: !!this.s.config,
       url: this.s.config?.url || "",
       instanceId: this.s.config?.instanceId || "",
@@ -463,14 +516,20 @@ class Session {
     }
     this.observe();
     if (this.s.prepared?.job.id === id) throw new Error("原生回读尚未匹配，保存未确认");
-    void this.flush();
+    this.flush().catch((e) => warn("flush", e));
     return { saved: true };
   }
   report(event) {
     const old = this.s.calls[event.eventId];
     this.s.calls[event.eventId] = { event, revision: (old?.revision || 0) + 1, acknowledged: false };
+    const others = Object.keys(this.s.calls).filter((id) => id !== event.eventId),
+      excess = others.length + 1 - CALL_LIMIT;
+    if (excess > 0) {
+      for (const id of others.slice(0, excess)) delete this.s.calls[id];
+      this.s.coverage = "调用元数据积压超过上限，已丢弃最早的记录";
+    }
     this.save();
-    void this.flush();
+    this.flush().catch((e) => warn("flush", e));
   }
 }
 function session(req) {
@@ -478,6 +537,14 @@ function session(req) {
   const user = req.user.profile.handle;
   if (!sessions.has(user)) sessions.set(user, new Session(req.user.directories, user));
   return sessions.get(user);
+}
+/** Observers run inside native requests and Node callbacks, where a throw fails the request or the process. */
+function trySession(req) {
+  try {
+    return session(req);
+  } catch (e) {
+    warn("journal", e);
+  }
 }
 export async function init(router) {
   const load = (p) => import(pathToFileURL(path.join(serverRoot(), p)).href);
@@ -526,6 +593,8 @@ export async function init(router) {
         s.s.config = before;
         throw e;
       }
+      // The only note an unpaired journal carries is the quarantine notice asking for this pairing.
+      if (!before) s.s.coverage = null;
       s.save();
       await s.refresh();
       s.observe();
@@ -635,31 +704,39 @@ export async function init(router) {
       return { acknowledgedIds };
     }),
   );
+  // Hooks go into the tavern's own routers, which outlive a failed init; everything that can fail runs first.
+  for (const user of await users.getAllUserHandles()) {
+    const dirs = users.getUserDirectories(user);
+    if (fs.existsSync(path.join(dirs.root, "resource-center-link", "state.enc")))
+      try {
+        sessions.set(user, new Session(dirs, user));
+      } catch (e) {
+        warn(`journal of ${user}`, e);
+      }
+  }
   attach(settings.router, (req, res, next) => {
     if (req.path === "/save" && req.user)
       res.once("finish", () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try {
-            session(req).observe();
-          } catch {
-            const s = session(req);
-            s.s.coverage = "原生保存后未能采集连接快照";
-            s.save();
-          }
+        if (res.statusCode < 200 || res.statusCode >= 300) return;
+        const s = trySession(req);
+        try {
+          s?.observe();
+        } catch (e) {
+          warn("native save observer", e);
+          s.cover("原生保存后未能采集连接快照");
         }
       });
     next();
   });
   attach(chat.router, (req, res, next) => {
     if (req.path !== "/generate" || req.headers["x-arc-client"] !== "2" || !req.user) return next();
-    const s = session(req);
-    if (!s.s.config) return next();
+    const s = trySession(req);
+    if (!s?.s.config) return next();
     let facts;
     try {
       facts = requestFacts(req.body, s.manager(), util);
     } catch {
-      s.s.coverage = "本次请求协议尚未采集，未推测调用归属";
-      s.save();
+      s.cover("本次请求协议尚未采集，未推测调用归属");
       return next();
     }
     const rawId = String(req.headers["x-arc-request-id"] || ""),
@@ -702,39 +779,40 @@ export async function init(router) {
       feed(chunk);
       return Reflect.apply(end, this, [chunk, ...args]);
     };
+    // Called from response events and timers: it must not throw.
     function finish(closed) {
       if (ended) return;
       ended = true;
       s.finalizers?.delete(eventId);
       s.active--;
-      const extra = parser.end(event.isStream),
-        statusCode = res.statusCode;
-      const cancelled = s.cancelled?.has(eventId);
-      s.cancelled?.delete(eventId);
-      const result =
-        cancelled && !parser.terminal
-          ? "cancelled"
-          : statusCode >= 400 || parser.error
-            ? "failure"
-            : parser.terminal
-              ? "success"
-              : cancelled
-                ? "cancelled"
-                : "unknown";
-      const errorType =
-        parser.errorType ||
-        (statusCode === 401 || statusCode === 403
-          ? "key"
-          : statusCode === 429
-            ? "rate"
-            : statusCode >= 500
-              ? "upstream"
-              : statusCode >= 400
-                ? "input"
-                : result === "cancelled"
-                  ? "cancelled"
-                  : undefined);
       try {
+        const extra = parser.end(event.isStream),
+          statusCode = res.statusCode;
+        const cancelled = s.cancelled?.has(eventId);
+        s.cancelled?.delete(eventId);
+        const result =
+          cancelled && !parser.terminal
+            ? "cancelled"
+            : statusCode >= 400 || parser.error
+              ? "failure"
+              : parser.terminal
+                ? "success"
+                : cancelled
+                  ? "cancelled"
+                  : "unknown";
+        const errorType =
+          parser.errorType ||
+          (statusCode === 401 || statusCode === 403
+            ? "key"
+            : statusCode === 429
+              ? "rate"
+              : statusCode >= 500
+                ? "upstream"
+                : statusCode >= 400
+                  ? "input"
+                  : result === "cancelled"
+                    ? "cancelled"
+                    : undefined);
         s.report({
           ...event,
           ...extra,
@@ -757,8 +835,9 @@ export async function init(router) {
               }
             : {}),
         });
-      } catch {
+      } catch (e) {
         s.s.coverage = "本次调用终态未能写入队列";
+        warn("generation observer", e);
       }
     }
     res.once("finish", () => {
@@ -788,18 +867,16 @@ export async function init(router) {
     });
     next();
   });
-  for (const user of await users.getAllUserHandles()) {
-    const dirs = users.getUserDirectories(user);
-    if (fs.existsSync(path.join(dirs.root, "resource-center-link", "state.enc")))
-      sessions.set(user, new Session(dirs, user));
-  }
   let tick = 0;
   timer = setInterval(() => {
     tick++;
-    for (const s of sessions.values()) {
-      for (const f of s.finalizers?.values() || []) if (f.ended()) f.finish(true);
-      if (tick % 30 === 0) void s.flush();
-    }
+    for (const s of sessions.values())
+      try {
+        for (const f of s.finalizers?.values() || []) if (f.ended()) f.finish(true);
+        if (tick % 30 === 0) s.flush().catch((e) => warn("flush", e));
+      } catch (e) {
+        warn("timer", e);
+      }
   }, 1000);
   timer.unref();
   console.log("resource-center-link: native save and generation observers ready");
@@ -807,6 +884,13 @@ export async function init(router) {
 export async function exit() {
   clearInterval(timer);
   for (const fn of detach.splice(0)) fn();
-  for (const s of sessions.values()) if (s.s.config) s.save();
+  // A rejected exit hook keeps the tavern's shutdown handler from ever reaching process.exit().
+  for (const s of sessions.values())
+    if (s.s.config)
+      try {
+        s.save();
+      } catch (e) {
+        warn("journal", e);
+      }
   sessions.clear();
 }
