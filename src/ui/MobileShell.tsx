@@ -95,6 +95,9 @@ export function MobileShell({
     items = document.getElementById("nonQRFormItems")!;
   const latest = useRef({ left, panel, editor, sheet });
   latest.current = { left, panel, editor, sheet };
+  // The bus handlers are bound once; closeDrawers checks the leave guards against the current layout.
+  const closeDrawersRef = useRef(closeDrawers);
+  closeDrawersRef.current = closeDrawers;
   const close = () => {
       setSheet(null);
       setChooser(null);
@@ -150,7 +153,7 @@ export function MobileShell({
     const image = () => {
       setSheet(null);
       setEditor(false);
-      closeDrawers();
+      closeDrawersRef.current();
     };
     const off = [
       bus.on("image-compose", image),

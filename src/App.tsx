@@ -364,7 +364,7 @@ export default function App({
       }),
     [],
   );
-  useEffect(() => bus.on("image-input", () => dispatch({ type: "image-input" })), []);
+  useEffect(() => bus.on("image-input", () => live.current.act({ type: "image-input" })), []);
   useEffect(
     () =>
       bus.on("layout-menu", (open) => {
