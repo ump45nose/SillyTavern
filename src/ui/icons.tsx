@@ -45,7 +45,6 @@ const thin = (name: string, Base: React.ComponentType<IconProps>) => {
 
 const paths = {
   aihelp: "M10 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM3 21a7 7 0 0 1 9.5-6.5M17.5 13.5l3 3-5 5h-3v-3z",
-  arrowR: "M5 12h14M13 6l6 6-6 6",
   book: "M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z",
   check: "M5 12.5l4.5 4.5L19 7.5",
   clip: "M20.5 11.5l-8.2 8.2a5 5 0 0 1-7-7l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8",
@@ -112,7 +111,6 @@ const paths = {
 } as const;
 
 export const Activity = drawn("trace", paths.trace);
-export const ArrowRight = drawn("arrowR", paths.arrowR);
 export const ArrowUp = drawn("up", paths.up);
 export const BookMarked = drawn("world", paths.world);
 export const BookOpen = drawn("book", paths.book);

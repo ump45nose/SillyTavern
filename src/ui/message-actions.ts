@@ -22,7 +22,7 @@ import {
   WandSparkles,
   X,
 } from "./icons";
-import { nativeGlyphs } from "./NativeGlyph";
+import { glyphOf } from "./glyphs";
 
 /** One description and native target per action, shared by reading, RP and phone menus. */
 export const messageActions = {
@@ -78,7 +78,7 @@ export function describeMessageAction(control: HTMLElement) {
     };
   return {
     id: undefined,
-    icon: [...control.classList].map((name) => nativeGlyphs[name]).find(Boolean) || WandSparkles,
+    icon: glyphOf(control.classList) || WandSparkles,
     label: control.getAttribute("aria-label") || control.title || control.textContent?.trim() || "扩展操作",
     mutates: true,
   };

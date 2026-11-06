@@ -4,7 +4,7 @@ import type { HostAdapter } from "../host/adapter";
 import { Select } from "../ui/Select";
 import { HostControl, type FormControl } from "../ui/HostControl";
 import { Notice, Field } from "../ui/common";
-import { nativeGlyphs } from "../ui/NativeGlyph";
+import { glyphOf } from "../ui/glyphs";
 import type { LucideIcon } from "../ui/icons";
 type Section = { label: string; selectors: string[] };
 export const nativePages: Record<string, { id: string; sections: Section[] }> = {
@@ -232,7 +232,7 @@ export default function NativeSettings({
             node.closest('.wb-settings-native-group[data-group="扩展设置"]')
           )
             continue;
-          const Icon = Object.entries(nativeGlyphs).find(([name]) => node.classList.contains(name))?.[1];
+          const Icon = glyphOf(node.classList);
           if (!Icon) continue;
           const slot = document.createElement("span");
           slot.className = "wb-component-glyph";

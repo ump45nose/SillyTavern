@@ -1,20 +1,8 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
-import {
-  Copy,
-  Download,
-  KeyRound,
-  PencilLine,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  Save,
-  Settings,
-  Trash2,
-  Upload,
-  Volume2,
-} from "../ui/icons";
+import { Settings } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import { Field, Notice } from "../ui/common";
+import { actionGlyphs, glyphFor } from "../ui/glyphs";
 import { HostControl, type FormControl } from "../ui/HostControl";
 import { Fold } from "../ui/ResourceControls";
 import { nativePages } from "./NativeSettings";
@@ -61,29 +49,7 @@ function labelOf(n: HTMLElement) {
 }
 function iconOf(n: HTMLElement) {
   const s = (n.id + " " + n.className + " " + n.title + " " + n.dataset.action).toLowerCase();
-  return /delete|trash|remove/.test(s)
-    ? Trash2
-    : /import|upload/.test(s)
-      ? Upload
-      : /export|download/.test(s)
-        ? Download
-        : /new|create|add/.test(s)
-          ? Plus
-          : /refresh|update/.test(s)
-            ? RefreshCw
-            : /restore|reset/.test(s)
-              ? RotateCcw
-              : /copy|duplicate/.test(s)
-                ? Copy
-                : /save/.test(s)
-                  ? Save
-                  : /rename|edit/.test(s)
-                    ? PencilLine
-                    : /key|secret/.test(s)
-                      ? KeyRound
-                      : /audio|sound/.test(s)
-                        ? Volume2
-                        : Settings;
+  return glyphFor(s, actionGlyphs, Settings);
 }
 function applicable(n: HTMLElement, root: HTMLElement) {
   for (let p: HTMLElement | null = n; p && p !== root; p = p.parentElement) {
