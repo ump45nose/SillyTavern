@@ -988,20 +988,6 @@
     box-shadow: none !important;
     background: transparent !important;
   }
-  .wb-host-widget {
-    padding: 7px 10px;
-    border: 1px solid var(--wb-line);
-    border-radius: 7px;
-    background: var(--wb-surface);
-    min-height: 39px;
-    display: flex;
-    align-items: center;
-  }
-  .wb-host-widget toolcool-color-picker {
-    --button-width: 20px;
-    --button-height: 20px;
-    --button-border-radius: 50%;
-  }
   .wb-group-layout > aside {
     position: sticky;
     top: 0;
