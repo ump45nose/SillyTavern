@@ -4,7 +4,6 @@ import { mergeEdits, sameData, validatePreset } from "./model";
 import { changedCells } from "./database";
 import type { SyncTable } from "../sync/database";
 import { ctx } from "./internals";
-import { addonManager } from "../addons/runtime";
 
 const BASE = "/api/plugins/workbench-sync";
 
@@ -53,9 +52,17 @@ export class SyncRelay {
   private reported = "";
   private reporting: Promise<void> = Promise.resolve();
   private unsubscribe: () => void;
+  /** Writes an outline into the open chat; registered by the add-on manager, which owns outlines. */
+  private writeOutline: ((draft: Data) => Promise<void>) | null = null;
   constructor(private host: HostAdapter) {
     void this.probe();
     this.unsubscribe = host.database.subscribe(() => void this.report());
+  }
+  handleOutline(write: (draft: Data) => Promise<void>) {
+    this.writeOutline = write;
+    return () => {
+      if (this.writeOutline === write) this.writeOutline = null;
+    };
   }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -194,14 +201,8 @@ export class SyncRelay {
   private async outline(id: string, draft: Data): Promise<Reply> {
     const { avatar, group, chat } = JSON.parse(id);
     if (!this.isOpen(avatar, group, chat)) return { status: "skip" };
-    const manager = addonManager(this.host),
-      runtime = manager.get("outline");
-    // A loaded outline holds its data in memory and saves it on the next change, so it takes the write.
-    if (runtime) await runtime.action("import", draft, "replace");
-    else {
-      const api = manager.api("outline");
-      await api.saveMetadata(draft, api.snapshot().chatKey);
-    }
+    if (!this.writeOutline) return { status: "error", message: "工作台界面尚未就绪，大纲未写入。" };
+    await this.writeOutline(draft);
     return { status: "done" };
   }
   /**

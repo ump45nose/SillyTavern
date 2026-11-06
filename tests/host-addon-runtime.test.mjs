@@ -48,15 +48,18 @@ await writeFile(directory + "/runtime.mjs", outputFiles[0].text);
 const { addonManager, disposeAddons } = await import(directory + "/runtime.mjs");
 
 const notify = new Set();
+const outlineWriters = new Set();
 const host = {
   prefs: () => ({ addons: {} }),
   subscribe: (fn) => (notify.add(fn), () => notify.delete(fn)),
   report: (error) => assert.fail(error),
+  sync: { handleOutline: (write) => (outlineWriters.add(write), () => outlineWriters.delete(write)) },
 };
 const prompt = () => st.extensionPrompts.noval_outline;
 
 test("the outline prompt comes back when a reload or branch empties SillyTavern's prompt table", () => {
   addonManager(host);
+  assert.equal(outlineWriters.size, 1, "the manager takes IDE outline writes for the open chat");
   assert.equal(prompt().depth, 2);
   assert.match(prompt().value, /当前节点 · 相遇/);
   const injected = prompt().value;
@@ -77,4 +80,5 @@ test("the outline prompt comes back when a reload or branch empties SillyTavern'
   assert.equal(prompt().depth, 5);
   disposeAddons(host);
   assert.equal(prompt().value, "");
+  assert.equal(outlineWriters.size, 0);
 });

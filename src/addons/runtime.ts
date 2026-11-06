@@ -60,6 +60,18 @@ export class AddonManager {
           }
       }),
     );
+    // IDE edits to the open chat's outline arrive through the sync relay. A loaded outline holds its
+    // data in memory and saves it on the next change, so it takes the write.
+    this.cleanups.push(
+      host.sync.handleOutline(async (draft) => {
+        const runtime = this.get("outline");
+        if (runtime) await runtime.action("import", draft, "replace");
+        else {
+          const api = this.api("outline");
+          await api.saveMetadata(draft, api.snapshot().chatKey);
+        }
+      }),
+    );
     this.cleanups.push(
       this.bridge.onReply((reply) => {
         const api = this.api("image-gen"),
