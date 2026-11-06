@@ -54,13 +54,14 @@ export function renderYaml(data: Data) {
 
 /** The YAML header between `---` lines and the body after it, which is kept byte for byte. */
 export function splitFront(text: string): { yaml: Yaml; body: string } {
-  text = text.replace(/\r\n/g, "\n");
-  if (!text.startsWith("---\n")) return { yaml: parseYaml(""), body: text };
-  const end = text.indexOf("\n---\n", 3),
-    tail = text.endsWith("\n---") ? text.length - 4 : -1,
-    close = end >= 0 ? end : tail;
-  if (close < 0) throw new SyncError("frontmatter 缺少结束的 ---。", 1);
-  return { yaml: parseYaml(text.slice(4, close + 1), 1), body: text.slice(close + 5) };
+  if (!/^---\r?\n/.test(text)) return { yaml: parseYaml(""), body: text };
+  // An empty header's closing line shares the opening line's break.
+  const close = /\r?\n---(?:\r?\n|$)/g;
+  close.lastIndex = 3;
+  const end = close.exec(text);
+  if (!end) throw new SyncError("frontmatter 缺少结束的 ---。", 1);
+  const header = text.slice(0, end.index).replace(/\r\n/g, "\n");
+  return { yaml: parseYaml(header.slice(4) + "\n", 1), body: text.slice(end.index + end[0].length) };
 }
 
 export function joinFront(data: Data, body: string) {

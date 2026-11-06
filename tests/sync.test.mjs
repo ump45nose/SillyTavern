@@ -28,6 +28,7 @@ const {
   personaNames,
   outlineCodec,
   tableCodec,
+  splitFront,
   SyncError,
 } = sync;
 
@@ -145,6 +146,42 @@ test("world entry edits keep unlisted fields; new files create entries; uid coll
   assert.equal(Object.keys(worldCodec.remove(book, "条目 1.md").entries).length, 3);
   assert.equal(worldCodec.rename(book, "灯塔.md", "海灯.md").entries[0].comment, "海灯");
   assert.throws(() => worldCodec.rename(book, "灯塔.md", "条目 1.md"), SyncError);
+});
+
+test("front matter files keep the body's line breaks; only the header is normalized", () => {
+  const crlf = { ...book, entries: { ...book.entries, 0: entry(0, { content: "第一行\r\n第二行\r\n" }) } };
+  roundTrip(worldCodec, crlf);
+  // An editor that saves the whole file with CRLF: the header still reads, the body is kept as sent.
+  const text = worldCodec.files(crlf).get("灯塔.md").replace(/\r?\n/g, "\r\n");
+  const written = worldCodec.write(crlf, "灯塔.md", text.replace("顺序: 100", "顺序: 7"));
+  assert.deepEqual([written.entries[0].order, written.entries[0].content], [7, "第一行\r\n第二行\r\n"]);
+  assert.equal(
+    lineOf(() => worldCodec.write(book, "灯塔.md", "---\r\nuid: 0\r\n顺序: 高\r\n---\r\n")),
+    3,
+  );
+  assert.deepEqual(
+    [
+      splitFront("---\r\n---\r\n正文\r\n"),
+      splitFront("---\r\nuid: 1\r\n---"),
+      splitFront("---\nuid: 1\n---\n\r\n"),
+      splitFront("正文\r\n"),
+    ].map(({ yaml, body }) => [yaml.data, body]),
+    [
+      [{}, "正文\r\n"],
+      [{ uid: 1 }, ""],
+      [{ uid: 1 }, "\r\n"],
+      [{}, "正文\r\n"],
+    ],
+  );
+  roundTrip(presetCodec, {
+    ...preset,
+    prompts: preset.prompts.map((p) => (p.identifier === "x1" ? { ...p, content: "短句。\r\n再一句。" } : p)),
+  });
+  const persona = { name: "旅人", description: "一个旅人。\r\n来自远方。", position: 0, depth: 2, role: 0 };
+  assert.deepEqual(
+    personaCodec.parse(persona, "user.png", "旅人", false, personaCodec.render(persona, "user.png", false)),
+    persona,
+  );
 });
 
 const card = {
@@ -335,7 +372,10 @@ test("SillyTavern's sensitive preset fields stay out of the files and keep their
   const edited = presetCodec.write(
     sensitive,
     "参数.yaml",
-    files.get("参数.yaml").replace("温度: 1", "温度: 0.5").replace("vertexai_auth_mode: express", "vertexai_auth_mode: full"),
+    files
+      .get("参数.yaml")
+      .replace("温度: 1", "温度: 0.5")
+      .replace("vertexai_auth_mode: express", "vertexai_auth_mode: full"),
   );
   assert.deepEqual(edited, { ...sensitive, temperature: 0.5, vertexai_auth_mode: "full" });
   assert.throws(
