@@ -239,7 +239,7 @@ export class AddonBridge {
         chatName: host.snapshot().chatName,
         busy: host.snapshot().busy,
       }),
-      exportSnapshot: () => host.exportSnapshot(id === "record-export" ? "raw" : "reading"),
+      exportSnapshot: () => host.exportSnapshot("reading"),
       download: (blob: Blob, filename: string) => host.download(blob, filename),
       jump: (n: number) => host.jump(n),
       exportChat: (name: string) => host.exportChat(name),

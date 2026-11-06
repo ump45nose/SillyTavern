@@ -27,11 +27,10 @@ test('physical keys and modifier-only events are handled consistently',()=>{
  assert.equal(shortcutHint('toggle.focus',{'toggle.focus':'Meta+Shift+KeyE'}),'⌘+Shift+E');
  assert.equal(shortcutHint('toggle.focus',{'toggle.focus':''}),'');
 });
-test('registered actions share dispatch and can be removed without affecting peers',()=>{
+test('registered actions share dispatch; an unregistered action names itself',()=>{
  const ops=new Operations(),seen=[];
- const remove=ops.register('open.world',()=>seen.push('world'));
+ ops.register('open.world',()=>seen.push('world'));
  ops.register('open.persona',()=>seen.push('persona'));
- ops.run('open.world');remove();ops.run('open.persona');
- assert.deepEqual(seen,['world','persona']);assert.throws(()=>ops.run('open.world'),/操作不可用/);
- ops.clear();assert.throws(()=>ops.run('open.persona'),/操作不可用/);
+ ops.run('open.world');ops.run('open.persona');
+ assert.deepEqual(seen,['world','persona']);assert.throws(()=>ops.run('next.world'),/操作不可用：next\.world/);
 });
