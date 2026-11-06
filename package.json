@@ -18,7 +18,7 @@
     "regression": "node scripts/verify-all.mjs",
     "regression:compare": "node scripts/verify-compare.mjs",
     "benchmark": "node scripts/benchmark.mjs",
-    "check": "npm run typecheck && tsc --noEmit -p server/workbench-sync && tsc --noEmit -p ide/vscode && node --check extension/trace.js && node --check extension/startup.js && for f in perf-extension/*.js perf-extension/*/*.js; do node --check \"$f\" || exit 1; done && node --check fixtures/mock-model.mjs",
+    "check": "npm run typecheck && tsc --noEmit -p server/workbench-sync && tsc --noEmit -p ide/vscode && for f in extension/*.js perf-extension/*.js perf-extension/*/*.js resource-center-extension/*.js server/resource-center-link/*.mjs fixtures/*.mjs scripts/*.mjs scripts/*/*.mjs deploy.mjs; do node --check \"$f\" || exit 1; done",
     "build": "node scripts/build.mjs && node scripts/build-sync.mjs",
     "typecheck": "tsc --noEmit",
     "verify:workbench": "node scripts/verify-workbench.mjs",

@@ -97,7 +97,7 @@ npm run deploy -- --no-restart                # 插件更新但不重启（下�
 
 
 ```bash
-npm run check              # TypeScript、观察器与测试模型语法
+npm run check              # TypeScript，以及扩展、服务端插件、脚本与测试模型的语法
 npm test                   # 保存冲突 / 数据保留 / Trace 单元测试
 npm run verify             # 原生生成、助手、回退、停用与手机挂载回归
 npm run verify:workbench    # 工作台配置、编辑、布局与 Trace
