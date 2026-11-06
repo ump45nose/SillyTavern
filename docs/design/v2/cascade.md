@@ -60,7 +60,27 @@ B 阶段把这些规则原样复制到 `wb.legacy` 层的**最前面**，不单�
 | `b120d53` | 删除 26 个无人使用的类的规则：58 个选择器、54 条规则。只删 `:is()` 中失效的参数，保留选择器权重 | 计算样式一致 |
 | `16186e9` | `tokens.css`：颜色、字号、间距、圆角、控件高度、阴影、动效、层级、布局尺寸各成阶梯；先读 `--wb-theme-*`；预留暗色；旧变量名改为别名 | 计算样式一致；主题钩子和暗色变量实测生效 |
 
-新增的验收命令是 `npm run verify:styles`：构建、采集 30 个状态的计算样式，再与 0.4 基线对比，有任何差异就失败。
+新增的验收命令是 `npm run verify:styles`：构建，采集 `scripts/visual/states.mjs` 里全部状态的计算样式，再与基线对比，有任何差异就失败。B 阶段时是 30 个状态、以 0.4 为基线；现在是 86 个状态（桌面 52、手机 34），默认基线是 `artifacts/baseline-c6/computed`（C7、C6 先后更换，见 [C 阶段记录](architecture.md)），可用 `WB_STYLE_BASELINE` 指定其他目录。
+
+### 在新机器上建立基线
+
+`artifacts/` 不进入 Git，新机器上没有基线目录，`verify:styles` 会在比对时报错。visual 实例（32014）只由本地运行时提供（compose 里没有）。先在要对照的提交上采一份基线：
+
+```bash
+npm run build                                 # 播种要挂载当前构建
+node scripts/local-runtime.mjs reset-visual   # 重建并启动 visual 实例，缺上游或 .env 时先准备
+npm run visual:seed                           # 写入确定性的合成数据
+git switch --detach <基线提交>                 # 通常是改动前的提交；先提交或暂存改动
+npm run build
+node scripts/visual/computed.mjs snap artifacts/baseline-c6/computed
+git switch -                                  # 回到当前提交
+npm run verify:styles                         # 构建、采样到 artifacts/visual/check，再与基线比对
+```
+
+- snap 使用基线提交里的 `states.mjs`：基线有、当前没有的状态记为 MISS；当前新增的状态不参与比对。
+- 快照放在别的目录时，用 `WB_STYLE_BASELINE=<目录> npm run verify:styles` 比对。
+- 任一状态采样失败时 snap 以 1 退出，`verify:styles` 不会进入比对；需要时单独运行 `node scripts/visual/computed.mjs diff <基线目录> artifacts/visual/check`。
+- 验证会话总是加载运行脚本那份检出的 `extension/`，所以也可以在临时 worktree 里构建并 snap，不切换当前检出；worktree 需要自己的 `.env` 和 `node_modules`。
 
 ### 对原定验收标准的调整
 
