@@ -1,8 +1,9 @@
 /*
- * Native bridge: the only unlayered workbench stylesheet.
- * Restyles SillyTavern's own DOM (#sheld, #chat, #send_form, leased settings) in place, so it must
- * compete with native unlayered rules; this is the only place where !important is allowed.
- * Everything inside workbench UI lives in @layer and is shielded by the isolation rule at the end.
+ * Native bridge: the main unlayered workbench stylesheet. The only other unlayered rules are those outside
+ * the @layer block in components/message-actions.css and components/image-insertion.css.
+ * All of them restyle SillyTavern's own DOM (#sheld, #chat, #send_form, leased settings) in place, so they
+ * must compete with native unlayered rules; !important is allowed only in these unlayered rules.
+ * Everything inside workbench UI lives in @layer and is shielded by the isolation rule near the end.
  */
 
 /* ── from style.css ── */

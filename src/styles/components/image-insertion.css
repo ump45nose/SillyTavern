@@ -1,4 +1,5 @@
-/* The insertion gap belongs to its native floor; media keep SillyTavern's rendering. */
+/* The insertion gap belongs to its native floor; media keep SillyTavern's rendering. The #chat rules
+   stay unlayered, like native-bridge.css, to compete with native unlayered rules. */
 body.wb-active #chat .wb-image-insert-slot {
   display: flex;
   justify-content: center;

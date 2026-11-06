@@ -86,7 +86,8 @@ npm run verify:styles                         # 构建、采样到 artifacts/vis
 
 - **`!important` 总数**：从 675 降到 741。增加的部分来自分类不确定、两边各放一份的规则。原定「≤ 50 且只出现在 bridge」做不到零变化：实测把分层内的 230 处全部去掉后，30 个状态全都出现差异，说明它们在解决旧规则之间的冲突，要逐屏重写才能去掉。调整后的标准：
   - 新的 `wb.base`、`wb.components`、`wb.layouts`、`wb.modes` 层里禁止出现 `!important`；
-  - `legacy` 和 `bridge` 冻结成存量，在 E 阶段逐屏迁移时清零或收缩；
+  - 不分层的只有原生桥接规则，共三处：`native-bridge.css`，以及 `components/message-actions.css`、`components/image-insertion.css` 中 `@layer` 块之外的 `#chat` 楼层规则（它们要和原生的不分层样式竞争，随功能留在各自文件里）；除 `legacy` 存量外，`!important` 只允许出现在这些不分层规则里；
+  - `legacy` 和 `native-bridge.css` 冻结成存量，在 E 阶段逐屏迁移时清零或收缩；
   - 每次迁移都报告数量变化。
 - **体积**：gzip 后 38.1 KB → 40.6 KB，主要来自 `native-defaults.css` 和两边各放一份的规则。旧样式会随 E 阶段的迁移整块删除，体积在那时下降。
 - **CSS 按需加载（B4）**：推迟到 E 阶段（C5 时重新评估后决定）。RP、PWA 的样式目前都在 `wb.legacy` 层里，同层规则在权重相同时按出现顺序决胜；改成按需注入会改变它们和其余旧规则的先后，无法保证计算样式一致。这些旧样式在 E 阶段逐屏重写时整块替换，届时新样式按组件分文件，再按模式拆包，不再受顺序影响。
