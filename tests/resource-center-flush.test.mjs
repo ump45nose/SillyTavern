@@ -66,6 +66,94 @@ const call = (eventId, result = "success") => ({
 });
 const queued = (s) => s.s.queue.map((q) => q.eventId);
 
+test("an accepted save rebases successors of the same lineage and follows up the credential", async (t) => {
+  const s = configured(t);
+  s.s.mappings.X = {
+    nativeConnectionId: "X",
+    version: 1,
+    channelVersion: 10,
+    credentialFingerprint: "fp-center",
+  };
+  s.s.queue.push(
+    save("e1", "X", [10, 1], { credential: "local-secret" }),
+    save("e2", "X", [10, 1]),
+    save("e3", "X", [7, 1]),
+  );
+  let version = 1,
+    channel = 10;
+  const log = serve(() => ({
+    state: "accepted",
+    connection: {
+      nativeConnectionId: "X",
+      version: ++version,
+      channelVersion: ++channel,
+      credentialFingerprint: "fp-center",
+    },
+  }));
+  await s.flush();
+  assert.deepEqual(
+    log.map(({ route, body }) => [route, body.baseChannelVersion, body.baseBindingVersion, body.credential]),
+    [
+      ["/api/v2/rp/saves", 10, 1, undefined],
+      ["/api/v2/rp/saves", 11, 2, undefined],
+      ["/api/v2/rp/saves", 7, 1, undefined],
+      ["/api/v2/rp/credentials", 12, 3, "local-secret"],
+    ],
+  );
+  assert.deepEqual(s.s.queue, []);
+  assert.equal(s.s.mappings.X.version, 5);
+  assert.deepEqual(s.s.problems, {});
+  assert.ok(s.s.lastAck);
+});
+
+test("a conflict parks the event on its connection and holds back later edits of that connection", async (t) => {
+  const s = configured(t);
+  bind(s, "X", "Y");
+  s.s.queue.push(save("x1", "X"), save("x2", "X"), save("y1", "Y"));
+  const conflict = {
+    nativeConnectionId: "X",
+    version: 1,
+    channelVersion: 1,
+    conflict: { reason: "两端都已修改" },
+  };
+  const log = serve(({ body }) =>
+    body.eventId === "x1" ? { state: "conflict", connection: conflict } : accepted(body.nativeConnectionId),
+  );
+  await s.flush();
+  assert.deepEqual(
+    log.map(({ body }) => body.eventId),
+    ["x1", "y1"],
+  );
+  assert.deepEqual(s.s.problems.X, { connection: conflict, event: save("x1", "X") });
+  assert.deepEqual(queued(s), ["x2"]);
+});
+
+test("400, 403 and 409 park a problem on that connection without stopping later entries", async (t) => {
+  const s = configured(t);
+  bind(s, "A", "B", "C", "D");
+  s.s.queue.push(save("a", "A"), save("b", "B"), save("c", "C"), save("d", "D"));
+  const codes = { a: 400, b: 403, c: 409 };
+  serve(({ body }) => (codes[body.eventId] ? failure(codes[body.eventId]) : accepted("D")));
+  await s.flush();
+  assert.deepEqual(s.s.problems, {
+    A: { error: "中心请求未完成（HTTP 400）" },
+    B: { error: "中心请求未完成（HTTP 403）" },
+    C: { error: "中心请求未完成（HTTP 409）" },
+  });
+  assert.deepEqual(queued(s), ["a", "b", "c"]);
+  assert.equal(s.s.error, undefined);
+});
+
+test("a stale receipt lease (409) is dropped as handled", async (t) => {
+  const s = configured(t);
+  s.s.queue.push({ kind: "receipt", eventId: "r1", body: { id: "job", lease: "old", state: "applied" } });
+  const log = serve(() => failure(409));
+  await s.flush();
+  assert.equal(log[0].route, "/api/v2/connector/receipts");
+  assert.deepEqual(s.s.queue, []);
+  assert.deepEqual(s.s.problems, {});
+});
+
 test("an HTML error page is classified by its status instead of failing to parse", async (t) => {
   const s = configured(t);
   bind(s, "A", "D");
@@ -140,6 +228,23 @@ test("an unreachable or unavailable center pauses the batch without spending att
     assert.equal(s.s.calls.c1.attempts, undefined);
     assert.ok(s.s.error);
   }
+});
+
+test("an acknowledgement for an older call revision keeps the newer report", async (t) => {
+  const s = configured(t);
+  s.s.calls.c1 = call("c1", "pending");
+  s.s.calls.c2 = call("c2", "pending");
+  serve(({ body }) => {
+    const event = body.events[0];
+    if (event.eventId === "c1" && event.result === "pending") s.report({ eventId: "c1", result: "success" });
+    return { acknowledgedIds: [event.eventId] };
+  });
+  await s.flush();
+  assert.equal(s.s.calls.c1.revision, 2);
+  assert.equal(s.s.calls.c1.acknowledged, false);
+  assert.equal(s.s.calls.c2.acknowledged, true);
+  await s.flush();
+  assert.deepEqual(Object.keys(s.s.calls), ["c2"]);
 });
 
 test("a journal write failing inside a background flush never becomes an unhandled rejection", async (t) => {
