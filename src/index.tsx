@@ -230,18 +230,16 @@ window.workbenchProbe = window.workbench;
 // The manifest's generate_interceptor; it applies in every layout, including the native one.
 (window as any).workbenchContextLimit = (chat: unknown[], _size: number, _abort: unknown, type: string) =>
   trimContext(chat, ctx().extensionSettings.workbench?.contextLimit, type);
-window.addEventListener(
-  "pagehide",
-  () => {
-    disposed = true;
-    unmount();
-    layoutRoot?.unmount();
-    layoutRoot = undefined;
-    layoutContainer?.remove();
-    layoutContainer = undefined;
-    launcher.remove();
-    context.eventSource.removeListener(context.eventTypes.APP_READY, ready);
-    context.eventSource.removeListener(context.eventTypes.APP_INITIALIZED, initialized);
-  },
-  { once: true },
-);
+window.addEventListener("pagehide", (event) => {
+  // A page kept in the back/forward cache comes back as it was, and nothing could mount it again.
+  if (event.persisted || disposed) return;
+  disposed = true;
+  unmount();
+  layoutRoot?.unmount();
+  layoutRoot = undefined;
+  layoutContainer?.remove();
+  layoutContainer = undefined;
+  launcher.remove();
+  context.eventSource.removeListener(context.eventTypes.APP_READY, ready);
+  context.eventSource.removeListener(context.eventTypes.APP_INITIALIZED, initialized);
+});
