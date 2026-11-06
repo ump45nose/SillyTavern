@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { gunzipSync } from "node:zlib";
-import { launch, session, ready, urls, artifacts, chooseLayout, toggleRight } from "./browser.mjs";
+import { launch, session, ready, urls, artifacts, chooseLayout, toggleRight, readSaveBody } from "./browser.mjs";
 
 // Real validation UI, with settings persisted only inside this browser's response replay.
 // The user's saved RP demo, preferences, persona and chats are not changed by verification.
@@ -12,9 +11,7 @@ try {
   const { page, errors } = await session(browser);
   let settings;
   await page.route("**/api/settings/save", async route => {
-    let body = route.request().postDataBuffer();
-    if (route.request().headers()["content-encoding"] === "gzip") body = gunzipSync(body);
-    settings = JSON.parse(body.toString());
+    settings = readSaveBody(route);
     await route.fulfill({ json:{} });
   });
   await page.route("**/api/settings/get", async route => {

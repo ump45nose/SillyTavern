@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { gunzipSync } from 'node:zlib';
-import { launch, session, ready, urls, artifacts, chooseLayout, openSettings, toggleRight } from './browser.mjs';
+import { launch, session, ready, urls, artifacts, chooseLayout, openSettings, toggleRight, readSaveBody } from './browser.mjs';
 const directory = artifacts + '/utility-tools'; fs.mkdirSync(directory, { recursive: true });
 const browser = await launch(), checks = [], report = { checkedAt: new Date().toISOString(), checks };
 const pass = name => { checks.push(name); console.log('PASS', name); };
@@ -10,8 +9,7 @@ try {
   const testSession = await session(browser); page = testSession.page;
   let settings;
   await page.route('**/api/settings/save', async route => {
-    let body = route.request().postDataBuffer(); if (route.request().headers()['content-encoding'] === 'gzip') body = gunzipSync(body);
-    settings = JSON.parse(body.toString()); await route.fulfill({ json: {} });
+    settings = readSaveBody(route); await route.fulfill({ json: {} });
   });
   await page.route('**/api/settings/get', async route => { const response = await route.fetch(), data = await response.json(); if (settings) data.settings = JSON.stringify(settings); await route.fulfill({ response, json: data }); });
   for (const path of ['**/api/chats/save', '**/api/chats/group/save']) await page.route(path, route => route.fulfill({ json: { result: 'ok' } }));

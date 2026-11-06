@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { gunzipSync } from 'node:zlib';
-import { launch, session, ready, urls, artifacts, openSettings, toggleRight } from './browser.mjs';
+import { launch, session, ready, urls, artifacts, openSettings, toggleRight, readSaveBody } from './browser.mjs';
 const directory = artifacts + '/addons'; fs.mkdirSync(directory, { recursive: true });
 const browser = await launch(), checks = [], report = { checkedAt: new Date().toISOString(), checks };
 const pass = name => { checks.push(name); console.log('PASS', name); };
@@ -9,8 +8,7 @@ let page;
 async function protectedSession() {
   const test = await session(browser); let saved;
   await test.page.route('**/api/settings/save', async route => {
-    let body = route.request().postDataBuffer(); if (route.request().headers()['content-encoding'] === 'gzip') body = gunzipSync(body);
-    saved = JSON.parse(body.toString()); await route.fulfill({ json: {} });
+    saved = readSaveBody(route); await route.fulfill({ json: {} });
   });
   await test.page.route('**/api/settings/get', async route => {
     const response = await route.fetch(), data = await response.json(), settings = saved || JSON.parse(data.settings);

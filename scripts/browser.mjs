@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 import { readEnv } from './env.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -103,6 +104,17 @@ export async function ready(page, url, { probe = false } = {}) {
     if (probe) await page.waitForFunction(() => window.workbenchProbe?.mounted, null, { timeout: 10_000 });
 }
 
+/**
+ * The JSON body of a save request, from its route or the request itself; null without one.
+ * wb-perf gzips large saves sent to a non-loopback host.
+ */
+export function readSaveBody(source) {
+    const request = typeof source.request === 'function' ? source.request() : source;
+    const body = request.postDataBuffer();
+    if (!body) return null;
+    return JSON.parse((request.headers()['content-encoding'] === 'gzip' ? gunzipSync(body) : body).toString());
+}
+
 /** Temporary motion checks must not change the shared validation account. */
 export async function withMotionPreference(page, verify) {
     const original = await page.evaluate(() => ({
@@ -110,9 +122,11 @@ export async function withMotionPreference(page, verify) {
         os: matchMedia('(prefers-reduced-motion: reduce)').matches,
     }));
     const protect = async route => {
-        const body = route.request().postDataJSON();
+        const request = route.request(), body = readSaveBody(request);
         if (body?.power_user) body.power_user.reduced_motion = original.setting;
-        await route.continue({ postData: JSON.stringify(body) });
+        // The body goes on as plain JSON, so wb-perf's gzip Content-Encoding must go (undefined drops a header).
+        const headers = request.headers()['content-encoding'] ? { ...request.headers(), 'content-encoding': undefined } : undefined;
+        await route.continue({ postData: JSON.stringify(body), headers });
     };
     await page.route('**/api/settings/save', protect);
     try {
