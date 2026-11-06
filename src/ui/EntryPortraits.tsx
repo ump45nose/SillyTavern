@@ -71,7 +71,9 @@ export function EntryPortraits({
     [preview, setPreview] = useState<Sprite | null>(null),
     [removing, setRemoving] = useState(""),
     [relabel, setRelabel] = useState<{ path: string; label: string } | null>(null),
-    next = useRef(0);
+    next = useRef(0),
+    latest = useRef(staged);
+  latest.current = staged;
   const safe = isPathSafe(title);
   const reload = () => {
     if (!safe) return setSprites([]);
@@ -84,14 +86,20 @@ export function EntryPortraits({
       live = false;
     };
   };
+  const unstageAll = () =>
+    setStaged((old) => {
+      old.forEach((item) => URL.revokeObjectURL(item.url));
+      return old.length ? [] : old;
+    });
   useEffect(() => {
     setSprites(null);
     setError("");
     setRemoving("");
     setRelabel(null);
+    unstageAll();
     return reload();
   }, [book, title]);
-  useEffect(() => () => staged.forEach((item) => URL.revokeObjectURL(item.url)), []);
+  useEffect(() => () => latest.current.forEach((item) => URL.revokeObjectURL(item.url)), []);
   useEffect(() => {
     if (!preview) return;
     const close = (e: KeyboardEvent) => e.key === "Escape" && setPreview(null);
@@ -312,13 +320,7 @@ export function EntryPortraits({
             ))}
           </ul>
           <footer>
-            <button
-              onClick={() => {
-                staged.forEach((item) => URL.revokeObjectURL(item.url));
-                setStaged([]);
-              }}
-              disabled={!!busy}
-            >
+            <button onClick={unstageAll} disabled={!!busy}>
               清空
             </button>
             <button className="is-primary" disabled={blocked || !!busy} onClick={() => void upload()}>

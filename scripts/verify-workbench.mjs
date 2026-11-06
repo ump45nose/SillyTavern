@@ -88,10 +88,7 @@ try {
   await page.getByRole("listbox", { name: "激活方式", exact: true }).waitFor({ state: "detached", timeout: 2000 });
   assert(await page.getByRole("dialog").isVisible());
   await page.getByRole("dialog").getByRole("button", { name: "正文", exact: true }).click();
-  assert.equal(
-    await page.locator(".wb-world.is-deep .wb-book-column").count(),
-    1,
-  );
+  assert.equal(await page.locator(".wb-world.is-deep").count(), 1);
   await page.getByLabel("世界书正文").fill("这份失败草稿不能丢失");
   await page.route("**/api/worldinfo/edit", (r) =>
     r.fulfill({ status: 500, body: "fixture failure" }),

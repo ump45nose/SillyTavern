@@ -39,6 +39,7 @@ export default function WorldBindings({ host }: { host: HostAdapter }) {
           {(["character", "chat"] as const).map((scope) => (
             <Field key={scope} label={scope === "character" ? "角色主世界书" : "当前聊天世界书"}>
               <Select
+                data-wb-local
                 aria-label={scope === "character" ? "角色主世界书" : "当前聊天世界书"}
                 disabled={task.busy || (scope === "character" ? !snap.character : !snap.chatName)}
                 value={bindings[scope]}

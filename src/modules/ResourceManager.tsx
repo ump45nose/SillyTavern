@@ -307,7 +307,7 @@ export default function ResourceManager({
         </aside>
         <div className="wb-manager-editor" inert={task.busy}>
           {kind === "world" ? (
-            <World key={id} host={host} initial={id} deep managed />
+            <World key={id} host={host} initial={id} deep />
           ) : (
             <Resources
               key={kind + ":" + id}

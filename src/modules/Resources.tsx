@@ -9,7 +9,6 @@ import {
   Plus,
   Trash2,
   BookmarkPlus,
-  X,
   RefreshCw,
   ChartNoAxesColumn,
   Upload,
@@ -1078,6 +1077,14 @@ function PresetEditor({
       {promptActions}
     </div>
   );
+  // A row keeps its key while the order changes, so the dragged row stays mounted until its dragend.
+  const seen = new Map<string, number>(),
+    rowKeys = rows.map((item) => {
+      const id = String(item.identifier),
+        n = (seen.get(id) ?? 0) + 1;
+      seen.set(id, n);
+      return n > 1 ? `${id}#${n}` : id;
+    });
   const promptList = (
     <ul className="wb-prompts" aria-label="提示词顺序">
       {rows.map((item, i) => {
@@ -1087,7 +1094,7 @@ function PresetEditor({
         return (
           <li
             className={`wb-prompt ${active ? "is-active" : ""} ${item.enabled === false ? "is-off" : ""} ${p?.marker ? "is-marker" : ""} ${dragging === i ? "is-dragging" : ""}`}
-            key={`${item.identifier}-${i}`}
+            key={rowKeys[i]}
             draggable={!!order.length}
             onDragStart={(e) => {
               setDragging(i);
@@ -1361,6 +1368,19 @@ function PresetEditor({
       />
     </Field>
   );
+  const importDraft = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file)
+      task.run(async () => {
+        const value = JSON.parse(await file.text());
+        validatePreset(value);
+        if (confirm("用文件内容替换当前草稿？保存后才会应用。")) {
+          edit.setDraft(value);
+          setAdvanced("");
+        }
+      });
+  };
   const bindingChecks = (
     <>
       {(["connection", "model"] as const).map((scope) => (
@@ -1431,19 +1451,7 @@ function PresetEditor({
               <label className="wb-upload-button">
                 <Upload size={15} />
                 导入到草稿
-                <input
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file)
-                      task.run(async () => {
-                        const value = JSON.parse(await file.text());
-                        validatePreset(value);
-                        edit.setDraft(value);
-                      });
-                  }}
-                />
+                <input type="file" accept=".json,application/json" onChange={importDraft} />
               </label>
             </div>
             <Fold title="编辑 JSON" initial={!!advanced}>
@@ -1593,23 +1601,7 @@ function PresetEditor({
                 onOpenChange={(open) => setActiveMore(open ? "advanced" : "")}
               >
                 <Field label="从文件替换当前草稿">
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = "";
-                      if (file)
-                        task.run(async () => {
-                          const value = JSON.parse(await file.text());
-                          validatePreset(value);
-                          if (confirm("用文件内容替换当前草稿？保存后才会应用。")) {
-                            edit.setDraft(value);
-                            setAdvanced("");
-                          }
-                        });
-                    }}
-                  />
+                  <input type="file" accept=".json,application/json" onChange={importDraft} />
                 </Field>
                 {json}
               </Fold>

@@ -141,10 +141,8 @@ export default function SettingsWorkspace({
     const dialog = ref.current!,
       previous = document.activeElement as HTMLElement;
     dialog.showModal();
-    document.body.classList.add("wb-settings-open");
     return () => {
       dialog.close();
-      document.body.classList.remove("wb-settings-open");
       previous?.focus();
     };
   }, []);
@@ -381,8 +379,9 @@ function SaveState({ host }: { host: HostAdapter }) {
     };
     const edit = (e: Event) => {
       const target = e.target as Element;
-      // Resource editors (fieldsets) in the same workspace keep drafts and their own save bar.
-      if (!target.closest?.(instantSettings) || target.closest("fieldset")) return;
+      // Resource editors (fieldsets) in the same workspace keep drafts and their own save bar;
+      // [data-wb-local] controls save elsewhere or not at all, so no settings save will follow.
+      if (!target.closest?.(instantSettings) || target.closest("fieldset,[data-wb-local]")) return;
       setState("saving");
       clearTimeout(timer);
       // SillyTavern debounces saves by a second; no confirmation after a few more means it failed.
