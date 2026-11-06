@@ -23,7 +23,7 @@ D1 方案可行，并在原方案上做了两处修正。插件 UI 内的样式�
 
 ## 验证结果
 
-1. **截图**：`scripts/visual/spike-layer.mjs` 把构建产物改写成分层结构后，30 个状态与 `artifacts/baseline-0.4/screens` 逐像素一致，差异为 0 个像素。
+1. **截图**：一次性 spike 脚本（`bdc5372` 中的 `scripts/visual/spike-layer.mjs`，结论落定后已删除）把构建产物改写成分层结构后，30 个状态与 `artifacts/baseline-0.4/screens` 逐像素一致，差异为 0 个像素。
 1. **计算样式**：用 `scripts/visual/computed.mjs` 采集每个状态下所有已渲染元素及其 `::before` / `::after` 的全部计算属性和几何尺寸，逐项对比，30/30 无差异。这个工具比截图更严格，会作为 B 阶段的验收门槛。基线在 `artifacts/baseline-0.4/computed/`。
 2. **注入恶意的原生全局规则**：插入 `button{letter-spacing:9px}` 和 `p{color:…}` 后，插件 UI 内都没有生效。
 3. **租借的原生控件**：`#rm_api_block` 里的 `select` 仍然接收原生规则（注入的 5px 字间距生效了）。
@@ -49,7 +49,7 @@ B 阶段把这些规则原样复制到 `wb.legacy` 层的**最前面**，不单�
 - **焦点样式**：酒馆的 `dynamic-styles.js` 会把样式表里的 `:hover` 规则克隆成 `:focus-visible`，但不会进入 `@layer`。分层之后，插件需要自己写 `:focus-visible`。spike 用机械克隆证明了等价；B3 改成在源码里写 `:is(:hover, :focus-visible)`。
 - **原生 `!important` 仍会穿透**：例如 `body.noShadows *`、`body.no-blur *`、`textarea::placeholder`。这是用户偏好，保留；需要时用分层内的 `!important` 覆盖。
 - **内联 `style` 属性**不受隔离影响。
-- **工具链只能基于源码文本**：CSSOM 重新序列化时，会把「含 `var()`、又被局部覆盖」的简写属性丢掉。例如 `border: 1px solid var(--x) !important; border-top: 0 !important` 序列化后变成一串空值。`scripts/visual/css-text.mjs` 只切分规则，不改写声明。
+- **工具链只能基于源码文本**：CSSOM 重新序列化时，会把「含 `var()`、又被局部覆盖」的简写属性丢掉。例如 `border: 1px solid var(--x) !important; border-top: 0 !important` 序列化后变成一串空值。B3 的迁移工具因此只切分规则文本、不改写声明（一次性脚本，迁移完成后已删除）；现存的 `scripts/visual/prune.mjs` 也按同样方式只删选择器、不动声明。
 - `World.tsx` 用了原生的 `green` / `blue` / `purple` 颜色类，隔离后改由插件自己定义（截图里看不出差别，因为插件已经覆盖了这几个类）。
 
 ## B 阶段结果（2026-10-11）
