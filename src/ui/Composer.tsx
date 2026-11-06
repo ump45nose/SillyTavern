@@ -10,6 +10,11 @@ import { useMdLive } from "./md/MdField";
 /** Decorate native controls in-place: event handlers, selection and plugin nodes stay owned by ST. */
 /** The composer card's smallest height: grip, two lines of text and the tool row (board "Main"). */
 const COMPOSER_MIN = 124;
+const applyHeight = (ratio: number) =>
+  document.body.style.setProperty(
+    "--wb-composer-height",
+    `${Math.max(COMPOSER_MIN, document.getElementById("sheld")!.clientHeight * ratio)}px`,
+  );
 export function Composer({
   host,
   toolbar,
@@ -69,12 +74,8 @@ export function Composer({
     if (frame.current) return;
     frame.current = requestAnimationFrame(() => {
       frame.current = 0;
-      const area = document.getElementById("sheld")!,
-        chat = document.getElementById("chat");
-      document.body.style.setProperty(
-        "--wb-composer-height",
-        `${Math.max(COMPOSER_MIN, area.clientHeight * ratioRef.current)}px`,
-      );
+      applyHeight(ratioRef.current);
+      const chat = document.getElementById("chat");
       if (chat && drag.current?.pinned) chat.scrollTop = chat.scrollHeight;
     });
   };
@@ -141,27 +142,19 @@ export function Composer({
     };
   }, [host, mobile]);
   useEffect(() => {
-    const area = document.getElementById("sheld")!;
-    const apply = () =>
-      document.body.style.setProperty(
-        "--wb-composer-height",
-        `${Math.max(COMPOSER_MIN, area.clientHeight * ratioRef.current)}px`,
-      );
+    const apply = () => applyHeight(ratioRef.current);
     const observer = new ResizeObserver(apply);
-    observer.observe(area);
+    observer.observe(document.getElementById("sheld")!);
     apply();
     return () => {
       observer.disconnect();
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
       document.body.style.removeProperty("--wb-composer-height");
       document.body.classList.remove("wb-resizing");
     };
   }, []);
-  useEffect(() => {
-    document.body.style.setProperty(
-      "--wb-composer-height",
-      `${Math.max(COMPOSER_MIN, document.getElementById("sheld")!.clientHeight * ratio)}px`,
-    );
-  }, [ratio]);
+  useEffect(() => applyHeight(ratio), [ratio]);
   const finish = () => {
     if (!drag.current) return;
     drag.current = null;
