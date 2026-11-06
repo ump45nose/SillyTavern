@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { HostAdapter } from "../host/adapter";
 import { Select } from "../ui/Select";
+import { HostControl, type FormControl } from "../ui/HostControl";
 import { Notice, Field } from "../ui/common";
 import { nativeGlyphs } from "../ui/NativeGlyph";
 import type { LucideIcon } from "../ui/icons";
@@ -73,59 +74,22 @@ export const nativePages: Record<string, { id: string; sections: Section[] }> = 
   world: { id: "WorldInfo", sections: [{ label: "绑定与全局设置", selectors: [] }] },
   character: { id: "right-nav-panel", sections: [{ label: "群组", selectors: [] }] },
 };
-function NativeSelect({ node, host }: { node: HTMLSelectElement; host: HostAdapter }) {
-  const [, redraw] = useReducer((v) => v + 1, 0);
-  useEffect(() => {
-    let frame = 0;
-    const sync = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(redraw);
-    };
-    const observer = new MutationObserver(sync);
-    observer.observe(node, { childList: true, subtree: true, attributes: true });
-    node.addEventListener("change", sync);
-    const unsub = host.subscribe(sync);
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-      node.removeEventListener("change", sync);
-      unsub();
-    };
-  }, [node]);
-  const names: Record<string, string> = {
-    avatar_style: "头像样式",
-    themes: "界面主题",
-    media_display: "媒体显示",
-    ui_language_select: "界面语言",
-    context_presets: "上下文模板",
-    instruct_presets: "指令模板",
+/** Native selects whose own label is missing or says too little. */
+const selectNames: Record<string, string> = {
+  avatar_style: "头像样式",
+  themes: "界面主题",
+  media_display: "媒体显示",
+  ui_language_select: "界面语言",
+  context_presets: "上下文模板",
+  instruct_presets: "指令模板",
+};
+function selectLabel(node: FormControl) {
+  const own = () => {
+    const label = node.labels?.[0]?.cloneNode(true) as HTMLElement | undefined;
+    label?.querySelectorAll("select,input,textarea,button,.menu_button").forEach((n) => n.remove());
+    return label?.textContent?.trim();
   };
-  const label = node.labels?.[0]?.cloneNode(true) as HTMLElement | undefined;
-  label?.querySelectorAll("select,input,textarea,button,.menu_button").forEach((n) => n.remove());
-  return (
-    <Select
-      aria-label={
-        node.getAttribute("aria-label") ||
-        names[node.id] ||
-        label?.textContent?.trim() ||
-        node.title ||
-        node.id
-      }
-      value={node.value}
-      disabled={node.disabled}
-      onChange={(e) => {
-        node.value = e.target.value;
-        node.dispatchEvent(new Event("input", { bubbles: true }));
-        node.dispatchEvent(new Event("change", { bubbles: true }));
-      }}
-    >
-      {[...node.options].map((o, i) => (
-        <option key={o.value + ":" + i} value={o.value} disabled={o.disabled}>
-          {o.textContent}
-        </option>
-      ))}
-    </Select>
-  );
+  return node.getAttribute("aria-label") || selectNames[node.id] || own() || node.title || node.id;
 }
 /** Mount complete native sections; rearrange whole blocks, never rebuild their inputs. */
 export default function NativeSettings({
@@ -477,7 +441,9 @@ export default function NativeSettings({
         </div>
       )}
       <div className={`wb-native-settings-slot page-${page}`} ref={ref} />
-      {bridges.map(({ node, slot }) => createPortal(<NativeSelect node={node} host={host} />, slot, node.id))}
+      {bridges.map(({ node, slot }) =>
+        createPortal(<HostControl host={host} node={node} label={selectLabel} />, slot, node.id),
+      )}
       {glyphs.map(({ slot, Icon }, i) =>
         createPortal(<Icon size={16} strokeWidth={1.7} aria-hidden="true" />, slot, "glyph-" + i),
       )}

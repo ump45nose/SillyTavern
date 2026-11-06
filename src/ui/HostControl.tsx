@@ -11,7 +11,8 @@ export function HostControl({
 }: {
   host: HostAdapter;
   node: FormControl;
-  label: string;
+  /** A function is asked again on each redraw, as the node's own label may change. */
+  label: string | ((node: FormControl) => string);
   presentation?: "number";
 }) {
   const [, redraw] = useReducer((n) => n + 1, 0);
@@ -40,7 +41,7 @@ export function HostControl({
     node.dispatchEvent(new Event("change", { bubbles: true }));
     redraw();
   };
-  const common = { "aria-label": label, disabled: node.disabled };
+  const common = { "aria-label": typeof label === "function" ? label(node) : label, disabled: node.disabled };
   if (node instanceof HTMLSelectElement) {
     if (node.multiple)
       return (
