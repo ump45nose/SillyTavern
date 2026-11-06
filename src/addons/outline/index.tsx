@@ -31,7 +31,7 @@ import {
   reuseOutline,
   type OutlineData,
   type OutlineNode,
-} from "./model";
+} from "../../domain/outline";
 import "./style.css";
 import { bus } from "../../host/bus";
 import { useLeaveGuard } from "../../ui/common";

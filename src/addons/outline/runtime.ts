@@ -1,4 +1,4 @@
-import { randomId } from "../../host/ids";
+import { randomId } from "../../domain/ids";
 import type { AddonRuntime, TaskHost, TaskState } from "../types";
 import {
   advance,
@@ -10,7 +10,7 @@ import {
   normalizeOutline,
   writingQueue,
   type OutlineData,
-} from "./model";
+} from "../../domain/outline";
 export function createRuntime(host: TaskHost): AddonRuntime {
   let data = normalizeOutline(host.metadata()),
     version = 0,

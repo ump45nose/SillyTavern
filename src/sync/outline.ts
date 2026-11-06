@@ -4,8 +4,8 @@ import {
   type OutlineData,
   type OutlineNode,
   type Status,
-} from "../addons/outline/model";
-import { randomId } from "../host/ids";
+} from "../domain/outline";
+import { randomId } from "../domain/ids";
 import { SyncError } from "./text";
 
 const statuses: [Status, string][] = [

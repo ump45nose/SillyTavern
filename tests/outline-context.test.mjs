@@ -4,7 +4,7 @@ import { build } from "esbuild";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 const directory = await mkdtemp(tmpdir() + "/wb-outline-tests-");
-const result = await build({ entryPoints: ["src/addons/outline/model.ts"], bundle: true, format: "esm", platform: "node", write: false });
+const result = await build({ entryPoints: ["src/domain/outline.ts"], bundle: true, format: "esm", platform: "node", write: false });
 await writeFile(directory + "/model.mjs", result.outputFiles[0].text);
 const model = await import(directory + "/model.mjs");
 

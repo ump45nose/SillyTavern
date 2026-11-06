@@ -1,4 +1,4 @@
-import { randomId } from "../../host/ids";
+import { randomId } from "../../domain/ids";
 export interface ImageReference {
   id: string;
   name: string;

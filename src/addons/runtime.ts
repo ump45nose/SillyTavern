@@ -4,7 +4,7 @@ import { addonEnabled, type AddonId } from "./catalog";
 import { loadAddon } from "./loader";
 import type { AddonRuntime, TaskHost } from "./types";
 import { bus } from "../host/bus";
-import { normalizeOutline, outlineContext } from "./outline/model";
+import { normalizeOutline, outlineContext } from "../domain/outline";
 const OUTLINE_PROMPT = "noval_outline";
 const managers = new WeakMap<HostAdapter, AddonManager>();
 export class AddonManager {

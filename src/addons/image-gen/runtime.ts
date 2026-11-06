@@ -1,4 +1,4 @@
-import { randomId } from "../../host/ids";
+import { randomId } from "../../domain/ids";
 import type { AddonRuntime, MessageTarget, StoryReply, TaskHost, TaskState } from "../types";
 import { configuration, generateImage } from "./backends";
 import { normalizeReferences, readImage, type ImageReference } from "./reference-files";

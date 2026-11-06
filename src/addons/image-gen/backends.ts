@@ -1,4 +1,4 @@
-import { randomId } from "../../host/ids";
+import { randomId } from "../../domain/ids";
 import { unzipSync } from "fflate";
 import type { TaskHost } from "../types";
 import {

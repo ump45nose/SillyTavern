@@ -16,7 +16,7 @@ import {
   type Data,
   type SyncTable,
 } from "../../../src/sync";
-import { normalizeOutline } from "../../../src/addons/outline/model";
+import { normalizeOutline } from "../../../src/domain/outline";
 import { firstLine, st, writeAtomic, type Directories } from "./st";
 
 const OPEN_CHAT = "打开该聊天后可同步：数据库只同步工作台页面里已打开的聊天。";

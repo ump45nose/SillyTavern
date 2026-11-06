@@ -1,4 +1,9 @@
-import { randomId } from "../../host/ids";
+/**
+ * The writing outline: its data, the rules that edit it and the text it gives. The outline add-on,
+ * the host, IDE sync and the sync server's bundle all read it, so it stays free of the DOM and of
+ * SillyTavern.
+ */
+import { randomId } from "./ids";
 export type Status = "todo" | "active" | "done";
 export interface OutlineNode {
   id: string;

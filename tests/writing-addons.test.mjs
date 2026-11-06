@@ -6,7 +6,7 @@ import {mkdtemp,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 const directory=await mkdtemp(tmpdir()+'/wb-addon-tests-');
 async function module(path){const result=await build({entryPoints:[path],bundle:true,format:'esm',platform:'node',write:false});const file=directory+'/'+path.replaceAll('/','-')+'.mjs';await writeFile(file,result.outputFiles[0].text);return import(file);}
-const model=await module('src/addons/outline/model.ts'),outline=await module('src/addons/outline/runtime.ts'),prompts=await module('src/addons/image-gen/prompts.ts'),backends=await module('src/addons/image-gen/backends.ts'),image=await module('src/addons/image-gen/runtime.ts');
+const model=await module('src/domain/outline.ts'),outline=await module('src/addons/outline/runtime.ts'),prompts=await module('src/addons/image-gen/prompts.ts'),backends=await module('src/addons/image-gen/backends.ts'),image=await module('src/addons/image-gen/runtime.ts');
 const png='iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4nGP4z8DwHwyBNBgAAEnICff5q7YNAAAAAElFTkSuQmCC';
 const target={chatKey:'chat:A',id:1,token:'m1',version:'v1'};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,10));

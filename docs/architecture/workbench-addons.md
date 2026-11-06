@@ -43,7 +43,7 @@
 
 ## API v2：大纲与生图
 
-记录导出保持 API v1。新模块使用 v2，增加 Sidebar/Workspace/完整编辑视图、createRuntime 和独立任务生命周期。`src/addons/runtime.ts` 的轻量管理器和 `src/host/addon-api.ts` 的完成事件桥随主界面加载，原则上不导入业务模块，有两处有意的例外：管理器静态导入 `outline/model`，使 `{{outline}}` 宏和大纲提示注入在大纲插件未加载时也能生效；`src/ui/AddonControls.tsx` 在生图运行对象存在时才懒加载生图的 `References` 组件，读取粘贴／拖入的参考图时才动态导入 `reference-files`。任务运行对象按 HostAdapter/当前聊天缓存，关闭 UI 只释放 CSS 和 UI 订阅；聊天切换、停用或退出工作台释放运行对象并取消任务。
+记录导出保持 API v1。新模块使用 v2，增加 Sidebar/Workspace/完整编辑视图、createRuntime 和独立任务生命周期。`src/addons/runtime.ts` 的轻量管理器和 `src/host/addon-api.ts` 的完成事件桥随主界面加载，不导入插件目录下的业务模块。大纲的数据结构和规则放在共享领域模块 `src/domain/outline.ts`，它用到的 `randomId` 在 `src/domain/ids.ts`；大纲插件、管理器、IDE 同步（`src/sync/`）和 workbench-sync 服务端都引用这里，不依赖插件目录。管理器借它在大纲插件未加载时提供 `{{outline}}` 宏，并把大纲提示登记到宿主的注入表（`src/host/prompts.ts`）。宿主内嵌插件代码的例外只有一处：`src/ui/AddonControls.tsx` 在生图运行对象存在时懒加载生图的 `References` 组件，读取粘贴／拖入的参考图时动态导入 `reference-files`；这两处不经插件清单和加载器，作为主构建的拆分 chunk 交付。任务运行对象按 HostAdapter/当前聊天缓存，关闭 UI 只释放 CSS 和 UI 订阅；聊天切换、停用或退出工作台释放运行对象并取消任务。
 
 数据以 `chatMetadata.workbench_addons[id]` 隔离；生图配置存 `extensionSettings.workbench.addonSettings[id]`。宿主能力是冻结对象，提供按插件命名空间的保存、独立连接请求、原输入/续写及原生图片附件；不暴露上下文或密钥仓库。聊天保存串行、使用当前最新元数据/消息，生成期间等待空闲；保存成功前不推进写作轮数。图片目标捕获聊天、消息对象标识和回复签名，附件写入前验证；附件先写入内存再保存聊天文件，期间酒馆自己的保存也带着它，保存失败时撤回仍未被改动的字段。HTTP 局域网使用 getRandomValues 生成标识，不依赖仅安全上下文可用的 randomUUID。
 

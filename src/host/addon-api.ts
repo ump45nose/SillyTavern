@@ -1,4 +1,4 @@
-import { randomId } from "./ids";
+import { randomId } from "../domain/ids";
 import type { HostAdapter } from "./adapter";
 import type { Data } from "./types";
 import type { AddonId } from "../addons/catalog";
