@@ -125,15 +125,18 @@ function setPath(target: Data, path: string[], value: unknown) {
 }
 const setNested = (target: Data, name: string, value: unknown) => setPath(target, name.split("."), value);
 const getNested = (source: Data, name: string) => getPath(source, name.split("."));
+/** A source value as its YAML key shows it. */
+function shown(field: Field, value: unknown) {
+  if (field.invert && typeof value === "boolean") value = !value;
+  const label = field.labels?.find(([raw]) => raw === value);
+  return label ? label[1] : value;
+}
 
 /** The fields present in `source`, under their YAML keys. */
 export function writeFields(fields: Field[], source: Data, out: Data = {}) {
   for (const field of fields) {
-    let value = getPath(source, field.path);
-    if (value === undefined) continue;
-    if (field.invert && typeof value === "boolean") value = !value;
-    const label = field.labels?.find(([raw]) => raw === value);
-    setNested(out, field.name, label ? label[1] : value);
+    const value = getPath(source, field.path);
+    if (value !== undefined) setNested(out, field.name, shown(field, value));
   }
   return out;
 }
@@ -153,8 +156,9 @@ const typeNames = {
 };
 
 /**
- * Applies the YAML keys present to a copy of `base`; keys left out keep their values. Unknown keys
- * are errors unless listed in `allowed`.
+ * Applies the YAML keys present to a copy of `base`; keys left out keep their values, and so do keys
+ * still showing the stored value, even one the field would refuse (a null seed). Unknown keys are
+ * errors unless listed in `allowed`.
  */
 export function readFields(fields: Field[], yaml: Yaml, base: Data, allowed: string[] = []) {
   const result = structuredClone(base),
@@ -176,7 +180,7 @@ export function readFields(fields: Field[], yaml: Yaml, base: Data, allowed: str
   check(yaml.data, "");
   for (const field of fields) {
     let value = getNested(yaml.data, field.name);
-    if (value === undefined) continue;
+    if (value === undefined || sameData(value, shown(field, getPath(base, field.path)))) continue;
     if (field.labels && typeof value === "string") {
       const hit = field.labels.find(([, label]) => label === value);
       if (hit) value = hit[0];

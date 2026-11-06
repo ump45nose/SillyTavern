@@ -410,6 +410,33 @@ test("SillyTavern's sensitive preset fields stay out of the files and keep their
   );
 });
 
+test("yaml values still as rendered keep the stored value, even one the field would refuse", () => {
+  const seeded = { ...preset, seed: null, n: "2" };
+  assert.match(presetCodec.files(seeded).get("参数.yaml"), /\n随机种子: null\n回复数量: "2"\n/);
+  roundTrip(presetCodec, seeded);
+  const params = presetCodec.files(seeded).get("参数.yaml");
+  assert.deepEqual(presetCodec.write(seeded, "参数.yaml", params.replace("温度: 1", "温度: 0.5")), {
+    ...seeded,
+    temperature: 0.5,
+  });
+  assert.equal(
+    presetCodec.write(seeded, "参数.yaml", params.replace("随机种子: null", "随机种子: 7")).seed,
+    7,
+  );
+  assert.equal(
+    lineOf(() => presetCodec.write({ ...preset, seed: 5 }, "参数.yaml", "随机种子: null\n")),
+    1,
+  );
+  assert.equal(
+    lineOf(() => presetCodec.write(seeded, "参数.yaml", params.replace('回复数量: "2"', "回复数量: 两个"))),
+    6,
+  );
+  roundTrip(characterCodec, { ...card, creator: null, tags: ["原创", 1] });
+  // Inverted and labelled fields compare as shown: 启用: false still turns the entry off.
+  const off = worldCodec.files(book).get("灯塔.md").replace("启用: true", "启用: false");
+  assert.equal(worldCodec.write(book, "灯塔.md", off).entries[0].disable, true);
+});
+
 test("connection profiles and personas round-trip without secrets", () => {
   const profiles = [
     {
