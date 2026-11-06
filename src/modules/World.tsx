@@ -18,6 +18,7 @@ import { positions, modeName } from "./world/shared";
 import { EntryItem } from "./world/EntryItem";
 import { EntryRow } from "./world/EntryRow";
 import { KeyChips } from "./world/KeyChips";
+import { TagInput } from "../ui/TagInput";
 /** Row heights the windowed entry lists are laid out with (CSS keeps rows exactly this tall). */
 const PANEL_ROW = 42,
   TABLE_ROW = 46;
@@ -110,7 +111,6 @@ export default function World({
   const [query, setQuery] = useState(""),
     [saved, setSaved] = useState(""),
     [scope, setScope] = useState("global"),
-    [newKey, setNewKey] = useState<string | null>(null),
     [filter, setFilter] = useState("all"),
     [target, setTarget] = useState(entryTitle),
     [entryOpen, setEntryOpen] = useState(false);
@@ -449,41 +449,15 @@ export default function World({
                   />
                   <div className="wb-entry-keys">
                     <span>关键词</span>
-                    {(selected.key ?? []).map((k: string, i: number) => (
-                      <span className="wb-key" key={k + i}>
-                        {k}
-                        <button
-                          aria-label={`移除关键词 ${k}`}
-                          onClick={() =>
-                            update({ key: (selected.key ?? []).filter((_: string, j: number) => j !== i) })
-                          }
-                        >
-                          <X size={11} />
-                        </button>
-                      </span>
-                    ))}
-                    {newKey === null ? (
-                      <button className="wb-key-add" onClick={() => setNewKey("")}>
-                        + 添加
-                      </button>
-                    ) : (
-                      <input
-                        className="wb-key-input"
-                        aria-label="新关键词"
-                        autoFocus
-                        value={newKey}
-                        onChange={(e) => setNewKey(e.target.value)}
-                        onBlur={() => setNewKey(null)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") setNewKey(null);
-                          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-                          e.preventDefault();
-                          const value = newKey.trim();
-                          if (value) update({ key: [...(selected.key ?? []), value] });
-                          setNewKey("");
-                        }}
-                      />
-                    )}
+                    <TagInput
+                      label="关键词"
+                      inputLabel="新关键词"
+                      values={selected.key ?? []}
+                      onChange={(key) => update({ key })}
+                      chipClassName="wb-key"
+                      inputClassName="wb-key-input"
+                      collapsed
+                    />
                   </div>
                 </>
               )}

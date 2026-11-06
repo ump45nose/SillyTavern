@@ -1,6 +1,6 @@
 import { Select } from "../../ui/Select";
 import React, { useState } from "react";
-import { MessageSquarePlus, ImagePlus, X } from "../../ui/icons";
+import { MessageSquarePlus, ImagePlus } from "../../ui/icons";
 import type { HostAdapter } from "../../host/adapter";
 import type { Data } from "../../host/types";
 import { sameData } from "../../host/model";
@@ -9,6 +9,7 @@ import { SaveBar, useAsyncDraft } from "../../ui/ResourceControls";
 import { useTokenCounts } from "../../ui/tokens";
 import { MdField } from "../../ui/md/MdField";
 import { SpeakerColor } from "../../ui/SpeakerColor";
+import { TagInput } from "../../ui/TagInput";
 import { plain } from "./shared";
 const editorTabs = ["人设", "第一条消息", "对话示例", "高级定义", "创作者注释"] as const;
 type EditorTab = (typeof editorTabs)[number];
@@ -38,8 +39,7 @@ export function CharacterEditor({ host, id }: { host: HostAdapter; id: string })
       onError: task.setError,
     }),
     [message, setMessage] = useState(""),
-    [tab, setTab] = useState<EditorTab>("人设"),
-    [tagText, setTagText] = useState("");
+    [tab, setTab] = useState<EditorTab>("人设");
   const tokens = useTokenCounts(
     host,
     draft ? tokenFields.map((k) => [k, String(draft[k] ?? "")] as [string, string]) : [],
@@ -93,11 +93,6 @@ export function CharacterEditor({ host, id }: { host: HostAdapter; id: string })
     })),
     total = budget.reduce((n, x) => n + x.value, 0),
     limit = host.contextLimit();
-  const addTag = () => {
-    const value = tagText.trim();
-    if (value && !tags.includes(value)) put({ tags: [...tags, value] });
-    setTagText("");
-  };
   const worlds = host.snapshot().resources.world;
   return (
     <fieldset disabled={task.busy} className="wb-character-editor">
@@ -193,31 +188,7 @@ export function CharacterEditor({ host, id }: { host: HostAdapter; id: string })
             </button>
           </div>
           <div className="wb-ce-tags">
-            {tags.map((t) => (
-              <span key={t}>
-                {t}
-                <button
-                  aria-label={`移除标签 ${t}`}
-                  onClick={() => put({ tags: tags.filter((x) => x !== t) })}
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            ))}
-            <input
-              aria-label="添加标签"
-              placeholder="+ 标签"
-              value={tagText}
-              size={Math.max(4, tagText.length + 1)}
-              onChange={(e) => setTagText(e.target.value.replace(/,|，/g, ""))}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === "," || e.key === "，") {
-                  e.preventDefault();
-                  addTag();
-                }
-              }}
-              onBlur={addTag}
-            />
+            <TagInput label="标签" values={tags} onChange={(tags) => put({ tags })} placeholder="+ 标签" />
           </div>
         </header>
         <nav className="wb-ce-tabs" role="tablist" aria-label="角色字段">
