@@ -1077,6 +1077,14 @@ function PresetEditor({
       {promptActions}
     </div>
   );
+  // A row keeps its key while the order changes, so the dragged row stays mounted until its dragend.
+  const seen = new Map<string, number>(),
+    rowKeys = rows.map((item) => {
+      const id = String(item.identifier),
+        n = (seen.get(id) ?? 0) + 1;
+      seen.set(id, n);
+      return n > 1 ? `${id}#${n}` : id;
+    });
   const promptList = (
     <ul className="wb-prompts" aria-label="提示词顺序">
       {rows.map((item, i) => {
@@ -1086,7 +1094,7 @@ function PresetEditor({
         return (
           <li
             className={`wb-prompt ${active ? "is-active" : ""} ${item.enabled === false ? "is-off" : ""} ${p?.marker ? "is-marker" : ""} ${dragging === i ? "is-dragging" : ""}`}
-            key={`${item.identifier}-${i}`}
+            key={rowKeys[i]}
             draggable={!!order.length}
             onDragStart={(e) => {
               setDragging(i);
