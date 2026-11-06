@@ -169,12 +169,13 @@ export class AddonBridge {
   insert(text: string, mode: "replace" | "caret") {
     if (document.body.classList.contains("wb-image-input-mode"))
       throw new Error("请先退出手动生图输入，再插入写作指令。");
-    const input = document.getElementById("send_textarea") as HTMLTextAreaElement;
-    const start = input.selectionStart,
-      end = input.selectionEnd;
-    input.value = mode === "replace" ? text : input.value.slice(0, start) + text + input.value.slice(end);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    this.host.focusInput(mode === "replace" ? text.length : start + text.length);
+    if (mode === "replace") this.host.setInput(text);
+    else {
+      const input = document.getElementById("send_textarea") as HTMLTextAreaElement,
+        start = input.selectionStart;
+      this.host.setInput(input.value.slice(0, start) + text + input.value.slice(input.selectionEnd));
+      this.host.focusInput(start + text.length);
+    }
     bus.emit("image-compose");
   }
   async write(text: string | null, signal: AbortSignal, allowDraft = false): Promise<StoryReply> {
@@ -229,7 +230,7 @@ export class AddonBridge {
         }
         if (text !== null) {
           this.insert(text, "replace");
-          document.getElementById("send_but")!.click();
+          this.host.sendInput();
         } else void c.generate("continue").catch((error: Error) => finish(error));
       });
     } finally {

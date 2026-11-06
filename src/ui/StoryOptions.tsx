@@ -77,8 +77,7 @@ export function ComposerOptions({ host, mobile }: { host: HostAdapter; mobile: b
   const { items } = state,
     choose = (option: StoryOption) => {
       setPeek(-1);
-      if (host.options.choose(option, "novel") === "fill")
-        requestAnimationFrame(() => document.getElementById("send_textarea")?.focus());
+      if (host.options.choose(option, "novel") === "fill") requestAnimationFrame(() => host.focusInput());
     };
   useLayoutEffect(() => {
     const form = document.getElementById("send_form"),

@@ -245,11 +245,24 @@ export const chatMethods = {
       })),
     };
   },
-  setInput(this: HostAdapter, text: string) {
+  /**
+   * Writes the native input as typing would, so SillyTavern and the composer hear it. Given a range,
+   * that selection is put back and focus stays where it is (a draft returning); otherwise the caret
+   * goes to the end and the input takes focus.
+   */
+  setInput(this: HostAdapter, text: string, range?: [start: number, end: number]) {
     const node = nativeNodes.input as HTMLTextAreaElement;
     node.value = text;
     node.dispatchEvent(new Event("input", { bubbles: true }));
-    this.focusInput(text.length);
+    if (range) node.setSelectionRange(...range);
+    else this.focusInput(text.length);
+  },
+  /**
+   * Sends the native input with a click on SillyTavern's send button, which the workbench's own
+   * interceptions (placeholders, image prompts) see first.
+   */
+  sendInput(this: HostAdapter) {
+    document.getElementById("send_but")!.click();
   },
   /** Puts the caret in the native input. The phone leaves it to the user's tap, so the keyboard
    *  opens when they start typing instead of covering the page each time the input is entered. */

@@ -232,12 +232,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
   useEffect(
     () => () => {
       const mode = modeRef.current;
-      if (mode?.target.chatKey === manager.bridge.key()) {
-        const input = document.getElementById("send_textarea") as HTMLTextAreaElement;
-        input.value = mode.draft;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.setSelectionRange(mode.start, mode.end);
-      }
+      if (mode?.target.chatKey === manager.bridge.key()) host.setInput(mode.draft, [mode.start, mode.end]);
     },
     [manager],
   );
@@ -250,9 +245,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
           ? { ...previous, target }
           : { target, draft: input.value, start: input.selectionStart, end: input.selectionEnd },
       );
-      input.value = "";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      host.focusInput();
+      host.setInput("");
     };
     const off = bus.on("image-input", receive);
     const anchor = document.createElement("div");
@@ -265,12 +258,7 @@ export function ImageInputMode({ host }: { host: HostAdapter }) {
     };
   }, [host, manager]);
   const cancel = () => {
-    if (mode?.target.chatKey === manager.bridge.key()) {
-      const input = document.getElementById("send_textarea") as HTMLTextAreaElement;
-      input.value = mode.draft;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.setSelectionRange(mode.start, mode.end);
-    }
+    if (mode?.target.chatKey === manager.bridge.key()) host.setInput(mode.draft, [mode.start, mode.end]);
     setMode(null);
     bus.emit("image-compose-end");
   };

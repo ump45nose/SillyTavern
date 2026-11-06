@@ -113,7 +113,7 @@ export class OptionsRuntime {
   choose(option: StoryOption, layout: "novel" | "rp"): OptionAction {
     const action = this.state.config[layout];
     this.host.setInput(optionText(option));
-    if (action === "send") document.getElementById("send_but")!.click();
+    if (action === "send") this.host.sendInput();
     return action;
   }
   /** The prompt is the user's own across chats; empty brings the default back. */
