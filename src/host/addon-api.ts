@@ -47,14 +47,7 @@ export class AddonBridge {
   } | null = null;
   private completionTimers = new Set<ReturnType<typeof setTimeout>>();
   constructor(private host: HostAdapter) {
-    const on = (name: string, fn: (...args: any[]) => void) => {
-      const c = context(),
-        event = c.eventTypes[name];
-      if (event) {
-        c.eventSource.on(event, fn);
-        this.cleanup.push(() => c.eventSource.removeListener(event, fn));
-      }
-    };
+    const on = (name: string, fn: (...args: any[]) => void) => this.cleanup.push(host.listen(name, fn));
     on("CHAT_CHANGED", () => {
       this.cycle = null;
       this.chatChanges.forEach((fn) => fn());
@@ -156,19 +149,7 @@ export class AddonBridge {
     const c = context();
     if (this.disposed || key !== this.key() || !c.getCurrentChatId())
       throw new Error("聊天已切换或尚未保存。");
-    const header = { chat_metadata: metadata, user_name: "unused", character_name: "unused" };
-    const character = c.characters[c.characterId];
-    const body = c.groupId
-      ? { id: c.getCurrentChatId(), chat: [header, ...messages], force: false }
-      : {
-          ch_name: character?.name,
-          file_name: c.getCurrentChatId(),
-          avatar_url: character?.avatar,
-          chat: [header, ...messages],
-          force: false,
-        };
-    const response = await this.host.request(c.groupId ? "/api/chats/group/save" : "/api/chats/save", body);
-    if (!response.ok) throw new Error("聊天保存失败，进度未推进。");
+    await this.host.saveChatFile(metadata, messages, "聊天保存失败，结果未写入");
     if (this.disposed || key !== this.key()) throw new Error("聊天已切换，结果未写入当前聊天。");
   }
   private serial<T>(fn: () => Promise<T>): Promise<T> {
@@ -260,7 +241,7 @@ export class AddonBridge {
         chatName: host.snapshot().chatName,
         busy: host.snapshot().busy,
       }),
-      exportSnapshot: () => host.exportSnapshot(id === "record-export" ? "raw" : "reading"),
+      exportSnapshot: () => host.exportSnapshot("reading"),
       download: (blob: Blob, filename: string) => host.download(blob, filename),
       jump: (n: number) => host.jump(n),
       exportChat: (name: string) => host.exportChat(name),
@@ -368,7 +349,11 @@ export class AddonBridge {
         if (!avatar) return [];
         // The listing reads only each file's first line, so one request carries every chat's metadata.
         const data = await (
-          await host.request("/api/characters/chats", { avatar_url: avatar, metadata: true })
+          await host.request(
+            "/api/characters/chats",
+            { avatar_url: avatar, metadata: true },
+            "读取聊天列表失败",
+          )
         ).json();
         if (data.error) throw new Error("读取聊天列表失败。");
         return host
@@ -388,6 +373,7 @@ export class AddonBridge {
             c.groupId
               ? { id: name }
               : { ch_name: character?.name, file_name: name, avatar_url: character?.avatar },
+            "读取聊天失败",
           )
         ).json();
         const data = Array.isArray(lines) ? lines[0]?.chat_metadata?.workbench_addons?.[id] : undefined;

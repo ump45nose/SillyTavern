@@ -1,17 +1,13 @@
-/** Shared action identities for buttons, keyboard bindings and later mobile layouts. */
+/** Handlers for the shortcut actions below: the app registers them and runs them from its key handler. */
 export class Operations {
   private handlers = new Map<string, () => unknown>();
   register(id: string, handler: () => unknown) {
     this.handlers.set(id, handler);
-    return () => this.handlers.delete(id);
   }
   run(id: string) {
     const handler = this.handlers.get(id);
     if (!handler) throw new Error(`操作不可用：${id}`);
     return handler();
-  }
-  clear() {
-    this.handlers.clear();
   }
 }
 export const shortcutActions = [

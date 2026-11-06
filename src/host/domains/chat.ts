@@ -72,7 +72,7 @@ export const chatMethods = {
       return this.sortChats(await (await internal("groupChats")).getGroupPastChats(ctx().groupId));
     const c = this.snapshot().character;
     if (!c) return [];
-    const r = await this.request("/api/characters/chats", { avatar_url: c.id });
+    const r = await this.request("/api/characters/chats", { avatar_url: c.id }, "读取聊天列表失败");
     const data = await r.json();
     return data.error ? [] : this.sortChats(Object.values(data) as Data[]);
   },
@@ -91,6 +91,32 @@ export const chatMethods = {
     if (ctx().groupId)
       await (await internal("groupChats")).openGroupChat(ctx().groupId, name.replace(/\.jsonl$/, ""));
     else await ctx().openCharacterChat(name.replace(/\.jsonl$/, ""));
+  },
+  /**
+   * Writes the open chat's file: SillyTavern's header row with `metadata`, then `messages`. The file is
+   * written directly because SillyTavern's own chat save reports a failure without throwing.
+   */
+  saveChatFile(this: HostAdapter, metadata: Data, messages: Data[], failure?: string) {
+    const c = ctx(),
+      chat = [{ chat_metadata: metadata, user_name: "unused", character_name: "unused" }, ...messages];
+    if (c.groupId)
+      return this.request("/api/chats/group/save", { id: c.getCurrentChatId(), chat, force: false }, failure);
+    const character = c.characters[c.characterId];
+    return this.request(
+      "/api/chats/save",
+      {
+        ch_name: character?.name,
+        file_name: c.getCurrentChatId(),
+        avatar_url: character?.avatar,
+        chat,
+        force: false,
+      },
+      failure,
+    );
+  },
+  /** Deletes a rendered floor once the user confirms in SillyTavern's own dialog. */
+  async deleteMessage(this: HostAdapter, id: number) {
+    await ctx().deleteMessage(id, undefined, true);
   },
   async jump(this: HostAdapter, id: number) {
     const selector = `#chat .mes[mesid="${id}"]`;
@@ -136,7 +162,7 @@ export const chatMethods = {
       const module = await internal("groupChats"),
         group = c.groups.find((g: Data) => g.id === c.groupId);
       if (!group?.chats.includes(file)) throw new Error("群聊文件已不存在。");
-      await this.request("/api/chats/group/delete", { id: file });
+      await this.request("/api/chats/group/delete", { id: file }, "删除聊天失败");
       group.chats = group.chats.filter((id: string) => id !== file);
       if (group.chat_id === file) {
         if (group.chats.length) await module.openGroupChat(c.groupId, group.chats.at(-1));
@@ -147,7 +173,11 @@ export const chatMethods = {
     } else {
       const character = this.snapshot().character;
       if (!character) throw new Error("请先选择角色。");
-      await this.request("/api/chats/delete", { avatar_url: character.id, chatfile: file + ".jsonl" });
+      await this.request(
+        "/api/chats/delete",
+        { avatar_url: character.id, chatfile: file + ".jsonl" },
+        "删除聊天失败",
+      );
       if (this.snapshot().chatName === file) await script.replaceCurrentChat();
       await c.eventSource.emit(c.eventTypes.CHAT_DELETED, file);
     }
@@ -176,13 +206,17 @@ export const chatMethods = {
     const script = await internal("script");
     await script.saveChatConditional();
     const data = await (
-      await this.request("/api/chats/export", {
-        is_group: !!ctx().groupId,
-        avatar_url: this.snapshot().character?.id,
-        file: name.replace(/\.jsonl$/, "") + ".jsonl",
-        exportfilename: name,
-        format: "jsonl",
-      })
+      await this.request(
+        "/api/chats/export",
+        {
+          is_group: !!ctx().groupId,
+          avatar_url: this.snapshot().character?.id,
+          file: name.replace(/\.jsonl$/, "") + ".jsonl",
+          exportfilename: name,
+          format: "jsonl",
+        },
+        "导出聊天失败",
+      )
     ).json();
     if (typeof data.result !== "string") throw new Error("聊天导出未返回内容。");
     this.download(

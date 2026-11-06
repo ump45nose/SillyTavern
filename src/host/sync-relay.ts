@@ -1,12 +1,18 @@
 import type { HostAdapter } from "./adapter";
 import type { Data } from "./types";
-import { clone, mergeEdits, sameData, validatePreset } from "./model";
+import { mergeEdits, sameData, validatePreset } from "./model";
 import { changedCells } from "./database";
 import type { SyncTable } from "../sync/database";
 import { ctx } from "./internals";
-import { addonManager } from "../addons/runtime";
 
 const BASE = "/api/plugins/workbench-sync";
+const parse = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+};
 
 export interface SyncRecent {
   time: number;
@@ -53,9 +59,17 @@ export class SyncRelay {
   private reported = "";
   private reporting: Promise<void> = Promise.resolve();
   private unsubscribe: () => void;
+  /** Writes an outline into the open chat; registered by the add-on manager, which owns outlines. */
+  private writeOutline: ((draft: Data) => Promise<void>) | null = null;
   constructor(private host: HostAdapter) {
     void this.probe();
     this.unsubscribe = host.database.subscribe(() => void this.report());
+  }
+  handleOutline(write: (draft: Data) => Promise<void>) {
+    this.writeOutline = write;
+    return () => {
+      if (this.writeOutline === write) this.writeOutline = null;
+    };
   }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -81,19 +95,24 @@ export class SyncRelay {
   private listen() {
     const source = new EventSource(`${BASE}/events?role=page`);
     this.source = source;
-    const status = (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
+    const on = (name: string, handle: (data: Data) => void) =>
+      source.addEventListener(name, (event) => {
+        const text = String((event as MessageEvent).data),
+          data = parse(text);
+        if (data && typeof data === "object") handle(data as Data);
+        else this.unreadable(name, text);
+      });
+    const status = (data: Data) =>
       this.set({ status: "online", clients: data.clients, pages: data.pages, recent: data.recent ?? [] });
-    };
     // Every (re)connection is a new page to the plug-in: report the open chat's tables again.
-    source.addEventListener("hello", (event) => {
-      this.page = JSON.parse(event.data).page;
+    on("hello", (data) => {
+      this.page = data.page;
       this.reported = "";
-      status(event);
+      status(data);
       void this.report();
     });
-    source.addEventListener("status", status);
-    source.addEventListener("write", (event) => void this.write(JSON.parse((event as MessageEvent).data)));
+    on("status", status);
+    on("write", (data) => void this.write(data as WriteRequest));
     // EventSource reconnects by itself; CLOSED means the server answered with an error (plug-in gone).
     source.onerror = () =>
       this.set({ status: source.readyState === EventSource.CLOSED ? "absent" : "reconnecting" });
@@ -142,6 +161,16 @@ export class SyncRelay {
     // A failed report is sent again with the next change or reconnection.
     if (response?.ok) this.reported = body;
   }
+  /**
+   * An event whose data is not a JSON object. A write is still answered when its request id can be
+   * read, so the IDE hears at once rather than after the plug-in's timeout.
+   */
+  private unreadable(name: string, text: string) {
+    const request = name === "write" ? /"request"\s*:\s*"([\w-]+)"/.exec(text)?.[1] : undefined;
+    if (request)
+      void this.reply(request, { status: "error", message: "写入请求的数据已损坏，页面没有执行。" });
+    else console.warn(`[Workbench] unreadable ${name} event from workbench-sync`, text.slice(0, 200));
+  }
   private async write(request: WriteRequest) {
     let reply: Reply;
     try {
@@ -149,10 +178,13 @@ export class SyncRelay {
     } catch (error) {
       reply = { status: "error", message: error instanceof Error ? error.message : String(error) };
     }
-    await fetch(`${BASE}/relay`, {
+    await this.reply(request.request, reply);
+  }
+  private reply(request: string, reply: Reply) {
+    return fetch(`${BASE}/relay`, {
       method: "POST",
       headers: ctx().getRequestHeaders(),
-      body: JSON.stringify({ request: request.request, ...reply }),
+      body: JSON.stringify({ request, ...reply }),
     }).catch((error) => this.host.report(error));
   }
   private async apply({ kind, id, base, draft }: WriteRequest): Promise<Reply> {
@@ -168,20 +200,15 @@ export class SyncRelay {
     return { status: "done" };
   }
   /**
-   * Writes the preset file without SillyTavern's list update, which would select the preset and
-   * reapply the file over the running settings. For the running preset, IDE changes reach the
-   * running settings only where those still equal the file; other fields are reported as conflicts.
+   * Writes the file without applying it (writePresetFile). For the running preset, IDE changes reach
+   * the running settings only where those still equal the file; other fields are reported as conflicts.
    */
   private async preset(name: string, base: Data, draft: Data): Promise<Reply> {
     validatePreset(draft);
     const host = this.host,
-      manager = ctx().getPresetManager(),
       running = host.runningPreset(name),
       merged = mergeEdits(base, draft, host.presetData(name));
-    await manager.savePreset(name, merged, { skipUpdate: true });
-    const { presets, preset_names } = manager.getPresetList(),
-      index = Array.isArray(preset_names) ? preset_names.indexOf(name) : preset_names[name];
-    if (index !== undefined && index >= 0) presets[index] = clone(merged);
+    await host.writePresetFile(name, merged);
     const changed = Object.keys({ ...base, ...draft }).filter((k) => !sameData(base[k], draft[k])),
       conflicts: string[] = [];
     if (running) {
@@ -199,14 +226,8 @@ export class SyncRelay {
   private async outline(id: string, draft: Data): Promise<Reply> {
     const { avatar, group, chat } = JSON.parse(id);
     if (!this.isOpen(avatar, group, chat)) return { status: "skip" };
-    const manager = addonManager(this.host),
-      runtime = manager.get("outline");
-    // A loaded outline holds its data in memory and saves it on the next change, so it takes the write.
-    if (runtime) await runtime.action("import", draft, "replace");
-    else {
-      const api = manager.api("outline");
-      await api.saveMetadata(draft, api.snapshot().chatKey);
-    }
+    if (!this.writeOutline) return { status: "error", message: "工作台界面尚未就绪，大纲未写入。" };
+    await this.writeOutline(draft);
     return { status: "done" };
   }
   /**
@@ -227,6 +248,12 @@ export class SyncRelay {
       )
     )
       return { status: "skip", message: "数据库刚刚更新过这张表：请重新载入文件后再改。" };
+    const stray = draft.rows.find((row) => row.index && !table.rows[row.index - 1]);
+    if (stray)
+      return {
+        status: "error",
+        message: `这张表没有第 ${stray.index} 行（共 ${table.rows.length} 行），整张表都没有写入：请重新载入文件后再改。`,
+      };
     const kept = new Set<number>();
     for (const row of draft.rows) {
       if (!row.index) continue;

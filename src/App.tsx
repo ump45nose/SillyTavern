@@ -330,10 +330,9 @@ export default function App({
   live.current = { s, act, goPanel, next, toggleLeft, toggleFocus };
   const [operations] = useState(() => {
     const ops = new Operations();
-    for (const kind of ["connection", "preset", "world", "persona"] as Resource[]) {
+    for (const kind of ["connection", "preset", "world", "persona"] as Resource[])
       ops.register(`open.${kind}`, () => live.current.goPanel(kind));
-      ops.register(`next.${kind}`, () => live.current.next(kind));
-    }
+    ops.register("next.connection", () => live.current.next("connection"));
     for (const kind of ["trace", "outline", "database", "image-gen", "character"] as const)
       ops.register(`open.${kind}`, () => live.current.goPanel(kind));
     ops.register("outline.editor", () => {

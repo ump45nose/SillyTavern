@@ -16,8 +16,8 @@ export class AddonManager {
   private pending = new Map<AddonId, Promise<AddonRuntime>>();
   private listeners = new Set<() => void>();
   private cleanups: (() => void)[] = [];
-  /** Runtime subscriptions; they end with their runtimes on reset. */
-  private unsubscribes: (() => void)[] = [];
+  /** Each runtime's subscription; it ends with its runtime. */
+  private unsubscribes = new Map<AddonId, () => void>();
   private key: string;
   private version = 0;
   private disposed = false;
@@ -54,10 +54,24 @@ export class AddonManager {
         this.syncOutline();
         for (const [id, runtime] of this.runtimes)
           if (!addonEnabled(host.prefs(), id)) {
+            this.unsubscribes.get(id)?.();
+            this.unsubscribes.delete(id);
             runtime.dispose();
             this.runtimes.delete(id);
             this.emit();
           }
+      }),
+    );
+    // IDE edits to the open chat's outline arrive through the sync relay. A loaded outline holds its
+    // data in memory and saves it on the next change, so it takes the write.
+    this.cleanups.push(
+      host.sync.handleOutline(async (draft) => {
+        const runtime = this.get("outline");
+        if (runtime) await runtime.action("import", draft, "replace");
+        else {
+          const api = this.api("outline");
+          await api.saveMetadata(draft, api.snapshot().chatKey);
+        }
       }),
     );
     this.cleanups.push(
@@ -71,23 +85,31 @@ export class AddonManager {
       }),
     );
   }
-  /** Re-reads the chat's outline when its metadata object changes (every save replaces it). */
+  /**
+   * Re-reads the chat's outline when its metadata object changes (every save replaces it). The prompt
+   * is checked against SillyTavern's table, which starts empty whenever a chat is loaded, reloaded or
+   * branched, even when the outline itself stays the same.
+   */
   private syncOutline() {
-    const source = addonEnabled(this.host.prefs(), "outline")
-      ? ctx().chatMetadata?.workbench_addons?.outline
-      : undefined;
-    if (source === this.outline.source) return;
-    const next = { source, text: "", prompt: "", depth: 0 };
-    try {
-      const data = normalizeOutline(source);
-      next.text = outlineContext(data);
-      if (data.settings.inject.enabled) [next.prompt, next.depth] = [next.text, data.settings.inject.depth];
-    } catch (error) {
-      this.host.report(error);
+    const c = ctx(),
+      source = addonEnabled(this.host.prefs(), "outline")
+        ? c.chatMetadata?.workbench_addons?.outline
+        : undefined;
+    if (source !== this.outline.source) {
+      const next = { source, text: "", prompt: "", depth: 0 };
+      try {
+        const data = normalizeOutline(source);
+        next.text = outlineContext(data);
+        if (data.settings.inject.enabled) [next.prompt, next.depth] = [next.text, data.settings.inject.depth];
+      } catch (error) {
+        this.host.report(error);
+      }
+      this.outline = next;
     }
-    if (next.prompt !== this.outline.prompt || next.depth !== this.outline.depth)
-      ctx().setExtensionPrompt(OUTLINE_PROMPT, next.prompt, IN_CHAT, next.depth, false, SYSTEM);
-    this.outline = next;
+    const { prompt, depth } = this.outline,
+      injected = c.extensionPrompts?.[OUTLINE_PROMPT];
+    if ((injected?.value ?? "") !== prompt || (prompt && injected.depth !== depth))
+      c.setExtensionPrompt(OUTLINE_PROMPT, prompt, IN_CHAT, depth, false, SYSTEM);
   }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -120,7 +142,7 @@ export class AddonManager {
         if (module.apiVersion !== 2) throw new Error("此插件没有后台任务。");
         const runtime = module.createRuntime(this.api(id));
         this.runtimes.set(id, runtime);
-        this.unsubscribes.push(runtime.subscribe(this.emit));
+        this.unsubscribes.set(id, runtime.subscribe(this.emit));
         this.emit();
         return runtime;
       })
@@ -136,7 +158,8 @@ export class AddonManager {
       .filter((task) => task.status !== "idle");
   }
   private reset() {
-    this.unsubscribes.splice(0).forEach((off) => off());
+    this.unsubscribes.forEach((off) => off());
+    this.unsubscribes.clear();
     this.runtimes.forEach((runtime) => runtime.dispose());
     this.runtimes.clear();
     this.pending.clear();

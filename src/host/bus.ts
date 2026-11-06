@@ -37,8 +37,12 @@ type Name = keyof BusEvents;
 type Handler<K extends Name> = (payload: BusEvents[K]) => void;
 
 /**
- * Typed replacement for the workbench's window CustomEvents. The only window event left is
- * `wb-startup-updated`, sent by extension/startup.js, which loads outside this bundle.
+ * Typed replacement for the workbench's window CustomEvents. Two window events remain, both contracts
+ * with code that loads outside this bundle:
+ * - `wb-startup-updated`, sent by extension/startup.js;
+ * - `workbench:connection-archive-request`, cancelable, sent by domains/organize.ts before connections
+ *   are archived or restored. resource-center-extension takes the request over by cancelling it and
+ *   setting `detail.promise`.
  */
 class Bus {
   private handlers = new Map<Name, Set<Handler<any>>>();

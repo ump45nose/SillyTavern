@@ -18,6 +18,8 @@ import type { DatabaseRuntime } from "./database-runtime";
 import { bus } from "./bus";
 
 export const defaults: Preferences = { left: true, bindings: {}, groups: {} };
+/** Event names this SillyTavern does not have; each is warned about once per page. */
+const missingEvents = new Set<string>();
 
 export const sliceNames: Slice[] = ["session", "characters", "resources", "chat", "prefs"];
 /** Slices built from another slice go stale with it. */
@@ -65,7 +67,10 @@ const indexMessage = (m: Data, id: number): MessageIndex => ({
 
 /**
  * Shared host state and infrastructure. Domain behaviour lives in ./domains and is mixed into
- * HostAdapter; fields here are internal to the host package even where TypeScript cannot say so.
+ * HostAdapter. Fields here are internal to the host package even where TypeScript cannot say so,
+ * except three the UI uses directly: resource editors keep unsaved work in `drafts`, reload when
+ * `resourceVersions` moves, and disable navigation while `resourceAction` (a batch copy, delete or
+ * export) runs.
  */
 export class HostCore {
   drafts = new Map<string, { base: Data; draft: Data; extra?: Data }>();
@@ -102,13 +107,21 @@ export class HostCore {
   database!: DatabaseRuntime;
   /** The chat's story options, from the model's replies or a database table. */
   options!: OptionsRuntime;
+  /** Listens until destroy; the returned function stops earlier, for listeners with a shorter life. */
   listen(name: string, fn: (...args: any[]) => void) {
     const c = ctx(),
       event = c.eventTypes[name];
-    if (event) {
-      c.eventSource.on(event, fn);
-      this.cleanup.push(() => c.eventSource.removeListener(event, fn));
+    if (!event) {
+      if (!missingEvents.has(name)) {
+        missingEvents.add(name);
+        console.warn(`[Workbench] SillyTavern has no ${name} event; what it would refresh stays stale.`);
+      }
+      return () => {};
     }
+    const off = () => c.eventSource.removeListener(event, fn);
+    c.eventSource.on(event, fn);
+    this.cleanup.push(off);
+    return off;
   }
   /** Notified on every change; prefer subscribeSlice for anything rendered often. */
   subscribe = (fn: () => void) => {
@@ -169,18 +182,35 @@ export class HostCore {
     }
     return changed;
   }
-  /** Re-indexes one floor after send, receive, edit or swipe without rebuilding the others. */
-  updateMessage(id: number) {
+  /** Re-indexes floors after send, receive, edit, swipe or hiding without rebuilding the others. */
+  updateMessage(...ids: number[]) {
     const chat = this.sliceCache.chat,
       source: Data[] = ctx().chat;
-    if (!chat || !Number.isInteger(id) || id < 0 || id >= source.length || source.length < chat.length)
+    if (
+      !chat ||
+      source.length < chat.length ||
+      ids.some((id) => !Number.isInteger(id) || id < 0 || id >= source.length)
+    )
       return this.invalidate("chat");
     const next = chat.slice();
     for (let i = chat.length; i < source.length; i++) next[i] = indexMessage(source[i], i);
-    next[id] = indexMessage(source[id], id);
+    for (const id of ids) next[id] = indexMessage(source[id], id);
     this.sliceCache.chat = next;
     this.sliceVersions.chat++;
     this.notify(new Set(["chat"]));
+  }
+  /**
+   * Re-indexes the floors whose hidden flag no longer matches the chat. Hiding fires no event, and
+   * SillyTavern marks only the rendered ones of a hidden range in the page.
+   */
+  syncHidden() {
+    const chat = this.sliceCache.chat,
+      source: Data[] = ctx().chat;
+    if (!chat) return;
+    const changed = chat
+      .filter((m, i) => i < source.length && !!source[i].is_system !== !!m.hidden)
+      .map((m) => m.id);
+    if (changed.length) this.updateMessage(...changed);
   }
   private notify(stale: Set<Slice>) {
     this.cache = null;
@@ -255,13 +285,19 @@ export class HostCore {
     delete headers["Content-Type"];
     return fetch(path, { method: "POST", headers, body: form });
   }
-  async request(path: string, body: Data) {
+  /** `failure` names what failed; without it the error assumes an editor's load or save, whose draft stays. */
+  async request(path: string, body: Data, failure?: string) {
     const response = await fetch(path, {
       method: "POST",
       headers: ctx().getRequestHeaders(),
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`保存或读取失败（HTTP ${response.status}），草稿已保留。`);
+    if (!response.ok)
+      throw new Error(
+        failure
+          ? `${failure}（HTTP ${response.status}）。`
+          : `保存或读取失败（HTTP ${response.status}），草稿已保留。`,
+      );
     return response;
   }
   snapshot(): HostSnapshot {

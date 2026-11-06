@@ -44,10 +44,11 @@ export const extensionsMethods = {
     const module = await internal("extensions");
     if (!id.startsWith("third-party/")) throw new Error("内置扩展随酒馆版本更新。");
     if (action === "delete") await this.extensionHook(id, "delete");
-    const response = await this.request(`/api/extensions/${action}`, {
-      extensionName: id.replace(/^third-party\//, ""),
-      global: module.extensionTypes[id] === "global",
-    });
+    const response = await this.request(
+      `/api/extensions/${action}`,
+      { extensionName: id.replace(/^third-party\//, ""), global: module.extensionTypes[id] === "global" },
+      action === "delete" ? "删除扩展失败" : "更新扩展失败",
+    );
     if (action === "delete") await this.persistSettings();
     const data = await response.json();
     if (action === "update" && !data.isUpToDate) await this.extensionHook(id, "update");

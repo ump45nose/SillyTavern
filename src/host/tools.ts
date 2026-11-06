@@ -76,13 +76,15 @@ export function pinnedTools(value: unknown): PinnedTool[] {
     )
     .map(({ id, label }) => ({ id, label }));
 }
-/** Every pinnable native tool by id, from one scan of both menus; an id two entries share resolves to neither. */
+/**
+ * Every pinnable native tool by id, from one scan of both menus. Ids name their menu, so entries that
+ * share one are in the same menu, where nativeMenuItems already leaves them unpinnable.
+ */
 export function pinnableTools(): Map<string, NativeTool> {
-  const items = [...nativeMenuItems("menu"), ...nativeMenuItems("tools")],
-    counts = new Map<string, number>();
-  for (const item of items) counts.set(item.id, (counts.get(item.id) ?? 0) + 1);
   return new Map(
-    items.filter((item) => item.pinnable && counts.get(item.id) === 1).map((item) => [item.id, item]),
+    [...nativeMenuItems("menu"), ...nativeMenuItems("tools")]
+      .filter((item) => item.pinnable)
+      .map((item) => [item.id, item]),
   );
 }
 export function resolveTool(id: string): NativeTool | undefined {

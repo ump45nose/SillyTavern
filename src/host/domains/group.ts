@@ -54,13 +54,8 @@ export const groupMethods = {
     if (String(c.groupId) !== id || String(c.chatId) !== chatId)
       throw new Error("当前群聊已切换，草稿仍保留。");
     if (this.isBusy()) throw new Error("请等待生成结束后保存。");
-    const edited = mergeEdits(base, draft, this.groupOverrides()),
-      metadata = { ...c.chatMetadata, ...edited };
-    await this.request("/api/chats/group/save", {
-      id: chatId,
-      chat: [{ chat_metadata: metadata, user_name: "unused", character_name: "unused" }, ...c.chat],
-      force: false,
-    });
+    const edited = mergeEdits(base, draft, this.groupOverrides());
+    await this.saveChatFile({ ...c.chatMetadata, ...edited }, c.chat);
     Object.assign(c.chatMetadata, edited);
     return edited;
   },
@@ -102,7 +97,7 @@ export const groupMethods = {
     return this.groups();
   },
   async deleteGroup(this: HostAdapter, id: string) {
-    await this.request("/api/groups/delete", { id });
+    await this.request("/api/groups/delete", { id }, "删除群组失败");
     const module = await internal("groupChats");
     if (ctx().groupId === id) await module.resetSelectedGroup();
     await module.getGroups();

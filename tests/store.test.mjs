@@ -103,6 +103,51 @@ test("updateMessage re-indexes one floor and appends new ones without rebuilding
   assert.equal(host.slice("chat").length, 2, "a shorter chat falls back to a full rebuild");
 });
 
+test("syncHidden re-indexes only the floors whose hidden flag changed", () => {
+  const host = new HostCore();
+  st.chat = [message("a"), message("b", true), message("c")];
+  const first = host.slice("chat");
+  let heard = 0;
+  host.subscribeSlice("chat", () => heard++);
+  host.syncHidden();
+  assert.equal(heard, 0, "nothing changed");
+  st.chat[0].is_system = true;
+  st.chat[2].is_system = true;
+  host.syncHidden();
+  const next = host.slice("chat");
+  assert.equal(heard, 1, "one notification for the whole hidden range");
+  assert.deepEqual(
+    next.map((m) => !!m.hidden),
+    [true, false, true],
+  );
+  assert.equal(next[1], first[1]);
+  st.chat[0].is_system = false;
+  host.syncHidden();
+  assert.equal(host.slice("chat")[0].hidden, undefined);
+});
+
+test("listen warns once about an event SillyTavern lacks, and returns the removal either way", (t) => {
+  const listeners = new Map();
+  st.eventTypes = { CHAT_CHANGED: "chat_id_changed" };
+  st.eventSource = {
+    on: (event, fn) => listeners.set(event, fn),
+    removeListener: (event, fn) => listeners.get(event) === fn && listeners.delete(event),
+  };
+  const warn = t.mock.method(console, "warn", () => {});
+  const host = new HostCore();
+  const fn = () => {};
+  const off = host.listen("CHAT_CHANGED", fn);
+  assert.equal(listeners.get("chat_id_changed"), fn);
+  off();
+  assert.equal(listeners.size, 0);
+  assert.equal(host.cleanup.length, 1, "destroy removes it too");
+  host.listen("NO_SUCH_EVENT", fn)();
+  host.listen("NO_SUCH_EVENT", fn);
+  assert.equal(warn.mock.callCount(), 1);
+  assert.match(warn.mock.calls[0].arguments[0], /NO_SUCH_EVENT/);
+  assert.equal(host.cleanup.length, 1);
+});
+
 test("snapshot assembles the slices and keeps identity until something changes", () => {
   const host = new HostCore();
   const snap = host.snapshot();
@@ -112,6 +157,14 @@ test("snapshot assembles the slices and keeps identity until something changes",
   host.invalidate("chat");
   assert.notEqual(host.snapshot(), snap);
   assert.equal(host.snapshot().characters, snap.characters);
+});
+
+test("a failed request names what failed, or keeps the editor's draft message by default", async (t) => {
+  st.getRequestHeaders = () => ({});
+  t.mock.method(globalThis, "fetch", async () => ({ ok: false, status: 404 }));
+  const host = new HostCore();
+  await assert.rejects(host.request("/api/x", {}), /^Error: 保存或读取失败（HTTP 404），草稿已保留。$/);
+  await assert.rejects(host.request("/api/x", {}, "删除聊天失败"), /^Error: 删除聊天失败（HTTP 404）。$/);
 });
 
 test("previews strip markup and collapse whitespace", () => {
