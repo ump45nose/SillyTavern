@@ -106,9 +106,13 @@ export const characterMethods = {
    * Deletes cards with the cleanup SillyTavern's own delete does for each, but without closing the open
    * chat. Its regex extension answers the delete event by revoking the open character's embedded scripts,
    * which SillyTavern never shows because it closes the chat first; that permission is put back.
+   * A card that fails is skipped and returned, not thrown. The list reloads once, after the last card,
+   * so each delete event carries the card's index in the list from before the batch.
    */
   async deleteCharacters(this: HostAdapter, ids: string[]) {
-    if (!ids.length) return;
+    const deleted: string[] = [],
+      failed: { id: string; message: string }[] = [];
+    if (!ids.length) return { deleted, failed };
     if (ids.includes(this.snapshot().character?.id ?? ""))
       throw new Error("请先切换到未被选中的角色，再删除当前角色。");
     const c = ctx(),
@@ -116,16 +120,24 @@ export const characterMethods = {
       regexAllowed = !!open && !!c.extensionSettings.character_allowed_regex?.includes(open);
     try {
       for (const id of ids) {
-        const index = c.characters.findIndex((x: Data) => x.avatar === id);
-        await this.request("/api/characters/delete", { avatar_url: id, delete_chats: false }, "删除角色失败");
+        const index = c.characters.findIndex((x: Data) => x.avatar === id),
+          character = c.characters[index];
+        try {
+          if (!character) throw new Error("角色已不存在。");
+          await this.request(
+            "/api/characters/delete",
+            { avatar_url: id, delete_chats: false },
+            "删除角色失败",
+          );
+        } catch (e) {
+          failed.push({ id, message: e instanceof Error ? e.message : String(e) });
+          continue;
+        }
+        deleted.push(id);
         for (const key of [`AlertWI_${id}`, `AlertRegex_${id}`, `mediaWarningShown:${id}`])
           c.accountStorage.removeItem(key);
         delete c.tagMap[id];
-        if (index >= 0)
-          await c.eventSource.emit(c.eventTypes.CHARACTER_DELETED, {
-            id: index,
-            character: c.characters[index],
-          });
+        await c.eventSource.emit(c.eventTypes.CHARACTER_DELETED, { id: index, character });
       }
     } finally {
       const allowed = c.extensionSettings.character_allowed_regex;
@@ -134,6 +146,7 @@ export const characterMethods = {
       await c.getCharacters();
       this.invalidate("characters");
     }
+    return { deleted, failed };
   },
   /** One merge request per card, from the tags in the loaded list; one reload and event at the end. */
   async tagCharacters(this: HostAdapter, ids: string[], tag: string) {

@@ -20,9 +20,9 @@ const { characterMethods } = await import(
 function setup(failing = "") {
   const log = { requests: [], removed: [], emitted: [], saves: 0, reloads: 0, invalidated: [] };
   Object.assign(st, {
-    characters: [{ avatar: "open.png" }, { avatar: "a.png" }, { avatar: "b.png" }],
+    characters: [{ avatar: "open.png" }, { avatar: "a.png" }, { avatar: "b.png" }, { avatar: "c.png" }],
     characterId: "0",
-    tagMap: { "open.png": ["t"], "a.png": ["t"], "b.png": ["t"] },
+    tagMap: { "open.png": ["t"], "a.png": ["t"], "b.png": ["t"], "c.png": ["t"] },
     accountStorage: { removeItem: (key) => log.removed.push(key) },
     extensionSettings: { character_allowed_regex: ["open.png", "a.png"] },
     eventTypes: { CHARACTER_DELETED: "characterDeleted" },
@@ -51,7 +51,10 @@ function setup(failing = "") {
 
 test("each deleted card gets SillyTavern's cleanup and delete event; the open character keeps its regex permission", async () => {
   const { host, log } = setup();
-  await host.deleteCharacters(["a.png", "b.png"]);
+  assert.deepEqual(await host.deleteCharacters(["a.png", "b.png"]), {
+    deleted: ["a.png", "b.png"],
+    failed: [],
+  });
   assert.deepEqual(log.requests, [
     ["/api/characters/delete", { avatar_url: "a.png", delete_chats: false }],
     ["/api/characters/delete", { avatar_url: "b.png", delete_chats: false }],
@@ -64,7 +67,7 @@ test("each deleted card gets SillyTavern's cleanup and delete event; the open ch
     "AlertRegex_b.png",
     "mediaWarningShown:b.png",
   ]);
-  assert.deepEqual(Object.keys(st.tagMap), ["open.png"]);
+  assert.deepEqual(Object.keys(st.tagMap), ["open.png", "c.png"]);
   assert.deepEqual(log.emitted, [
     ["characterDeleted", 1, "a.png"],
     ["characterDeleted", 2, "b.png"],
@@ -73,12 +76,44 @@ test("each deleted card gets SillyTavern's cleanup and delete event; the open ch
   assert.deepEqual([log.saves, log.reloads, log.invalidated], [1, 1, ["characters"]]);
 });
 
-test("a failed delete stops the batch but still saves and reloads after the ones that went through", async () => {
+test("a failed card is skipped and reported; the rest are deleted with one save and one reload", async () => {
   const { host, log } = setup("b.png");
-  await assert.rejects(host.deleteCharacters(["a.png", "b.png"]), /^Error: 删除角色失败（HTTP 500）。$/);
-  assert.deepEqual(log.emitted, [["characterDeleted", 1, "a.png"]]);
+  assert.deepEqual(await host.deleteCharacters(["a.png", "b.png", "c.png"]), {
+    deleted: ["a.png", "c.png"],
+    failed: [{ id: "b.png", message: "删除角色失败（HTTP 500）。" }],
+  });
+  assert.deepEqual(
+    log.requests.map(([, body]) => body.avatar_url),
+    ["a.png", "b.png", "c.png"],
+  );
+  assert.deepEqual(log.removed, [
+    "AlertWI_a.png",
+    "AlertRegex_a.png",
+    "mediaWarningShown:a.png",
+    "AlertWI_c.png",
+    "AlertRegex_c.png",
+    "mediaWarningShown:c.png",
+  ]);
   assert.deepEqual(Object.keys(st.tagMap), ["open.png", "b.png"]);
+  // Indexes in the list as it was before the batch: c.png stays 3 after a.png is gone.
+  assert.deepEqual(log.emitted, [
+    ["characterDeleted", 1, "a.png"],
+    ["characterDeleted", 3, "c.png"],
+  ]);
   assert.deepEqual([log.saves, log.reloads, log.invalidated], [1, 1, ["characters"]]);
+});
+
+test("a card no longer in the list is reported without a delete request", async () => {
+  const { host, log } = setup();
+  assert.deepEqual(await host.deleteCharacters(["gone.png", "a.png"]), {
+    deleted: ["a.png"],
+    failed: [{ id: "gone.png", message: "角色已不存在。" }],
+  });
+  assert.deepEqual(
+    log.requests.map(([, body]) => body.avatar_url),
+    ["a.png"],
+  );
+  assert.deepEqual(log.emitted, [["characterDeleted", 1, "a.png"]]);
 });
 
 test("the open character is not deleted from here", async () => {

@@ -56,14 +56,16 @@ try {
         format: "png",
       }),
       bytes = [...new Uint8Array(await r.arrayBuffer()).slice(0, 8)];
-    await h.deleteCharacters([id]);
+    const { failed } = await h.deleteCharacters([id]);
     return {
       tagged: updated.data.tags.includes("WB验证"),
       extension: updated.data.extensions.workbench_fixture,
       png: bytes,
+      failed,
       deleted: !c.characters.some((x) => x.avatar === id),
     };
   });
+  assert.deepEqual(batch.failed, []);
   assert.equal(batch.tagged && batch.deleted, true);
   assert.deepEqual(batch.extension, { unknown: "keep" });
   assert.deepEqual(batch.png, [137, 80, 78, 71, 13, 10, 26, 10]);
