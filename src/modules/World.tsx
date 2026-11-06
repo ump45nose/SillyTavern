@@ -14,7 +14,8 @@ import { EntryPortraits } from "../ui/EntryPortraits";
 import { MdField } from "../ui/md/MdField";
 import { isPathSafe } from "../host/cast";
 import { unarchived } from "../host/organize";
-import { positions, modeName } from "./world/shared";
+import { modeName } from "./world/shared";
+import { EntryParams } from "./world/EntryParams";
 import { EntryItem } from "./world/EntryItem";
 import { EntryRow } from "./world/EntryRow";
 import { KeyChips } from "./world/KeyChips";
@@ -462,37 +463,7 @@ export default function World({
                 </>
               )}
               {(tab === "content" || tab === "trigger") && (
-                <div className="wb-entry-params">
-                  <label>
-                    注入位置
-                    <Select
-                      value={selected.position ?? 0}
-                      onChange={(e) => update({ position: Number(e.target.value) })}
-                    >
-                      {positions.map((v, i) => (
-                        <option key={v} value={i}>
-                          {v}
-                        </option>
-                      ))}
-                    </Select>
-                  </label>
-                  {[
-                    ["depth", "深度"],
-                    ["order", "顺序"],
-                    ["probability", "触发概率 %"],
-                  ].map(([key, label]) => (
-                    <label key={key}>
-                      {label}
-                      <input
-                        type="number"
-                        min={0}
-                        max={key === "probability" ? 100 : undefined}
-                        value={selected[key] ?? 0}
-                        onChange={(e) => update({ [key]: Number(e.target.value) })}
-                      />
-                    </label>
-                  ))}
-                </div>
+                <EntryParams entry={selected} onChange={update} compact />
               )}
             </article>
           </EntryEditor>
@@ -518,70 +489,7 @@ export default function World({
     (event.currentTarget as HTMLElement).focus({ preventScroll: true });
     tableWindow.reveal(next);
   };
-  const params = selected && (
-    <aside className="wb-wt-params" aria-label="注入参数">
-      <h4>注入参数</h4>
-      <div className="wb-wt-param-grid">
-        <Field label="注入位置">
-          <Select
-            value={selected.position ?? 0}
-            onChange={(e) => update({ position: Number(e.target.value) })}
-          >
-            {positions.map((v, i) => (
-              <option key={v} value={i}>
-                {v}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        {[
-          ["order", "顺序"],
-          ["depth", "深度"],
-          ["probability", "概率 %"],
-          ["scanDepth", "扫描深度"],
-          ["sticky", "粘性"],
-          ["cooldown", "冷却"],
-          ["delay", "延迟"],
-          ["recursionStep", "递归步数"],
-          ["groupWeight", "组权重"],
-        ].map(([key, label]) => (
-          <Field label={label} key={key}>
-            <input
-              type="number"
-              min={0}
-              max={key === "probability" ? 100 : undefined}
-              value={selected[key] ?? 0}
-              onChange={(e) => update({ [key]: Number(e.target.value) })}
-            />
-          </Field>
-        ))}
-        <Field label="包含组">
-          <input value={selected.group ?? ""} onChange={(e) => update({ group: e.target.value })} />
-        </Field>
-      </div>
-      <div className="wb-wt-flags">
-        {[
-          ["useProbability", "启用概率"],
-          ["excludeRecursion", "排除递归"],
-          ["preventRecursion", "阻止后续递归"],
-          ["delayUntilRecursion", "仅递归时触发"],
-          ["matchWholeWords", "匹配完整单词"],
-          ["caseSensitive", "区分大小写"],
-          ["useGroupScoring", "分组评分"],
-          ["groupOverride", "覆盖包含组"],
-        ].map(([key, label]) => (
-          <label className="wb-check" key={key}>
-            <input
-              type="checkbox"
-              checked={!!selected[key]}
-              onChange={(e) => update({ [key]: e.target.checked })}
-            />
-            {label}
-          </label>
-        ))}
-      </div>
-    </aside>
-  );
+  const params = selected && <EntryParams entry={selected} onChange={update} />;
   const editorContent = selected && (
     <aside className="wb-wt-detail" aria-label={`条目详情：${selected.comment || entry}`}>
       <div className="wb-wt-editor-main">

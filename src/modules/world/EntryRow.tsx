@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { activation } from "../../host/model";
 import type { Data } from "../../host/types";
-import { positions, modeName, type EntryActions } from "./shared";
+import { DEFAULT_DEPTH, positions, modeName, type EntryActions } from "./shared";
 /** One row of the deep editor's entry table. */
 export const EntryRow = memo(function EntryRow({
   id,
@@ -39,7 +39,7 @@ export const EntryRow = memo(function EntryRow({
       </span>
       <span role="cell">{positions[e.position ?? 0]}</span>
       <span role="cell" className="is-num">
-        {(e.position ?? 0) === 4 ? (e.depth ?? 4) : "—"}
+        {(e.position ?? 0) === 4 ? (e.depth ?? DEFAULT_DEPTH) : "—"}
       </span>
       <span role="cell" className="is-num">
         {e.order ?? 0}

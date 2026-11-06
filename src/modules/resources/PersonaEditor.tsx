@@ -17,6 +17,17 @@ import { useTokenCounts } from "../../ui/tokens";
 import { Fold, SaveBar, Switch, useDraft } from "../../ui/ResourceControls";
 import { SpeakerColor } from "../../ui/SpeakerColor";
 import { MdField } from "../../ui/md/MdField";
+type PersonaField = {
+  key: string;
+  label: string;
+  control: React.ReactElement<any>;
+  /** In the panel's card it shares the row before it, under this shorter label. */
+  pair?: string;
+  /** On the desk it is a line above the description instead of a row in the side card. */
+  line?: boolean;
+  /** More than one control, so its row cannot be a label for it. */
+  group?: boolean;
+};
 export function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: string; deep?: boolean }) {
   const snap = useHostSlices(host, withoutChat),
     task = useTask(),
@@ -54,17 +65,6 @@ export function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: strin
       ),
       `${draft.name || "persona"}.json`,
     );
-  const roleSelect = (
-    <Select
-      aria-label="注入角色"
-      value={draft.role ?? 0}
-      onChange={(e) => change("role", Number(e.target.value))}
-    >
-      <option value={0}>System</option>
-      <option value={1}>User</option>
-      <option value={2}>Assistant</option>
-    </Select>
-  );
   const save = (
     <SaveBar
       {...edit}
@@ -72,21 +72,127 @@ export function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: strin
       save={() => task.run(async () => edit.saved(await host.savePersona(id, edit.base, draft)))}
     />
   );
-  const positionSelect = (
-    <Select value={draft.position ?? 0} onChange={(e) => change("position", Number(e.target.value))}>
-      {[
-        [0, "提示词 / 故事模板"],
-        [2, "作者注释之前"],
-        [3, "作者注释之后"],
-        [4, "指定深度"],
-        [9, "停用"],
-      ].map(([v, n]) => (
-        <option key={v} value={v}>
-          {n}
-        </option>
-      ))}
-    </Select>
-  );
+  // The panel's card and the settings page's desk edit the same fields; only the layout differs.
+  const fields: PersonaField[] = [
+    {
+      key: "name",
+      label: "用户名称",
+      line: true,
+      control: <input value={draft.name ?? ""} onChange={(e) => change("name", e.target.value)} />,
+    },
+    {
+      key: "title",
+      label: "说明标题",
+      line: true,
+      control: (
+        <input
+          placeholder="列表中名称下方的一行"
+          value={draft.title ?? ""}
+          onChange={(e) => change("title", e.target.value)}
+        />
+      ),
+    },
+    {
+      key: "position",
+      label: "注入位置",
+      control: (
+        <Select value={draft.position ?? 0} onChange={(e) => change("position", Number(e.target.value))}>
+          {[
+            [0, "提示词 / 故事模板"],
+            [2, "作者注释之前"],
+            [3, "作者注释之后"],
+            [4, "指定深度"],
+            [9, "停用"],
+          ].map(([v, n]) => (
+            <option key={v} value={v}>
+              {n}
+            </option>
+          ))}
+        </Select>
+      ),
+    },
+    ...(draft.position === 4
+      ? [
+          {
+            key: "depth",
+            label: "深度",
+            control: (
+              <input
+                type="number"
+                min={0}
+                max={9999}
+                value={draft.depth ?? 2}
+                onChange={(e) => change("depth", Number(e.target.value))}
+              />
+            ),
+          },
+          {
+            key: "role",
+            label: "注入角色",
+            pair: "角色",
+            control: (
+              <Select value={draft.role ?? 0} onChange={(e) => change("role", Number(e.target.value))}>
+                <option value={0}>System</option>
+                <option value={1}>User</option>
+                <option value={2}>Assistant</option>
+              </Select>
+            ),
+          },
+        ]
+      : []),
+    {
+      key: "lorebook",
+      label: "绑定世界书",
+      control: (
+        <Select value={draft.lorebook || ""} onChange={(e) => change("lorebook", e.target.value)}>
+          <option value="">不绑定</option>
+          {snap.resources.world.map((w) => (
+            <option key={w.id}>{w.name}</option>
+          ))}
+        </Select>
+      ),
+    },
+    {
+      key: "color",
+      label: "对白颜色",
+      group: true,
+      control: <SpeakerColor host={host} kind="persona" id={id} />,
+    },
+  ];
+  const control = (field: PersonaField) =>
+    field.group ? field.control : React.cloneElement(field.control, { "aria-label": field.label });
+  /** The fields as the panel's card rows, the desk's side card rows or the desk's lines. */
+  const fieldRows = (layout: "card" | "side" | "line") => {
+    if (layout === "card") {
+      const rows: PersonaField[][] = [];
+      for (const field of fields)
+        if (field.pair && rows.length) rows[rows.length - 1].push(field);
+        else rows.push([field]);
+      return rows.map(([first, ...paired]) => (
+        <div key={first.key} className={paired.length ? "wb-card-row wb-card-pair" : "wb-card-row"}>
+          <span className="wb-card-label">{first.label}</span>
+          {control(first)}
+          {paired.map((field) => (
+            <React.Fragment key={field.key}>
+              <span className="wb-card-label is-inline">{field.pair}</span>
+              {control(field)}
+            </React.Fragment>
+          ))}
+        </div>
+      ));
+    }
+    return fields
+      .filter((field) => !!field.line === (layout === "line"))
+      .map((field) => {
+        const Row = field.group ? "div" : "label";
+        return (
+          <Row key={field.key} className={layout === "line" ? "wb-persona-line" : "wb-persona-card-row"}>
+            <span>{field.label}</span>
+            {control(field)}
+          </Row>
+        );
+      });
+  };
   // The panel's fold and the settings page's side column offer the same persona actions.
   const manage = (
     <>
@@ -183,59 +289,7 @@ export function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: strin
             />
           </section>
           <section className="wb-card wb-persona-fields-card" aria-label="名称与注入">
-            <div className="wb-card-row">
-              <span className="wb-card-label">用户名称</span>
-              <input
-                aria-label="用户名称"
-                value={draft.name ?? ""}
-                onChange={(e) => change("name", e.target.value)}
-              />
-            </div>
-            <div className="wb-card-row">
-              <span className="wb-card-label">说明标题</span>
-              <input
-                aria-label="说明标题"
-                placeholder="列表中名称下方的一行"
-                value={draft.title ?? ""}
-                onChange={(e) => change("title", e.target.value)}
-              />
-            </div>
-            <div className="wb-card-row">
-              <span className="wb-card-label">注入位置</span>
-              {React.cloneElement(positionSelect, { "aria-label": "注入位置" })}
-            </div>
-            {draft.position === 4 && (
-              <div className="wb-card-row wb-card-pair">
-                <span className="wb-card-label">深度</span>
-                <input
-                  aria-label="深度"
-                  type="number"
-                  min={0}
-                  max={9999}
-                  value={draft.depth ?? 2}
-                  onChange={(e) => change("depth", Number(e.target.value))}
-                />
-                <span className="wb-card-label is-inline">角色</span>
-                {roleSelect}
-              </div>
-            )}
-            <div className="wb-card-row">
-              <span className="wb-card-label">绑定世界书</span>
-              <Select
-                aria-label="绑定世界书"
-                value={draft.lorebook || ""}
-                onChange={(e) => change("lorebook", e.target.value)}
-              >
-                <option value="">不绑定</option>
-                {snap.resources.world.map((w) => (
-                  <option key={w.id}>{w.name}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="wb-card-row">
-              <span className="wb-card-label">对白颜色</span>
-              <SpeakerColor host={host} kind="persona" id={id} />
-            </div>
+            {fieldRows("card")}
           </section>
           <Fold title="管理与偏好" hint="导出 · 统计 · 删除">
             <div className="wb-persona-manage">{manage}</div>
@@ -294,62 +348,12 @@ export function PersonaEditor({ host, id, deep }: { host: HostAdapter; id: strin
           </section>
           <section className="wb-persona-card" aria-label="注入与绑定">
             <p className="wb-persona-card-title">注入与绑定</p>
-            <label className="wb-persona-card-row">
-              <span>注入位置</span>
-              {React.cloneElement(positionSelect, { "aria-label": "注入位置" })}
-            </label>
-            {draft.position === 4 && (
-              <>
-                <label className="wb-persona-card-row">
-                  <span>深度</span>
-                  <input
-                    aria-label="深度"
-                    type="number"
-                    min={0}
-                    max={9999}
-                    value={draft.depth ?? 2}
-                    onChange={(e) => change("depth", Number(e.target.value))}
-                  />
-                </label>
-                <label className="wb-persona-card-row">
-                  <span>注入角色</span>
-                  {roleSelect}
-                </label>
-              </>
-            )}
-            <label className="wb-persona-card-row">
-              <span>绑定世界书</span>
-              <Select
-                aria-label="绑定世界书"
-                value={draft.lorebook || ""}
-                onChange={(e) => change("lorebook", e.target.value)}
-              >
-                <option value="">不绑定</option>
-                {snap.resources.world.map((w) => (
-                  <option key={w.id}>{w.name}</option>
-                ))}
-              </Select>
-            </label>
-            <div className="wb-persona-card-row">
-              <span>对白颜色</span>
-              <SpeakerColor host={host} kind="persona" id={id} />
-            </div>
+            {fieldRows("side")}
           </section>
           <div className="wb-persona-tools">{manage}</div>
         </div>
         <div className="wb-persona-main">
-          <label className="wb-persona-line">
-            <span>用户名称</span>
-            <input value={draft.name ?? ""} onChange={(e) => change("name", e.target.value)} />
-          </label>
-          <label className="wb-persona-line">
-            <span>说明标题</span>
-            <input
-              placeholder="列表中名称下方的一行"
-              value={draft.title ?? ""}
-              onChange={(e) => change("title", e.target.value)}
-            />
-          </label>
+          {fieldRows("line")}
           <MdField
             className="wb-persona-desc"
             label="用户描述"
