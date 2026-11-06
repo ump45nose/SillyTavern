@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { flushSync } from "react-dom";
 import type { MobileSheet, MobileState } from "./types";
+import { trackDrag, type DragTrack } from "./drag";
 
 export function useSheetGestures(
   sheetRef: RefObject<HTMLDivElement | null>,
@@ -20,38 +21,29 @@ export function useSheetGestures(
   useEffect(() => {
     const node = sheetRef.current;
     if (!node || presence.exiting) return;
-    let drag: {
-      y: number;
-      pointer: number;
-      dy: number;
-      previous: { y: number; t: number };
-      last: { y: number; t: number };
-    } | null = null;
+    let drag: { pointer: number; track: DragTrack } | null = null;
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || !(e.target as Element).closest(".wb-mobile-sheet-grip,.wb-mobile-sheet > header"))
         return;
       if ((e.target as Element).closest("button")) return;
-      const at = { y: e.clientY, t: e.timeStamp };
-      drag = { y: e.clientY, pointer: e.pointerId, dy: 0, previous: at, last: at };
+      drag = { pointer: e.pointerId, track: trackDrag("y", e, e.timeStamp) };
       node.dataset.wbDrag = "";
     };
-    const top = node.classList.contains("is-management");
+    const top = node.classList.contains("is-management"),
+      away = top ? -1 : 1;
+    const pulled = (track: DragTrack) => (top ? Math.min(0, track.delta) : Math.max(0, track.delta));
     const move = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.pointer) return;
-      drag.dy = top ? Math.min(0, e.clientY - drag.y) : Math.max(0, e.clientY - drag.y);
-      drag.previous = drag.last;
-      drag.last = { y: e.clientY, t: e.timeStamp };
-      node.style.setProperty("--wb-sheet-pull", `${drag.dy}px`);
+      drag.track.move(e, e.timeStamp);
+      node.style.setProperty("--wb-sheet-pull", `${pulled(drag.track)}px`);
     };
     const up = (e: PointerEvent) => {
       const current = drag;
       drag = null;
       if (!current || e.pointerId !== current.pointer) return;
-      const speed =
-        ((current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t)) *
-        (top ? -1 : 1);
       delete node.dataset.wbDrag;
-      if (speed > 0.5 || Math.abs(current.dy) > node.offsetHeight / 3) close();
+      if (current.track.flick(0.5) === away || Math.abs(pulled(current.track)) > node.offsetHeight / 3)
+        close();
       else node.style.removeProperty("--wb-sheet-pull");
     };
     node.addEventListener("pointerdown", down);
@@ -72,16 +64,15 @@ export function useSheetGestures(
     let drag: {
       y: number;
       pointer: number;
-      dy: number;
       height: number;
       started: boolean;
-      previous: { y: number; t: number };
-      last: { y: number; t: number };
+      track: DragTrack;
     } | null = null;
+    const pulled = (track: DragTrack, height: number) => Math.min(height, Math.max(0, track.delta));
     const move = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.pointer) return;
-      const dy = e.clientY - drag.y;
       if (!drag.started) {
+        const dy = e.clientY - drag.y;
         if (Math.abs(dy) < 8) return;
         if (dy < 0) return end();
         drag.started = true;
@@ -92,11 +83,10 @@ export function useSheetGestures(
         veil()?.style.setProperty("animation", "none");
         drag.height = node.offsetHeight;
       }
-      drag.dy = Math.min(drag.height, Math.max(0, dy));
-      drag.previous = drag.last;
-      drag.last = { y: e.clientY, t: e.timeStamp };
-      sheetRef.current!.style.setProperty("--wb-sheet-pull", `${drag.dy - drag.height}px`);
-      veil()?.style.setProperty("opacity", String(drag.dy / drag.height));
+      drag.track.move(e, e.timeStamp);
+      const dy = pulled(drag.track, drag.height);
+      sheetRef.current!.style.setProperty("--wb-sheet-pull", `${dy - drag.height}px`);
+      veil()?.style.setProperty("opacity", String(dy / drag.height));
     };
     const up = (e: PointerEvent) => {
       const current = drag;
@@ -104,9 +94,12 @@ export function useSheetGestures(
       if (!current?.started || e.pointerId !== current.pointer) return;
       dragged = e.timeStamp;
       const node = sheetRef.current!,
-        speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
+        speed = current.track.velocity;
       delete node.dataset.wbDrag;
-      if (e.type === "pointerup" && (speed > 0.45 || (speed > -0.45 && current.dy > current.height * 0.35))) {
+      if (
+        e.type === "pointerup" &&
+        (speed > 0.45 || (speed > -0.45 && pulled(current.track, current.height) > current.height * 0.35))
+      ) {
         node.style.removeProperty("--wb-sheet-pull");
         veil()?.style.setProperty("transition", "opacity 260ms");
         veil()?.style.setProperty("opacity", "1");
@@ -124,8 +117,13 @@ export function useSheetGestures(
       if ((e.target as Element).closest("button:not(.wb-mobile-title)")) return;
       if (state.sheet || state.left || state.panel || state.editor) return;
       if (document.body.classList.contains("wb-focus")) return;
-      const at = { y: e.clientY, t: e.timeStamp };
-      drag = { y: e.clientY, pointer: e.pointerId, dy: 0, height: 0, started: false, previous: at, last: at };
+      drag = {
+        y: e.clientY,
+        pointer: e.pointerId,
+        height: 0,
+        started: false,
+        track: trackDrag("y", e, e.timeStamp),
+      };
       document.addEventListener("pointermove", move);
       document.addEventListener("pointerup", up);
       document.addEventListener("pointercancel", up);

@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { motionAllowed } from "../Motion";
 import type { MobileState } from "./types";
 import { bus } from "../../host/bus";
+import { trackDrag, type DragTrack } from "./drag";
 
 export function useComposerPage(
   rp: boolean,
@@ -26,13 +27,7 @@ export function useComposerPage(
   // pill's top edge and width, with its top corners rounded meanwhile: compositor-only, so no
   // repaint per frame, no class changes mid-motion, and the textarea stays the same node.
   const motion = useRef<Animation[]>([]),
-    pull = useRef<{
-      y: number;
-      pointer: number;
-      dy: number;
-      previous: { y: number; t: number };
-      last: { y: number; t: number };
-    } | null>(null);
+    pull = useRef<{ pointer: number; track: DragTrack } | null>(null);
   const settle = () => {
     motion.current.forEach((a) => a.cancel());
     motion.current = [];
@@ -139,26 +134,23 @@ export function useComposerPage(
   const edit = (value: boolean) => (value ? openPage() : closePage());
   // Pulling the page down: it follows the finger, then folds back into the pill or band past a
   // fifth of its height or on a flick, and otherwise springs back up.
-  const pullFrom = (pointer: number, y: number, t: number) => {
-    const at = { y, t };
-    pull.current = { y, pointer, dy: 0, previous: at, last: at };
+  const pullFrom = (pointer: number, point: { clientX: number; clientY: number }, t: number) => {
+    pull.current = { pointer, track: trackDrag("y", point, t) };
     settle();
     moving(true);
   };
-  const pullTo = (y: number, t: number) => {
-    const current = pull.current!;
-    current.dy = Math.max(0, y - current.y);
-    current.previous = current.last;
-    current.last = { y, t };
-    dock.style.setProperty("translate", `0 ${current.dy}px`);
+  const pullTo = (point: { clientX: number; clientY: number }, t: number) => {
+    const { track } = pull.current!;
+    track.move(point, t);
+    dock.style.setProperty("translate", `0 ${Math.max(0, track.delta)}px`);
   };
   const letPull = () => {
-    const current = pull.current!;
+    const { track } = pull.current!;
     pull.current = null;
-    const speed = (current.last.y - current.previous.y) / Math.max(1, current.last.t - current.previous.t);
-    if (speed > 0.5 || current.dy > dock.offsetHeight * 0.18) return closePage(current.dy);
+    const dy = Math.max(0, track.delta);
+    if (track.flick(0.5) > 0 || dy > dock.offsetHeight * 0.18) return closePage(dy);
     dock.style.removeProperty("translate");
-    const back = dock.animate([{ translate: `0 ${current.dy}px` }, { translate: "0 0" }], {
+    const back = dock.animate([{ translate: `0 ${dy}px` }, { translate: "0 0" }], {
       duration: motionAllowed() ? 240 : 0,
       easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
     });
@@ -207,8 +199,7 @@ export function useComposerPage(
       up: boolean;
       rise: number;
       started: boolean;
-      previous: { y: number; t: number };
-      last: { y: number; t: number };
+      track: DragTrack;
     } | null = null;
     const reset = () => {
       delete dock.dataset.wbDrag;
@@ -223,8 +214,7 @@ export function useComposerPage(
       const target = e.target as Element;
       if (e.touches.length !== 1 || target.closest("button,a,select")) return;
       if (rp && !document.body.hasAttribute("data-wb-rp-compose")) return;
-      const t = e.touches[0],
-        at = { y: t.clientY, t: e.timeStamp };
+      const t = e.touches[0];
       drag = {
         id: t.identifier,
         x: t.clientX,
@@ -238,8 +228,7 @@ export function useComposerPage(
         up: true,
         rise: 0,
         started: false,
-        previous: at,
-        last: at,
+        track: trackDrag("y", t, e.timeStamp),
       };
     };
     const move = (e: TouchEvent) => {
@@ -263,8 +252,7 @@ export function useComposerPage(
         if (!up) document.body.dataset.wbBandLower = "";
       }
       e.preventDefault();
-      drag.previous = drag.last;
-      drag.last = { y: t.clientY, t: e.timeStamp };
+      drag.track.move(t, e.timeStamp);
       if (!drag.up) {
         drag.rise = Math.min(0, dy);
         document.body.style.setProperty("--wb-rp-pull", `${Math.min(160, -dy * 0.6)}px`);
@@ -282,11 +270,12 @@ export function useComposerPage(
       if (!current || ![...e.changedTouches].some((touch) => touch.identifier === current.id)) return;
       drag = null;
       if (!current.started) return;
-      const speed = (current.previous.y - current.last.y) / Math.max(1, current.last.t - current.previous.t);
+      // The track runs down the screen; a rise runs up it.
+      const flick = current.track.flick(0.45);
       if (!current.up) {
         reset();
-        if (speed < -0.45 || current.rise < -72) bus.emit("rp-dialogue");
-      } else if (speed > 0.45 || current.rise > 72) {
+        if (flick > 0 || current.rise < -72) bus.emit("rp-dialogue");
+      } else if (flick < 0 || current.rise > 72) {
         // The band is already as tall as the finger made it: the page grows from there, and the
         // band settles back under it once it has covered the window.
         openPage(rp ? 0 : current.rise);
@@ -331,10 +320,10 @@ export function useComposerPage(
           dy = t.clientY - start.y;
         if (Math.hypot(dx, dy) < 8) return;
         if (dy <= 0 || Math.abs(dx) > dy || e.timeStamp - start.t > 400) return void (start = null);
-        pullFrom(-1, start.y, start.t);
+        pullFrom(-1, { clientX: start.x, clientY: start.y }, start.t);
       }
       e.preventDefault();
-      pullTo(t.clientY, e.timeStamp);
+      pullTo(t, e.timeStamp);
     };
     const up = () => {
       start = null;
@@ -359,10 +348,10 @@ export function useComposerPage(
     onPointerDown(event) {
       if (event.button !== 0 || (event.target as Element).closest("button")) return;
       if (event.pointerType === "mouse") event.currentTarget.setPointerCapture(event.pointerId);
-      pullFrom(event.pointerId, event.clientY, event.timeStamp);
+      pullFrom(event.pointerId, event, event.timeStamp);
     },
     onPointerMove(event) {
-      if (event.pointerId === pull.current?.pointer) pullTo(event.clientY, event.timeStamp);
+      if (event.pointerId === pull.current?.pointer) pullTo(event, event.timeStamp);
     },
     onPointerUp(event) {
       if (event.pointerId === pull.current?.pointer) letPull();

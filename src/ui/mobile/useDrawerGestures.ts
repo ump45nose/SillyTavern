@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import { flushSync } from "react-dom";
 import type { Panel } from "../../host/types";
 import { interactive, type MobileState } from "./types";
+import { trackDrag, type DragTrack } from "./drag";
 
 export function useDrawerGestures(
   rp: boolean,
@@ -30,8 +31,7 @@ export function useDrawerGestures(
       node?: HTMLElement;
       width?: number;
       shown?: number;
-      previous: { x: number; t: number };
-      last: { x: number; t: number };
+      track: DragTrack;
     };
     let drag: Drag | null = null;
     // Drag state lives in data attributes and inline styles on the drawer and its shade only: class
@@ -69,7 +69,6 @@ export function useDrawerGestures(
         if (target.closest(interactive) || (selection?.toString() && inReading)) return;
         if (rp ? target.closest(".wb-ui,#sheld,.wb-mobile-header") : !target.closest("#chat")) return;
       }
-      const at = { x: e.clientX, t: e.timeStamp };
       drag = {
         x: e.clientX,
         y: e.clientY,
@@ -78,8 +77,7 @@ export function useDrawerGestures(
         target,
         opening: !open,
         side: open ? (state.left ? "left" : "right") : undefined,
-        previous: at,
-        last: at,
+        track: trackDrag("x", e, e.timeStamp),
       };
     };
     const move = (e: PointerEvent) => {
@@ -102,8 +100,7 @@ export function useDrawerGestures(
       const toward = drag.side === "left" ? dx : -dx,
         shown = Math.min(drag.width!, Math.max(0, drag.opening ? toward : drag.width! + toward));
       drag.shown = shown;
-      drag.previous = drag.last;
-      drag.last = { x: e.clientX, t: e.timeStamp };
+      drag.track.move(e, e.timeStamp);
       drag.node.style.setProperty("--wb-drawer-x", `${shown}px`);
       shade()?.style.setProperty("opacity", String(shown / drag.width!));
     };
@@ -112,11 +109,10 @@ export function useDrawerGestures(
       drag = null;
       if (!current?.node || e.pointerId !== current.pointer) return;
       const sign = current.side === "left" ? 1 : -1,
-        speed =
-          ((current.last.x - current.previous.x) * sign) / Math.max(1, current.last.t - current.previous.t),
+        swipe = current.track.flick(0.35) * sign,
         travel = (e.clientX - current.x) * sign,
         quick = e.timeStamp - current.t < 300 && Math.abs(travel) > 40,
-        flick = speed > 0.35 ? true : speed < -0.35 ? false : quick ? travel > 0 : null,
+        flick = swipe > 0 ? true : swipe < 0 ? false : quick ? travel > 0 : null,
         open = flick ?? current.shown! > current.width! * 0.4;
       // The new state and the drag styles leave in one frame, so the slide continues from the finger.
       flushSync(() => {
