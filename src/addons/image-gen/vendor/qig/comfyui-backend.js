@@ -57,27 +57,6 @@ export function normalizeComfyModelLoader(value, legacySettings = {}) {
         : "checkpoint";
 }
 
-export function normalizeComfySettings(settings = {}) {
-    const source = isRecord(settings) ? settings : {};
-    const originalLoader = String(source.comfyModelLoader || "").trim().toLowerCase();
-    const hasExplicitLoader = originalLoader === "checkpoint" || originalLoader === "unet";
-    const comfyModelLoader = normalizeComfyModelLoader(source.comfyModelLoader, source);
-    const needsLegacyVae = !hasExplicitLoader
-        && comfyModelLoader === "unet"
-        && !String(source.comfyFluxVaeModel || "").trim();
-    return {
-        ...source,
-        comfyModelLoader,
-        ...(needsLegacyVae ? { comfyFluxVaeModel: "ae.safetensors" } : {}),
-    };
-}
-
-export function selectComfyModelList(catalogs, modelLoader) {
-    const loader = normalizeComfyModelLoader(modelLoader);
-    const models = loader === "unet" ? catalogs?.unets : catalogs?.checkpoints;
-    return Array.isArray(models) ? models : [];
-}
-
 export function buildComfyBuiltinWorkflow(options = {}) {
     const modelLoader = normalizeComfyModelLoader(options.modelLoader);
     const modelName = String(options.modelName || "model.safetensors").trim();
@@ -315,72 +294,8 @@ function renderValue(value, tokenValues) {
     return value;
 }
 
-export function renderComfyWorkflow(workflow, tokenValues = {}) {
-    if (!isRecord(tokenValues)) throw new Error("ComfyUI placeholder values must be an object");
-    return renderValue(parseComfyWorkflow(workflow), tokenValues);
-}
-
 const MAX_COMPONENT_VALUE_BYTES = 4096;
 const MAX_COMPONENT_OVERRIDE_ENTRIES = 256;
-const MAX_COMPONENT_CHOICES = 10_000;
-
-/**
- * Collect direct string inputs from an API-format graph. ComfyUI object_info, not this local scan,
- * decides which candidates are COMBO inputs.
- */
-export function collectComfyWorkflowStringInputCandidates(workflow) {
-    const nodes = getPromptNodes(parseComfyWorkflow(workflow));
-    const found = [];
-    for (const [nodeId, node] of Object.entries(nodes)) {
-        for (const [inputName, rawValue] of Object.entries(node.inputs)) {
-            if (typeof rawValue !== "string") continue;
-            if (byteLength(rawValue) > MAX_COMPONENT_VALUE_BYTES) continue;
-            found.push({
-                nodeId,
-                classType: node.class_type,
-                inputName,
-                rawValue,
-                title: typeof node._meta?.title === "string" ? node._meta.title : "",
-            });
-        }
-    }
-    return found;
-}
-
-// Kept for the existing caller; this now returns candidates, not inferred component eligibility.
-export const discoverComfyWorkflowComponents = collectComfyWorkflowStringInputCandidates;
-
-export function parseComfyObjectInfoComboInputs(value, classType) {
-    if (!isRecord(value) || typeof classType !== "string" || !hasOwn(value, classType)) return [];
-    const input = value[classType]?.input;
-    if (!isRecord(input)) return [];
-    const sections = [
-        ["required", input.required],
-        ["optional", input.optional],
-    ].filter(([_name, definitions]) => isRecord(definitions));
-    if (sections.reduce((count, [_name, definitions]) => count + Object.keys(definitions).length, 0)
-        > MAX_WORKFLOW_NODES) return [];
-
-    const found = [];
-    for (const [section, definitions] of sections) {
-        for (const [inputName, declaration] of Object.entries(definitions)) {
-            if (!Array.isArray(declaration) || declaration.length < 1 || declaration.length > 2) continue;
-            const [choices, options] = declaration;
-            if (!Array.isArray(choices) || choices.length > MAX_COMPONENT_CHOICES) continue;
-            let totalBytes = 0;
-            if (!choices.every(choice => {
-                if (typeof choice !== "string") return false;
-                const bytes = byteLength(choice);
-                totalBytes += bytes;
-                return bytes <= MAX_COMPONENT_VALUE_BYTES && totalBytes <= MAX_WORKFLOW_BYTES;
-            })) continue;
-            if ((options !== undefined && !isRecord(options)) || options?.forceInput === true) continue;
-            found.push({ inputName, required: section === "required", choices: [...choices] });
-            if (found.length >= MAX_WORKFLOW_NODES) return found;
-        }
-    }
-    return found;
-}
 
 export function normalizeComfyWorkflowComponentOverrides(value) {
     const hasVersion = isRecord(value) && hasOwn(value, "version");
@@ -413,15 +328,6 @@ function matchesRawComponentInput(rawNodes, entry) {
         && rawNode.inputs[entry.inputName] === entry.rawValue;
 }
 
-export function pruneComfyWorkflowComponentOverrides(workflow, overrides) {
-    const rawNodes = getPromptNodes(parseComfyWorkflow(workflow));
-    const normalized = normalizeComfyWorkflowComponentOverrides(overrides);
-    return {
-        ...normalized,
-        entries: normalized.entries.filter(entry => matchesRawComponentInput(rawNodes, entry)),
-    };
-}
-
 /**
  * Replace matching literal inputs in an already-rendered node map. Never touches links, classes or
  * topology. An entry whose node, class, input or original value changed is ignored, so a replaced
@@ -448,53 +354,6 @@ export function buildComfyPromptRequest(workflow, tokenValues = {}, componentOve
     // Overrides run after placeholders so an override value is always a literal, never a second substitution pass.
     applyComponentOverrides(getPromptNodes(rendered), parsed, componentOverrides);
     return getPromptNodes(rendered) === rendered ? { prompt: rendered } : rendered;
-}
-
-function collectTokens(value, tokens = new Set()) {
-    if (typeof value === "string") {
-        for (const placeholder of value.match(PLACEHOLDER) || []) {
-            const name = placeholder.slice(1, -1);
-            if (TOKEN_NAME_SET.has(name) || NUMBERED_REFERENCE.test(name)) tokens.add(name);
-        }
-    } else if (Array.isArray(value)) {
-        for (const item of value) collectTokens(item, tokens);
-    } else if (isRecord(value)) {
-        for (const item of Object.values(value)) collectTokens(item, tokens);
-    }
-    return tokens;
-}
-
-export function getComfyWorkflowCapabilities(workflow, tokenValues = {}, componentOverrides = null) {
-    const parsed = parseComfyWorkflow(workflow);
-    const nodes = getPromptNodes(parsed);
-    for (const entry of normalizeComfyWorkflowComponentOverrides(componentOverrides).entries) {
-        if (!entry.verified || !matchesRawComponentInput(nodes, entry)) continue;
-        if (typeof renderString(entry.rawValue, tokenValues) !== "string") continue;
-        // Applied choices are literals, including values that look like placeholders.
-        delete nodes[entry.nodeId].inputs[entry.inputName];
-    }
-    const tokens = collectTokens(parsed);
-    const has = name => tokens.has(name);
-    const referenceImages = has("reference_image") || [...tokens].some(name => NUMBERED_REFERENCE.test(name));
-    return {
-        tokens: [...tokens].sort(),
-        prompt: has("prompt"),
-        negative: has("negative"),
-        seed: has("seed"),
-        width: has("width"),
-        height: has("height"),
-        steps: has("steps"),
-        cfgScale: has("cfg"),
-        denoise: has("denoise"),
-        clipSkip: has("clip_skip") || has("clip_stop_at_layer"),
-        sampler: has("sampler"),
-        scheduler: has("scheduler"),
-        model: has("model"),
-        referenceImages,
-        batch: has("batch_index") || has("batch_count"),
-        clientId: has("client_id"),
-        filenamePrefix: has("filename_prefix"),
-    };
 }
 
 export function parseComfyPromptResponse(value) {
@@ -670,58 +529,6 @@ export function parseComfyHistoryEntry(entry, options = {}) {
     if (terminal && images.length) return { state: "success", terminal: true, messages, images };
     if (terminal) return { state: "completed_no_images", terminal: true, messages, images: [] };
     return { state: "pending", terminal: false, messages, images };
-}
-
-function parseWebSocketEnvelope(message) {
-    let value = message;
-    if (isRecord(message) && (message.type === "message" || typeof message.type !== "string")) value = message.data;
-    if (typeof value === "string") {
-        try {
-            value = JSON.parse(value);
-        } catch {
-            return null;
-        }
-    }
-    return isRecord(value) ? value : null;
-}
-
-export function parseComfyWebSocketMessage(message, promptId) {
-    const envelope = parseWebSocketEnvelope(message);
-    if (!envelope || typeof envelope.type !== "string" || !isRecord(envelope.data)) return null;
-    const data = envelope.data;
-    const eventPromptId = data.prompt_id ?? data.promptId;
-    if (typeof eventPromptId !== "string" || eventPromptId !== promptId) return null;
-
-    if (envelope.type === "progress") {
-        return { type: "progress", promptId, value: data.value, max: data.max, node: data.node ?? null };
-    }
-    if (envelope.type === "executing") {
-        if (data.node === null) return { type: "success", promptId, terminal: true, legacy: true };
-        if (data.node != null) return { type: "current_node", promptId, node: String(data.node), terminal: false };
-        return null;
-    }
-    if (envelope.type === "execution_success") {
-        return { type: "success", promptId, terminal: true, data };
-    }
-    if (envelope.type === "execution_error") {
-        return {
-            type: "error",
-            promptId,
-            terminal: true,
-            message: messageText(data, "ComfyUI execution failed"),
-            data,
-        };
-    }
-    if (envelope.type === "execution_interrupted") {
-        return {
-            type: "interrupted",
-            promptId,
-            terminal: true,
-            message: messageText(data, "ComfyUI execution was interrupted"),
-            data,
-        };
-    }
-    return null;
 }
 
 function abortError(message = "The operation was aborted") {

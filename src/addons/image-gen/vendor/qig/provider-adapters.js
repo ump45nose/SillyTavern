@@ -99,24 +99,6 @@ export function isOpenAIChatCompletionsEndpoint(value) {
     return /\/chat\/completions$/i.test(getUrlPath(value));
 }
 
-export function isNovelAICompatibleProxyUrl(value) {
-    const path = getUrlPath(value);
-    if (/\/generate$/i.test(path)) return false;
-    return /\/v1$/i.test(path) || /\/chat\/completions$/i.test(path);
-}
-
-export function getGptImageApiUrl(proxyUrl = '') {
-    const endpoint = String(proxyUrl || '').trim();
-    if (!endpoint) return 'https://api.openai.com/v1/images/generations';
-
-    const normalizedPath = getUrlPath(endpoint);
-    if (/\/images\/generations$/i.test(normalizedPath)) return endpoint;
-    if (/\/chat\/completions$/i.test(normalizedPath)) return editUrlPath(endpoint, path => path.replace(/\/+$/, '').replace(/\/chat\/completions$/i, '/images/generations'));
-    if (/\/images$/i.test(normalizedPath)) return editUrlPath(endpoint, path => `${path.replace(/\/+$/, '')}/generations`);
-    if (/\/v1$/i.test(normalizedPath)) return editUrlPath(endpoint, path => `${path.replace(/\/+$/, '')}/images/generations`);
-    return endpoint;
-}
-
 export function getOpenAICompatibleApiUrl(value, endpointMode = 'images_generations') {
     const endpoint = String(value || '').trim();
     if (!endpoint) return '';
@@ -132,90 +114,6 @@ export function getOpenAICompatibleApiUrl(value, endpointMode = 'images_generati
     if (/\/images$/i.test(path)) return editUrlPath(endpoint, current => `${current.replace(/\/+$/, '')}/generations`);
     if (/\/v1$/i.test(path)) return editUrlPath(endpoint, current => `${current.replace(/\/+$/, '')}/images/generations`);
     return endpoint;
-}
-
-export function extractProviderErrorMessage(data) {
-    const candidates = [
-        data?.error?.message,
-        data?.error,
-        data?.detail,
-        data?.message,
-        data?.choices?.[0]?.message?.content,
-    ];
-    for (const candidate of candidates) {
-        if (typeof candidate !== 'string') continue;
-        const message = candidate.trim();
-        if (message) return message.slice(0, 1000);
-    }
-    return '';
-}
-
-export async function readProviderErrorResponse(response, maxBytes = 1024 * 1024) {
-    const text = await readResponseText(response, maxBytes);
-    let data = null;
-    if (text) {
-        try {
-            data = JSON.parse(text);
-        } catch {
-            data = null;
-        }
-    }
-    const message = extractProviderErrorMessage(data)
-        || text.replace(/\s+/g, ' ').trim().slice(0, 1000)
-        || response?.statusText
-        || '';
-    return { data, text, message };
-}
-
-export function getGptImageRouteRetryUrl(endpoint, responseData) {
-    const message = extractProviderErrorMessage(responseData);
-    if (!/proxy error\s*\(\s*http\s+404\s+not found\s*\)/i.test(message)
-        || !/requested proxy endpoint does not exist/i.test(message)) {
-        return '';
-    }
-
-    const value = String(endpoint || '').trim();
-    if (!value) return '';
-    const normalizedPath = getUrlPath(value);
-    if (!normalizedPath || /\/images\/generations$/i.test(normalizedPath)) return '';
-    return editUrlPath(value, path => `${path.replace(/\/+$/, '')}/images/generations`);
-}
-
-function isGptImageRequestError(result) {
-    if (!result || typeof result !== 'object') return false;
-    const status = Number(result.status);
-    return result.ok === false
-        || (Number.isFinite(status) && status >= 400)
-        || result.error != null;
-}
-
-function throwGptImageRequestError(result) {
-    if (result.error instanceof Error) throw result.error;
-
-    const status = Number(result.status);
-    const detail = extractProviderErrorMessage(result.data)
-        || (typeof result.error === 'string' ? result.error.trim().slice(0, 1000) : '');
-    const label = Number.isFinite(status) ? `GPT Image error ${status}` : 'GPT Image request failed';
-    const error = new Error(detail ? `${label}: ${detail}` : label);
-    if (Number.isFinite(status)) error.status = status;
-    error.data = result.data;
-    throw error;
-}
-
-export async function requestGptImageWithRouteRetry(endpoint, request, onRetry = () => {}) {
-    const firstResult = await request(endpoint);
-    if (firstResult?.image || firstResult?.source) return firstResult;
-    if (!isGptImageRequestError(firstResult)) return firstResult;
-
-    const retryUrl = Number(firstResult.status) === 404
-        ? getGptImageRouteRetryUrl(endpoint, firstResult.data)
-        : '';
-    if (!retryUrl) throwGptImageRequestError(firstResult);
-
-    onRetry(retryUrl);
-    const retryResult = await request(retryUrl);
-    if (retryResult?.image || retryResult?.source || !isGptImageRequestError(retryResult)) return retryResult;
-    throwGptImageRequestError(retryResult);
 }
 
 export function getNanobananaApiUrl(proxyUrl = '', model = 'gemini-3-pro-image', apiKey = '') {
