@@ -6,6 +6,13 @@ import type { SyncTable } from "../sync/database";
 import { ctx } from "./internals";
 
 const BASE = "/api/plugins/workbench-sync";
+const parse = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+};
 
 export interface SyncRecent {
   time: number;
@@ -88,19 +95,24 @@ export class SyncRelay {
   private listen() {
     const source = new EventSource(`${BASE}/events?role=page`);
     this.source = source;
-    const status = (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
+    const on = (name: string, handle: (data: Data) => void) =>
+      source.addEventListener(name, (event) => {
+        const text = String((event as MessageEvent).data),
+          data = parse(text);
+        if (data && typeof data === "object") handle(data as Data);
+        else this.unreadable(name, text);
+      });
+    const status = (data: Data) =>
       this.set({ status: "online", clients: data.clients, pages: data.pages, recent: data.recent ?? [] });
-    };
     // Every (re)connection is a new page to the plug-in: report the open chat's tables again.
-    source.addEventListener("hello", (event) => {
-      this.page = JSON.parse(event.data).page;
+    on("hello", (data) => {
+      this.page = data.page;
       this.reported = "";
-      status(event);
+      status(data);
       void this.report();
     });
-    source.addEventListener("status", status);
-    source.addEventListener("write", (event) => void this.write(JSON.parse((event as MessageEvent).data)));
+    on("status", status);
+    on("write", (data) => void this.write(data as WriteRequest));
     // EventSource reconnects by itself; CLOSED means the server answered with an error (plug-in gone).
     source.onerror = () =>
       this.set({ status: source.readyState === EventSource.CLOSED ? "absent" : "reconnecting" });
@@ -149,6 +161,16 @@ export class SyncRelay {
     // A failed report is sent again with the next change or reconnection.
     if (response?.ok) this.reported = body;
   }
+  /**
+   * An event whose data is not a JSON object. A write is still answered when its request id can be
+   * read, so the IDE hears at once rather than after the plug-in's timeout.
+   */
+  private unreadable(name: string, text: string) {
+    const request = name === "write" ? /"request"\s*:\s*"([\w-]+)"/.exec(text)?.[1] : undefined;
+    if (request)
+      void this.reply(request, { status: "error", message: "写入请求的数据已损坏，页面没有执行。" });
+    else console.warn(`[Workbench] unreadable ${name} event from workbench-sync`, text.slice(0, 200));
+  }
   private async write(request: WriteRequest) {
     let reply: Reply;
     try {
@@ -156,10 +178,13 @@ export class SyncRelay {
     } catch (error) {
       reply = { status: "error", message: error instanceof Error ? error.message : String(error) };
     }
-    await fetch(`${BASE}/relay`, {
+    await this.reply(request.request, reply);
+  }
+  private reply(request: string, reply: Reply) {
+    return fetch(`${BASE}/relay`, {
       method: "POST",
       headers: ctx().getRequestHeaders(),
-      body: JSON.stringify({ request: request.request, ...reply }),
+      body: JSON.stringify({ request, ...reply }),
     }).catch((error) => this.host.report(error));
   }
   private async apply({ kind, id, base, draft }: WriteRequest): Promise<Reply> {
@@ -223,6 +248,12 @@ export class SyncRelay {
       )
     )
       return { status: "skip", message: "数据库刚刚更新过这张表：请重新载入文件后再改。" };
+    const stray = draft.rows.find((row) => row.index && !table.rows[row.index - 1]);
+    if (stray)
+      return {
+        status: "error",
+        message: `这张表没有第 ${stray.index} 行（共 ${table.rows.length} 行），整张表都没有写入：请重新载入文件后再改。`,
+      };
     const kept = new Set<number>();
     for (const row of draft.rows) {
       if (!row.index) continue;
