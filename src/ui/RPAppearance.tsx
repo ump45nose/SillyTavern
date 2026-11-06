@@ -4,8 +4,9 @@ import type { HostAdapter } from "../host/adapter";
 import { useHostSlices } from "./common";
 import { Popover } from "./Popover";
 import { usePresence } from "./Motion";
-import { boundedPreference } from "../host/rp";
 import { CastPanel, CastSource } from "./RPCast";
+import { Range, Segmented } from "./FieldControls";
+import { bounded, readingFields, rpFields } from "./readingFields";
 
 export function RPAppearance({
   host,
@@ -62,59 +63,33 @@ export function RPAppearance({
           ) : (
             <div className="wb-pop-form">
               <span className="wb-pop-label">对白字体</span>
-              <div className="wb-font-choices">
-                {[
-                  ["serif", "宋体 · 纸书"],
-                  ["sans", "黑体 · 清晰"],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    aria-pressed={(prefs.readingFont || "serif") === value}
-                    onClick={() => host.preference({ readingFont: value as "serif" | "sans" })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <label className="wb-field">
-                <span>
-                  对白字号<output>{boundedPreference(prefs.rpTextSize, 19, 14, 26)} px</output>
-                </span>
-                <input
-                  aria-label="RP 对白字号"
-                  type="range"
-                  min="14"
-                  max="26"
-                  value={boundedPreference(prefs.rpTextSize, 19, 14, 26)}
-                  onChange={(e) => host.preference({ rpTextSize: Number(e.target.value) })}
-                />
-              </label>
-              <label className="wb-field">
-                <span>
-                  对白区域宽度<output>{boundedPreference(prefs.rpDialogWidth, 72, 65, 94)}%</output>
-                </span>
-                <input
-                  aria-label="RP 对白宽度"
-                  type="range"
-                  min="65"
-                  max="94"
-                  value={boundedPreference(prefs.rpDialogWidth, 72, 65, 94)}
-                  onChange={(e) => host.preference({ rpDialogWidth: Number(e.target.value) })}
-                />
-              </label>
-              <label className="wb-field">
-                <span>
-                  角色立绘大小<output>{boundedPreference(prefs.rpSpriteScale, 91, 55, 100)}%</output>
-                </span>
-                <input
-                  aria-label="RP 立绘大小"
-                  type="range"
-                  min="55"
-                  max="100"
-                  value={boundedPreference(prefs.rpSpriteScale, 91, 55, 100)}
-                  onChange={(e) => host.preference({ rpSpriteScale: Number(e.target.value) })}
-                />
-              </label>
+              <Segmented
+                className="wb-font-choices"
+                options={readingFields.readingFont.options}
+                value={prefs.readingFont || readingFields.readingFont.fallback}
+                onChange={(readingFont) => host.preference({ readingFont })}
+              />
+              <Range
+                captioned
+                field={rpFields.rpTextSize}
+                label="RP 对白字号"
+                value={bounded(rpFields.rpTextSize, prefs.rpTextSize)}
+                onChange={(rpTextSize) => host.preference({ rpTextSize })}
+              />
+              <Range
+                captioned
+                field={rpFields.rpDialogWidth}
+                label="RP 对白宽度"
+                value={bounded(rpFields.rpDialogWidth, prefs.rpDialogWidth)}
+                onChange={(rpDialogWidth) => host.preference({ rpDialogWidth })}
+              />
+              <Range
+                captioned
+                field={rpFields.rpSpriteScale}
+                label="RP 立绘大小"
+                value={bounded(rpFields.rpSpriteScale, prefs.rpSpriteScale)}
+                onChange={(rpSpriteScale) => host.preference({ rpSpriteScale })}
+              />
               <label className="wb-check">
                 <input
                   type="checkbox"

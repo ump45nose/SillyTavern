@@ -57,6 +57,10 @@
       Georgia,
       serif
     );
+    /* The reading-font preference for chat messages and RP dialogue; no theme hook, unlike the faces above. */
+    --wb-font-message-serif: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
+    --wb-font-message-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --wb-font-dialogue-sans: system-ui, sans-serif;
     --wb-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     --wb-text-xs: 12px; /* captions and counters only */
     --wb-text-sm: 13px;

@@ -20,7 +20,7 @@ import {
   Lightbulb,
 } from "./icons";
 import type { HostAdapter } from "../host/adapter";
-import { boundedPreference } from "../host/rp";
+import { bounded, dialogueFont, rpFields } from "./readingFields";
 import { matchSpeaker, pickSprite } from "../host/cast";
 import { useHostSlices } from "./common";
 import { ReadingPresentation } from "./Reading";
@@ -103,8 +103,8 @@ export function RPStage({
 }) {
   const snap = useHostSlices(host, ["session", "chat", "prefs"]),
     prefs = host.prefs();
-  const textSize = boundedPreference(prefs.rpTextSize, 19, 14, 26),
-    dialogWidth = boundedPreference(prefs.rpDialogWidth, 72, 65, 94);
+  const textSize = bounded(rpFields.rpTextSize, prefs.rpTextSize),
+    dialogWidth = bounded(rpFields.rpDialogWidth, prefs.rpDialogWidth);
   const messages = useNativeDialogue(host),
     [cursor, setCursor] = useState<Cursor>({ id: -1, page: -1, compose: false });
   const inertBefore = useRef<{ sheld: boolean; form: boolean } | null>(null);
@@ -282,14 +282,9 @@ export function RPStage({
     document.body.style.setProperty("--wb-rp-width", String(dialogWidth / 100));
     document.body.style.setProperty(
       "--wb-rp-sprite",
-      boundedPreference(prefs.rpSpriteScale, 91, 55, 100) + "vh",
+      bounded(rpFields.rpSpriteScale, prefs.rpSpriteScale) + "vh",
     );
-    document.body.style.setProperty(
-      "--wb-rp-font",
-      prefs.readingFont === "sans"
-        ? "system-ui,sans-serif"
-        : "'Noto Serif CJK SC','Source Han Serif SC','Songti SC',SimSun,serif",
-    );
+    document.body.style.setProperty("--wb-rp-font", dialogueFont(prefs.readingFont));
     for (const message of messages) {
       const visible = history || (message === current && !compose);
       if (!originals.current.has(message.node))

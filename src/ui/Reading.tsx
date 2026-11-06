@@ -8,6 +8,8 @@ import { motionAllowed, usePresence } from "./Motion";
 import { MessageActions } from "./MessageActions";
 import { useMessageEditing } from "./useMessageEditing";
 import { messageActions } from "./message-actions";
+import { Range, Segmented } from "./FieldControls";
+import { bounded, messageFont, readingFields } from "./readingFields";
 /** `row` renders a labelled list row (the phone's session menu) instead of the toolbar icon. */
 export function ReadingSettings({ host, row = false }: { host: HostAdapter; row?: boolean }) {
   // Subscribed for the re-render: the preferences below are read from the host on each render.
@@ -37,62 +39,33 @@ export function ReadingSettings({ host, row = false }: { host: HostAdapter; row?
         >
           <div className="wb-pop-form">
             <span className="wb-pop-label">字体</span>
-            <div className="wb-font-choices">
-              {[
-                ["serif", "宋体 · 纸书"],
-                ["sans", "黑体 · 清晰"],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  aria-pressed={(prefs.readingFont || "serif") === value}
-                  onClick={() => host.preference({ readingFont: value as "serif" | "sans" })}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <label className="wb-field">
-              <span>
-                字号<output>{prefs.readingSize ?? 17} px</output>
-              </span>
-              <input
-                aria-label="阅读字号"
-                type="range"
-                min={14}
-                max={24}
-                step={1}
-                value={prefs.readingSize ?? 17}
-                onChange={(e) => host.preference({ readingSize: Number(e.target.value) })}
-              />
-            </label>
-            <label className="wb-field">
-              <span>
-                行距<output>{prefs.readingLeading ?? 2}</output>
-              </span>
-              <input
-                aria-label="阅读行距"
-                type="range"
-                min={1.5}
-                max={2.4}
-                step={0.1}
-                value={prefs.readingLeading ?? 2}
-                onChange={(e) => host.preference({ readingLeading: Number(e.target.value) })}
-              />
-            </label>
-            <label className="wb-field">
-              <span>
-                左右留白<output>{prefs.readingInset ?? 64} px</output>
-              </span>
-              <input
-                aria-label="正文左右留白"
-                type="range"
-                min={24}
-                max={128}
-                step={4}
-                value={prefs.readingInset ?? 64}
-                onChange={(e) => host.preference({ readingInset: Number(e.target.value) })}
-              />
-            </label>
+            <Segmented
+              className="wb-font-choices"
+              options={readingFields.readingFont.options}
+              value={prefs.readingFont || readingFields.readingFont.fallback}
+              onChange={(readingFont) => host.preference({ readingFont })}
+            />
+            <Range
+              captioned
+              field={readingFields.readingSize}
+              label="阅读字号"
+              value={prefs.readingSize ?? readingFields.readingSize.fallback}
+              onChange={(readingSize) => host.preference({ readingSize })}
+            />
+            <Range
+              captioned
+              field={readingFields.readingLeading}
+              label="阅读行距"
+              value={prefs.readingLeading ?? readingFields.readingLeading.fallback}
+              onChange={(readingLeading) => host.preference({ readingLeading })}
+            />
+            <Range
+              captioned
+              field={readingFields.readingInset}
+              label="正文左右留白"
+              value={prefs.readingInset ?? readingFields.readingInset.fallback}
+              onChange={(readingInset) => host.preference({ readingInset })}
+            />
             <label className="wb-check">
               <input
                 type="checkbox"
@@ -101,22 +74,14 @@ export function ReadingSettings({ host, row = false }: { host: HostAdapter; row?
               />
               默认折叠用户输入
             </label>
-            <span className="wb-pop-label">时间与楼层</span>
-            <div className="wb-meta-choices">
-              {[
-                ["hover", "悬浮显示"],
-                ["always", "始终显示"],
-                ["never", "隐藏"],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  aria-pressed={(prefs.messageMeta || "hover") === value}
-                  onClick={() => host.preference({ messageMeta: value as any })}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <span className="wb-pop-label">{readingFields.messageMeta.label}</span>
+            <Segmented
+              className="wb-meta-choices"
+              options={readingFields.messageMeta.options}
+              order={["hover", "always", "never"]}
+              value={prefs.messageMeta || readingFields.messageMeta.fallback}
+              onChange={(messageMeta) => host.preference({ messageMeta })}
+            />
           </div>
         </Popover>
       )}
@@ -263,18 +228,16 @@ export const ReadingPresentation = React.memo(function ReadingPresentation({
   }, [snap.chatName, prefs.userCollapsed]);
   useEffect(() => {
     document.body.dataset.wbMeta = prefs.messageMeta || "hover";
+    const { readingSize, readingLeading, readingInset } = readingFields;
+    document.body.style.setProperty("--wb-reading-font", messageFont(prefs.readingFont));
+    document.body.style.setProperty("--wb-reading-size", (prefs.readingSize ?? readingSize.fallback) + "px");
     document.body.style.setProperty(
-      "--wb-reading-font",
-      prefs.readingFont === "sans"
-        ? "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
-        : "'Noto Serif CJK SC','Source Han Serif SC','Songti SC',SimSun,serif",
+      "--wb-reading-leading",
+      String(prefs.readingLeading ?? readingLeading.fallback),
     );
-    document.body.style.setProperty("--wb-reading-size", (prefs.readingSize ?? 17) + "px");
-    document.body.style.setProperty("--wb-reading-leading", String(prefs.readingLeading ?? 2));
-    const inset = Number(prefs.readingInset ?? 64);
     document.body.style.setProperty(
       "--wb-reading-inset",
-      Math.max(24, Math.min(128, Number.isFinite(inset) ? inset : 64)) + "px",
+      bounded(readingInset, Number(prefs.readingInset ?? readingInset.fallback)) + "px",
     );
   }, [prefs.readingFont, prefs.readingSize, prefs.readingLeading, prefs.messageMeta, prefs.readingInset]);
   const output: React.ReactNode[] = [];
