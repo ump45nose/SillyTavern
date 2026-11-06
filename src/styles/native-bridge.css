@@ -763,19 +763,6 @@ body.wb-active :is(.wb-ui, .wb-ui *, #chat, #send_textarea).wb-scrolling {
 body.wb-active .wb-connection-detail #title_api {
   display: none;
 }
-body.wb-active .wb-native-slot .wb-connection-bridged,
-body.wb-active .wb-native-slot .wb-connection-bridged + .select2-container {
-  display: none !important;
-}
-body.wb-active .wb-native-slot .wb-connection-profile-original {
-  display: none !important;
-}
-body.wb-active
-  .wb-native-slot
-  .wb-connection-actions-original
-  > :is(#api_button_openai, #test_api_button, #api_button_textgenerationwebui) {
-  display: none !important;
-}
 body.wb-active .select2-dropdown {
   background: var(--wb-surface);
   border: 1px solid var(--wb-line);

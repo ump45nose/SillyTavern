@@ -1,8 +1,7 @@
 /* Legacy rp styles (0.4.0), layered. Shrinks as screens move to wb.components. */
 @layer wb.legacy {
   /* RP changes only the homepage shell and native conversation presentation. */
-  .wb-header-shell,
-  .wb-panel-header-row {
+  .wb-header-shell {
     display: contents;
   }
   body.wb-rp .wb-top {
@@ -102,25 +101,6 @@
       opacity 160ms,
       visibility 200ms,
       top 220ms;
-  }
-  body.wb-rp .wb-panel-header-row {
-    display: flex;
-    flex: none;
-    align-items: center;
-    border-bottom: 1px solid var(--wb-line);
-    background: var(--wb-soft);
-    padding-right: 12px;
-  }
-  body.wb-rp .wb-panel-header-row .wb-panel-switch {
-    flex: 1;
-    border-bottom: 0;
-  }
-  body.wb-rp .wb-panel-header-row > .wb-icon {
-    flex: none;
-    width: 28px;
-    height: 28px;
-    min-height: 28px;
-    padding: 5px;
   }
   body.wb-rp .wb-input-grip {
     display: none !important;

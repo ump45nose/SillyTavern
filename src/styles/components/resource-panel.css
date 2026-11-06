@@ -1121,13 +1121,6 @@
   }
 
   /* ── Preset: the prompt being edited, and the folds below ── */
-  .wb-preset-more {
-    flex: none;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 6px 12px 0;
-  }
   .wb-prompt-card {
     display: flex;
     flex-direction: column;

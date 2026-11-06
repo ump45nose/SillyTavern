@@ -9,9 +9,6 @@
   .wb-ui :is(.wb-resource-choice, .wb-quick-row) strong {
     font-weight: 500;
   }
-  .wb-ui .wb-favorites .is-active .wb-portrait {
-    border-color: var(--wb-selection-line);
-  }
   .wb-ui :is(.wb-font-choices, .wb-meta-choices, .wb-pop-tabs, .wb-world-scope) button[aria-pressed="true"] {
     background: var(--wb-selection-fill);
     box-shadow: inset 0 0 0 1px var(--wb-selection-line);

@@ -172,10 +172,6 @@
     min-width: 0;
     padding: 12px;
   }
-  body.wb-mobile .wb-panel-header-row {
-    height: 44px;
-    min-height: 44px;
-  }
   body.wb-mobile .wb-resource-rail {
     display: none;
   }
@@ -381,8 +377,7 @@
     min-height: 52px;
     flex-wrap: wrap;
   }
-  body.wb-mobile .wb-settings-header > small,
-  body.wb-mobile .wb-settings-footer {
+  body.wb-mobile .wb-settings-header > small {
     display: none;
   }
   body.wb-mobile .wb-settings-header > button {

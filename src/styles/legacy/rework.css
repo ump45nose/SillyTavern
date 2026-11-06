@@ -37,25 +37,6 @@
     box-shadow: none;
     animation: none;
   }
-  .wb-rail-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 31px;
-    margin-bottom: 7px;
-    gap: 6px;
-    color: var(--wb-muted);
-  }
-  .wb-rail-heading strong {
-    font-size: 12px;
-    font-weight: 500;
-  }
-  .wb-rail-heading .wb-icon {
-    width: 26px;
-    height: 26px;
-    min-height: 26px;
-    padding: 5px;
-  }
   .wb-resource-menu.is-rail > .wb-search {
     min-height: 34px;
     margin-bottom: 10px;
@@ -104,26 +85,6 @@
   .wb-right .wb-resource-title[aria-expanded="true"] > svg {
     transform: none;
   }
-  .wb-right .wb-resource-title-line > .wb-resource-title-copy {
-    flex: 1;
-  }
-  .wb-right .wb-preset-common .wb-check-pair {
-    flex: 1;
-    min-width: 0;
-    gap: 6px;
-  }
-  .wb-right .wb-preset-common .wb-check {
-    font-size: 12px;
-    white-space: nowrap;
-  }
-  .wb-right .wb-parameter-strip {
-    margin: 5px 0 0;
-  }
-  .wb-parameter-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2px 10px;
-  }
   /* Compact collection management and persistent hover/focus information. */
   .wb-characters.is-management {
     display: block;
@@ -133,12 +94,6 @@
   }
   .wb-characters.is-management .wb-designed-page-head {
     margin-bottom: 8px;
-  }
-  .wb-character-rail {
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-    height: 100%;
   }
   .wb-group-layout {
     grid-template-columns: 180px minmax(0, 1fr);
