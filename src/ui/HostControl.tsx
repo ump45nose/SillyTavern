@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer } from "react";
 import { Select } from "./Select";
 import type { HostAdapter } from "../host/adapter";
 export type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -149,17 +149,4 @@ export function BoundControl({
   ) : (
     <small>当前宿主未提供此配置</small>
   );
-}
-/** Keep third-party custom-element state and handlers; only replace its surrounding layout. */
-export function HostWidget({ node }: { node: HTMLElement }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const mark = document.createComment("Workbench custom control origin");
-    node.before(mark);
-    ref.current!.append(node);
-    return () => {
-      mark.replaceWith(node);
-    };
-  }, [node]);
-  return <div className="wb-host-widget" ref={ref} />;
 }

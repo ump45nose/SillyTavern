@@ -70,7 +70,6 @@ ComfyUI 默认工作流自动切换为底图重绘；自定义 API 工作流需�
 - `node scripts/verify-writing-addons.mjs`：实际酒馆浏览器回放，设置/聊天/图片写入均拦截；模型请求用模拟事件与响应，不消耗真实额度，不修改真实聊天。
 - `node scripts/verify-sidebar-image-input.mjs`：左栏其他组件内容收纳、标题保持可点击及恢复、边缘悬浮和固定、原生输入框样式/尺寸一致及草稿恢复、参考图上传/粘贴/移除与真实请求载荷、Noval/RP 三种桌面宽度。模型和数据写入仍为模拟回放。
 - `npm run verify:addons`：记录导出按需加载、释放、失败重试和兼容性回归。
-- `node scripts/verify-addon-design.mjs`：局域网静态预览、动画及多个视口检查。
 
 浏览器截图和报告写入忽略跟踪的 `artifacts/writing-addons/`，以 1496×817 为主；真实模型与五种外部服务的认证/CORS/配额应由使用者配置后验证。
 

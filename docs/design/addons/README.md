@@ -42,7 +42,7 @@
 
 ## 检查与下一阶段
 
-运行 `node scripts/verify-addon-design.mjs` 检查固定 HTTP 入口、交互及五种实际视口：1024×768、1366×768、1496×817、1920×1080、2992×1634。截图及报告位于忽略跟踪的 `artifacts/addon-design/`。
+预览已不再单独做自动检查；附加功能的回归在实际酒馆中运行：`npm run verify:writing-addons`、`npm run verify:addons`，说明见 `docs/workbench-writing-addons.md`。
 
 2026-10-09：16 组检查通过，覆盖 25 个页面与尺寸组合。检查左栏收纳释放高度、章节展开中间帧与节点内容展开；固定入口 `no-store`、控件可达、无页面横向溢出；页面及资源错误为零，没有外部请求或运行 API 访问。另完成 JavaScript 语法与 Git 空白检查。布局待用户确认，未运行酒馆功能验收。
 

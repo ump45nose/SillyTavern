@@ -416,24 +416,25 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
   const chosen = list.filter((x) => selected.includes(x.id)),
     all = list.length > 0 && chosen.length === list.length,
     count = chosen.length;
+  const report = (verb: string, done: number, failed: { id: string; message: string }[]) => {
+    setMessage(`已${verb} ${done} 个角色${failed.length ? `，${failed.length} 个失败` : ""}`);
+    if (failed.length)
+      task.setError(
+        failed.map((f) => `${chosen.find((x) => x.id === f.id)?.name || f.id}：${f.message}`).join("；"),
+      );
+  };
   /** One card at a time: a failure is named in the error and the rest still run. */
-  const each = (verb: string, job: (id: string) => Promise<unknown>, after?: (failed: string[]) => void) =>
+  const each = (verb: string, job: (id: string) => Promise<unknown>) =>
     task.run(async () => {
-      const failed: string[] = [],
-        errors: string[] = [];
+      const failed: { id: string; message: string }[] = [];
       for (const x of chosen) {
         try {
           await job(x.id);
         } catch (e) {
-          failed.push(x.id);
-          errors.push(`${x.name}：${e instanceof Error ? e.message : String(e)}`);
+          failed.push({ id: x.id, message: e instanceof Error ? e.message : String(e) });
         }
       }
-      setMessage(
-        `已${verb} ${chosen.length - failed.length} 个角色${failed.length ? `，${failed.length} 个失败` : ""}`,
-      );
-      if (errors.length) task.setError(errors.join("；"));
-      after?.(failed);
+      report(verb, chosen.length - failed.length, failed);
     });
   const batch = (
     <div className={`wb-character-bulk ${count ? "is-active" : ""}`}>
@@ -474,7 +475,11 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
         disabled={!count || task.busy}
         onClick={() => {
           if (confirm(`删除选中的 ${count} 个角色卡？聊天文件保留。\n${nameList(chosen)}`))
-            each("删除", (id) => host.deleteCharacters([id]), setSelected);
+            task.run(async () => {
+              const { deleted, failed } = await host.deleteCharacters(chosen.map((x) => x.id));
+              report("删除", deleted.length, failed);
+              setSelected(failed.map((f) => f.id));
+            });
         }}
       >
         删除
