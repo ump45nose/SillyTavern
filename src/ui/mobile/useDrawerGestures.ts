@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { flushSync } from "react-dom";
 import type { Panel } from "../../host/types";
 import { interactive, type MobileState } from "./types";
@@ -6,10 +6,15 @@ import { interactive, type MobileState } from "./types";
 export function useDrawerGestures(
   rp: boolean,
   latest: RefObject<MobileState>,
-  toggleLeft: () => void,
-  goPanel: (panel: Panel) => void,
-  closeDrawers: () => void,
+  onToggleLeft: () => void,
+  onPanel: (panel: Panel) => void,
+  onCloseDrawers: () => void,
 ) {
+  const actions = useRef({ onToggleLeft, onPanel, onCloseDrawers });
+  actions.current = { onToggleLeft, onPanel, onCloseDrawers };
+  const toggleLeft = () => actions.current.onToggleLeft();
+  const goPanel = (panel: Panel) => actions.current.onPanel(panel);
+  const closeDrawers = () => actions.current.onCloseDrawers();
   // Drawers follow the finger. A sideways drag on the reading (RP: the scene around the dialogue box)
   // pulls the outline out from the left or the panel from the right; a drag on an open drawer or its
   // shade pushes it back. On release, a flick or more than 40% shown decides.
@@ -144,5 +149,5 @@ export function useDrawerGestures(
       document.removeEventListener("pointerup", up);
       document.removeEventListener("pointercancel", cancel);
     };
-  }, [rp, toggleLeft, goPanel, closeDrawers]);
+  }, [rp]);
 }
