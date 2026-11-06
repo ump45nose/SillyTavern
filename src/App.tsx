@@ -287,20 +287,16 @@ export default function App({
       void task.run(() => item.node.click());
     }
   };
-  const next = (kind: Resource) =>
+  const nextConnection = () =>
     task.run(async () => {
-      // Archived items are skipped; books and profiles follow their list groups.
-      const items = listOrder(snap.resources[kind]);
+      // Archived profiles are skipped; the rest follow their list groups.
+      const items = listOrder(snap.resources.connection);
       if (!items.length) {
-        goPanel(kind);
+        goPanel("connection");
         return;
       }
-      const index = items.findIndex(
-        (x) => x.id === (kind === "world" ? focusId || snap.current.world : snap.current[kind]),
-      );
-      const item = items[(index + 1) % items.length];
-      if (kind === "world") goPanel(kind, item.id);
-      else await host.select(kind, item.id);
+      const index = items.findIndex((x) => x.id === snap.current.connection);
+      await host.select("connection", items[(index + 1) % items.length].id);
     });
   const toggleLeft = () => {
     if (!mobile) hover.dismiss("left");
@@ -326,13 +322,13 @@ export default function App({
   });
   // Long-lived subscribers (operations, keyboard, bus) read the current render through this ref,
   // so they are registered once.
-  const live = useRef({ s, act, goPanel, next, toggleLeft, toggleFocus });
-  live.current = { s, act, goPanel, next, toggleLeft, toggleFocus };
+  const live = useRef({ s, act, goPanel, nextConnection, toggleLeft, toggleFocus });
+  live.current = { s, act, goPanel, nextConnection, toggleLeft, toggleFocus };
   const [operations] = useState(() => {
     const ops = new Operations();
     for (const kind of ["connection", "preset", "world", "persona"] as Resource[])
       ops.register(`open.${kind}`, () => live.current.goPanel(kind));
-    ops.register("next.connection", () => live.current.next("connection"));
+    ops.register("next.connection", () => live.current.nextConnection());
     for (const kind of ["trace", "outline", "database", "image-gen", "character"] as const)
       ops.register(`open.${kind}`, () => live.current.goPanel(kind));
     ops.register("outline.editor", () => {
