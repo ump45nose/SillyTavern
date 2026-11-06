@@ -423,9 +423,13 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
         failed.map((f) => `${chosen.find((x) => x.id === f.id)?.name || f.id}：${f.message}`).join("；"),
       );
   };
+  const batchRun = (fn: () => unknown) => {
+    setMessage("");
+    return task.run(fn);
+  };
   /** One card at a time: a failure is named in the error and the rest still run. */
   const each = (verb: string, job: (id: string) => Promise<unknown>) =>
-    task.run(async () => {
+    batchRun(async () => {
       const failed: { id: string; message: string }[] = [];
       for (const x of chosen) {
         try {
@@ -456,7 +460,7 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
         onClick={() => {
           const value = prompt("添加标签");
           const ids = chosen.map((x) => x.id);
-          if (value) task.run(() => host.tagCharacters(ids, value));
+          if (value) batchRun(() => host.tagCharacters(ids, value));
         }}
       >
         标签
@@ -475,7 +479,7 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
         disabled={!count || task.busy}
         onClick={() => {
           if (confirm(`删除选中的 ${count} 个角色卡？聊天文件保留。\n${nameList(chosen)}`))
-            task.run(async () => {
+            batchRun(async () => {
               const { deleted, failed } = await host.deleteCharacters(chosen.map((x) => x.id));
               report("删除", deleted.length, failed);
               setSelected(failed.map((f) => f.id));
