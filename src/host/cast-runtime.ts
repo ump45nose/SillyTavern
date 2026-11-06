@@ -1,9 +1,7 @@
 import type { HostAdapter } from "./adapter";
 import { ctx, loadExtensionModule, nativeNodes } from "./internals";
 import { castPrompt, isPathSafe, markCastTags, parseCastTag, type CastName, type Sprite } from "./cast";
-
-let hookAdded = false,
-  marking = false;
+import { formatterHook } from "./formatter";
 
 /** Chat metadata `workbenchRP.cast`: a world book and the titles of the entries that play. */
 export interface CastConfig {
@@ -30,15 +28,15 @@ export interface CastState {
 }
 
 const PROMPT = "noval_cast",
-  EXPRESSIONS = "/scripts/extensions/expressions/index.js",
-  IN_CHAT = 1,
-  SYSTEM = 0;
+  EXPRESSIONS = "/scripts/extensions/expressions/index.js";
 const idle: CastState = { entries: [], members: [], missing: [], loading: false, error: "" };
 const enc = encodeURIComponent;
 /** A sprite's file name without its extension: what the server matches to replace or delete it. */
 const stem = (sprite: Sprite) =>
   decodeURIComponent(sprite.path.split("?")[0].split("/").pop()!).replace(/\.[^.]+$/, "");
 const extension = (fileName: string) => fileName.match(/\.[^.]+$/)?.[0].toLowerCase() ?? ".png";
+const sameCast = (a: CastConfig, b: CastConfig) =>
+  a.book === b.book && a.entries.length === b.entries.length && a.entries.every((x, i) => x === b.entries[i]);
 
 function entriesOf(book: any): CastEntry[] {
   const seen = new Set<string>(),
@@ -94,6 +92,10 @@ export class CastRuntime {
       this.prompt([]);
       return this.set(idle);
     }
+    // The host writes this prompt into each chat it opens, so a different cast's comes out now rather
+    // than once the book is read.
+    const previous = this.state.config;
+    if (previous && !sameCast(config, previous)) this.prompt([]);
     this.set({ ...this.state, config, loading: true, error: "" });
     try {
       const entries = entriesOf(await this.host.readBook(config.book));
@@ -234,13 +236,10 @@ export class CastRuntime {
     );
   }
   private prompt(members: CastMember[]) {
-    ctx().setExtensionPrompt(
+    this.host.prompts.set(
       PROMPT,
       castPrompt(members.map((m) => ({ name: m.name, labels: [...new Set(m.sprites.map((s) => s.label))] }))),
-      IN_CHAT,
-      1,
-      false,
-      SYSTEM,
+      { depth: 1 },
     );
   }
   /** Takes the prompt out; a load still reading the book or images never writes it back. */
@@ -277,18 +276,12 @@ export class CastRuntime {
   }
   /**
    * Marks the line-opening `名字|表情:` tags of replies as SillyTavern renders them; the raw message
-   * keeps them, so editing and the model still see them. SillyTavern's formatter has no way to
-   * remove a hook, so it is added once per page and stands idle while the workbench is unmounted.
-   * Replies already on screen were rendered without it and are rendered again once.
+   * keeps them, so editing and the model still see them. The hook stands idle once the returned
+   * function is called, when the workbench is unmounted. Replies already on screen were rendered
+   * without it and are rendered again once.
    */
   showTags() {
-    if (!hookAdded) {
-      ctx().messageFormatter.addHook((mes: string, at: { isUser: boolean; isReasoning: boolean }) =>
-        marking && !at.isUser && !at.isReasoning ? markCastTags(mes) : mes,
-      );
-      hookAdded = true;
-    }
-    marking = true;
+    const off = formatterHook("cast", (mes, at) => (!at.isUser && !at.isReasoning ? markCastTags(mes) : mes));
     const { chat, updateMessageBlock } = ctx();
     for (const node of nativeNodes.chat!.querySelectorAll<HTMLElement>('.mes:not([is_user="true"])')) {
       const id = Number(node.getAttribute("mesid"));
@@ -300,8 +293,6 @@ export class CastRuntime {
       )
         updateMessageBlock(id, message);
     }
-    return () => {
-      marking = false;
-    };
+    return off;
   }
 }

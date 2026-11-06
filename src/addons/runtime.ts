@@ -4,11 +4,8 @@ import { addonEnabled, type AddonId } from "./catalog";
 import { loadAddon } from "./loader";
 import type { AddonRuntime, TaskHost } from "./types";
 import { bus } from "../host/bus";
-import { ctx } from "../host/internals";
 import { normalizeOutline, outlineContext } from "./outline/model";
-const OUTLINE_PROMPT = "noval_outline",
-  IN_CHAT = 1,
-  SYSTEM = 0;
+const OUTLINE_PROMPT = "noval_outline";
 const managers = new WeakMap<HostAdapter, AddonManager>();
 export class AddonManager {
   readonly bridge: AddonBridge;
@@ -21,21 +18,16 @@ export class AddonManager {
   private key: string;
   private version = 0;
   private disposed = false;
-  /** The outline metadata object last read, and what it gave: `{{outline}}` and the injected prompt. */
-  private outline: { source?: unknown; text: string; prompt: string; depth: number } = {
-    text: "",
-    prompt: "",
-    depth: 0,
-  };
+  /** The outline metadata object last read, and the `{{outline}}` text it gave. */
+  private outline: { source?: unknown; text: string } = { text: "" };
   constructor(private host: HostAdapter) {
     this.bridge = new AddonBridge(host);
     this.key = this.bridge.key();
     // The outline guides writing without its add-on loaded: a macro, and the prompt when injection is on.
-    ctx().registerMacro("outline", () => this.outline.text, "工作台大纲：当前节点、上级背景与下一节点");
-    this.cleanups.push(() => {
-      ctx().unregisterMacro("outline");
-      ctx().setExtensionPrompt(OUTLINE_PROMPT, "", IN_CHAT, 0, false, SYSTEM);
-    });
+    this.cleanups.push(
+      this.bridge.macro("outline", () => this.outline.text, "工作台大纲：当前节点、上级背景与下一节点"),
+      () => host.prompts.clear(OUTLINE_PROMPT),
+    );
     this.syncOutline();
     this.cleanups.push(
       this.bridge.onChatChange(() => {
@@ -85,31 +77,22 @@ export class AddonManager {
       }),
     );
   }
-  /**
-   * Re-reads the chat's outline when its metadata object changes (every save replaces it). The prompt
-   * is checked against SillyTavern's table, which starts empty whenever a chat is loaded, reloaded or
-   * branched, even when the outline itself stays the same.
-   */
+  /** Re-reads the chat's outline when its metadata object changes (every save replaces it). */
   private syncOutline() {
-    const c = ctx(),
-      source = addonEnabled(this.host.prefs(), "outline")
-        ? c.chatMetadata?.workbench_addons?.outline
-        : undefined;
-    if (source !== this.outline.source) {
-      const next = { source, text: "", prompt: "", depth: 0 };
-      try {
-        const data = normalizeOutline(source);
-        next.text = outlineContext(data);
-        if (data.settings.inject.enabled) [next.prompt, next.depth] = [next.text, data.settings.inject.depth];
-      } catch (error) {
-        this.host.report(error);
-      }
-      this.outline = next;
+    const source = addonEnabled(this.host.prefs(), "outline") ? this.bridge.stored("outline") : undefined;
+    if (source === this.outline.source) return;
+    let text = "",
+      prompt = "",
+      depth = 0;
+    try {
+      const data = normalizeOutline(source);
+      text = outlineContext(data);
+      if (data.settings.inject.enabled) [prompt, depth] = [text, data.settings.inject.depth];
+    } catch (error) {
+      this.host.report(error);
     }
-    const { prompt, depth } = this.outline,
-      injected = c.extensionPrompts?.[OUTLINE_PROMPT];
-    if ((injected?.value ?? "") !== prompt || (prompt && injected.depth !== depth))
-      c.setExtensionPrompt(OUTLINE_PROMPT, prompt, IN_CHAT, depth, false, SYSTEM);
+    this.outline = { source, text };
+    this.host.prompts.set(OUTLINE_PROMPT, prompt, { depth });
   }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);

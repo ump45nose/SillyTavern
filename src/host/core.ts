@@ -14,6 +14,7 @@ import { ctx, internal } from "./internals";
 import type { ChatObserver, MediaObserver } from "./chat-observer";
 import type { CastRuntime } from "./cast-runtime";
 import type { OptionsRuntime } from "./options-runtime";
+import type { PromptTable } from "./prompts";
 import type { DatabaseRuntime } from "./database-runtime";
 import { bus } from "./bus";
 
@@ -101,6 +102,8 @@ export class HostCore {
   /** Created in init; the only observers on #chat and on the native sprite wrappers. */
   chatObserver!: ChatObserver;
   media!: MediaObserver;
+  /** The prompts the workbench injects; SillyTavern's own table is written from it. */
+  prompts!: PromptTable;
   /** The chat's world-book cast on the RP stage. */
   cast!: CastRuntime;
   /** The database plug-in's tables for this chat; `available` is false without the plug-in. */

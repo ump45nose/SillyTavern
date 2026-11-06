@@ -101,6 +101,15 @@ export class AddonBridge {
     const c = context();
     return `${c.groupId || c.characters[c.characterId]?.avatar || ""}:${c.getCurrentChatId() || ""}`;
   }
+  /** An add-on's data in the open chat's metadata, as stored rather than copied. */
+  stored(id: AddonId) {
+    return context().chatMetadata?.workbench_addons?.[id];
+  }
+  /** Registers a `{{name}}` macro; the returned function unregisters it. */
+  macro(name: string, read: () => string, description: string) {
+    context().registerMacro(name, read, description);
+    return () => context().unregisterMacro(name);
+  }
   target(id: number): MessageTarget {
     const message = context().chat[id];
     if (!message) throw new Error("目标楼层已不存在。");
@@ -245,7 +254,7 @@ export class AddonBridge {
       download: (blob: Blob, filename: string) => host.download(blob, filename),
       jump: (n: number) => host.jump(n),
       exportChat: (name: string) => host.exportChat(name),
-      metadata: () => copy(context().chatMetadata.workbench_addons?.[id] || {}),
+      metadata: () => copy(bridge.stored(id) || {}),
       saveMetadata: (data: Data, key: string) =>
         bridge.serial(async () => {
           await bridge.idle(key);

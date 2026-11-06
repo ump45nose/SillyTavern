@@ -3,6 +3,7 @@ import { assertContext, ctx, internal, nativeNodes } from "./internals";
 import { ChatObserver, MediaObserver } from "./chat-observer";
 import { CastRuntime } from "./cast-runtime";
 import { OptionsRuntime } from "./options-runtime";
+import { PromptTable } from "./prompts";
 import { DatabaseRuntime } from "./database-runtime";
 import { SyncRelay } from "./sync-relay";
 import { PlaceholderRuntime } from "./placeholder-runtime";
@@ -43,10 +44,12 @@ export class HostAdapter extends HostCore {
       internal("openai"),
     ]);
     assertContext();
+    this.prompts = new PromptTable(this);
     this.chatObserver = new ChatObserver(nativeNodes.chat!);
     this.media = new MediaObserver();
     this.cast = new CastRuntime(this);
     this.cleanup.push(
+      () => this.prompts.dispose(),
       this.cast.showTags(),
       () => this.cast.dispose(),
       () => this.chatObserver.disconnect(),

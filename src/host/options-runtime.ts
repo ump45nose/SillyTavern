@@ -1,4 +1,5 @@
 import type { HostAdapter } from "./adapter";
+import { formatterHook } from "./formatter";
 import { ctx } from "./internals";
 import {
   DEFAULT_OPTIONS_PROMPT,
@@ -25,10 +26,7 @@ export interface OptionsState {
   error: string;
 }
 
-const PROMPT = "noval_options",
-  IN_CHAT = 1,
-  SYSTEM = 0,
-  HOOKED = Symbol.for("workbench.options.formatter");
+const PROMPT = "noval_options";
 
 /**
  * A chat's story options: the model's `<options>` block (asked for by an injected prompt, hidden in
@@ -39,14 +37,10 @@ export class OptionsRuntime {
   private listeners = new Set<() => void>();
   private table: StoryOption[] = [];
   constructor(private host: HostAdapter) {
-    // MessageFormatter keeps its hooks for the page's life, so the hook goes in once per page.
-    const formatter = ctx().messageFormatter;
-    if (formatter && !formatter[HOOKED]) {
-      formatter[HOOKED] = true;
-      formatter.addHook((mes: string, info: { isUser: boolean }) => (info.isUser ? mes : stripOptions(mes)), {
-        stage: formatter.stage.BEFORE_REGEX,
-      });
-    }
+    // Never idled: replies keep their blocks hidden after the workbench is unmounted.
+    formatterHook("options", (mes, info) => (info.isUser ? mes : stripOptions(mes)), {
+      stage: ctx().messageFormatter.stage.BEFORE_REGEX,
+    });
     host.listen("CHAT_COMPLETION_PROMPT_READY", (data: { chat?: { role: string; content: unknown }[] }) => {
       for (const message of data.chat || [])
         if (message.role === "assistant") message.content = this.stripContent(message.content);
@@ -93,14 +87,7 @@ export class OptionsRuntime {
   /** Reads the chat's choice; called on every chat switch. */
   load() {
     const config = this.config();
-    ctx().setExtensionPrompt(
-      PROMPT,
-      config.source === "model" ? this.template() : "",
-      IN_CHAT,
-      0,
-      false,
-      SYSTEM,
-    );
+    this.host.prompts.set(PROMPT, config.source === "model" ? this.template() : "", { depth: 0 });
     this.table = [];
     this.set({ config, error: "" });
     if (config.source === "db") {
@@ -166,7 +153,7 @@ export class OptionsRuntime {
     this.set({ items, key });
   }
   dispose() {
-    ctx().setExtensionPrompt(PROMPT, "", IN_CHAT, 0, false, SYSTEM);
+    this.host.prompts.clear(PROMPT);
     this.listeners.clear();
   }
 }

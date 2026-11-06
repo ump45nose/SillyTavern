@@ -11,7 +11,7 @@ const outline = (depth) => ({
   settings: { inject: { enabled: true, depth } },
 });
 const st = {
-  eventTypes: { CHAT_CHANGED: "chat_changed" },
+  eventTypes: { CHAT_CHANGED: "chat_changed", GENERATION_STARTED: "generation_started" },
   eventSource: {
     on: (event, fn) => handlers.set(event, [...(handlers.get(event) || []), fn]),
     removeListener: (event, fn) =>
@@ -48,6 +48,15 @@ const { outputFiles } = await build({
 });
 await writeFile(directory + "/runtime.mjs", outputFiles[0].text);
 const { addonManager, disposeAddons } = await import(directory + "/runtime.mjs");
+const prompts = await build({
+  entryPoints: [new URL("../src/host/prompts.ts", import.meta.url).pathname],
+  bundle: true,
+  format: "esm",
+  write: false,
+});
+const { PromptTable } = await import(
+  "data:text/javascript;base64," + Buffer.from(prompts.outputFiles[0].text).toString("base64")
+);
 // An installed outline add-on: its manifest (fetched) and its module (imported), with a runtime that
 // records its subscribers.
 await writeFile(directory + "/package.json", '{"type":"module"}');
@@ -89,9 +98,11 @@ const host = {
   report: (error) => assert.fail(error),
   sync: { handleOutline: (write) => (outlineWriters.add(write), () => outlineWriters.delete(write)) },
 };
+host.prompts = new PromptTable(host);
 const prompt = () => st.extensionPrompts.noval_outline;
+const emit = (event, ...args) => (handlers.get(event) || []).forEach((fn) => fn(...args));
 
-test("the outline prompt comes back when a reload or branch empties SillyTavern's prompt table", () => {
+test("the outline prompt comes back when a reload, a branch or a generation finds SillyTavern's table empty", () => {
   addonManager(host);
   assert.equal(outlineWriters.size, 1, "the manager takes IDE outline writes for the open chat");
   assert.equal(prompt().depth, 2);
@@ -100,15 +111,16 @@ test("the outline prompt comes back when a reload or branch empties SillyTavern'
   // Reloading the chat: the table starts empty and the metadata is read again with the same outline.
   st.extensionPrompts = {};
   st.chatMetadata = { workbench_addons: { outline: outline(2) } };
-  handlers.get("chat_changed").forEach((fn) => fn());
+  emit("chat_changed");
   assert.deepEqual(prompt(), { value: injected, position: 1, depth: 2 });
-  // The same metadata object again: nothing is re-read, but an emptied table is still refilled.
+  // Emptied without a chat switch (an edited first message put back): the next generation refills it,
+  // a dry run (a token count) as well.
   st.extensionPrompts = {};
-  notify.forEach((fn) => fn());
-  assert.equal(prompt().value, injected);
+  emit("generation_started", "normal", {}, true);
+  assert.deepEqual(prompt(), { value: injected, position: 1, depth: 2 });
   const writes = st.writes;
   notify.forEach((fn) => fn());
-  assert.equal(st.writes, writes, "an injected prompt is not written again");
+  assert.equal(st.writes, writes, "the same outline is not written again on every host change");
   st.chatMetadata = { workbench_addons: { outline: outline(5) } };
   notify.forEach((fn) => fn());
   assert.equal(prompt().depth, 5);
