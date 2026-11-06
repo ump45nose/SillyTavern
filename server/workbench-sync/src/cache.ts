@@ -3,6 +3,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import crypto from "node:crypto";
 import { promisify } from "node:util";
+import { prepend } from "../../shared/st-host.mjs";
 
 /**
  * Response cache for the two boot requests that dominate a page refresh: /api/settings/get and
@@ -173,20 +174,6 @@ type Handler = (req: Req, res: Res, next: (error?: unknown) => void) => unknown;
 
 const size = (bytes: number) =>
   bytes >= 1048576 ? `${(bytes / 1048576).toFixed(2)} MB` : `${Math.round(bytes / 1024)} KB`;
-
-/** Prepends `handler` to an Express 4 router, ahead of SillyTavern's own routes. */
-function prepend(router: ExpressRouter, add: () => void) {
-  const before = router.stack.length;
-  add();
-  const added = router.stack.splice(before);
-  router.stack.unshift(...added);
-  return () => {
-    for (const layer of added) {
-      const at = router.stack.indexOf(layer);
-      if (at >= 0) router.stack.splice(at, 1);
-    }
-  };
-}
 
 /** Serves `kind` from the cache while its fingerprint holds; otherwise records SillyTavern's reply. */
 function reader(cache: ResponseCache, kind: Kind): Handler {

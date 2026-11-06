@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { serverImport, serverRoot } from "../../shared/st-host.mjs";
 
 /** The parts of a user's directory list (SillyTavern's USER_DIRECTORY_TEMPLATE) this plug-in reads. */
 export interface Directories {
@@ -14,15 +14,13 @@ export interface Directories {
 }
 
 /**
- * SillyTavern's own root. The plug-in is loaded through a symlink, so its own URL points into the
- * workbench checkout; server.js (argv[1]) or the working directory locate the server instead.
+ * Imports SillyTavern's modules from its own root. The plug-in is loaded through a symlink, so its
+ * own URL points into the workbench checkout.
  */
-function serverRoot() {
-  const candidates = [process.argv[1] && path.dirname(fs.realpathSync(process.argv[1])), process.cwd()];
-  const root = candidates.find((dir) => dir && fs.existsSync(path.join(dir, "src/character-card-parser.js")));
-  if (!root) throw new Error("workbench-sync: SillyTavern server directory not found.");
-  return root;
-}
+const stImport = () =>
+  serverImport(
+    serverRoot("src/character-card-parser.js", "workbench-sync: SillyTavern server directory not found."),
+  );
 
 interface Host {
   readCard: (image: Buffer) => string;
@@ -32,8 +30,7 @@ interface Host {
 let host: Promise<Host> | undefined;
 export function st() {
   return (host ??= (async () => {
-    const root = serverRoot(),
-      load = (file: string) => import(pathToFileURL(path.join(root, file)).href);
+    const load = stImport();
     const [card, util] = await Promise.all([load("src/character-card-parser.js"), load("src/util.js")]);
     return { readCard: card.read, writeCard: card.write, getConfigValue: util.getConfigValue };
   })());
@@ -44,8 +41,7 @@ export function st() {
  * so the same file URL yields the module instances server-startup already mounted.
  */
 export async function stRouters() {
-  const root = serverRoot(),
-    load = (file: string) => import(pathToFileURL(path.join(root, file)).href);
+  const load = stImport();
   const [settings, characters] = await Promise.all([
     load("src/endpoints/settings.js"),
     load("src/endpoints/characters.js"),
