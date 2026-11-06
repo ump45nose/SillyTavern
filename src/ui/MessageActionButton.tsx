@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, MouseEvent } from "react";
 import {
   invokeMessageAction,
   messageActionDisabled,
@@ -10,19 +10,25 @@ import {
 export function MessageActionButton({
   node,
   action,
+  control = messageControl(node, action),
   busy = false,
   iconOnly = false,
   onInvoke,
+  run,
   size = 17,
   children,
   ...props
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
   node: HTMLElement | null | undefined;
   action: MessageAction;
+  /** The native control that decides whether the button is enabled; null leaves it disabled. */
+  control?: HTMLElement | null;
   busy?: boolean;
   iconOnly?: boolean;
   size?: number;
   onInvoke?: () => void;
+  /** Runs instead of the native control. */
+  run?: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   const [Icon, label] = messageActions[action];
   return (
@@ -31,10 +37,11 @@ export function MessageActionButton({
       aria-label={label}
       title={label}
       {...props}
-      disabled={props.disabled || messageActionDisabled(messageControl(node, action), busy)}
-      onClick={() => {
+      disabled={props.disabled || messageActionDisabled(control, busy)}
+      onClick={(event) => {
         onInvoke?.();
-        invokeMessageAction(node, action);
+        if (run) run(event);
+        else invokeMessageAction(node, action);
       }}
     >
       <Icon size={size} />

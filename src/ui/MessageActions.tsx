@@ -3,10 +3,10 @@ import { Check, Ellipsis, PencilLine, Trash2, X } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { Popover } from "./Popover";
 import { beginImageInsert } from "./ImageInsertion";
+import { MessageActionButton } from "./MessageActionButton";
 import {
   describeMessageAction,
   messageActionDisabled,
-  messageActions,
   messageControl,
   messageMenuControls,
   invokeMessageAction,
@@ -97,24 +97,23 @@ export function MessageActions({
         commonActions.map((actions, index) => {
           const control = controls[index];
           const action = actions.find((action) => control?.classList.contains(action)) || actions[0];
-          const [Icon, label] = messageActions[action];
           return (
-            <button
+            <MessageActionButton
               key={actions[0]}
-              type="button"
               className="wb-message-common"
-              aria-label={label}
-              title={label}
-              disabled={messageActionDisabled(control, locked)}
-              onClick={(event) => {
-                setAnchor(null);
-                if (action === "wb-image-insert-button")
-                  beginImageInsert(host, Number(node.getAttribute("mesid")), event.currentTarget);
-                else invokeMessageAction(node, action);
-              }}
-            >
-              <Icon size={12} />
-            </button>
+              node={node}
+              action={action}
+              control={control}
+              busy={locked}
+              iconOnly
+              size={12}
+              onInvoke={() => setAnchor(null)}
+              run={
+                action === "wb-image-insert-button"
+                  ? (event) => beginImageInsert(host, Number(node.getAttribute("mesid")), event.currentTarget)
+                  : undefined
+              }
+            />
           );
         })
       )}
