@@ -1,23 +1,14 @@
 import { Select } from "../ui/Select";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Search, X, Braces, BookMarked, ChevronLeft } from "../ui/icons";
-import { SaveBar } from "../ui/ResourceControls";
+import { SaveBar, unsavedDraft, useAsyncDraft } from "../ui/ResourceControls";
 import { EntryEditor, useMobileLayout } from "../ui/EntryEditor";
 import { useTokenTally } from "../ui/tokens";
 import { useWindow, WINDOW_FROM } from "../ui/useWindow";
-import { activation, sameData, setActivation, validateBook } from "../host/model";
+import { activation, setActivation, validateBook } from "../host/model";
 import type { Data } from "../host/types";
 import type { HostAdapter } from "../host/adapter";
-import {
-  useTask,
-  SearchBox,
-  Notice,
-  Empty,
-  Field,
-  useHostSlices,
-  useLeaveGuard,
-  withoutChat,
-} from "../ui/common";
+import { useTask, SearchBox, Notice, Empty, Field, useHostSlices, withoutChat } from "../ui/common";
 import { ResourcePicker } from "../ui/ResourcePicker";
 import { EntryPortraits } from "../ui/EntryPortraits";
 import { MdField } from "../ui/md/MdField";
@@ -47,6 +38,16 @@ const searchFull = (e: Data) => {
     fullText.set(e, (text = `${e.comment} ${e.key?.join(" ")} ${e.content}`.toLowerCase()));
   return text;
 };
+/** A book's pretty JSON, once per book object: the JSON tab and the draft cache share the string. */
+const bookText = new WeakMap<Data, string>();
+const prettyBook = (book: Data) => {
+  let text = bookText.get(book);
+  if (text === undefined) bookText.set(book, (text = JSON.stringify(book, null, 2)));
+  return text;
+};
+/** The JSON tab's text in a cached draft when it holds edits the draft does not; otherwise null. */
+const editedJson = (extra: Data | undefined, draft: Data): string | null =>
+  extra?.tab === "json" && extra.json !== prettyBook(draft) ? extra.json : null;
 /** Copy-on-write: only the book, its entry map and the one entry are new objects. */
 const withEntry = (book: Data, id: string, entry: Data) => ({
   ...book,
@@ -70,13 +71,43 @@ export default function World({
   const snap = useHostSlices(host, withoutChat),
     task = useTask();
   const [name, setName] = useState(initial || snap.current.world || snap.resources.world[0]?.id || "");
-  const cached = host.drafts.get("world:" + name);
-  const [base, setBase] = useState<Data | null>(cached?.base ?? null),
-    [draft, setDraft] = useState<Data | null>(cached?.draft ?? null),
-    [entry, setEntry] = useState<string>(cached?.extra?.entry ?? ""),
-    [query, setQuery] = useState(""),
-    [tab, setTab] = useState(cached?.extra?.tab ?? "content"),
-    [json, setJson] = useState(cached?.extra?.json ?? ""),
+  const [restored] = useState(() => unsavedDraft(host, "world:" + name));
+  // The JSON tab's text stays null until it is edited; until then the tab shows the draft itself.
+  const [json, setJson] = useState(() => (restored ? editedJson(restored.extra, restored.draft) : null)),
+    [tab, setTab] = useState<string>(restored?.extra?.tab ?? "content"),
+    [entry, setEntry] = useState<string>(restored?.extra?.entry ?? "");
+  const edit = useAsyncDraft({
+      host,
+      key: "world:" + name,
+      load: name ? () => host.readBook(name) : null,
+      version: host.resourceVersions.world,
+      extra: (book) => ({ json: tab === "json" ? (json ?? prettyBook(book)) : "", tab, entry }),
+      edited: json !== null,
+      onLoad: (data) => {
+        const wanted =
+          target &&
+          Object.entries<Data>(data.entries ?? {}).find(
+            ([, e]) => String(e.comment ?? "").trim() === target,
+          )?.[0];
+        // Where the detail covers the table (phones, a narrow workspace) a book opens on its list.
+        const covered =
+          deep &&
+          (document.body.classList.contains("wb-mobile") || (workspace.current?.clientWidth ?? 1e4) <= 520);
+        setEntry(
+          (previous) =>
+            wanted ||
+            (data.entries?.[previous] ? previous : covered ? "" : (Object.keys(data.entries ?? {})[0] ?? "")),
+        );
+        if (target) {
+          setTarget(undefined);
+          if (wanted) setTab("portraits");
+        }
+      },
+      onError: task.setError,
+    }),
+    { base, draft, dirty, setDraft } = edit,
+    pretty = tab === "json" && draft ? prettyBook(draft) : "";
+  const [query, setQuery] = useState(""),
     [saved, setSaved] = useState(""),
     [scope, setScope] = useState("global"),
     [newKey, setNewKey] = useState<string | null>(null),
@@ -86,71 +117,16 @@ export default function World({
   useEffect(() => {
     onSelection?.(name);
   }, [name]);
-  // Edits never mutate base or draft, so the cache can hold them as they are.
-  useLayoutEffect(() => {
-    if (base && draft) host.drafts.set("world:" + name, { base, draft, extra: { json, tab, entry } });
-  }, [name, base, draft, json, tab, entry]);
-  const changed = useMemo(() => !!base && !!draft && !sameData(base, draft), [base, draft]),
-    pretty = useMemo(() => (tab === "json" && draft ? JSON.stringify(draft, null, 2) : ""), [tab, draft]);
-  const dirty = changed || (tab === "json" && Boolean(draft) && json !== pretty);
-  useLeaveGuard(dirty);
-  /** The book version base was read at; a clean editor rereads only when the book has changed since. */
-  const loaded = useRef<{ name: string; version: number } | null>(null);
   const workspace = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (dirty) return;
-    const version = host.resourceVersions.world;
-    if (loaded.current?.name === name && loaded.current.version === version) return;
-    let live = true;
-    if (name)
-      host
-        .readBook(name)
-        .then((data) => {
-          if (live) {
-            loaded.current = { name, version };
-            setBase(data);
-            setDraft(data);
-            const wanted =
-              target &&
-              Object.entries<Data>(data.entries ?? {}).find(
-                ([, e]) => String(e.comment ?? "").trim() === target,
-              )?.[0];
-            // Where the detail covers the table (phones, a narrow workspace) a book opens on its list.
-            const covered =
-              deep &&
-              (document.body.classList.contains("wb-mobile") ||
-                (workspace.current?.clientWidth ?? 1e4) <= 520);
-            setEntry(
-              (previous) =>
-                wanted ||
-                (data.entries?.[previous]
-                  ? previous
-                  : covered
-                    ? ""
-                    : (Object.keys(data.entries ?? {})[0] ?? "")),
-            );
-            if (target) {
-              setTarget(undefined);
-              if (wanted) setTab("portraits");
-            }
-            setJson(JSON.stringify(data, null, 2));
-          }
-        })
-        .catch((e) => {
-          if (live) task.setError(e.message);
-        });
-    return () => {
-      live = false;
-    };
-  }, [name, host.resourceVersions.world, dirty]);
   const choose = (next: string) => {
     if (next === name) return;
     if (dirty && !confirm("切换世界书将放弃未保存修改，继续？")) return;
     host.drafts.delete("world:" + name);
-    setTab("content");
+    const unsaved = unsavedDraft(host, "world:" + next);
+    setTab(unsaved?.extra?.tab ?? "content");
+    setJson(unsaved ? editedJson(unsaved.extra, unsaved.draft) : null);
+    if (unsaved) setEntry(unsaved.extra?.entry ?? "");
     setEntryOpen(false);
-    setBase(null);
-    setDraft(null);
     setName(next);
   };
   const update = (patch: Data) => {
@@ -161,7 +137,7 @@ export default function World({
   const save = () =>
     task.run(async () => {
       if (!base || !draft) return;
-      const candidate = tab === "json" ? JSON.parse(json) : draft;
+      const candidate = tab === "json" && json !== null ? JSON.parse(json) : draft;
       const result = await host.saveBook(name, base, candidate);
       // A renamed entry's portraits follow its title to the new folder; the book is saved either way.
       let moved = 0;
@@ -174,11 +150,8 @@ export default function World({
         }
         setSaved(moved ? `已保存 · ${moved} 张立绘随改名移动` : "已保存");
       } finally {
-        // The saved book is current: saving must not trigger a reread of it.
-        loaded.current = { name, version: host.resourceVersions.world };
-        setBase(result);
-        setDraft(result);
-        setJson(JSON.stringify(result, null, 2));
+        edit.saved(result);
+        setJson(null);
       }
     });
   // Stable, so list rows that did not change skip rendering.
@@ -241,19 +214,20 @@ export default function World({
     if (entry) reveal(list.findIndex(([id]) => id === entry));
   }, [entry, reveal]);
   const switchTab = (t: string) => {
-    if (tab === "json") {
+    if (tab === "json" && json !== null) {
       try {
         const data = JSON.parse(json);
         validateBook(data);
         setDraft(data);
+        setJson(null);
       } catch {
         task.setError("JSON 无法解析，请先修正。");
         return;
       }
     }
-    if (t === "json") setJson(JSON.stringify(draft, null, 2));
     setTab(t);
   };
+  const editJson = (text: string) => setJson(text === pretty ? null : text);
   const addEntry = () =>
     task.run(async () => {
       if (!draft) return;
@@ -280,9 +254,8 @@ export default function World({
       busy={task.busy}
       message={saved}
       reset={() => {
-        if (!base) return;
-        setDraft(base);
-        setJson(JSON.stringify(base, null, 2));
+        edit.reset();
+        setJson(null);
         setSaved("");
       }}
       save={save}
@@ -438,8 +411,8 @@ export default function World({
                 <textarea
                   className="wb-entry-text is-code"
                   aria-label="世界书 JSON"
-                  value={json}
-                  onChange={(e) => setJson(e.target.value)}
+                  value={json ?? pretty}
+                  onChange={(e) => editJson(e.target.value)}
                 />
               ) : tab === "trigger" ? (
                 <div className="wb-entry-trigger">
@@ -781,8 +754,8 @@ export default function World({
           <textarea
             className="wb-wt-json"
             aria-label="世界书 JSON"
-            value={json}
-            onChange={(e) => setJson(e.target.value)}
+            value={json ?? pretty}
+            onChange={(e) => editJson(e.target.value)}
           />
         ) : (
           <>

@@ -1,11 +1,11 @@
 import { Select } from "../../ui/Select";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { MessageSquarePlus, ImagePlus, X } from "../../ui/icons";
 import type { HostAdapter } from "../../host/adapter";
 import type { Data } from "../../host/types";
-import { clone } from "../../host/model";
-import { useTask, Notice, Empty, Field, useLeaveGuard } from "../../ui/common";
-import { SaveBar } from "../../ui/ResourceControls";
+import { sameData } from "../../host/model";
+import { useTask, Notice, Empty, Field } from "../../ui/common";
+import { SaveBar, useAsyncDraft } from "../../ui/ResourceControls";
 import { useTokenCounts } from "../../ui/tokens";
 import { MdField } from "../../ui/md/MdField";
 import { SpeakerColor } from "../../ui/SpeakerColor";
@@ -30,36 +30,20 @@ const tokenFields = [
 /** The character card editor (board CharacterEdit): portrait and facts, tabbed fields, then the token budget and greetings. */
 export function CharacterEditor({ host, id }: { host: HostAdapter; id: string }) {
   const task = useTask(),
-    [base, setBase] = useState<Data | null>(host.drafts.get("character:" + id)?.base || null),
-    [draft, setDraft] = useState<Data | null>(host.drafts.get("character:" + id)?.draft || null),
+    { base, draft, dirty, setDraft, saved, reset } = useAsyncDraft({
+      host,
+      key: "character:" + id,
+      load: () => host.characterData(id).then((c) => c.data ?? {}),
+      version: host.resourceVersions.character,
+      onError: task.setError,
+    }),
     [message, setMessage] = useState(""),
     [tab, setTab] = useState<EditorTab>("人设"),
     [tagText, setTagText] = useState("");
-  const dirty = !!base && JSON.stringify(base) !== JSON.stringify(draft);
   const tokens = useTokenCounts(
     host,
     draft ? tokenFields.map((k) => [k, String(draft[k] ?? "")] as [string, string]) : [],
   );
-  useEffect(() => {
-    if (dirty) return;
-    let live = true;
-    host
-      .characterData(id)
-      .then((c) => {
-        if (live) {
-          setBase(clone(c.data ?? {}));
-          setDraft(clone(c.data ?? {}));
-        }
-      })
-      .catch((e) => task.setError(e.message));
-    return () => {
-      live = false;
-    };
-  }, [id, host.resourceVersions.character, dirty]);
-  useEffect(() => {
-    if (base && draft) host.drafts.set("character:" + id, { base: clone(base), draft: clone(draft) });
-  }, [base, draft, id]);
-  useLeaveGuard(dirty);
   if (!draft || !base)
     return (
       <>
@@ -74,7 +58,7 @@ export function CharacterEditor({ host, id }: { host: HostAdapter; id: string })
   };
   const ext = (patch: Data) => put({ extensions: { ...draft.extensions, ...patch } });
   const depth = (patch: Data) => ext({ depth_prompt: { ...draft.extensions?.depth_prompt, ...patch } });
-  const changed = (key: string) => JSON.stringify(draft[key] ?? "") !== JSON.stringify(base[key] ?? "");
+  const changed = (key: string) => !sameData(draft[key] ?? "", base[key] ?? "");
   const field = (key: string, label: string, rows = 4, reading = true) => (
     <label className={`wb-ce-field ${reading ? "is-reading" : ""}`} key={key}>
       <span className="wb-ce-label">
@@ -351,14 +335,13 @@ export function CharacterEditor({ host, id }: { host: HostAdapter; id: string })
             )
             .join(" · ")}
           reset={() => {
-            setDraft(clone(base));
+            reset();
             setMessage("");
           }}
           save={() =>
             task.run(async () => {
               const data = await host.saveCharacter(id, base, draft);
-              setBase(clone(data.data));
-              setDraft(clone(data.data));
+              saved(data.data ?? {});
               setMessage("已保存");
             })
           }

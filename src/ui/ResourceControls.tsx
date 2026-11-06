@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Data } from "../host/types";
@@ -194,10 +194,47 @@ export function SaveBar({
     </footer>
   );
 }
+type DraftCache = { host: HostAdapter; key: string };
+/** The cached draft under `key` while it holds unsaved work; a clean one is read again instead. */
+export const unsavedDraft = (host: HostAdapter, key: string) =>
+  host.dirtyDraftKeys().includes(key) ? host.drafts.get(key) : undefined;
+/**
+ * Mirrors an editor's draft into `host.drafts`, with `extra(draft)` or else the entry's own extra,
+ * whenever the key, base, draft or one of the extra values changes. When the editor closes or moves
+ * to another key the entry goes, unless `dirtyDraftKeys` (which saving and discarding all drafts go
+ * by) still lists it.
+ */
+function useDraftCache(
+  cache: DraftCache | undefined,
+  base: Data | null,
+  draft: Data | null,
+  extra?: (draft: Data) => Data,
+) {
+  const written = useRef<unknown[]>([]);
+  useLayoutEffect(() => {
+    if (!cache || !base || !draft) return;
+    const value = extra?.(draft),
+      parts = [cache.key, base, draft, ...Object.values(value ?? {})];
+    if (parts.length === written.current.length && parts.every((x, i) => x === written.current[i])) return;
+    written.current = parts;
+    cache.host.drafts.set(cache.key, {
+      base,
+      draft,
+      extra: value ?? cache.host.drafts.get(cache.key)?.extra,
+    });
+  });
+  useEffect(() => {
+    if (!cache) return;
+    const { host, key } = cache;
+    return () => {
+      if (!host.dirtyDraftKeys().includes(key)) host.drafts.delete(key);
+    };
+  }, [cache?.host, cache?.key]);
+}
 export function useDraft(
   read: () => Data,
   version: number,
-  cache?: { host: HostAdapter; key: string },
+  cache?: DraftCache,
   /** Fold outside changes into a dirty draft instead of waiting for it to be saved or reverted. */
   rebase = false,
 ) {
@@ -212,10 +249,7 @@ export function useDraft(
     [draft, setDraft] = useState<Data>(initial.draft),
     [message, setMessage] = useState("");
   const dirty = useMemo(() => !sameData(base, draft), [base, draft]);
-  useLayoutEffect(() => {
-    if (cache)
-      cache.host.drafts.set(cache.key, { base, draft, extra: cache.host.drafts.get(cache.key)?.extra });
-  }, [base, draft, cache?.key]);
+  useDraftCache(cache, base, draft);
   useEffect(() => {
     if (!dirty) {
       const value = read();
@@ -260,5 +294,88 @@ export function useDraft(
       setBase((b) => ({ ...b, [key]: saved }));
       setDraft((d) => ({ ...d, [key]: edited }));
     },
+  };
+}
+const restoreDraft = (host: HostAdapter, key: string) => {
+  const cached = unsavedDraft(host, key);
+  return { key, base: cached?.base ?? null, draft: cached?.draft ?? null };
+};
+/**
+ * useDraft for data read asynchronously. A key reopens on its unsaved draft (`unsavedDraft` gives the
+ * editor the `extra` cached with it); a clean one is read again, and once more whenever `version`
+ * moves. `extra` is the editor state to cache beside a draft; `edited` marks unsaved work that lives
+ * only in that state.
+ */
+export function useAsyncDraft({
+  host,
+  key,
+  load,
+  version,
+  extra,
+  edited = false,
+  onLoad,
+  onError,
+}: {
+  host: HostAdapter;
+  key: string;
+  /** Null while there is nothing to read. */
+  load: (() => Promise<Data>) | null;
+  version: number;
+  extra?: (draft: Data) => Data;
+  edited?: boolean;
+  onLoad?: (data: Data) => void;
+  onError?: (message: string) => void;
+}) {
+  const [state, setState] = useState(() => restoreDraft(host, key));
+  let current = state;
+  if (current.key !== key) setState((current = restoreDraft(host, key)));
+  const { base, draft } = current;
+  const changed = useMemo(() => !!base && !!draft && !sameData(base, draft), [base, draft]),
+    dirty = changed || (edited && !!draft);
+  useDraftCache({ host, key }, base, draft, extra);
+  useLeaveGuard(dirty);
+  /** What base was read at. A null version follows a save, whose own change event is no news. */
+  const loaded = useRef<{ key: string; version: number | null } | null>(null),
+    latest = useRef({ load, onLoad, onError });
+  latest.current = { load, onLoad, onError };
+  useEffect(() => {
+    if (dirty || !latest.current.load) return;
+    const last = loaded.current;
+    if (last?.key === key && (last.version === null || last.version === version)) {
+      loaded.current = { key, version };
+      return;
+    }
+    let live = true;
+    latest.current.load().then(
+      (data) => {
+        if (!live) return;
+        loaded.current = { key, version };
+        setState({ key, base: data, draft: data });
+        latest.current.onLoad?.(data);
+      },
+      (e) => {
+        if (live) latest.current.onError?.(e instanceof Error ? e.message : String(e));
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [key, version, dirty]);
+  const setDraft = useCallback(
+    (next: Data | ((draft: Data) => Data)) =>
+      setState((s) => (s.draft ? { ...s, draft: typeof next === "function" ? next(s.draft) : next } : s)),
+    [],
+  );
+  return {
+    base,
+    draft,
+    dirty,
+    setDraft,
+    /** Takes data the host has just saved as the new base. */
+    saved: (data: Data) => {
+      loaded.current = { key, version: null };
+      setState({ key, base: data, draft: data });
+    },
+    reset: () => setState((s) => ({ ...s, draft: s.base })),
   };
 }
