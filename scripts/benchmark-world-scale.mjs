@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { launch, session, ready, urls, createCharacter, openSettings, save } from "./browser.mjs";
+import { summarize } from "./lib/stats.mjs";
 
 const SYNTHETIC = 3189,
   KEYS = 30;
@@ -16,18 +17,7 @@ const books = folder
       .filter((f) => f.endsWith(".json"))
       .map((f) => ({ name: "Bench·" + path.parse(f).name, data: JSON.parse(fs.readFileSync(path.join(folder, f), "utf8")) }))
   : [];
-const stats = (samples) => {
-  if (!samples.length) return { n: 0 };
-  const sorted = [...samples].sort((a, b) => a - b),
-    at = (q) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
-  return {
-    n: samples.length,
-    mean: +(samples.reduce((a, b) => a + b, 0) / samples.length).toFixed(1),
-    median: +at(0.5).toFixed(1),
-    p95: +at(0.95).toFixed(1),
-    max: +sorted.at(-1).toFixed(1),
-  };
-};
+const stats = (samples) => summarize(samples, 1);
 const browser = await launch(),
   report = { checkedAt: new Date().toISOString(), source: folder ? "WB_BENCH_BOOKS" : "synthetic" };
 try {

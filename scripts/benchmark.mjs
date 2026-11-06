@@ -4,6 +4,7 @@ import http from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { launch, session, ready, urls, save, root } from './browser.mjs';
+import { quantile } from './lib/stats.mjs';
 
 const run = promisify(execFile);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -72,7 +73,7 @@ try {
         }
         const summary = values => {
             const sorted = values.map(x => x.appReadyMs).sort((a, b) => a - b);
-            return { minMs: sorted[0], medianMs: sorted[Math.floor(sorted.length / 2)], maxMs: sorted.at(-1) };
+            return { minMs: sorted[0], medianMs: quantile(sorted, 0.5), maxMs: sorted.at(-1) };
         };
         result.summary = { cold: summary(result.cold), warm: summary(result.warm) };
         report.profiles.push(result);

@@ -2,12 +2,12 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readEnv } from './env.mjs';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const artifacts = path.join(root, 'artifacts');
 fs.mkdirSync(artifacts, { recursive: true });
-const env = Object.fromEntries(fs.readFileSync(path.join(root, '.env'), 'utf8').split('\n')
-    .filter(line => line.includes('=') && !line.startsWith('#')).map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
+const env = readEnv();
 export const credentials = { username: env.WB_USERNAME, password: env.WB_PASSWORD };
 // WB_PORT_OFFSET lets a second checkout run its own local instances beside the default ones.
 const offset = Number(process.env.WB_PORT_OFFSET ?? env.WB_PORT_OFFSET ?? 0);

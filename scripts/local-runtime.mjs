@@ -6,31 +6,22 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { envFile, readEnv } from "./env.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lock = JSON.parse(fs.readFileSync(path.join(root, "baseline.lock.json"), "utf8"));
 const upstream = path.join(root, "upstream", "SillyTavern");
 const runtime = path.join(root, "runtime");
 const pidFile = path.join(runtime, "local-pids.json");
-const envPath = path.join(root, ".env");
 // visual: a disposable instance reseeded for screenshot baselines (scripts/visual/*).
 // WB_PORT_OFFSET (environment or .env) shifts every port so a second checkout can run beside the first.
-const offset = Number(process.env.WB_PORT_OFFSET ?? readEnv().WB_PORT_OFFSET ?? 0);
+const offset = Number(process.env.WB_PORT_OFFSET ?? readEnv({ optional: true }).WB_PORT_OFFSET ?? 0);
 const instances = { baseline: 32011 + offset, validation: 32012 + offset, visual: 32014 + offset };
 const mockPort = 32013 + offset;
 // WB_BIND_ADDRESS (e.g. 0.0.0.0 for tailnet / LAN) applies to the workbench instances; baseline stays on loopback.
 const exposed = ["validation", "visual"];
 // The workbench instances load server plug-ins (workbench-sync for IDE sync); baseline stays official.
 const withPlugins = ["validation", "visual"];
-
-function readEnv() {
-  if (!fs.existsSync(envPath)) return {};
-  return Object.fromEntries(
-    fs.readFileSync(envPath, "utf8").split("\n")
-      .filter((line) => line.includes("=") && !line.startsWith("#"))
-      .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)]),
-  );
-}
 
 function prepare() {
   if (!fs.existsSync(upstream)) {
@@ -41,9 +32,9 @@ function prepare() {
   if (!fs.existsSync(path.join(upstream, "node_modules"))) {
     execFileSync("npm", ["ci", "--omit=dev", "--no-audit", "--no-fund"], { cwd: upstream, stdio: "inherit" });
   }
-  if (!fs.existsSync(envPath)) {
+  if (!fs.existsSync(envFile)) {
     // Test-only credentials for the localhost instances; never reuse elsewhere.
-    fs.writeFileSync(envPath, [
+    fs.writeFileSync(envFile, [
       "WB_BIND_ADDRESS=127.0.0.1",
       "WB_USERNAME=workbench",
       `WB_PASSWORD=${crypto.randomBytes(18).toString("base64url")}`,
@@ -52,7 +43,7 @@ function prepare() {
       "",
     ].join("\n"), { mode: 0o600 });
   }
-  const env = readEnv();
+  const env = readEnv({ optional: true });
   for (const [name, port] of Object.entries(instances)) {
     const directory = path.join(runtime, name);
     for (const sub of ["config", "data/default-user/extensions", "backups"]) fs.mkdirSync(path.join(directory, sub), { recursive: true });
@@ -128,7 +119,7 @@ function linkExtensions() {
 // Re-applied on every start so changing WB_BIND_ADDRESS, the credentials in .env or the plug-in switch needs no reprepare;
 // SillyTavern keeps these keys when it rewrites the file.
 function applyEnv(name) {
-  const env = readEnv();
+  const env = readEnv({ optional: true });
   const config = path.join(runtime, name, "config/config.yaml");
   const address = exposed.includes(name) ? env.WB_BIND_ADDRESS || "127.0.0.1" : "127.0.0.1";
   const keys = [

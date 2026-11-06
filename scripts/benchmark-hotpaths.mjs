@@ -1,21 +1,13 @@
 // Hot-path costs on the validation instance: world-book typing, bulk tagging, chat-index rebuilds and
 // preset editor renders. Writes artifacts/benchmark-hotpaths.json; compare runs before and after a change.
 import { launch, session, ready, urls, createCharacter, connect, openSettings, save } from "./browser.mjs";
+import { summarize } from "./lib/stats.mjs";
 
 const ENTRIES = 600,
   KEYS = 60,
   TAGGED = 8,
   MESSAGES = 400;
-const stats = (samples) => {
-  const sorted = [...samples].sort((a, b) => a - b),
-    at = (q) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
-  return {
-    n: samples.length,
-    mean: +(samples.reduce((a, b) => a + b, 0) / samples.length).toFixed(2),
-    median: +at(0.5).toFixed(2),
-    p95: +at(0.95).toFixed(2),
-  };
-};
+const stats = (samples) => summarize(samples, 2);
 const browser = await launch(),
   report = { checkedAt: new Date().toISOString(), entries: ENTRIES, keys: KEYS };
 try {
