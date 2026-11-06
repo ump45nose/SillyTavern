@@ -436,6 +436,7 @@ export default function World({
               </div>
               {tab === "portraits" ? (
                 <EntryPortraits
+                  key={`${name}:${entry}`}
                   host={host}
                   book={name}
                   title={String(base?.entries?.[entry]?.comment ?? "").trim()}
@@ -691,6 +692,7 @@ export default function World({
         </header>
         {tab === "portraits" ? (
           <EntryPortraits
+            key={`${name}:${entry}`}
             host={host}
             book={name}
             title={String(base?.entries?.[entry]?.comment ?? "").trim()}
