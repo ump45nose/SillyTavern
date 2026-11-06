@@ -54,28 +54,6 @@
     outline-offset: -4px;
     border-radius: 7px;
   }
-  .wb-ui .wb-favorites > button {
-    width: 64px;
-    align-items: center;
-    gap: 6px;
-  }
-  .wb-ui .wb-favorites > button:is(:hover, :focus-visible),
-  .wb-ui .wb-favorites > button:active {
-    background: transparent;
-    color: var(--wb-accent);
-  }
-  .wb-favorites .wb-portrait {
-    display: block;
-    flex: none;
-    width: 52px;
-    height: 52px;
-    padding: 2px;
-    border: 2px solid transparent;
-    border-radius: 50%;
-    transition:
-      border-color 160ms,
-      background-color 160ms;
-  }
   .wb-ui .wb-portrait img {
     display: block;
     width: 100%;
@@ -86,24 +64,6 @@
     border-radius: inherit;
     object-fit: cover;
     object-position: center;
-  }
-  .wb-favorites .wb-portrait {
-    white-space: normal;
-    overflow: visible;
-  }
-  .wb-favorites > button > span:not(.wb-portrait) {
-    width: 64px;
-  }
-  .wb-favorites > button:is(:hover, :focus-visible) .wb-portrait {
-    background: var(--wb-selected);
-  }
-  .wb-favorites .is-active .wb-portrait {
-    border-color: var(--wb-accent);
-  }
-  .wb-ui .wb-favorites .is-active img {
-    padding: 0;
-    border: 0;
-    outline: 0;
   }
   body.wb-active .wb-composer-tools button:is(:hover, :focus-visible) {
     background: color-mix(in srgb, var(--wb-selected) 45%, var(--wb-surface));

@@ -567,24 +567,6 @@
   body.wb-active .wb-ui .wb-top-action.is-active svg * {
     color: var(--wb-accent) !important;
   }
-  .wb-resource-heading {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 18px 20px 14px;
-    border-bottom: 1px solid var(--wb-line);
-    flex-shrink: 0;
-  }
-  .wb-resource-heading h3 {
-    font:
-      500 18px/1.6 Georgia,
-      "Noto Serif CJK SC",
-      serif;
-    overflow-wrap: anywhere;
-  }
-  .wb-resource-heading small {
-    font-size: 11px;
-  }
   .wb-resource-choice {
     display: flex;
     align-items: center;
@@ -634,125 +616,11 @@
     color: var(--wb-control-ink);
     cursor: pointer;
   }
-  .wb-check-pair {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .wb-save-footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 0;
-    position: sticky;
-    bottom: 0;
-    background: var(--wb-surface);
-    border-top: 1px solid var(--wb-line);
-    z-index: 2;
-  }
-  .wb-save-footer button {
-    font-size: 12px;
-    padding: 7px 10px;
-  }
-  .wb-save-footer small {
-    font-size: 11px;
-  }
-  .wb-native-profile-actions,
-  .wb-persona-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin: 14px 0;
-  }
-  .wb-native-profile-actions button,
-  .wb-persona-actions button {
-    font-size: 12px;
-  }
-  .wb-native-caption {
-    font-size: 11px;
-    line-height: 1.8;
-    color: var(--wb-muted);
-    margin: 12px 0 !important;
-  }
-  .wb-use-resource {
-    font-size: 12px !important;
-    color: var(--wb-accent) !important;
-    background: var(--wb-selected) !important;
-    border: 0 !important;
-    margin-bottom: 8px;
-  }
   .wb-preset-editor {
     min-height: 0;
     flex: 1;
     overflow: auto;
     display: block;
-  }
-  .wb-preset-common {
-    padding: 12px 20px;
-  }
-  .wb-preset-columns {
-    display: grid;
-    grid-template-columns: 145px minmax(0, 1fr);
-    height: 256px;
-    min-height: 180px;
-    border-top: 1px solid var(--wb-line);
-    border-bottom: 1px solid var(--wb-line);
-  }
-  .wb-preset-columns .wb-resource-choice {
-    flex-wrap: wrap;
-    gap: 0;
-    padding: 4px;
-  }
-  .wb-preset-columns .wb-resource-choice strong {
-    font-size: 12px;
-  }
-  .wb-preset-columns .wb-resource-choice .wb-icon {
-    width: 25px;
-    height: 28px;
-    min-height: 28px;
-  }
-  .wb-prompt-list {
-    padding: 10px;
-    overflow: auto;
-  }
-  .wb-prompt-list .wb-section-title {
-    padding: 0 0 8px;
-    font-size: 12px;
-  }
-  .wb-prompt-row {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 5px 8px;
-    border-radius: 7px;
-    transition: background-color 160ms;
-  }
-  .wb-prompt-row.is-active {
-    background: var(--wb-selected);
-  }
-  .wb-prompt-row:is(:hover, :focus-visible) {
-    background: color-mix(in srgb, var(--wb-selected) 65%, transparent);
-  }
-  .wb-prompt-row button {
-    background: transparent;
-    border: 0;
-    flex: 1;
-    min-width: 0;
-    align-items: flex-start;
-    flex-direction: column;
-    text-align: left;
-    font-size: 12px;
-    gap: 2px;
-    padding: 5px 0;
-  }
-  .wb-prompt-row small {
-    font-size: 10px;
-  }
-  .wb-preset-scroll {
-    padding: 18px 20px 0;
-  }
-  .wb-preset-editor > .wb-save-footer {
-    padding: 12px 20px;
   }
   .wb-trace-full {
     padding: 14px 28px;

@@ -12,9 +12,6 @@
     color: var(--wb-danger);
     font-size: var(--wb-text-sm);
   }
-  .wb-preset-pending small {
-    color: var(--wb-warning);
-  }
   .wb-evidence {
     display: inline-flex;
     align-items: center;
@@ -27,11 +24,6 @@
   .wb-evidence:focus-visible {
     outline: 2px solid var(--wb-accent);
     outline-offset: 2px;
-  }
-  .wb-trace-export {
-    display: flex;
-    align-items: center;
-    gap: var(--wb-space-1);
   }
   /* Rendered where the missing chunk would have mounted, which may be an unopened container. */
   .wb-stale-chunk {

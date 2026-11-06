@@ -39,18 +39,12 @@
   .wb-settings-nav > button[aria-pressed="true"] {
     border-color: color-mix(in srgb, var(--wb-accent) 20%, var(--wb-line));
   }
-  .wb-settings-footer {
-    font-size: 10px;
-  }
   /* One quiet list surface, with complete names available on hover. */
   .wb-resource-rail {
     background: var(--wb-paper);
   }
   .wb-resource-menu.is-rail {
     background: transparent;
-  }
-  .wb-resource-menu.is-rail .wb-rail-heading {
-    margin-bottom: 9px;
   }
   .wb-resource-menu.is-rail .wb-resource-choice {
     border-radius: 7px;
@@ -79,14 +73,8 @@
   .wb-resource-menu.is-rail .wb-search {
     background: var(--wb-surface);
   }
-  .wb-right .wb-resource-heading {
-    gap: 10px;
-  }
   .wb-right .wb-resource-title {
     font-size: 16px;
-  }
-  .wb-right .wb-prompt-row {
-    border-radius: 8px;
   }
   .wb-right :is(.wb-prompt-row) .wb-icon:focus-visible {
     background: transparent;
@@ -161,31 +149,6 @@
       background-color 180ms,
       border-color 180ms;
   }
-  /* Clicked editors stay mounted so both opening and closing can interpolate. */
-  .wb-prompt-collapse {
-    display: grid;
-    grid-template-rows: 0fr;
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      grid-template-rows 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
-      opacity 180ms,
-      visibility 260ms;
-  }
-  .wb-prompt-collapse.is-open {
-    grid-template-rows: 1fr;
-    opacity: 1;
-    visibility: visible;
-  }
-  .wb-prompt-collapse-body {
-    min-height: 0;
-    overflow: hidden;
-  }
-  .wb-right .wb-resource-v3 .wb-preset-scroll {
-    transition:
-      max-height 260ms cubic-bezier(0.22, 0.8, 0.3, 1),
-      padding-top 260ms;
-  }
   /* The same paper transition in both directions, including portal menus. */
   @keyframes wb-paper-out {
     from {
@@ -207,8 +170,5 @@
   }
   .wb-resource-menu.is-rail .wb-picker-list {
     animation: wb-value-in 220ms ease;
-  }
-  .wb-prompt-editor .wb-editor-heading {
-    transition: color 180ms;
   }
 }

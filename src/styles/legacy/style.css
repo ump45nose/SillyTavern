@@ -303,29 +303,6 @@
   .wb-left > .wb-section-title {
     padding-top: 0;
   }
-  .wb-outline {
-    flex: 1;
-    min-height: 100px;
-    overflow: auto;
-  }
-  .wb-outline > button {
-    display: flex;
-    width: 100%;
-    background: none;
-    border: 0;
-    border-radius: 6px;
-    justify-content: flex-start;
-    text-align: left;
-    font-size: 13px;
-    margin-bottom: 5px;
-    padding: 9px 5px;
-    overflow-wrap: anywhere;
-  }
-  .wb-outline > button span {
-    font: 11px Georgia;
-    color: var(--wb-muted);
-    margin-right: 6px;
-  }
   .wb-left details {
     border-top: 1px solid var(--wb-line);
     padding: 13px 0;
@@ -408,11 +385,6 @@
     color: #983c2a;
     padding: 10px 14px;
     overflow-wrap: anywhere;
-    font-size: 12px;
-  }
-  .wb-success {
-    padding: 6px 16px;
-    color: #548366;
     font-size: 12px;
   }
   .wb-toast {
@@ -529,10 +501,6 @@
     flex: 1;
     overflow: hidden;
   }
-  .wb-mode option {
-    color: var(--wb-ink);
-    background: var(--wb-surface);
-  }
   .wb-editor-heading {
     display: flex;
     align-items: center;
@@ -563,75 +531,8 @@
     padding: 0 20px;
     overflow: hidden;
   }
-  .wb-favorites {
-    display: flex;
-    gap: 14px;
-    overflow-x: auto;
-    padding: 0 0 18px;
-    flex-shrink: 0;
-  }
-  .wb-favorites button {
-    padding: 0;
-    border: 0;
-    background: none;
-    flex-direction: column;
-    width: 56px;
-    flex-shrink: 0;
-    font-size: 11px;
-    gap: 7px;
-  }
-  .wb-favorites img {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-  }
-  .wb-favorites .is-active img {
-    border-color: var(--wb-accent);
-    padding: 2px;
-  }
-  .wb-favorites span {
-    width: 60px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .wb-character-list {
-    overflow: auto;
-    flex: 1;
-  }
-  .wb-resource-footer {
-    display: flex;
-    gap: 6px;
-    justify-content: space-between;
-    border-top: 1px solid var(--wb-line);
-    padding: 14px 0;
-    flex-shrink: 0;
-  }
-  .wb-resource-footer button {
-    font-size: 11px;
-    padding: 7px;
-    border: 0;
-    background: none;
-  }
   .wb-characters.is-management {
     grid-template-columns: 205px minmax(0, 1fr);
-  }
-  .wb-batch {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 0;
-    border-top: 1px solid var(--wb-line);
-    font-size: 12px;
-  }
-  .wb-batch label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .wb-batch button {
-    font-size: 12px;
   }
   .wb-resources {
     display: flex;
