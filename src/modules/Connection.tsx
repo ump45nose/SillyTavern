@@ -106,7 +106,7 @@ export function ConnectionRuntime({ host }: { host: HostAdapter }) {
         </div>
       </section>
       <Notice error={task.error} />
-      <DesignedSettings host={host} page="connection" group="服务与凭据" />
+      <DesignedSettings host={host} />
     </>
   );
 }
