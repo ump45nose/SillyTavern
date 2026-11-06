@@ -71,23 +71,31 @@ export class AddonManager {
       }),
     );
   }
-  /** Re-reads the chat's outline when its metadata object changes (every save replaces it). */
+  /**
+   * Re-reads the chat's outline when its metadata object changes (every save replaces it). The prompt
+   * is checked against SillyTavern's table, which starts empty whenever a chat is loaded, reloaded or
+   * branched, even when the outline itself stays the same.
+   */
   private syncOutline() {
-    const source = addonEnabled(this.host.prefs(), "outline")
-      ? ctx().chatMetadata?.workbench_addons?.outline
-      : undefined;
-    if (source === this.outline.source) return;
-    const next = { source, text: "", prompt: "", depth: 0 };
-    try {
-      const data = normalizeOutline(source);
-      next.text = outlineContext(data);
-      if (data.settings.inject.enabled) [next.prompt, next.depth] = [next.text, data.settings.inject.depth];
-    } catch (error) {
-      this.host.report(error);
+    const c = ctx(),
+      source = addonEnabled(this.host.prefs(), "outline")
+        ? c.chatMetadata?.workbench_addons?.outline
+        : undefined;
+    if (source !== this.outline.source) {
+      const next = { source, text: "", prompt: "", depth: 0 };
+      try {
+        const data = normalizeOutline(source);
+        next.text = outlineContext(data);
+        if (data.settings.inject.enabled) [next.prompt, next.depth] = [next.text, data.settings.inject.depth];
+      } catch (error) {
+        this.host.report(error);
+      }
+      this.outline = next;
     }
-    if (next.prompt !== this.outline.prompt || next.depth !== this.outline.depth)
-      ctx().setExtensionPrompt(OUTLINE_PROMPT, next.prompt, IN_CHAT, next.depth, false, SYSTEM);
-    this.outline = next;
+    const { prompt, depth } = this.outline,
+      injected = c.extensionPrompts?.[OUTLINE_PROMPT];
+    if ((injected?.value ?? "") !== prompt || (prompt && injected.depth !== depth))
+      c.setExtensionPrompt(OUTLINE_PROMPT, prompt, IN_CHAT, depth, false, SYSTEM);
   }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
