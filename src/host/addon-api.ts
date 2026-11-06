@@ -6,6 +6,7 @@ import type { MessageTarget, StoryReply, TaskHost } from "../addons/types";
 import { ctx as context, internal } from "./internals";
 import { bus, guards } from "./bus";
 import { isSensitiveKey } from "./secrets";
+import { assignWithUndo } from "./model";
 // Add-on settings name their API key `key`; the shared rule leaves `key` to world info keywords.
 const credentialField = { test: (key: string) => /^key$/i.test(key) || isSensitiveKey(key) };
 function safeMetadata(value: any): any {
@@ -154,10 +155,13 @@ export class AddonBridge {
       this.idleCancels.add(cancel);
     });
   }
-  async persist(key: string, metadata: Data, messages: Data[]) {
-    const c = context();
-    if (this.disposed || key !== this.key() || !c.getCurrentChatId())
+  /** Throws unless `key` is still the open chat and it has a file to write. */
+  private writable(key: string) {
+    if (this.disposed || key !== this.key() || !context().getCurrentChatId())
       throw new Error("聊天已切换或尚未保存。");
+  }
+  async persist(key: string, metadata: Data, messages: Data[]) {
+    this.writable(key);
     await this.host.saveChatFile(metadata, messages, "聊天保存失败，结果未写入");
     if (this.disposed || key !== this.key()) throw new Error("聊天已切换，结果未写入当前聊天。");
   }
@@ -398,6 +402,7 @@ export class AddonBridge {
       await this.idle(target.chatKey);
       if (!this.valid(target)) return false;
       if (!url.startsWith("/user/images/")) throw new Error("仅可插入已保存的图片。");
+      this.writable(target.chatKey);
       const c = context(),
         message = c.chat[target.id],
         extra = copy(message.extra || {});
@@ -409,20 +414,22 @@ export class AddonBridge {
       if (!remove) extra.media.push({ type: "image", url, title: "工作台生图", wb_addon: "image-gen" });
       extra.inline_image = true;
       extra.media_index = Math.max(0, extra.media.length - 1);
-      const messages = copy(c.chat);
-      messages[target.id].extra = extra;
-      const swipe = message.swipe_id;
-      if (Number.isInteger(swipe) && messages[target.id].swipe_info?.[swipe])
-        messages[target.id].swipe_info[swipe].extra = copy(extra);
-      await this.persist(target.chatKey, copy(c.chatMetadata), messages);
-      await this.idle(target.chatKey);
-      if (!this.valid(target)) return false;
-      message.extra = extra;
-      if (Number.isInteger(swipe) && message.swipe_info?.[swipe])
-        message.swipe_info[swipe].extra = copy(extra);
-      const element = document.querySelector(`.mes[mesid="${target.id}"]`);
-      if (element) c.appendMediaToMessage(message, window.jQuery(element));
-      this.host.updateMessage(target.id);
+      // In memory before the write, so a save SillyTavern makes meanwhile carries the image as well.
+      const swipe = Number.isInteger(message.swipe_id) ? message.swipe_info?.[message.swipe_id] : undefined,
+        undo = [assignWithUndo(message, { extra })];
+      if (swipe) undo.push(assignWithUndo(swipe, { extra: copy(extra) }));
+      try {
+        await this.host.saveChatFile(copy(c.chatMetadata), copy(c.chat), "聊天保存失败，结果未写入");
+      } catch (error) {
+        undo.forEach((fn) => fn());
+        throw error;
+      } finally {
+        if (context().chat[target.id] === message) {
+          const element = document.querySelector(`.mes[mesid="${target.id}"]`);
+          if (element) c.appendMediaToMessage(message, window.jQuery(element));
+          this.host.updateMessage(target.id);
+        }
+      }
       return true;
     });
   }

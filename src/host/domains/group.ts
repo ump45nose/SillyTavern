@@ -1,6 +1,6 @@
 import type { HostAdapter } from "../adapter";
 import type { Data } from "../types";
-import { clone, mergeEdits } from "../model";
+import { assignWithUndo, clone, mergeEdits } from "../model";
 import { ctx, internal } from "../internals";
 
 /** Groups: membership, media policy and per-chat overrides. */
@@ -55,8 +55,14 @@ export const groupMethods = {
       throw new Error("当前群聊已切换，草稿仍保留。");
     if (this.isBusy()) throw new Error("请等待生成结束后保存。");
     const edited = mergeEdits(base, draft, this.groupOverrides());
-    await this.saveChatFile({ ...c.chatMetadata, ...edited }, c.chat);
-    Object.assign(c.chatMetadata, edited);
+    // In memory before the write, so a save SillyTavern makes meanwhile carries the edits as well.
+    const undo = assignWithUndo(c.chatMetadata, edited);
+    try {
+      await this.saveChatFile(c.chatMetadata, c.chat);
+    } catch (error) {
+      undo();
+      throw error;
+    }
     return edited;
   },
   async openGroup(this: HostAdapter, id: string) {

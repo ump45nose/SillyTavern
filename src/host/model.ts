@@ -13,6 +13,25 @@ export function sameData(a: unknown, b: unknown): boolean {
     if (!sameData(a[key], b[key])) return false;
   return true;
 }
+/**
+ * Assigns `patch` onto `target`. The returned function puts back each field that still holds what was
+ * assigned, taking out the fields that were absent; a field replaced in the meantime stays.
+ */
+export function assignWithUndo(target: Data, patch: Data) {
+  const before = Object.keys(patch).map((key) => ({
+    key,
+    had: Object.hasOwn(target, key),
+    value: target[key],
+  }));
+  Object.assign(target, patch);
+  return () => {
+    for (const { key, had, value } of before)
+      if (target[key] === patch[key]) {
+        if (had) target[key] = value;
+        else delete target[key];
+      }
+  };
+}
 /** SillyTavern's server-side merge for card updates: plain objects merge, anything else replaces. */
 export function deepMerge(target: Data, source: Data): Data {
   const output = { ...target };
