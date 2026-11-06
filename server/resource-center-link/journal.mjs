@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomBytes, createCipheriv, createDecipheriv } from "node:crypto";
 
+const stamp = () => new Date().toISOString().replace(/[:.]/g, "-");
+
 /** One encrypted journal per native user. Network retries never need to read chat files. */
 export class Journal {
   constructor(root) {
@@ -19,14 +21,26 @@ export class Journal {
       localRevision: 0,
     };
     if (fs.existsSync(this.file)) {
-      if (!this.key) throw new Error("资源中心日志的配套密钥缺失");
-      const data = fs.readFileSync(this.file),
-        d = createDecipheriv("aes-256-gcm", this.key, data.subarray(0, 12));
-      d.setAuthTag(data.subarray(12, 28));
-      this.state = {
-        ...this.state,
-        ...JSON.parse(Buffer.concat([d.update(data.subarray(28)), d.final()]).toString()),
-      };
+      const data = fs.readFileSync(this.file);
+      try {
+        if (!this.key) throw new Error("资源中心日志的配套密钥缺失");
+        const d = createDecipheriv("aes-256-gcm", this.key, data.subarray(0, 12));
+        d.setAuthTag(data.subarray(12, 28));
+        this.state = {
+          ...this.state,
+          ...JSON.parse(Buffer.concat([d.update(data.subarray(28)), d.final()]).toString()),
+        };
+      } catch (e) {
+        // A journal that cannot be decrypted is kept aside for inspection; the user pairs again.
+        this.problem = String(e?.message || e);
+        this.quarantined = `${this.file}.corrupt-${stamp()}`;
+        fs.renameSync(this.file, this.quarantined);
+      }
+    }
+    // A key of any other size cannot encrypt new state either, and save() never overwrites a key file.
+    if (this.key && this.key.length !== 32) {
+      fs.renameSync(key, `${key}.corrupt-${stamp()}`);
+      this.key = undefined;
     }
   }
   save() {

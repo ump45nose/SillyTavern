@@ -18,6 +18,7 @@ const cleanError = (e) =>
     : String(e?.message || "操作未完成")
         .replace(/\bsk-[\w-]+/g, "[凭据已隐藏]")
         .slice(0, 200);
+const warn = (where, e) => console.warn(`resource-center-link: ${where}: ${cleanError(e)}`);
 const sessions = new Map();
 const detach = [];
 let timer;
@@ -39,12 +40,17 @@ function attach(router, handler) {
     }
   });
 }
-class Session {
+export class Session {
   constructor(dirs, user) {
     this.dirs = dirs;
     this.user = user;
     this.journal = new Journal(dirs.root);
     this.s = this.journal.state;
+    if (this.journal.quarantined) {
+      const name = path.basename(this.journal.quarantined);
+      this.s.coverage = `资源中心日志无法解密，已隔离为 ${name}，请重新配对`;
+      console.warn(`resource-center-link: journal of ${user} moved to ${name}: ${this.journal.problem}`);
+    }
     this.busy = false;
     this.active = 0;
     for (const row of Object.values(this.s.calls))
@@ -58,6 +64,15 @@ class Session {
   }
   save() {
     this.journal.save();
+  }
+  /** Coverage notes are best effort: failing to persist one must not fail the native request. */
+  cover(note) {
+    this.s.coverage = note;
+    try {
+      this.save();
+    } catch (e) {
+      warn("journal", e);
+    }
   }
   manager() {
     return new host.secrets.SecretManager(this.dirs);
@@ -479,6 +494,14 @@ function session(req) {
   if (!sessions.has(user)) sessions.set(user, new Session(req.user.directories, user));
   return sessions.get(user);
 }
+/** Observers run inside native requests and Node callbacks, where a throw fails the request or the process. */
+function trySession(req) {
+  try {
+    return session(req);
+  } catch (e) {
+    warn("journal", e);
+  }
+}
 export async function init(router) {
   const load = (p) => import(pathToFileURL(path.join(serverRoot(), p)).href);
   const [secrets, settings, chat, users, util] = await Promise.all([
@@ -635,25 +658,34 @@ export async function init(router) {
       return { acknowledgedIds };
     }),
   );
+  // Hooks go into the tavern's own routers, which outlive a failed init; everything that can fail runs first.
+  for (const user of await users.getAllUserHandles()) {
+    const dirs = users.getUserDirectories(user);
+    if (fs.existsSync(path.join(dirs.root, "resource-center-link", "state.enc")))
+      try {
+        sessions.set(user, new Session(dirs, user));
+      } catch (e) {
+        warn(`journal of ${user}`, e);
+      }
+  }
   attach(settings.router, (req, res, next) => {
     if (req.path === "/save" && req.user)
       res.once("finish", () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try {
-            session(req).observe();
-          } catch {
-            const s = session(req);
-            s.s.coverage = "原生保存后未能采集连接快照";
-            s.save();
-          }
+        if (res.statusCode < 200 || res.statusCode >= 300) return;
+        const s = trySession(req);
+        try {
+          s?.observe();
+        } catch (e) {
+          warn("native save observer", e);
+          s.cover("原生保存后未能采集连接快照");
         }
       });
     next();
   });
   attach(chat.router, (req, res, next) => {
     if (req.path !== "/generate" || req.headers["x-arc-client"] !== "2" || !req.user) return next();
-    const s = session(req);
-    if (!s.s.config) return next();
+    const s = trySession(req);
+    if (!s?.s.config) return next();
     let facts;
     try {
       facts = requestFacts(req.body, s.manager(), util);
@@ -702,39 +734,40 @@ export async function init(router) {
       feed(chunk);
       return Reflect.apply(end, this, [chunk, ...args]);
     };
+    // Called from response events and timers: it must not throw.
     function finish(closed) {
       if (ended) return;
       ended = true;
       s.finalizers?.delete(eventId);
       s.active--;
-      const extra = parser.end(event.isStream),
-        statusCode = res.statusCode;
-      const cancelled = s.cancelled?.has(eventId);
-      s.cancelled?.delete(eventId);
-      const result =
-        cancelled && !parser.terminal
-          ? "cancelled"
-          : statusCode >= 400 || parser.error
-            ? "failure"
-            : parser.terminal
-              ? "success"
-              : cancelled
-                ? "cancelled"
-                : "unknown";
-      const errorType =
-        parser.errorType ||
-        (statusCode === 401 || statusCode === 403
-          ? "key"
-          : statusCode === 429
-            ? "rate"
-            : statusCode >= 500
-              ? "upstream"
-              : statusCode >= 400
-                ? "input"
-                : result === "cancelled"
-                  ? "cancelled"
-                  : undefined);
       try {
+        const extra = parser.end(event.isStream),
+          statusCode = res.statusCode;
+        const cancelled = s.cancelled?.has(eventId);
+        s.cancelled?.delete(eventId);
+        const result =
+          cancelled && !parser.terminal
+            ? "cancelled"
+            : statusCode >= 400 || parser.error
+              ? "failure"
+              : parser.terminal
+                ? "success"
+                : cancelled
+                  ? "cancelled"
+                  : "unknown";
+        const errorType =
+          parser.errorType ||
+          (statusCode === 401 || statusCode === 403
+            ? "key"
+            : statusCode === 429
+              ? "rate"
+              : statusCode >= 500
+                ? "upstream"
+                : statusCode >= 400
+                  ? "input"
+                  : result === "cancelled"
+                    ? "cancelled"
+                    : undefined);
         s.report({
           ...event,
           ...extra,
@@ -757,8 +790,9 @@ export async function init(router) {
               }
             : {}),
         });
-      } catch {
+      } catch (e) {
         s.s.coverage = "本次调用终态未能写入队列";
+        warn("generation observer", e);
       }
     }
     res.once("finish", () => {
@@ -788,18 +822,16 @@ export async function init(router) {
     });
     next();
   });
-  for (const user of await users.getAllUserHandles()) {
-    const dirs = users.getUserDirectories(user);
-    if (fs.existsSync(path.join(dirs.root, "resource-center-link", "state.enc")))
-      sessions.set(user, new Session(dirs, user));
-  }
   let tick = 0;
   timer = setInterval(() => {
     tick++;
-    for (const s of sessions.values()) {
-      for (const f of s.finalizers?.values() || []) if (f.ended()) f.finish(true);
-      if (tick % 30 === 0) void s.flush();
-    }
+    for (const s of sessions.values())
+      try {
+        for (const f of s.finalizers?.values() || []) if (f.ended()) f.finish(true);
+        if (tick % 30 === 0) void s.flush();
+      } catch (e) {
+        warn("timer", e);
+      }
   }, 1000);
   timer.unref();
   console.log("resource-center-link: native save and generation observers ready");
