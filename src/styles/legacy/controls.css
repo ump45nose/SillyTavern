@@ -167,14 +167,14 @@
     background: var(--wb-accent);
   }
   /* A resource row has one hover surface; nested controls never paint a second. */
-  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row) button:is(:hover, :focus-visible),
-  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row) button:active {
+  .wb-ui :is(.wb-resource-choice, .wb-quick-row) button:is(:hover, :focus-visible),
+  .wb-ui :is(.wb-resource-choice, .wb-quick-row) button:active {
     background: transparent;
   }
-  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row):is(:hover, :focus-visible) {
+  .wb-ui :is(.wb-resource-choice, .wb-quick-row):is(:hover, :focus-visible) {
     background: color-mix(in srgb, var(--wb-selected) 28%, var(--wb-surface));
   }
-  .wb-ui :is(.wb-resource-choice, .wb-prompt-row, .wb-quick-row).is-active:is(:hover, :focus-visible) {
+  .wb-ui :is(.wb-resource-choice, .wb-quick-row).is-active:is(:hover, :focus-visible) {
     background: var(--wb-selected);
   }
   /* Same quiet scroll thumb in reading, editors, popovers and leased controls. */

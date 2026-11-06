@@ -9,7 +9,7 @@
   .wb-ui :is(.wb-resource-choice, .wb-quick-row) strong {
     font-weight: 500;
   }
-  .wb-ui :is(.wb-font-choices, .wb-meta-choices, .wb-pop-tabs, .wb-world-scope) button[aria-pressed="true"] {
+  .wb-ui :is(.wb-font-choices, .wb-meta-choices, .wb-pop-tabs) button[aria-pressed="true"] {
     background: var(--wb-selection-fill);
     box-shadow: inset 0 0 0 1px var(--wb-selection-line);
     border-color: transparent;
@@ -25,12 +25,8 @@
     background: var(--wb-selection-fill) !important;
     box-shadow: inset 0 0 0 1px var(--wb-selection-line);
   }
-  .wb-ui :is(.wb-designed-actions > button[aria-pressed="true"], #bg_tabs .bg_tab_button.ui-tabs-active) {
+  .wb-ui :is(#bg_tabs .bg_tab_button.ui-tabs-active) {
     background: var(--wb-selection-fill);
     box-shadow: inset 0 0 0 1px var(--wb-selection-line);
-  }
-  .wb-ui .wb-designed-gallery .wb-background-preview.is-current {
-    outline: 1px solid var(--wb-selection-line);
-    outline-offset: -1px;
   }
 }
