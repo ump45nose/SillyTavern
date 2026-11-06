@@ -67,7 +67,10 @@ const indexMessage = (m: Data, id: number): MessageIndex => ({
 
 /**
  * Shared host state and infrastructure. Domain behaviour lives in ./domains and is mixed into
- * HostAdapter; fields here are internal to the host package even where TypeScript cannot say so.
+ * HostAdapter. Fields here are internal to the host package even where TypeScript cannot say so,
+ * except three the UI uses directly: resource editors keep unsaved work in `drafts`, reload when
+ * `resourceVersions` moves, and disable navigation while `resourceAction` (a batch copy, delete or
+ * export) runs.
  */
 export class HostCore {
   drafts = new Map<string, { base: Data; draft: Data; extra?: Data }>();
