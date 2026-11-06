@@ -8,9 +8,11 @@ const json = (file) => JSON.parse(read(file));
 const pkg = json("package.json");
 const workbench = json("extension/manifest.json");
 const lock = json("baseline.lock.json");
-// The workbench and wb-perf are released together under the repository version. The resource-center link
-// (resource-center-extension/) and each add-on carry their own versions.
+// The workbench and wb-perf are released together under the repository version; the resource-center link
+// (resource-center-extension/) and each add-on carry their own versions. All three SillyTavern extensions
+// require the locked upstream release.
 const released = ["extension/manifest.json", "perf-extension/manifest.json"];
+const extensions = [...released, "resource-center-extension/manifest.json"];
 
 test("package.json, the workbench and wb-perf manifests share one release version", () => {
   for (const file of released) assert.equal(json(file).version, pkg.version, file);
@@ -44,6 +46,6 @@ test("every add-on in the catalog shows the version its manifest loads", async (
   }
 });
 
-test("released manifests require the locked upstream release", () => {
-  for (const file of released) assert.equal(json(file).minimum_client_version, lock.upstream.release, file);
+test("every extension manifest requires the locked upstream release", () => {
+  for (const file of extensions) assert.equal(json(file).minimum_client_version, lock.upstream.release, file);
 });
