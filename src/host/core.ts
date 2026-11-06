@@ -169,18 +169,35 @@ export class HostCore {
     }
     return changed;
   }
-  /** Re-indexes one floor after send, receive, edit or swipe without rebuilding the others. */
-  updateMessage(id: number) {
+  /** Re-indexes floors after send, receive, edit, swipe or hiding without rebuilding the others. */
+  updateMessage(...ids: number[]) {
     const chat = this.sliceCache.chat,
       source: Data[] = ctx().chat;
-    if (!chat || !Number.isInteger(id) || id < 0 || id >= source.length || source.length < chat.length)
+    if (
+      !chat ||
+      source.length < chat.length ||
+      ids.some((id) => !Number.isInteger(id) || id < 0 || id >= source.length)
+    )
       return this.invalidate("chat");
     const next = chat.slice();
     for (let i = chat.length; i < source.length; i++) next[i] = indexMessage(source[i], i);
-    next[id] = indexMessage(source[id], id);
+    for (const id of ids) next[id] = indexMessage(source[id], id);
     this.sliceCache.chat = next;
     this.sliceVersions.chat++;
     this.notify(new Set(["chat"]));
+  }
+  /**
+   * Re-indexes the floors whose hidden flag no longer matches the chat. Hiding fires no event, and
+   * SillyTavern marks only the rendered ones of a hidden range in the page.
+   */
+  syncHidden() {
+    const chat = this.sliceCache.chat,
+      source: Data[] = ctx().chat;
+    if (!chat) return;
+    const changed = chat
+      .filter((m, i) => i < source.length && !!source[i].is_system !== !!m.hidden)
+      .map((m) => m.id);
+    if (changed.length) this.updateMessage(...changed);
   }
   private notify(stale: Set<Slice>) {
     this.cache = null;

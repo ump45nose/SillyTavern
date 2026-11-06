@@ -2,6 +2,8 @@
 export interface ChatChange {
   /** `.mes` nodes were added, removed, renumbered or changed role. */
   nodes: boolean;
+  /** A rendered floor was hidden or shown (/hide, the eye button); SillyTavern fires no event for it. */
+  hidden: boolean;
   /** Inline editing started or ended, or a message's edit controls were replaced. */
   editing: boolean;
   /** Floors (mesid) whose rendered content changed; while streaming this is the last floor. */
@@ -27,7 +29,7 @@ export class ChatObserver {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ["mesid", "is_user"],
+      attributeFilter: ["mesid", "is_user", "is_system"],
     });
   }
   subscribe(fn: (change: ChatChange) => void) {
@@ -42,10 +44,12 @@ export class ChatObserver {
     this.listeners.clear();
   }
   private collect(records: MutationRecord[]) {
-    const change = (this.pending ??= { nodes: false, editing: false, content: new Set() });
+    const change = (this.pending ??= { nodes: false, hidden: false, editing: false, content: new Set() });
     for (const r of records) {
-      if (r.type === "attributes") change.nodes = true;
-      else if (r.type === "childList")
+      if (r.type === "attributes") {
+        if (r.attributeName === "is_system") change.hidden = true;
+        else change.nodes = true;
+      } else if (r.type === "childList")
         for (const node of [...r.addedNodes, ...r.removedNodes]) {
           if (touches(node, ".mes")) change.nodes = true;
           if (touches(node, EDITING)) change.editing = true;

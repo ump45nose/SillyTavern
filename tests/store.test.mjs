@@ -103,6 +103,29 @@ test("updateMessage re-indexes one floor and appends new ones without rebuilding
   assert.equal(host.slice("chat").length, 2, "a shorter chat falls back to a full rebuild");
 });
 
+test("syncHidden re-indexes only the floors whose hidden flag changed", () => {
+  const host = new HostCore();
+  st.chat = [message("a"), message("b", true), message("c")];
+  const first = host.slice("chat");
+  let heard = 0;
+  host.subscribeSlice("chat", () => heard++);
+  host.syncHidden();
+  assert.equal(heard, 0, "nothing changed");
+  st.chat[0].is_system = true;
+  st.chat[2].is_system = true;
+  host.syncHidden();
+  const next = host.slice("chat");
+  assert.equal(heard, 1, "one notification for the whole hidden range");
+  assert.deepEqual(
+    next.map((m) => !!m.hidden),
+    [true, false, true],
+  );
+  assert.equal(next[1], first[1]);
+  st.chat[0].is_system = false;
+  host.syncHidden();
+  assert.equal(host.slice("chat")[0].hidden, undefined);
+});
+
 test("snapshot assembles the slices and keeps identity until something changes", () => {
   const host = new HostCore();
   const snap = host.snapshot();

@@ -51,6 +51,7 @@ export class HostAdapter extends HostCore {
       () => this.cast.dispose(),
       () => this.chatObserver.disconnect(),
       () => this.media.disconnect(),
+      this.chatObserver.subscribe((change) => change.hidden && this.syncHidden()),
     );
     const c = ctx();
     // Which slices each SillyTavern event can change. Native selects all emit one of these, so
