@@ -162,6 +162,7 @@ function CharacterPanel({ host, onManage }: { host: HostAdapter; onManage?: (gro
             multiple
             onChange={(e) => {
               const files = [...(e.target.files || [])];
+              e.target.value = "";
               task.run(async () => {
                 for (const file of files) await host.importCharacter(file);
               });
@@ -507,6 +508,7 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
                 multiple
                 onChange={(e) => {
                   const files = [...(e.target.files || [])];
+                  e.target.value = "";
                   task.run(async () => {
                     for (const file of files) await host.importCharacter(file);
                   });
