@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Check, Ellipsis, PencilLine, Trash2, X } from "./icons";
 import type { HostAdapter } from "../host/adapter";
-import { ctx } from "../host/internals";
 import { Popover } from "./Popover";
 import { beginImageInsert } from "./ImageInsertion";
 import {
@@ -70,7 +69,7 @@ export function MessageActions({
     setDeleting(true);
     try {
       // The native confirmation deletes this floor, without opening or saving its editor.
-      await ctx().deleteMessage(Number(node.getAttribute("mesid")), undefined, true);
+      await host.deleteMessage(Number(node.getAttribute("mesid")));
     } catch (error) {
       host.report(error);
     } finally {

@@ -92,6 +92,10 @@ export const chatMethods = {
       await (await internal("groupChats")).openGroupChat(ctx().groupId, name.replace(/\.jsonl$/, ""));
     else await ctx().openCharacterChat(name.replace(/\.jsonl$/, ""));
   },
+  /** Deletes a rendered floor once the user confirms in SillyTavern's own dialog. */
+  async deleteMessage(this: HostAdapter, id: number) {
+    await ctx().deleteMessage(id, undefined, true);
+  },
   async jump(this: HostAdapter, id: number) {
     const selector = `#chat .mes[mesid="${id}"]`;
     let node = document.querySelector(selector);
