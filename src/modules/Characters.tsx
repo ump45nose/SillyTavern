@@ -59,6 +59,13 @@ const plain = (text: unknown) =>
   String(text ?? "")
     .replace(/<[^>]*>/g, "")
     .trim();
+/** The first few names, then the total, so a long selection still fits a confirmation. */
+const nameList = (items: Item[], shown = 8) => {
+  const names = items.map((x) => x.name);
+  return names.length > shown
+    ? `${names.slice(0, shown).join("、")} 等 ${names.length} 个`
+    : names.join("、");
+};
 /** The right panel (board "PanelCharacter"): the list lives in the rail; the card shows one character to read, then act on. */
 function CharacterPanel({ host, onManage }: { host: HostAdapter; onManage?: (group?: string) => void }) {
   const snap = useHostSlices(host, withoutChat),
@@ -375,7 +382,8 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
     [filter, setFilter] = useState("all"),
     [sort, setSort] = useState("recent"),
     [selected, setSelected] = useState<string[]>([]),
-    [editing, setEditing] = useState<string | null>(null);
+    [editing, setEditing] = useState<string | null>(null),
+    [message, setMessage] = useState("");
   const tagsOf = (x: Item) => (x.data?.data?.tags ?? []) as string[];
   const tags = [...new Set(snap.characters.flatMap(tagsOf))];
   const list = snap.characters
@@ -403,8 +411,29 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
     ["current", "当前"],
     ...tags.map((t) => ["tag:" + t, t] as [string, string]),
   ];
-  const all = list.length > 0 && list.every((x) => selected.includes(x.id)),
-    count = selected.length;
+  // Batch actions take only the selected cards still in view, never ones a filter or search hides.
+  const chosen = list.filter((x) => selected.includes(x.id)),
+    all = list.length > 0 && chosen.length === list.length,
+    count = chosen.length;
+  /** One card at a time: a failure is named in the error and the rest still run. */
+  const each = (verb: string, job: (id: string) => Promise<unknown>, after?: (failed: string[]) => void) =>
+    task.run(async () => {
+      const failed: string[] = [],
+        errors: string[] = [];
+      for (const x of chosen) {
+        try {
+          await job(x.id);
+        } catch (e) {
+          failed.push(x.id);
+          errors.push(`${x.name}：${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+      setMessage(
+        `已${verb} ${chosen.length - failed.length} 个角色${failed.length ? `，${failed.length} 个失败` : ""}`,
+      );
+      if (errors.length) task.setError(errors.join("；"));
+      after?.(failed);
+    });
   const batch = (
     <div className={`wb-character-bulk ${count ? "is-active" : ""}`}>
       <label className="wb-check">
@@ -424,40 +453,27 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
         disabled={!count || task.busy}
         onClick={() => {
           const value = prompt("添加标签");
-          if (value) task.run(() => host.tagCharacters(selected, value));
+          const ids = chosen.map((x) => x.id);
+          if (value) task.run(() => host.tagCharacters(ids, value));
         }}
       >
         标签
       </button>
       <button
         disabled={!count || task.busy}
-        onClick={() =>
-          task.run(async () => {
-            for (const id of selected) await host.duplicateCharacter(id);
-          })
-        }
+        onClick={() => each("复制", (id) => host.duplicateCharacter(id))}
       >
         复制
       </button>
-      <button
-        disabled={!count || task.busy}
-        onClick={() =>
-          task.run(async () => {
-            for (const id of selected) await host.exportCharacter(id);
-          })
-        }
-      >
+      <button disabled={!count || task.busy} onClick={() => each("导出", (id) => host.exportCharacter(id))}>
         导出
       </button>
       <button
         className="is-danger"
         disabled={!count || task.busy}
         onClick={() => {
-          if (confirm(`删除选中的 ${count} 个角色卡？聊天文件保留。`))
-            task.run(async () => {
-              await host.deleteCharacters(selected);
-              setSelected([]);
-            });
+          if (confirm(`删除选中的 ${count} 个角色卡？聊天文件保留。\n${nameList(chosen)}`))
+            each("删除", (id) => host.deleteCharacters([id]), setSelected);
         }}
       >
         删除
@@ -467,6 +483,11 @@ function CharacterLibrary({ host }: { host: HostAdapter }) {
   return (
     <div className="wb-characters is-management">
       <Notice error={task.error} />
+      {message && (
+        <p className="wb-batch-status" role="status">
+          {message}
+        </p>
+      )}
       {!editing ? (
         <section className="wb-library-content">
           <header className="wb-library-head">
