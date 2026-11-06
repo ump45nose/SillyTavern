@@ -1,12 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { launch, session, ready, urls, artifacts, chooseLayout, openSettings, toggleRight, readSaveBody } from './browser.mjs';
-const directory = artifacts + '/utility-tools'; fs.mkdirSync(directory, { recursive: true });
-const browser = await launch(), checks = [], report = { checkedAt: new Date().toISOString(), checks };
-const pass = name => { checks.push(name); console.log('PASS', name); };
-let page;
-try {
-  const testSession = await session(browser); page = testSession.page;
+import { ready, urls, chooseLayout, openSettings, toggleRight, readSaveBody, settle } from './browser.mjs';
+import { runCheck } from './lib/check.mjs';
+await runCheck('utility-tools', async ({ session, pass, report, cleanup, dir: directory }) => {
+  const testSession = await session(), page = testSession.page;
+  cleanup(async () => { if (!report.passed) report.pageErrors = await page.evaluate(() => ({ launcher: document.querySelector('#wb-launcher')?.textContent, error: document.querySelector('.wb-error')?.textContent })).catch(() => ({})); });
   let settings;
   await page.route('**/api/settings/save', async route => {
     settings = readSaveBody(route); await route.fulfill({ json: {} });
@@ -15,13 +13,13 @@ try {
   for (const path of ['**/api/chats/save', '**/api/chats/group/save']) await page.route(path, route => route.fulfill({ json: { result: 'ok' } }));
   await page.setViewportSize({ width: 1496, height: 817 }); await ready(page, urls.validation);
   await page.waitForFunction(() => window.workbench?.mounted && window.workbench.metrics.workbenchReadyMs);
-  const role = name => page.getByRole('button', { name, exact: true }), settle = () => page.waitForTimeout(350);
-  await page.evaluate(() => { workbench.host.preference({ layout: 'novel', pinnedTools: [{ id: 'wb:export', label: '记录导出' }], addons: { 'record-export': true } }); window.__utilityNative = { input: document.getElementById('send_textarea'), chat: document.getElementById('chat') }; }); await settle();
-  const ensureLeft = async () => { if (await page.locator('.wb-edge-left').getAttribute('aria-expanded') === 'false') { await page.locator('.wb-edge-left').click(); await settle(); } };
+  const role = name => page.getByRole('button', { name, exact: true });
+  await page.evaluate(() => { workbench.host.preference({ layout: 'novel', pinnedTools: [{ id: 'wb:export', label: '记录导出' }], addons: { 'record-export': true } }); window.__utilityNative = { input: document.getElementById('send_textarea'), chat: document.getElementById('chat') }; }); await settle(page, 350);
+  const ensureLeft = async () => { if (await page.locator('.wb-edge-left').getAttribute('aria-expanded') === 'false') { await page.locator('.wb-edge-left').click(); await settle(page, 350); } };
   const settingsGroup = async group => { await ensureLeft(); await openSettings(page, '用户设置'); await page.getByRole('navigation', { name: '设置分组' }).getByRole('button', { name: group, exact: true }).click(); };
   const tool = id => page.locator(`.wb-composer-actions [data-wb-tool="${id}"]`);
   const exportPanel = page.getByRole('region', { name: '聊天记录分析与导出' });
-  const openExport = async () => { if (await role('快进到你的回应').count()) { await role('快进到你的回应').click(); await settle(); } if (await tool('wb:export').count()) await tool('wb:export').click(); else { await role('更多工具').click(); await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '记录导出', exact: true }).click(); } await page.waitForSelector('.wb-export-workspace'); };
+  const openExport = async () => { if (await role('快进到你的回应').count()) { await role('快进到你的回应').click(); await settle(page, 350); } if (await tool('wb:export').count()) await tool('wb:export').click(); else { await role('更多工具').click(); await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '记录导出', exact: true }).click(); } await page.waitForSelector('.wb-export-workspace'); };
   const waitResult = async count => { await page.waitForFunction(count => { const footer = document.querySelector('.wb-export-footer'); return footer?.querySelector('.wb-primary:not(:disabled)') && footer.querySelector('.wb-export-totals').textContent.startsWith(`${count} 层`); }, count); };
   const structure = async () => exportPanel.getByRole('button', { name: /^XML 结构/ }).click();
   const preview = async () => exportPanel.getByRole('button', { name: /^结果预览/ }).click();
@@ -34,14 +32,14 @@ try {
 
   await settingsGroup('常用工具');
   for (const name of ['作者注释', '变量管理器', 'Token 计数', '数据银行']) await page.getByRole('checkbox', { name: `固定 ${name}`, exact: true }).check();
-  await role('上移 变量管理器').click(); await settle();
+  await role('上移 变量管理器').click(); await settle(page, 350);
   const pins = await page.evaluate(() => workbench.host.prefs().pinnedTools);
   assert.deepEqual(pins.map(t => t.label), ['记录导出', '变量管理器', '作者注释', 'Token 计数', '数据银行']);
   assert.ok(pins.find(t => t.label === '变量管理器').id.startsWith('label:tools:'));
   await page.screenshot({ path: directory + '/tool-settings-1496.png' });
-  await page.evaluate(() => workbench.host.persistSettings()); await role('返回工作台').click(); await settle();
+  await page.evaluate(() => workbench.host.persistSettings()); await role('返回工作台').click(); await settle(page, 350);
   await tool('native:menu:option_toggle_AN').click(); await page.getByRole('dialog', { name: '作者注释', exact: true }).waitFor();
-  await page.locator('.wb-popover #floatingPrompt').waitFor(); await page.locator('.wb-popover').getByRole('button', { name: '关闭弹出框' }).click(); await settle();
+  await page.locator('.wb-popover #floatingPrompt').waitFor(); await page.locator('.wb-popover').getByRole('button', { name: '关闭弹出框' }).click(); await settle(page, 350);
   pass('settings select/reorder/save common tools; pinned author note uses the existing native editor');
 
   await page.evaluate(() => {
@@ -50,24 +48,24 @@ try {
     window.__utilityTool = { node, parent: node.parentNode, next: node.nextSibling, clicks: 0 };
     window.__utilityTool.listener = event => { event.stopImmediatePropagation(); __utilityTool.clicks++; };
     node.addEventListener('click', __utilityTool.listener, true); source.append(node);
-  }); await settle();
+  }); await settle(page, 350);
   const variable = pins.find(t => t.label === '变量管理器'); await tool(variable.id).click();
   assert.equal(await page.evaluate(() => __utilityTool.clicks), 1);
-  await page.evaluate(() => __utilityTool.node.classList.add('disabled')); await settle(); assert.equal(await tool(variable.id).isDisabled(), true);
-  await page.evaluate(() => __utilityTool.node.remove()); await settle(); assert.equal(await tool(variable.id).isDisabled(), true);
-  await page.evaluate(() => { const state = __utilityTool; state.node.classList.remove('disabled'); state.parent.insertBefore(state.node, state.next); state.node.removeEventListener('click', state.listener, true); delete window.__utilityTool; }); await settle();
+  await page.evaluate(() => __utilityTool.node.classList.add('disabled')); await settle(page, 350); assert.equal(await tool(variable.id).isDisabled(), true);
+  await page.evaluate(() => __utilityTool.node.remove()); await settle(page, 350); assert.equal(await tool(variable.id).isDisabled(), true);
+  await page.evaluate(() => { const state = __utilityTool; state.node.classList.remove('disabled'); state.parent.insertBefore(state.node, state.next); state.node.removeEventListener('click', state.listener, true); delete window.__utilityTool; }); await settle(page, 350);
   assert.equal(await tool(variable.id).isEnabled(), true);
   pass('anonymous helper identity survives native menu reordering; disabled/missing entries cannot invoke another tool');
 
-  await page.setViewportSize({ width: 1024, height: 768 }); await toggleRight(page); await settle();
+  await page.setViewportSize({ width: 1024, height: 768 }); await toggleRight(page); await settle(page, 350);
   await role('更多工具').click(); await page.getByRole('dialog', { name: '更多工具' }).waitFor();
   assert.ok(await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '记录导出', exact: true }).count());
-  await page.evaluate(id => { const node = [...workbench.host.menuItems('tools')].find(item => item.id === id).node; window.__utilityDisabled = { node, previous: node.getAttribute('aria-disabled') }; node.setAttribute('aria-disabled', 'true'); }, variable.id); await settle();
+  await page.evaluate(id => { const node = [...workbench.host.menuItems('tools')].find(item => item.id === id).node; window.__utilityDisabled = { node, previous: node.getAttribute('aria-disabled') }; node.setAttribute('aria-disabled', 'true'); }, variable.id); await settle(page, 350);
   assert.equal(await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: /^变量管理器/ }).isDisabled(), true);
-  await page.evaluate(() => { const { node, previous } = __utilityDisabled; previous === null ? node.removeAttribute('aria-disabled') : node.setAttribute('aria-disabled', previous); delete window.__utilityDisabled; }); await settle();
+  await page.evaluate(() => { const { node, previous } = __utilityDisabled; previous === null ? node.removeAttribute('aria-disabled') : node.setAttribute('aria-disabled', previous); delete window.__utilityDisabled; }); await settle(page, 350);
   assert.equal(await page.getByRole('dialog', { name: '更多工具' }).getByRole('button', { name: '变量管理器', exact: true }).isEnabled(), true);
   const fit = await page.locator('.wb-composer-actions').evaluate(node => [...node.children].every(child => child.getBoundingClientRect().right <= node.getBoundingClientRect().right + 1)); assert.equal(fit, true);
-  await page.keyboard.press('Escape'); await toggleRight(page); await page.setViewportSize({ width: 1496, height: 817 }); await settle();
+  await page.keyboard.press('Escape'); await toggleRight(page); await page.setViewportSize({ width: 1496, height: 817 }); await settle(page, 350);
   pass('narrow composer keeps a single line with accessible overflow instead of overlapping send controls');
 
   await page.evaluate(async () => {
@@ -123,26 +121,26 @@ try {
   await page.locator('#send_textarea').fill('WB_EXPORT_INPUT_DRAFT'); await exportPanel.getByRole('button', { name: '取消', exact: true }).click();
   assert.ok((await exportPanel.innerText()).includes('分析已取消')); assert.equal(await page.locator('#send_textarea').inputValue(), 'WB_EXPORT_INPUT_DRAFT');
   await page.evaluate(async () => { SillyTavern.getContext = __utilityGetContext; delete window.__utilityGetContext; const c = SillyTavern.getContext(); c.chat.splice(0, c.chat.length, ...__utilityChat); delete window.__utilityChat; await (await import('/script.js')).printMessages(); workbench.host.refresh(); });
-  await toggleRight(page); await settle();
+  await toggleRight(page); await settle(page, 350);
   pass('chat changes discard prior analysis; a 10,000-message scan can be cancelled while editing the original input');
 
-  if (await page.locator('.wb-edge-left[aria-expanded=true]').count()) { await page.locator('.wb-edge-left').click(); await settle(); }
+  if (await page.locator('.wb-edge-left[aria-expanded=true]').count()) { await page.locator('.wb-edge-left').click(); await settle(page, 350); }
   for (const [width, height] of [[1024, 768], [2992, 1634]]) {
-    await page.setViewportSize({ width, height }); await settle(); await openExport(); await waitResult(1); await settle();
+    await page.setViewportSize({ width, height }); await settle(page, 350); await openExport(); await waitResult(1); await settle(page, 350);
     const geometry = await exportPanel.evaluate(node => ({ left: node.getBoundingClientRect().left, right: node.getBoundingClientRect().right, bottom: node.querySelector('.wb-export-footer').getBoundingClientRect().bottom, scrollHeight: node.querySelector('.wb-export-scroll').getBoundingClientRect().height, overflow: document.documentElement.scrollWidth > innerWidth }));
     assert.equal(geometry.overflow, false); assert.ok(geometry.right <= width + 1 && geometry.left >= 0 && geometry.bottom <= height + 1 && geometry.scrollHeight > 100, JSON.stringify(geometry));
-    await page.screenshot({ path: directory + `/export-noval-${width}.png` }); await toggleRight(page); await settle();
+    await page.screenshot({ path: directory + `/export-noval-${width}.png` }); await toggleRight(page); await settle(page, 350);
   }
   await page.setViewportSize({ width: 1496, height: 817 });
-  await chooseLayout(page,'RP'); await settle();
-  await page.evaluate(() => workbench.host.preference({ rpTopAuto: false })); await settle();
+  await chooseLayout(page,'RP'); await settle(page, 350);
+  await page.evaluate(() => workbench.host.preference({ rpTopAuto: false })); await settle(page, 350);
   assert.equal(await page.locator('.wb-left.is-open,.wb-right.is-open').count(), 0);
   await openExport(); await waitResult(1);
   assert.equal(await page.evaluate(() => __utilityNative.input === document.getElementById('send_textarea') && __utilityNative.chat === document.getElementById('chat')), true);
   assert.deepEqual(await page.evaluate(() => workbench.host.prefs().pinnedTools), pins);
   file = await downloadText(); assert.ok(file.text.length > 0);
-  await page.screenshot({ path: directory + '/export-rp-1496.png' }); await toggleRight(page); await settle();
-  await chooseLayout(page,'Noval'); await settle();
+  await page.screenshot({ path: directory + '/export-rp-1496.png' }); await toggleRight(page); await settle(page, 350);
+  await chooseLayout(page,'Noval'); await settle(page, 350);
   pass('1024 and 2992 widths keep the export footer and scrolling area usable; RP shares tools, download and original native nodes');
 
   await settingsGroup('加载诊断'); await page.getByRole('region', { name: '加载诊断' }).waitFor();
@@ -156,6 +154,5 @@ try {
   assert.ok(await page.evaluate(() => workbenchStartup.history.length >= 2));
   report.startup = { appReadyMs: startup.milestones.appReadyMs, workbenchReadyMs: startup.milestones.workbenchReadyMs, incompleteResources: startup.incompleteResources };
   pass('browser startup diagnostics export non-content metrics; tool selections and recent navigation history survive reload');
-  assert.deepEqual(testSession.errors, []); report.errors = testSession.errors; report.passed = true;
-} catch (error) { report.passed = false; report.failure = error.stack; if (page) { await page.screenshot({ path: directory + '/failure.png' }).catch(() => {}); report.pageErrors = await page.evaluate(() => ({ launcher: document.querySelector('#wb-launcher')?.textContent, error: document.querySelector('.wb-error')?.textContent })).catch(() => ({})); } console.error(error); process.exitCode = 1; }
-finally { fs.writeFileSync(directory + '/verification.json', JSON.stringify(report, null, 2)); await browser.close(); }
+  assert.deepEqual(testSession.errors, []);
+});

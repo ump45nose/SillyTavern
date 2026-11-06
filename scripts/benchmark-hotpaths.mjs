@@ -1,6 +1,6 @@
 // Hot-path costs on the validation instance: world-book typing, bulk tagging, chat-index rebuilds and
 // preset editor renders. Writes artifacts/benchmark-hotpaths.json; compare runs before and after a change.
-import { launch, session, ready, urls, createCharacter, connect, openSettings, save } from "./browser.mjs";
+import { launch, session, ready, urls, createCharacter, connect, openSettings, save, settingsWorkspace } from "./browser.mjs";
 import { summarize } from "./lib/stats.mjs";
 
 const ENTRIES = 600,
@@ -145,7 +145,7 @@ try {
   // 4. Preset editor: how often one render reads the whole preset.
   await openSettings(page, "预设");
   const preset = await page.evaluate(() => SillyTavern.getContext().getPresetManager().getSelectedPresetName());
-  const ws = page.getByRole("dialog", { name: "独立设置工作区", exact: true });
+  const ws = settingsWorkspace(page);
   await ws.getByRole("button", { name: "编辑 " + preset, exact: true }).click();
   await page.waitForTimeout(300);
   report.presetRender = await page.evaluate(async () => {

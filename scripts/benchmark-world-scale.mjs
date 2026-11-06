@@ -5,7 +5,7 @@
 // ~3 KB each). Writes artifacts/benchmark-world-scale.json; compare runs before and after a change.
 import fs from "node:fs";
 import path from "node:path";
-import { launch, session, ready, urls, createCharacter, openSettings, save } from "./browser.mjs";
+import { launch, session, ready, urls, createCharacter, openSettings, save, settingsWorkspace } from "./browser.mjs";
 import { summarize } from "./lib/stats.mjs";
 
 const SYNTHETIC = 3189,
@@ -86,7 +86,7 @@ try {
 
   // 1. Settings workspace: open the book in the entry table.
   await openSettings(page, "世界书");
-  const ws = page.getByRole("dialog", { name: "独立设置工作区", exact: true });
+  const ws = settingsWorkspace(page);
   report.managerOpen = await phase(async () => {
     tokenCalls.length = 0;
     const start = Date.now();

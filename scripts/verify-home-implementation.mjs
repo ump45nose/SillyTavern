@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, exitFocus, openResource } from './browser.mjs';
+import { launch, session, ready, urls, createCharacter, connect, withReducedMotion, exitFocus, openResource, settle } from './browser.mjs';
 const dir = 'artifacts/home-implementation'; fs.mkdirSync(dir,{recursive:true});
 const checks=[], pass=(name, details={})=>{checks.push({name,details,passed:true});console.log('PASS',name);};
 const b=await launch();
@@ -10,8 +10,7 @@ try {
  await page.evaluate(()=>{ workbench.host.preference({left:true,inputRatio:.2}); });
  // Remount to load persisted layout preferences without mutating the user's messages.
  await page.evaluate(async()=>{workbench.unmount();await workbench.mount();});
- const settle=()=>page.waitForTimeout(300);
- await settle();
+ await settle(page,300);
  assert.equal(await page.locator('.wb-nav-footer button').count(),3);
  // Six core panels plus the three bundled add-ons (export, outline, image), enabled by default.
  assert.equal(await page.locator('.wb-panel-tabs button').count(),9);
@@ -34,30 +33,30 @@ try {
   const handle=await page.getByRole("separator",{name:"调整输入框高度"}).boundingBox();assert(handle.y-g.form.y<5);return g;
  };
  for(const [width,height] of [[1366,768],[1440,900],[1496,817],[1920,1080]]){
-  await page.setViewportSize({width,height});await settle();let g=await verifyGeometry();
+  await page.setViewportSize({width,height});await settle(page,300);let g=await verifyGeometry();
   await page.screenshot({path:`${dir}/home-${width}.png`});
-  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();g=await verifyGeometry();assert.equal(g.main.w,width-(width<=1400?240:260)-(width<=1400?440:460)-180-24/* the panel card sits between two 12px desk gutters */);
+  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle(page,300);g=await verifyGeometry();assert.equal(g.main.w,width-(width<=1400?240:260)-(width<=1400?440:460)-180-24/* the panel card sits between two 12px desk gutters */);
   await page.screenshot({path:`${dir}/roles-${width}.png`});
-  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();pass('desktop geometry '+width,g);
+  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle(page,300);pass('desktop geometry '+width,g);
  }
  for(const width of [1024,1100]) {
-  await page.setViewportSize({width,height:820});await settle();
-  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();await verifyGeometry();
+  await page.setViewportSize({width,height:820});await settle(page,300);
+  await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle(page,300);await verifyGeometry();
   await page.screenshot({path:`${dir}/narrow-${width}.png`});
-  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
+  await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle(page,300);
  }
  pass('minimum desktop widths keep menu, tools and send aligned');
- await page.setViewportSize({width:1200,height:820});await settle();
- await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle();
+ await page.setViewportSize({width:1200,height:820});await settle(page,300);
+ await page.getByRole('button',{name:'角色与资源侧栏',exact:true}).click();await settle(page,300);
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-left-open')),false);await verifyGeometry();
- await page.keyboard.press('Alt+Shift+F');await settle();assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-focus')),true);
+ await page.keyboard.press('Alt+Shift+F');await settle(page,300);assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-focus')),true);
  await page.screenshot({path:`${dir}/focus.png`});
- await exitFocus(page);await settle();
+ await exitFocus(page);await settle(page,300);
  assert.equal(await page.locator('.wb-panel-tabs button.is-active').textContent(),'角色');
- await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle();
+ await page.getByRole('button',{name:'关闭右栏',exact:true}).click();await settle(page,300);
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-left-open')),true);
  pass('auto collapse and restore; focus restores prior resource and layout');
- await page.setViewportSize({width:1440,height:900});await settle();
+ await page.setViewportSize({width:1440,height:900});await settle(page,300);
  const input=page.locator('#send_textarea'), draft='**原文草稿**\n<story>{{char}}</story>';await input.fill(draft);
  const grip=page.getByRole('separator',{name:'调整输入框高度'}), pos=await grip.boundingBox(), before=await input.boundingBox();
  await page.mouse.move(pos.x+pos.width/2,pos.y+pos.height/2);await page.mouse.down();await page.mouse.move(pos.x+pos.width/2,pos.y-190,{steps:12});await page.mouse.up();
@@ -65,7 +64,7 @@ try {
  await page.screenshot({path:`${dir}/composer-expanded.png`});
  await grip.press('End');assert.equal(await grip.getAttribute('aria-valuenow'),'60');await grip.press('Home');assert.equal(await grip.getAttribute('aria-valuenow'),'20');
  pass('pointer and keyboard resize 20–60%; native raw draft preserved');
- await openResource(page,'预设详情');await settle();
+ await openResource(page,'预设详情');await settle(page,300);
  assert.equal(await page.locator('.wb-panel-tabs button.is-active').textContent(),'预设');
  const selector=page.locator('.wb-pill[aria-controls="wb-choices-preset"]');assert.equal(await selector.getAttribute('aria-current'),'true');
  await selector.click();await page.locator('#wb-choices-preset').waitFor();

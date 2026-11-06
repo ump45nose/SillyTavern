@@ -2,7 +2,7 @@
 // chooser, the settings manager, "next" and the in-use rule. Creates and removes its own WBG-* fixtures.
 import assert from "node:assert/strict";
 import path from "node:path";
-import { launch, session, ready, urls, createCharacter, openSettings, artifacts, save } from "./browser.mjs";
+import { launch, session, ready, urls, createCharacter, openSettings, artifacts, save, settingsWorkspace } from "./browser.mjs";
 
 const browser = await launch(),
   report = { checkedAt: new Date().toISOString(), checks: [] };
@@ -79,7 +79,7 @@ try {
 
   // ── Manager: groups, batch grouping, rename, dissolve, archive, in-use refusal ──
   await openSettings(page, "世界书");
-  const ws = page.getByRole("dialog", { name: "独立设置工作区", exact: true }),
+  const ws = settingsWorkspace(page),
     manager = ws.locator(".wb-resource-manager");
   await manager.locator(".wb-manager-group", { hasText: "组A" }).waitFor();
   const groupOf = (name) =>

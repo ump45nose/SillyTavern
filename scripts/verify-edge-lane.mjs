@@ -1,22 +1,18 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { launch, session, ready, urls, createCharacter } from './browser.mjs';
+import { ready, urls, createCharacter, settle } from './browser.mjs';
+import { runCheck } from './lib/check.mjs';
 
 // D2: dragging #chat's scrollbar or wheel-scrolling near the edge must not reveal the right
 // sidebar; resting in the edge lane still does, and the preference turns the lane off.
-const dir='artifacts/edge-lane';fs.mkdirSync(dir,{recursive:true});
-const checks=[],pass=(name,details)=>{checks.push({name,passed:true,details});console.log('PASS',name,JSON.stringify(details??{}));};
-const browser=await launch();let page,errors=[],passed=false;
-try {
- ({page,errors}=await session(browser));await page.setViewportSize({width:1496,height:817});await ready(page,urls.validation,{probe:true});await createCharacter(page);
- const settle=()=>page.waitForTimeout(330);
+await runCheck('edge-lane',async({session,pass})=>{
+ const {page,errors}=await session();await page.setViewportSize({width:1496,height:817});await ready(page,urls.validation,{probe:true});await createCharacter(page);
  await page.evaluate(()=>workbench.host.preference({edgeHover:true}));
  if(await page.locator('#chat .mes').count()<30)await page.evaluate(()=>TavernHelper.createChatMessages(Array.from({length:30},(_,i)=>({role:i%2?'assistant':'user',message:`WB_EDGE 第 ${i+1} 段：`+'港口的风吹过灯塔。'.repeat(12)}))));
  // Close both sidebars so #chat reaches as far as the lane allows.
- await page.evaluate(()=>workbench.host.preference({left:false}));await settle();
+ await page.evaluate(()=>workbench.host.preference({left:false}));await settle(page,330);
  if(await page.evaluate(()=>document.body.classList.contains('wb-right-open')))await page.getByRole('button',{name:'关闭右栏',exact:true}).click();
  if(await page.evaluate(()=>document.body.classList.contains('wb-left-open')))await page.getByRole('button',{name:/收纳左边栏/}).click();
- await page.mouse.move(700,400);await settle();
+ await page.mouse.move(700,400);await settle(page,330);
  const hot=()=>page.evaluate(()=>document.body.classList.contains('wb-right-hover-open'));
  const geometry=await page.evaluate(()=>{const lane=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--wb-edge-lane'));const chat=document.getElementById('chat');const r=chat.getBoundingClientRect();return {lane,right:r.right,left:r.left,width:innerWidth,scrollable:chat.scrollHeight>chat.clientHeight,edge:document.body.classList.contains('wb-edge-hover')};});
  assert(geometry.edge,'edge hover class must be on');assert(geometry.scrollable,'fixture chat must scroll');
@@ -34,7 +30,7 @@ try {
  // Releasing over the edge arrow makes Chromium click it; that click must not pin the sidebar.
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-right-open')),false,'releasing a drag over the edge arrow must not open the sidebar');
  pass('scrollbar drag overshooting into the lane keeps the sidebar closed');
- await page.mouse.move(700,400);await settle();
+ await page.mouse.move(700,400);await settle(page,330);
  await page.mouse.wheel(0,600);await page.mouse.move(geometry.width-6,400,{steps:3});await page.waitForTimeout(300);
  assert.equal(await hot(),false,'pointer arriving right after wheel scrolling must not reveal');
  await page.waitForTimeout(400);await page.mouse.move(geometry.width-8,404);await page.waitForTimeout(450);
@@ -44,19 +40,19 @@ try {
  await page.mouse.move(geometry.width-5,500);await page.mouse.move(700,500);await page.waitForTimeout(400);
  assert.equal(await hot(),false,'passing through the lane without dwelling must not reveal');
  pass('a brief pass through the lane does not reveal');
- await page.evaluate(()=>workbench.host.preference({edgeHover:false}));await settle();
+ await page.evaluate(()=>workbench.host.preference({edgeHover:false}));await settle(page,330);
  const off=await page.evaluate(()=>({edge:document.body.classList.contains('wb-edge-hover'),right:document.getElementById('chat').getBoundingClientRect().right,width:innerWidth}));
  assert.equal(off.edge,false);assert(Math.abs(off.right-(off.width-12))<2,'with edge reveal off #chat reaches the sheet edge, one 12px desk gutter from the window');
  await page.mouse.move(geometry.width-6,400);await page.mouse.move(geometry.width-8,404);await page.waitForTimeout(500);assert.equal(await hot(),false,'edge reveal off');
- await page.evaluate(()=>workbench.host.preference({edgeHover:true}));await settle();
- const arrow=page.getByRole('button',{name:'角色与资源侧栏',exact:true});await arrow.click();await page.waitForFunction(()=>document.body.classList.contains('wb-right-open'));await settle();
+ await page.evaluate(()=>workbench.host.preference({edgeHover:true}));await settle(page,330);
+ const arrow=page.getByRole('button',{name:'角色与资源侧栏',exact:true});await arrow.click();await page.waitForFunction(()=>document.body.classList.contains('wb-right-open'));await settle(page,330);
  const open=await page.evaluate(()=>{const panel=document.querySelector('.wb-right.is-open').getBoundingClientRect().left;return {panel,chat:document.getElementById('chat').getBoundingClientRect().right,arrow:document.querySelectorAll('.wb-edge-right').length}});
  // The pinned panel is a card on the desk: one gutter separates the sheet from it; the edge arrow stays beside it to fold it again.
  assert(Math.abs(open.panel-12-open.chat)<1.5&&open.arrow===1,`a pinned sidebar takes no lane and keeps its edge arrow: ${JSON.stringify(open)}`);
  // A scrollbar drag released over the gutter beside the card must not close the panel.
- await page.mouse.move(open.chat-3,320);await page.mouse.down();await page.mouse.move(open.chat+6,400,{steps:6});await page.mouse.up();await settle();
+ await page.mouse.move(open.chat-3,320);await page.mouse.down();await page.mouse.move(open.chat+6,400,{steps:6});await page.mouse.up();await settle(page,330);
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-right-open')),true,'releasing a scrollbar drag beside the card must not close the sidebar');
  await page.getByRole('button',{name:'收纳右边栏',exact:true}).click();await page.waitForFunction(()=>!document.body.classList.contains('wb-right-open'));
  pass('the preference turns the lane and the reveal off together; a pinned sidebar takes no lane; edge arrows toggle on click only and fold a pinned sidebar');
- assert.deepEqual(errors,[]);passed=true;
-}catch(error){if(page)await page.screenshot({path:dir+'/failure.png'});throw error;}finally{fs.writeFileSync(dir+'/verification.json',JSON.stringify({checkedAt:new Date().toISOString(),passed,checks,errors},null,2));await browser.close();}
+ assert.deepEqual(errors,[]);
+});

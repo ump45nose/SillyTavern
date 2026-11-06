@@ -1,14 +1,11 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { launch, session, ready, urls } from './browser.mjs';
+import { ready, urls } from './browser.mjs';
+import { runCheck } from './lib/check.mjs';
 
 // A page opened before an extension update asks for chunks the update deleted. The workbench must
 // stay mounted and offer a reload, not fall back to the native UI.
-const dir='artifacts/stale-chunk';fs.mkdirSync(dir,{recursive:true});
-const checks=[],pass=(name,details)=>{checks.push({name,passed:true,details});console.log('PASS',name,JSON.stringify(details??{}));};
-const browser=await launch();let page,errors=[],passed=false;
-try {
- ({page,errors}=await session(browser));await page.setViewportSize({width:1496,height:817});
+await runCheck('stale-chunk',async({session,pass,dir})=>{
+ const {page}=await session();await page.setViewportSize({width:1496,height:817});
  await page.route('**/api/settings/get',async r=>{const response=await r.fetch(),data=await response.json(),s=JSON.parse(data.settings);s.extension_settings.workbench??={};Object.assign(s.extension_settings.workbench,{layout:'novel',left:true});data.settings=JSON.stringify(s);await r.fulfill({response,json:data});});
  // Simulate the update: the lazily loaded page chunks (capitalised names) are gone from the server.
  const missing=[];
@@ -25,5 +22,4 @@ try {
  await ready(page,urls.validation,{probe:true});
  assert.equal(await page.evaluate(()=>document.body.classList.contains('wb-active')),true);
  pass('reload restores the workbench');
- passed=true;
-}catch(error){if(page)await page.screenshot({path:dir+'/failure.png'});throw error;}finally{fs.writeFileSync(dir+'/verification.json',JSON.stringify({checkedAt:new Date().toISOString(),passed,checks,errors},null,2));await browser.close();}
+});

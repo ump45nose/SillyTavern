@@ -207,6 +207,11 @@ export async function paperValue(page, label) {
 
 export const save = (name, value) => fs.writeFileSync(path.join(artifacts, name), JSON.stringify(value, null, 2) + '\n');
 
+/** Lets a transition finish; each check keeps the delay its assertions were tuned against. */
+export const settle = (page, ms) => page.waitForTimeout(ms);
+
+export const settingsWorkspace = page => page.getByRole('dialog', { name: '独立设置工作区', exact: true });
+
 /** Leaves focus mode through the reading bar's 退出专注 pill (the layout switcher hides in focus since E2). */
 export async function exitFocus(page) {
     await page.getByRole('button', { name: '退出专注', exact: true }).click();
@@ -255,7 +260,7 @@ export async function openResource(page, label) {
 
 /** Opens a settings page: 设置 in the left column, then the page's entry in the workspace nav. */
 export async function openSettings(page, name) {
-    const workspace = page.getByRole('dialog', { name: '独立设置工作区', exact: true });
+    const workspace = settingsWorkspace(page);
     if (!(await workspace.isVisible())) await page.locator('.wb-nav-footer').getByRole('button', { name: '设置', exact: true }).click();
     await workspace.waitFor();
     await workspace.locator('.wb-settings-nav').getByRole('button', { name, exact: true }).click();
