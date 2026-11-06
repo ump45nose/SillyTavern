@@ -11,11 +11,15 @@ import {
   type Data,
   type Field,
 } from "./text";
+import { isSensitiveKey } from "../host/secrets";
 
 const PARAMS = "参数.yaml",
   PROMPTS = "提示词";
-/** Credentials stay out of the files; they are kept as stored. */
-const hidden = ["prompts", "prompt_order", "proxy_password"];
+/**
+ * Prompts have their own files. Credentials and SillyTavern's proxy and endpoint settings stay out of
+ * the files; they are kept as stored.
+ */
+const hidden = (key: string) => key === "prompts" || key === "prompt_order" || isSensitiveKey(key);
 /** Parameters with names on the preset page; the rest go under 「其他」 with their own keys. */
 const params: Field[] = (
   [
@@ -100,7 +104,7 @@ export const presetCodec = {
   dirs: [PROMPTS],
   files(preset: Data) {
     const out: Data = writeFields(params, preset),
-      other = otherKeys(params, preset, hidden);
+      other = otherKeys(params, preset, Object.keys(preset).filter(hidden));
     if (Object.keys(other).length) out.其他 = other;
     const files = new Map<string, string>([[PARAMS, renderYaml(out)]]);
     for (const { prompt, enabled, file, explicit } of promptList(preset)) {
@@ -119,7 +123,7 @@ export const presetCodec = {
       if (!other || typeof other !== "object" || Array.isArray(other))
         throw new SyncError("「其他」应是「键: 值」的映射。", yaml.line("其他"));
       for (const key of Object.keys(other))
-        if (hidden.includes(key) || params.some((p) => p.path[0] === key))
+        if (hidden(key) || params.some((p) => p.path[0] === key))
           throw new SyncError(`「其他」里不能写 ${key}。`, yaml.line(`其他.${key}`));
       return { ...next, ...other };
     }

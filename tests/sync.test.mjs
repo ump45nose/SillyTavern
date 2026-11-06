@@ -265,10 +265,10 @@ test("presets round-trip; prompts follow the global order; the proxy password st
       "提示词/04-未排序.md",
     ],
   );
-  assert.doesNotMatch(files.get("参数.yaml"), /proxy_password|never-shown/);
+  assert.doesNotMatch(files.get("参数.yaml"), /proxy_password|never-shown|custom_url/);
   assert.match(
     files.get("参数.yaml"),
-    /^温度: 1\nTop P: 0.9\n上下文 Token 上限: 8192\n流式传输: true\n其他:\n  custom_url: /,
+    /^温度: 1\nTop P: 0.9\n上下文 Token 上限: 8192\n流式传输: true\n其他:\n  names_behavior: 0\n$/,
   );
   assert.match(
     files.get("提示词/03-风格_语气.md"),
@@ -307,6 +307,44 @@ test("preset edits: params, other keys, prompt switches, new prompts and refusal
       presetCodec.write(preset, "提示词/02-Main Prompt.md", "---\nidentifier: main\n注入位置: 中间\n---\n"),
     ),
     3,
+  );
+});
+
+test("SillyTavern's sensitive preset fields stay out of the files and keep their stored values", () => {
+  const sensitive = {
+    ...preset,
+    reverse_proxy: "https://u:p@proxy.example/v1",
+    custom_include_headers: "Authorization: Bearer sk-x",
+    custom_include_body: "api_key: sk-body",
+    custom_exclude_body: "hidden_field",
+    azure_base_url: "https://azure-host.example",
+    azure_deployment_name: "azure-deploy",
+    vertexai_region: "vertex-region",
+    vertexai_express_project_id: "vertex-project",
+    workers_ai_account_id: "workers-account",
+    vertexai_auth_mode: "express",
+    bypass_status_check: false,
+  };
+  const files = presetCodec.files(sensitive);
+  assert.doesNotMatch(
+    [...files.values()].join("\n"),
+    /reverse_proxy|proxy_password|custom_url|custom_include|custom_exclude|azure_|vertexai_region|vertexai_express|workers_ai|u:p@|proxy\.example|sk-x|sk-body|hidden_field|azure-|vertex-|workers-|example\.invalid|never-shown/,
+  );
+  assert.match(files.get("参数.yaml"), /\n  vertexai_auth_mode: express\n  bypass_status_check: false\n$/);
+  roundTrip(presetCodec, sensitive);
+  const edited = presetCodec.write(
+    sensitive,
+    "参数.yaml",
+    files.get("参数.yaml").replace("温度: 1", "温度: 0.5").replace("vertexai_auth_mode: express", "vertexai_auth_mode: full"),
+  );
+  assert.deepEqual(edited, { ...sensitive, temperature: 0.5, vertexai_auth_mode: "full" });
+  assert.throws(
+    () => presetCodec.write(sensitive, "参数.yaml", "其他:\n  reverse_proxy: https://elsewhere.example\n"),
+    /不能写 reverse_proxy/,
+  );
+  assert.throws(
+    () => presetCodec.write(sensitive, "参数.yaml", "其他:\n  custom_include_headers: 'X: 1'\n"),
+    /不能写 custom_include_headers/,
   );
 });
 
