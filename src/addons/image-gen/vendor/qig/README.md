@@ -4,11 +4,11 @@ Source: https://github.com/platberlitz/sillytavern-image-gen
 Pinned commit: 5915f096d899960b5013b759556098d310b2fc08 (manifest version 3.5.0).
 License: MIT, retained verbatim in LICENSE.
 
-Selected upstream libraries, trimmed from upstream 5915f096 to the code Workbench reaches; the remaining code is unchanged. Workbench imports provider URL/payload/result helpers, image validation and materialization, A1111 URL normalization, ComfyUI workflow/polling/targeted cancellation, and prompt tag normalization. The upstream entry point, global initialization and UI are not included. Workbench orchestration and native image persistence live outside this directory.
+Selected upstream libraries, trimmed from upstream 5915f096 to the code Workbench reaches; the remaining code is unchanged. Workbench imports provider URL/payload/result helpers, image validation and materialization, ComfyUI workflow/polling/targeted cancellation, and prompt tag normalization. The upstream entry point, global initialization and UI are not included. Workbench orchestration and native image persistence live outside this directory.
 
 Removed from the upstream files:
 
-- `a1111-runtime.js`: everything except `normalizeA1111BaseUrl` and `A1111_REQUEST_TIMEOUT_MS` (numeric parsing, base64 helpers, reference image materialization, model refresh check, ADetailer unit).
+- `a1111-runtime.js`: removed; its only used helper, trailing slash removal for the A1111 base URL, is inlined in `backends.ts`.
 - `image-metadata.js`: PNG scanline validation (`validateImageData`), PNG text and structured metadata read/write with their size limits and text codecs, generation parameter parsing and `sanitizeServerSubfolder`; `detectImageFormat` and its format checks remain.
 - `provider-adapters.js`: `isNovelAICompatibleProxyUrl`, `getGptImageApiUrl`, provider error parsing and the GPT Image route retry (`requestGptImageWithRouteRetry` and its helpers).
 - `comfyui-backend.js`: settings and model list normalization, `renderComfyWorkflow`, workflow component discovery, object_info combo parsing, override pruning, capability detection and WebSocket message parsing.

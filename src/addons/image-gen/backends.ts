@@ -20,7 +20,6 @@ import {
   buildComfyViewUrl,
   cancelComfyPrompt,
 } from "./vendor/qig/comfyui-backend.js";
-import { normalizeA1111BaseUrl } from "./vendor/qig/a1111-runtime.js";
 import { defaultTemplate } from "./prompts";
 import { normalizeReferences, referenceData, type ImageReference } from "./reference-files";
 export const providers = ["openai", "gemini", "novelai", "a1111", "comfyui"] as const;
@@ -256,8 +255,7 @@ export async function generateImage(
   }
   if (config.provider === "a1111") {
     requestUrl =
-      normalizeA1111BaseUrl(baseURL(config.url)) +
-      (images.length ? "/sdapi/v1/img2img" : "/sdapi/v1/txt2img");
+      baseURL(config.url).replace(/\/+$/, "") + (images.length ? "/sdapi/v1/img2img" : "/sdapi/v1/txt2img");
     response = await post(requestUrl, {
       prompt: positive,
       negative_prompt: negative,
