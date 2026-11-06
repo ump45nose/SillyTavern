@@ -9,7 +9,6 @@ import {
   Plus,
   Trash2,
   BookmarkPlus,
-  X,
   RefreshCw,
   ChartNoAxesColumn,
   Upload,
