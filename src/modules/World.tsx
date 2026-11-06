@@ -1,5 +1,5 @@
 import { Select } from "../ui/Select";
-import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, Search, X, Braces, BookMarked, ChevronLeft } from "../ui/icons";
 import { SaveBar } from "../ui/ResourceControls";
 import { EntryEditor, useMobileLayout } from "../ui/EntryEditor";
@@ -23,17 +23,10 @@ import { EntryPortraits } from "../ui/EntryPortraits";
 import { MdField } from "../ui/md/MdField";
 import { isPathSafe } from "../host/cast";
 import { unarchived } from "../host/organize";
-const positions = [
-  "角色定义之前",
-  "角色定义之后",
-  "作者注释之前",
-  "作者注释之后",
-  "指定深度",
-  "示例之前",
-  "示例之后",
-  "Outlet",
-];
-const modeName: Record<string, string> = { keyword: "关键词", constant: "常驻", vector: "向量化" };
+import { positions, modeName } from "./world/shared";
+import { EntryItem } from "./world/EntryItem";
+import { EntryRow } from "./world/EntryRow";
+import { KeyChips } from "./world/KeyChips";
 /** Row heights the windowed entry lists are laid out with (CSS keeps rows exactly this tall). */
 const PANEL_ROW = 42,
   TABLE_ROW = 46;
@@ -881,161 +874,5 @@ export default function World({
         {(!mobile || !selected || tab === "json") && saveBar}
       </section>
     </fieldset>
-  );
-}
-type EntryActions = {
-  onToggle: (id: string, on: boolean) => void;
-  onOpen: (id: string) => void;
-};
-/** One entry in the sidebar list; an edit elsewhere in the book leaves it untouched. */
-const EntryItem = memo(function EntryItem({
-  id,
-  entry: e,
-  selected,
-  locked,
-  onToggle,
-  onMode,
-  onOpen,
-}: EntryActions & {
-  id: string;
-  entry: Data;
-  selected: boolean;
-  locked: boolean;
-  onMode: (id: string, mode: string) => void;
-}) {
-  const mode = activation(e),
-    title = e.comment || `条目 ${id}`;
-  return (
-    <li className={`wb-entry mode-${mode} ${selected ? "is-selected" : ""} ${e.disable ? "is-off" : ""}`}>
-      <input
-        type="checkbox"
-        aria-label={`启用条目 ${title}`}
-        disabled={locked}
-        checked={!e.disable}
-        onChange={(v) => onToggle(id, v.target.checked)}
-      />
-      <span className="wb-entry-mode">
-        <Select
-          aria-label={`${title} 激活方式`}
-          title="关键词 / 常驻 / 向量化"
-          disabled={locked}
-          value={mode}
-          onChange={(v) => onMode(id, v.target.value)}
-        >
-          <option value="keyword">关键词</option>
-          <option value="constant">常驻</option>
-          <option value="vector">向量化</option>
-        </Select>
-      </span>
-      <button
-        className="wb-entry-open"
-        aria-label={`编辑条目 ${title}`}
-        aria-pressed={selected}
-        onClick={() => onOpen(id)}
-      >
-        <strong>{title}</strong>
-        <small>
-          {mode === "constant"
-            ? "始终注入"
-            : mode === "vector"
-              ? "语义匹配"
-              : (e.key ?? []).join("、") || "未设置关键词"}
-        </small>
-      </button>
-    </li>
-  );
-});
-/** One row of the deep editor's entry table. */
-const EntryRow = memo(function EntryRow({
-  id,
-  entry: e,
-  open,
-  tokens,
-  onToggle,
-  onOpen,
-}: EntryActions & { id: string; entry: Data; open: boolean; tokens?: number }) {
-  const mode = activation(e);
-  return (
-    <div
-      role="row"
-      className={`wb-wt-row is-${mode} ${open ? "is-open" : ""} ${e.disable ? "is-disabled" : ""}`}
-      onClick={(v) => {
-        if (!(v.target as HTMLElement).closest("input, button")) onOpen(open ? "" : id);
-      }}
-    >
-      <span role="cell">
-        <input
-          type="checkbox"
-          aria-label={`启用条目 ${e.comment || id}`}
-          checked={!e.disable}
-          onChange={(v) => onToggle(id, v.target.checked)}
-        />
-        <i title={modeName[mode]} />
-      </span>
-      <span role="cell">
-        <button className="wb-wt-open" aria-expanded={open} onClick={() => onOpen(open ? "" : id)}>
-          {e.comment || `条目 ${id}`}
-        </button>
-      </span>
-      <span role="cell" className="wb-wt-keys">
-        {mode === "constant" ? "—" : mode === "vector" ? "向量匹配" : (e.key ?? []).join(", ") || "—"}
-      </span>
-      <span role="cell">{positions[e.position ?? 0]}</span>
-      <span role="cell" className="is-num">
-        {(e.position ?? 0) === 4 ? (e.depth ?? 4) : "—"}
-      </span>
-      <span role="cell" className="is-num">
-        {e.order ?? 0}
-      </span>
-      <span role="cell" className="is-num">
-        {tokens ?? ""}
-      </span>
-    </div>
-  );
-});
-/** Keyword chips with an inline add field (Enter adds, Backspace on empty removes the last). */
-function KeyChips({
-  label,
-  keys,
-  onChange,
-}: {
-  label: string;
-  keys: string[];
-  onChange: (keys: string[]) => void;
-}) {
-  const [text, setText] = useState("");
-  const add = () => {
-    const value = text.trim();
-    if (value && !keys.includes(value)) onChange([...keys, value]);
-    setText("");
-  };
-  return (
-    <div className="wb-wt-keychips">
-      <span>{label}</span>
-      <div>
-        {keys.map((k, i) => (
-          <span className="wb-key" key={k + i}>
-            {k}
-            <button aria-label={`移除${label} ${k}`} onClick={() => onChange(keys.filter((_, j) => j !== i))}>
-              <X size={11} />
-            </button>
-          </span>
-        ))}
-        <input
-          aria-label={`添加${label}`}
-          placeholder="+ 添加"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onBlur={add}
-          onKeyDown={(e) => {
-            if (e.nativeEvent.isComposing) return;
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add();
-            } else if (e.key === "Backspace" && !text && keys.length) onChange(keys.slice(0, -1));
-          }}
-        />
-      </div>
-    </div>
   );
 }
