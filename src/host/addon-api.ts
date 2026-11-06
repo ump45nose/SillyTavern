@@ -99,8 +99,7 @@ export class AddonBridge {
     };
   };
   key() {
-    const c = context();
-    return `${c.groupId || c.characters[c.characterId]?.avatar || ""}:${c.getCurrentChatId() || ""}`;
+    return this.host.chatKey();
   }
   /** An add-on's data in the open chat's metadata, as stored rather than copied. */
   stored(id: AddonId) {

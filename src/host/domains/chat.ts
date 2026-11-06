@@ -227,7 +227,7 @@ export const chatMethods = {
   exportSnapshot(this: HostAdapter, presentation: "raw" | "reading" = "raw") {
     const c = ctx();
     return {
-      key: `${c.groupId || this.snapshot().character?.id || ""}:${c.getCurrentChatId() || ""}`,
+      key: this.chatKey(),
       timestamp: Date.now(),
       messages: c.chat.map((message: Data, id: number) => ({
         id,

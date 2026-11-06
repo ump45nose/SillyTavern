@@ -8,6 +8,7 @@ const st = {
   characters: [{ avatar: "a.png", name: "Alice", data: { tags: [] } }],
   characterId: "0",
   chatId: "Alice - 1.jsonl",
+  getCurrentChatId: () => st.chatId,
   groups: [],
   onlineStatus: "Valid",
   mainApi: "openai",

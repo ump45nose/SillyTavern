@@ -87,6 +87,7 @@ const notify = new Set();
 const outlineWriters = new Set();
 let prefs = { addons: {} };
 const host = {
+  chatKey: () => "alice.png:chat",
   prefs: () => prefs,
   subscribe: (fn) => (notify.add(fn), () => notify.delete(fn)),
   listen(name, fn) {

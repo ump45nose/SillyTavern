@@ -84,6 +84,8 @@ export interface MessageIndex {
 }
 export interface SessionState {
   chatName: string;
+  /** HostCore.chatKey() when the session was built. */
+  chatKey: string;
   groupId?: string;
   groupName?: string;
   character: Item | null;

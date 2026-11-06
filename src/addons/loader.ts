@@ -87,11 +87,7 @@ export function addonHost(host: HostAdapter): AddonHost {
     revision: host.revision,
     snapshot: () => {
       const snap = host.snapshot();
-      return {
-        chatKey: `${snap.groupId || snap.character?.id || ""}:${snap.chatName}`,
-        chatName: snap.chatName,
-        busy: snap.busy,
-      };
+      return { chatKey: snap.chatKey, chatName: snap.chatName, busy: snap.busy };
     },
     exportSnapshot: () => host.exportSnapshot(),
     download: (blob: Blob, filename: string) => host.download(blob, filename),

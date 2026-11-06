@@ -303,6 +303,14 @@ export class HostCore {
       );
     return response;
   }
+  /**
+   * The open chat as add-ons tell chats apart: its group or character, and its file. Read live;
+   * `snapshot().chatKey` is the same key as of the session's last build.
+   */
+  chatKey() {
+    const c = ctx();
+    return `${c.groupId || c.characters[c.characterId]?.avatar || ""}:${c.getCurrentChatId() || ""}`;
+  }
   snapshot(): HostSnapshot {
     return (this.cache ??= {
       ...this.slice("session"),
@@ -377,6 +385,7 @@ export class HostCore {
       manager = c.getPresetManager();
     return {
       chatName: String(c.chatId ?? "").replace(/\.jsonl$/, ""),
+      chatKey: this.chatKey(),
       groupId: c.groupId || undefined,
       groupName: c.groups?.find((g: Data) => g.id === c.groupId)?.name,
       character: this.slice("characters").find((x) => x.active) ?? null,

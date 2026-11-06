@@ -30,6 +30,7 @@ const urls = (extra) => extra?.media?.map((m) => m.url) ?? [];
 /** The image add-on's view of a bridge whose chat file writes go to `save`. */
 function imageHost(save) {
   const bridge = new AddonBridge({
+    chatKey: () => "alice.png:chat",
     listen: () => () => {},
     subscribe: () => () => {},
     snapshot: () => ({ busy: false }),
