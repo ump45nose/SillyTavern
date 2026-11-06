@@ -147,19 +147,7 @@ export class AddonBridge {
     const c = context();
     if (this.disposed || key !== this.key() || !c.getCurrentChatId())
       throw new Error("聊天已切换或尚未保存。");
-    const header = { chat_metadata: metadata, user_name: "unused", character_name: "unused" };
-    const character = c.characters[c.characterId];
-    const body = c.groupId
-      ? { id: c.getCurrentChatId(), chat: [header, ...messages], force: false }
-      : {
-          ch_name: character?.name,
-          file_name: c.getCurrentChatId(),
-          avatar_url: character?.avatar,
-          chat: [header, ...messages],
-          force: false,
-        };
-    const response = await this.host.request(c.groupId ? "/api/chats/group/save" : "/api/chats/save", body);
-    if (!response.ok) throw new Error("聊天保存失败，进度未推进。");
+    await this.host.saveChatFile(metadata, messages);
     if (this.disposed || key !== this.key()) throw new Error("聊天已切换，结果未写入当前聊天。");
   }
   private serial<T>(fn: () => Promise<T>): Promise<T> {

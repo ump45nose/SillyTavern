@@ -92,6 +92,24 @@ export const chatMethods = {
       await (await internal("groupChats")).openGroupChat(ctx().groupId, name.replace(/\.jsonl$/, ""));
     else await ctx().openCharacterChat(name.replace(/\.jsonl$/, ""));
   },
+  /**
+   * Writes the open chat's file: SillyTavern's header row with `metadata`, then `messages`. The file is
+   * written directly because SillyTavern's own chat save reports a failure without throwing.
+   */
+  saveChatFile(this: HostAdapter, metadata: Data, messages: Data[]) {
+    const c = ctx(),
+      chat = [{ chat_metadata: metadata, user_name: "unused", character_name: "unused" }, ...messages];
+    if (c.groupId)
+      return this.request("/api/chats/group/save", { id: c.getCurrentChatId(), chat, force: false });
+    const character = c.characters[c.characterId];
+    return this.request("/api/chats/save", {
+      ch_name: character?.name,
+      file_name: c.getCurrentChatId(),
+      avatar_url: character?.avatar,
+      chat,
+      force: false,
+    });
+  },
   /** Deletes a rendered floor once the user confirms in SillyTavern's own dialog. */
   async deleteMessage(this: HostAdapter, id: number) {
     await ctx().deleteMessage(id, undefined, true);
