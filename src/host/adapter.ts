@@ -48,6 +48,7 @@ export class HostAdapter extends HostCore {
     this.cast = new CastRuntime(this);
     this.cleanup.push(
       this.cast.showTags(),
+      () => this.cast.dispose(),
       () => this.chatObserver.disconnect(),
       () => this.media.disconnect(),
     );

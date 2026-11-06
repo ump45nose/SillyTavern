@@ -66,6 +66,7 @@ export class CastRuntime {
   state: CastState = idle;
   private listeners = new Set<() => void>();
   private run = 0;
+  private disposed = false;
   private labels = new Map<string, Promise<string>>();
   constructor(private host: HostAdapter) {}
   subscribe = (fn: () => void) => {
@@ -85,6 +86,7 @@ export class CastRuntime {
   }
   /** Reads the chat's choice, the book and the chosen entries' images; called on every chat switch. */
   async load() {
+    if (this.disposed) return;
     const run = ++this.run,
       config = this.config();
     this.labels.clear();
@@ -240,6 +242,13 @@ export class CastRuntime {
       false,
       SYSTEM,
     );
+  }
+  /** Takes the prompt out; a load still reading the book or images never writes it back. */
+  dispose() {
+    this.disposed = true;
+    this.run++;
+    this.prompt([]);
+    this.listeners.clear();
   }
   /** The expression the host's classifier reads in an untagged passage; "" when none is set up. */
   expression(key: string, text: string) {
