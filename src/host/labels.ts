@@ -43,3 +43,12 @@ export const actionLabels = {
   updatePreset: "更新预设",
   updateConnectionProfile: "更新连接配置",
 } as const;
+
+/**
+ * The connection as every pill, tile and status line says it: the profile in use, else the model,
+ * else 已连接 or 未连接, which only ever say whether SillyTavern is online. Status labels pass no names;
+ * pills and tiles show online state with their own dot.
+ */
+export function connectionLabel(online: boolean, profile?: string, model?: string) {
+  return profile || model || (online ? "已连接" : "未连接");
+}

@@ -26,7 +26,7 @@ import type { HostSnapshot, Panel, Resource, SettingsPage } from "../host/types"
 import type { LayoutMode } from "./LayoutSwitcher";
 import type { ComposerPopup } from "./ComposerPopovers";
 import { ResourceControls } from "./Header";
-import { resourceLabels } from "../host/labels";
+import { connectionLabel, resourceLabels } from "../host/labels";
 import { ReadingSettings } from "./Reading";
 import { OptionsSheetList } from "./StoryOptions";
 import { toolIcon } from "./ToolIcon";
@@ -295,18 +295,20 @@ export function MobileShell({
           <span className="wb-mobile-status">
             <i className={`wb-dot ${snap.online ? "online" : ""}`} />
             <strong>
-              {snap.resources.connection.find((x) => x.id === snap.current.connection)?.name ||
-                host.model() ||
-                "未连接"}
+              {connectionLabel(
+                snap.online,
+                snap.resources.connection.find((x) => x.id === snap.current.connection)?.name,
+                host.model(),
+              )}
             </strong>
             {!!summary && <small>{summary}</small>}
           </span>
           <div className="wb-mobile-keys" role="group" aria-label="快捷配置">
             {(Object.keys(resourceLabels) as Resource[]).map((kind) => {
               const Icon = resourceIcons[kind],
+                name = snap.resources[kind].find((x) => x.id === snap.current[kind])?.name,
                 value =
-                  snap.resources[kind].find((x) => x.id === snap.current[kind])?.name ||
-                  (kind === "connection" ? host.model() : "未选择"),
+                  kind === "connection" ? connectionLabel(snap.online, name, host.model()) : name || "未选择",
                 count = kind === "world" ? worlds.length : 0;
               return (
                 <button

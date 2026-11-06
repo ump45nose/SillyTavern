@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, LoaderCircle, RefreshCw, Trash2, X } from "./icons";
 import type { HostAdapter } from "../host/adapter";
+import type { Data } from "../host/types";
 import { EXPRESSIONS, isPathSafe, stagedNotes, suggestLabel, type Sprite } from "../host/cast";
 
 interface Staged {
@@ -72,15 +73,21 @@ export function EntryPortraits({
     [removing, setRemoving] = useState(""),
     [relabel, setRelabel] = useState<{ path: string; label: string } | null>(null),
     next = useRef(0),
-    latest = useRef(staged);
+    latest = useRef(staged),
+    /** The folder as of the last render, for work that outlives a rename. */
+    folder = useRef(title),
+    /** The last batch: the folder it went into, and when it is over. */
+    batch = useRef<{ into: string; done: Promise<void> } | null>(null);
   latest.current = staged;
+  folder.current = title;
   const safe = isPathSafe(title);
   const reload = () => {
-    if (!safe) return setSprites([]);
+    const name = folder.current;
+    if (!isPathSafe(name)) return setSprites([]);
     let live = true;
     host.cast
-      .sprites(book, title)
-      .then((list) => live && setSprites(list))
+      .sprites(book, name)
+      .then((list) => live && name === folder.current && setSprites(list))
       .catch((e) => live && setError(e.message));
     return () => {
       live = false;
@@ -91,12 +98,30 @@ export function EntryPortraits({
       old.forEach((item) => URL.revokeObjectURL(item.url));
       return old.length ? [] : old;
     });
+  /**
+   * Saving a rename moves the folder's images once; a batch still going into the old folder can add
+   * images after the move has listed it. Those follow the entry too, unless another entry has the old
+   * title by now, and with it the folder.
+   */
+  const follow = async (from: string) => {
+    const to = folder.current;
+    if (from === to || !isPathSafe(to)) return;
+    const { entries } = await host.readBook(book);
+    if (Object.values<Data>(entries ?? {}).some((e) => String(e.comment ?? "").trim() === from)) return;
+    await host.cast.move(book, from, to);
+  };
+  // World keys this view by book and entry uid, so the title changes here only when the entry is
+  // renamed: what is staged stays, and another entry or book starts a new view.
   useEffect(() => {
     setSprites(null);
     setError("");
     setRemoving("");
     setRelabel(null);
-    unstageAll();
+    const last = batch.current;
+    if (last && last.into !== title) {
+      batch.current = null;
+      void last.done.then(() => work("follow", () => follow(last.into)));
+    }
     return reload();
   }, [book, title]);
   useEffect(() => () => latest.current.forEach((item) => URL.revokeObjectURL(item.url)), []);
@@ -152,8 +177,8 @@ export function EntryPortraits({
     ),
     blocked = notes.some((note) => note === "invalid" || note === "repeat"),
     labels = new Set((sprites ?? []).map((sprite) => sprite.label));
-  const upload = () =>
-    work("upload", async () => {
+  const upload = () => {
+    const done = work("upload", async () => {
       // One at a time, so each that went in leaves the list and a failure names its file.
       for (const [i, item] of [...staged].entries()) {
         setBusy(`upload:${i + 1}/${staged.length}`);
@@ -163,6 +188,9 @@ export function EntryPortraits({
         unstage(item.id);
       }
     });
+    batch.current = { into: title, done };
+    return done;
+  };
   return (
     <div
       className={`wb-portraits ${over ? "is-over" : ""}`}

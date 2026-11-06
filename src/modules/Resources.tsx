@@ -3,7 +3,7 @@ import { Copy, Trash2, BookmarkPlus } from "../ui/icons";
 import type { HostAdapter } from "../host/adapter";
 import type { Resource } from "../host/types";
 import { useTask, Notice, Empty, useHostSlices, withoutChat } from "../ui/common";
-import { resourceLabels } from "../host/labels";
+import { connectionLabel, resourceLabels } from "../host/labels";
 import { ResourcePicker, type RailExtras } from "../ui/ResourcePicker";
 import { ConnectionRuntime } from "./Connection";
 import { guards } from "../host/bus";
@@ -124,9 +124,7 @@ export default function Resources({
             {current && snap.current[kind] === id && (
               <span className={`wb-status-chip ${kind === "connection" && !snap.online ? "is-off" : ""}`}>
                 {kind === "connection"
-                  ? snap.online
-                    ? "已连接"
-                    : "未连接"
+                  ? connectionLabel(snap.online)
                   : kind === "preset"
                     ? "运行中"
                     : "使用中"}
