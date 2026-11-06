@@ -1,6 +1,8 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "./icons";
+import { popoverPlacement } from "./placement";
+import { useAnchoredLayer } from "./useAnchoredLayer";
 export function Popover({
   anchor,
   title,
@@ -18,56 +20,24 @@ export function Popover({
   exiting?: boolean;
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null),
-    close = useRef(onClose),
-    [place, setPlace] = useState({ left: 0, top: 0, visibility: "hidden" as "hidden" | "visible" });
-  close.current = onClose;
+  const ref = useRef<HTMLDivElement>(null);
+  const style = useAnchoredLayer(anchor, ref, {
+    placement: popoverPlacement,
+    onDismiss: onClose,
+    escape: true,
+  });
   useLayoutEffect(() => {
     const el = ref.current!;
-    const position = () => {
-      const a = anchor.getBoundingClientRect(),
-        p = el.getBoundingClientRect(),
-        above = a.top - p.height - 8;
-      setPlace({
-        left: Math.max(10, Math.min(a.left, innerWidth - p.width - 10)),
-        top: Math.max(10, Math.min(above >= 10 ? above : a.bottom + 8, innerHeight - p.height - 10)),
-        visibility: "visible",
-      });
-    };
-    position();
     const focusFrame = requestAnimationFrame(() => {
       const target = el.querySelector<HTMLElement>(
         "input:not([type=file]):not([type=hidden]),.wb-pop-row:not(:disabled),button:not(:disabled)",
       );
       target?.focus({ preventScroll: true });
     });
-    const observer = new ResizeObserver(position);
-    observer.observe(el);
-    const outside = (e: PointerEvent) => {
-      if (!el.inert && !el.contains(e.target as Node) && !anchor.contains(e.target as Node)) close.current();
-    };
-    const key = (e: KeyboardEvent) => {
-      if (!el.inert && e.key === "Escape") {
-        if (el.querySelector('.wb-select-trigger[aria-expanded="true"]')) return;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        close.current();
-        anchor.focus();
-      }
-    };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", key, true);
-    window.addEventListener("resize", position);
-    window.addEventListener("scroll", position, true);
     return () => {
       cancelAnimationFrame(focusFrame);
       if (el.contains(document.activeElement)) anchor.focus({ preventScroll: true });
-      observer.disconnect();
       anchor.setAttribute("aria-expanded", "false");
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", key, true);
-      window.removeEventListener("resize", position);
-      window.removeEventListener("scroll", position, true);
     };
   }, [anchor]);
   useLayoutEffect(() => {
@@ -82,7 +52,7 @@ export function Popover({
       role="dialog"
       aria-modal="false"
       aria-label={title}
-      style={place}
+      style={style}
     >
       <header>
         <strong>{title}</strong>

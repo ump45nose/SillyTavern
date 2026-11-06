@@ -1,7 +1,9 @@
-import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "./icons";
 import { usePresence } from "./Motion";
+import { listPlacement } from "./placement";
+import { useAnchoredLayer } from "./useAnchoredLayer";
 
 type Props = React.SelectHTMLAttributes<HTMLSelectElement>;
 type Option = { value: string; label: React.ReactNode; text: string; disabled: boolean };
@@ -30,8 +32,7 @@ export function Select({ children, className = "", value, onChange, disabled, ..
     menu = useRef<HTMLDivElement>(null);
   const id = useId(),
     [open, setOpen] = useState(false),
-    [active, setActive] = useState(0),
-    [place, setPlace] = useState({ left: 0, top: 0, width: 0, maxHeight: 260 });
+    [active, setActive] = useState(0);
   const presence = usePresence(open ? true : null);
   const current = options.findIndex(
     (o) => o.value === String(value ?? props.defaultValue ?? options[0]?.value),
@@ -54,41 +55,10 @@ export function Select({ children, className = "", value, onChange, disabled, ..
     setOpen(false);
     trigger.current?.focus();
   };
-  useLayoutEffect(() => {
-    if (!open) return;
-    const position = () => {
-      const rect = trigger.current!.getBoundingClientRect(),
-        width = Math.min(Math.max(rect.width, 180), innerWidth - 16);
-      const below = innerHeight - rect.bottom - 14,
-        above = rect.top - 14;
-      const downward = below >= 150 || below >= above;
-      const height = Math.min(260, Math.max(80, downward ? below : above));
-      if (menu.current) menu.current.style.width = `${width}px`;
-      const renderedHeight = Math.min(height, (menu.current?.scrollHeight ?? height) + 2);
-      setPlace({
-        left: Math.max(8, Math.min(rect.left, innerWidth - width - 8)),
-        top: downward ? rect.bottom + 6 : rect.top - renderedHeight - 6,
-        width,
-        maxHeight: height,
-      });
-    };
-    position();
-    window.addEventListener("resize", position);
-    window.addEventListener("scroll", position, true);
-    return () => {
-      window.removeEventListener("resize", position);
-      window.removeEventListener("scroll", position, true);
-    };
-  }, [open]);
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => {
-      if (!trigger.current?.contains(e.target as Node) && !menu.current?.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
+  const place = useAnchoredLayer(open ? trigger : null, menu, {
+    placement: listPlacement,
+    onDismiss: () => setOpen(false),
+  });
   useEffect(() => {
     if (open)
       menu.current?.querySelector(`[id="${id}-option-${active}"]`)?.scrollIntoView({ block: "nearest" });

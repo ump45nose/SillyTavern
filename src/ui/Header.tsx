@@ -8,6 +8,7 @@ import { GroupCheck } from "./ResourcePicker";
 import { connectionLabel, resourceLabels } from "../host/labels";
 import { usePresence } from "./Motion";
 import { resourceIcons } from "./resources";
+import { useAnchoredLayer } from "./useAnchoredLayer";
 /** The popover's way into the full panel, named after what the panel lets you do there. */
 const manageLabels: Record<Resource, string> = {
   connection: "管理连接",
@@ -169,6 +170,8 @@ function ResourcePills({
 >) {
   const presence = usePresence(chooser);
   const last = useRef<Resource | null>(null),
+    pill = useRef<HTMLButtonElement>(null),
+    pop = useRef<HTMLDivElement>(null),
     [query, setQuery] = useState("");
   // Keyboard users land on the current choice; closing returns them to the pill they came from.
   useEffect(() => {
@@ -191,14 +194,12 @@ function ResourcePills({
     )
       document.querySelector<HTMLButtonElement>(`.wb-pill[aria-controls="wb-choices-${previous}"]`)?.focus();
   }, [chooser]);
-  useEffect(() => {
-    if (!chooser) return;
-    const outside = (event: PointerEvent) => {
-      if (!(event.target as Element)?.closest?.(".wb-pill-slot")) setChooser(null);
-    };
-    document.addEventListener("pointerdown", outside, true);
-    return () => document.removeEventListener("pointerdown", outside, true);
-  }, [chooser]);
+  // Every pill counts as inside, so pressing another one switches the chooser without closing it first.
+  useAnchoredLayer(chooser ? pill : null, pop, {
+    onDismiss: () => setChooser(null),
+    capture: true,
+    within: ".wb-pill-slot",
+  });
   return (
     <nav className="wb-top-pills" aria-label="当前资源">
       {(Object.keys(resourceLabels) as Resource[]).map((kind) => {
@@ -220,6 +221,7 @@ function ResourcePills({
         return (
           <div className="wb-pill-slot" key={kind}>
             <button
+              ref={chooser === kind ? pill : undefined}
               className="wb-pill"
               aria-label={`${resourceLabels[kind]}：${shown}${count > 1 ? ` 等 ${count} 本` : ""}`}
               title={`${resourceLabels[kind]}：${shown}`}
@@ -251,6 +253,7 @@ function ResourcePills({
             />
             {open && (
               <div
+                ref={pop}
                 className="wb-pill-pop"
                 id={`wb-choices-${kind}`}
                 role="dialog"

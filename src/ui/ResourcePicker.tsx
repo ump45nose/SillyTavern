@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useLayoutEffect, useRef, useState, createContext, useContext } from "react";
+import React, { useEffect, useId, useRef, useState, createContext, useContext } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Plus, RotateCcw, Search } from "./icons";
 import type { Item } from "../host/types";
@@ -6,6 +6,8 @@ import { Empty, SearchBox } from "./common";
 import { Select } from "./Select";
 import { usePresence } from "./Motion";
 import { groupItems, ungroupedLabel } from "../host/organize";
+import { pickerPlacement } from "./placement";
+import { useAnchoredLayer } from "./useAnchoredLayer";
 
 export const ResourceRailContext = createContext<{
   open: boolean;
@@ -66,37 +68,14 @@ export function ResourcePicker({
   const button = useRef<HTMLButtonElement>(null),
     popup = useRef<HTMLDivElement>(null),
     popupId = useId();
-  const [position, setPosition] = useState({ left: 0, top: 0, width: 300, maxHeight: 500 });
   const current = items.find((x) => x.id === id);
-  useLayoutEffect(() => {
-    if (!open || rail) return;
-    const place = () => {
-      const r = button.current!.getBoundingClientRect(),
-        width = Math.min(340, innerWidth - 24);
-      setPosition({
-        left: Math.max(12, Math.min(r.left, innerWidth - width - 12)),
-        top: r.bottom + 8,
-        width,
-        maxHeight: Math.min(500, innerHeight - r.bottom - 20),
-      });
-    };
-    place();
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [open, rail]);
+  const position = useAnchoredLayer(open && !rail ? button : null, popup, {
+    placement: pickerPlacement,
+    onDismiss: () => setOpen(false),
+    escape: true,
+  });
   useEffect(() => {
-    if (!open || rail) return;
-    const outside = (e: PointerEvent) => {
-      if (!button.current?.contains(e.target as Node) && !popup.current?.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    popup.current?.querySelector("input")?.focus();
-    return () => document.removeEventListener("pointerdown", outside);
+    if (open && !rail) popup.current?.querySelector("input")?.focus();
   }, [open, rail]);
   const close = () => {
     setOpen(false);
@@ -177,13 +156,6 @@ export function ResourcePicker({
             role="dialog"
             aria-label={`${label}选择`}
             style={position}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.preventDefault();
-                e.stopPropagation();
-                close();
-              }
-            }}
           >
             <SearchBox value={query} onChange={setQuery} placeholder={`搜索${label}`} />
             {sortable && (
