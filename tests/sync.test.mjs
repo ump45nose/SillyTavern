@@ -559,6 +559,21 @@ test("outlines round-trip as headings with an attribute line under each", () => 
   assert.deepEqual(outlineCodec.parse(outline, "").nodes, []);
 });
 
+test("outline titles show line breaks as spaces; a heading left as rendered keeps the title", () => {
+  const titled = {
+    ...outline,
+    nodes: outline.nodes.map((n) =>
+      n.id === "a" ? { ...n, title: "相遇\n雨夜" } : n.id === "c" ? { ...n, title: "第二章\r\n终章" } : n,
+    ),
+  };
+  const text = outlineCodec.render(titled);
+  assert.match(text, /\n## 相遇 雨夜\n<!-- id: a [\s\S]*\n# 第二章 终章\n<!-- id: c /);
+  assert.deepEqual(outlineCodec.parse(titled, text), titled);
+  assert.equal(outlineCodec.render(outlineCodec.parse(titled, text)), text);
+  const renamed = outlineCodec.parse(titled, text.replace("## 相遇 雨夜", "## 重逢"));
+  assert.equal(renamed.nodes.find((n) => n.id === "a").title, "重逢");
+});
+
 test("outline edits: new headings get ids, settings stay, errors carry lines", () => {
   const text = outlineCodec.render(outline) + "\n## 新节点\n内容";
   const next = outlineCodec.parse(outline, text);

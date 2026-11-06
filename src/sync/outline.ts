@@ -17,6 +17,8 @@ const heading = /^(#{1,32}) (.*)$/,
   /** Body lines that would read as headings get one more leading backslash. */
   headingLike = /^\\*#{1,32} /,
   attributes = /^<!--(.*)-->$/;
+/** A heading is one line: line breaks in a title show as spaces. */
+const headingText = (title: string) => title.replace(/\r\n?|[\n\u2028\u2029]/g, " ");
 
 /**
  * An outline as Markdown: heading depth is the tree, the line under each heading holds the node's
@@ -30,7 +32,7 @@ export const outlineCodec = {
     return orderedNodes(data)
       .map((n) => {
         const status = statuses.find(([s]) => s === n.status)![1],
-          head = `${"#".repeat(depth(n))} ${n.title.replace(/\n/g, " ")}\n<!-- id: ${n.id} · 状态: ${status} · 轮数: ${n.rounds} · 已完成: ${n.completed} -->`,
+          head = `${"#".repeat(depth(n))} ${headingText(n.title)}\n<!-- id: ${n.id} · 状态: ${status} · 轮数: ${n.rounds} · 已完成: ${n.completed} -->`,
           body = n.content
             .split("\n")
             .map((line) => (headingLike.test(line) ? "\\" + line : line))
@@ -45,7 +47,8 @@ export const outlineCodec = {
     if (lines.at(-1) === "") lines.pop();
     const nodes: OutlineNode[] = [],
       stack: OutlineNode[] = [],
-      ids = new Set<string>();
+      ids = new Set<string>(),
+      titles = new Map(base.nodes.map((n) => [n.id, n.title]));
     let body: string[] | null = null;
     const close = (last: boolean) => {
       const node = nodes.at(-1);
@@ -97,6 +100,9 @@ export const outlineCodec = {
         }
       }
       if (!node.id) node.id = randomId();
+      // A heading left as rendered keeps the stored title, line breaks included.
+      const title = titles.get(node.id);
+      if (title !== undefined && headingText(title) === node.title) node.title = title;
       if (ids.has(node.id)) throw new SyncError(`节点 id ${node.id} 重复；复制节点时请删去 id。`, i + 1);
       ids.add(node.id);
       nodes.push(node);
