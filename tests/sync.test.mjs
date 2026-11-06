@@ -235,6 +235,28 @@ test("character cards round-trip as 角色卡.yaml, field files and numbered gre
   roundTrip(characterCodec, sparse);
 });
 
+test("character files left as rendered keep the stored values: null, non-text and line breaks", () => {
+  const stored = {
+    ...card,
+    personality: null,
+    scenario: null,
+    creator_notes: 3,
+    description: "图书管理员。\r\n话不多。",
+    alternate_greetings: ["早。", null],
+  };
+  assert.equal(characterCodec.files(stored).get("性格.md"), "");
+  roundTrip(characterCodec, stored);
+  assert.equal(characterCodec.write(stored, "性格.md", "温和").personality, "温和");
+  assert.equal(
+    characterCodec.write(stored, "角色描述.md", "图书管理员。\r\n改过").description,
+    "图书管理员。\r\n改过",
+  );
+  assert.deepEqual(characterCodec.write(stored, "备选开场白/02.md", "晚上好。").alternate_greetings, [
+    "早。",
+    "晚上好。",
+  ]);
+});
+
 test("character edits: yaml keys, greeting append and removal, ordered numbering", () => {
   const yaml = characterCodec.files(card).get("角色卡.yaml").replace("收藏: false", "收藏: true");
   assert.equal(characterCodec.write(card, "角色卡.yaml", yaml).extensions.fav, true);

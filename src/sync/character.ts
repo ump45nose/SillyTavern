@@ -52,14 +52,14 @@ export const characterCodec = {
     return files;
   },
   write(data: Data, file: string, text: string): Data {
-    text = text.replace(/\r\n/g, "\n");
     if (file === CARD) {
-      const next = readFields(fields, parseYaml(text), data);
+      const next = readFields(fields, parseYaml(text.replace(/\r\n/g, "\n")), data);
       if (typeof next.name !== "string" || !next.name.trim()) throw new SyncError("「名称」不能为空。", 1);
       return next;
     }
+    // Text files are kept as sent; one still as rendered keeps the stored value, null or not text.
     const field = texts.find(([name]) => name === file)?.[1];
-    if (field) return text === "" && data[field] === undefined ? data : { ...data, [field]: text };
+    if (field) return text === String(data[field] ?? "") ? data : { ...data, [field]: text };
     const index = greetingIndex(file),
       greetings = [...(Array.isArray(data.alternate_greetings) ? data.alternate_greetings : [])];
     if (index < 0) throw new SyncError("角色目录里只能写已有的文件和「备选开场白/NN.md」。");
@@ -67,6 +67,7 @@ export const characterCodec = {
       throw new SyncError(
         `备选开场白请按顺序编号：下一个是 ${greetingFile(greetings.length, greetings.length + 1)}。`,
       );
+    if (index < greetings.length && text === String(greetings[index] ?? "")) return data;
     greetings[index] = text;
     return { ...data, alternate_greetings: greetings };
   },
