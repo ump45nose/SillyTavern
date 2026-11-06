@@ -87,6 +87,7 @@ export class PlaceholderRuntime {
   dispose() {
     this.disposers.forEach((fn) => fn());
     this.request?.resolve(null);
+    this.listeners.clear();
   }
 
   /** Where variables go now: the open character's card, the open group, or "default". */

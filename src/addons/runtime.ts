@@ -16,8 +16,8 @@ export class AddonManager {
   private pending = new Map<AddonId, Promise<AddonRuntime>>();
   private listeners = new Set<() => void>();
   private cleanups: (() => void)[] = [];
-  /** Runtime subscriptions; they end with their runtimes on reset. */
-  private unsubscribes: (() => void)[] = [];
+  /** Each runtime's subscription; it ends with its runtime. */
+  private unsubscribes = new Map<AddonId, () => void>();
   private key: string;
   private version = 0;
   private disposed = false;
@@ -54,6 +54,8 @@ export class AddonManager {
         this.syncOutline();
         for (const [id, runtime] of this.runtimes)
           if (!addonEnabled(host.prefs(), id)) {
+            this.unsubscribes.get(id)?.();
+            this.unsubscribes.delete(id);
             runtime.dispose();
             this.runtimes.delete(id);
             this.emit();
@@ -140,7 +142,7 @@ export class AddonManager {
         if (module.apiVersion !== 2) throw new Error("此插件没有后台任务。");
         const runtime = module.createRuntime(this.api(id));
         this.runtimes.set(id, runtime);
-        this.unsubscribes.push(runtime.subscribe(this.emit));
+        this.unsubscribes.set(id, runtime.subscribe(this.emit));
         this.emit();
         return runtime;
       })
@@ -156,7 +158,8 @@ export class AddonManager {
       .filter((task) => task.status !== "idle");
   }
   private reset() {
-    this.unsubscribes.splice(0).forEach((off) => off());
+    this.unsubscribes.forEach((off) => off());
+    this.unsubscribes.clear();
     this.runtimes.forEach((runtime) => runtime.dispose());
     this.runtimes.clear();
     this.pending.clear();

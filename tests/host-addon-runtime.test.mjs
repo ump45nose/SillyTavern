@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { build } from "esbuild";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
 
 const handlers = new Map();
 const outline = (depth) => ({
@@ -36,7 +37,8 @@ const st = {
 };
 globalThis.document = { getElementById: () => null };
 globalThis.window = { SillyTavern: { getContext: () => st } };
-const directory = await mkdtemp(tmpdir() + "/wb-addon-runtime-tests-");
+// Real path: the loader checks add-on files against its own module URL, which has links resolved.
+const directory = await realpath(await mkdtemp(tmpdir() + "/wb-addon-runtime-tests-"));
 const { outputFiles } = await build({
   entryPoints: [new URL("../src/addons/runtime.ts", import.meta.url).pathname],
   bundle: true,
@@ -46,11 +48,37 @@ const { outputFiles } = await build({
 });
 await writeFile(directory + "/runtime.mjs", outputFiles[0].text);
 const { addonManager, disposeAddons } = await import(directory + "/runtime.mjs");
+// An installed outline add-on: its manifest (fetched) and its module (imported), with a runtime that
+// records its subscribers.
+await writeFile(directory + "/package.json", '{"type":"module"}');
+await writeFile(
+  directory + "/outline.js",
+  `export const id = "outline", apiVersion = 2;
+export function Workspace() {}
+export function createRuntime() {
+  const runtime = (globalThis.outlineRuntime = { listeners: new Set(), disposed: false });
+  return {
+    subscribe: (fn) => (runtime.listeners.add(fn), () => runtime.listeners.delete(fn)),
+    revision: () => 0,
+    state: () => ({}),
+    task: () => ({ status: "idle" }),
+    action: async () => {},
+    stop() {},
+    dispose: () => (runtime.disposed = true),
+  };
+}`,
+);
+const entry = pathToFileURL(directory + "/outline.js").href;
+globalThis.fetch = async () => ({
+  ok: true,
+  json: async () => ({ id: "outline", apiVersion: 2, version: "1", entry, css: entry.replace(/js$/, "css") }),
+});
 
 const notify = new Set();
 const outlineWriters = new Set();
+let prefs = { addons: {} };
 const host = {
-  prefs: () => ({ addons: {} }),
+  prefs: () => prefs,
   subscribe: (fn) => (notify.add(fn), () => notify.delete(fn)),
   listen(name, fn) {
     const event = st.eventTypes[name];
@@ -87,4 +115,17 @@ test("the outline prompt comes back when a reload or branch empties SillyTavern'
   disposeAddons(host);
   assert.equal(prompt().value, "");
   assert.equal(outlineWriters.size, 0);
+});
+
+test("turning an add-on off ends its runtime and the subscription to it at once", async () => {
+  const manager = addonManager(host);
+  await manager.ensure("outline");
+  const runtime = globalThis.outlineRuntime;
+  assert.equal(runtime.listeners.size, 1);
+  prefs = { addons: { outline: false } };
+  notify.forEach((fn) => fn());
+  assert.equal(manager.get("outline"), undefined);
+  assert.deepEqual([runtime.disposed, runtime.listeners.size], [true, 0]);
+  prefs = { addons: {} };
+  disposeAddons(host);
 });

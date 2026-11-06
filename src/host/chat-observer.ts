@@ -96,7 +96,14 @@ export class MediaObserver {
     this.listeners.clear();
   }
   private attach() {
-    for (const node of document.querySelectorAll("#expression-wrapper,#visual-novel-wrapper")) {
+    const present = new Set(document.querySelectorAll("#expression-wrapper,#visual-novel-wrapper"));
+    // An observer cannot drop a single node, so a wrapper leaving the page restarts the watch.
+    if ([...this.watched].some((node) => !present.has(node))) {
+      this.inner.disconnect();
+      this.watched.clear();
+      this.schedule();
+    }
+    for (const node of present) {
       if (this.watched.has(node)) continue;
       this.watched.add(node);
       this.inner.observe(node, {

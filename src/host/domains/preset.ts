@@ -231,11 +231,13 @@ export const presetMethods = {
   async revertPreset(this: HostAdapter) {
     const { eventSource, eventTypes } = ctx();
     await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, 3000);
-      eventSource.once(eventTypes.OAI_PRESET_CHANGED_AFTER, () => {
+      const done = () => {
         clearTimeout(timer);
+        eventSource.removeListener(eventTypes.OAI_PRESET_CHANGED_AFTER, done);
         resolve();
-      });
+      };
+      const timer = setTimeout(done, 3000);
+      eventSource.on(eventTypes.OAI_PRESET_CHANGED_AFTER, done);
       window.jQuery("#settings_preset_openai").trigger("change");
     });
     this.resourceVersions.preset++;

@@ -21,10 +21,15 @@ function presetManager({ keyed = false, selected = "" } = {}) {
 }
 const st = {};
 const appended = [];
+// What triggering the native preset select does; SillyTavern reapplies the file and then announces it.
+let selectChanged = () => {};
 globalThis.document = { getElementById: () => null };
 globalThis.window = {
   SillyTavern: { getContext: () => st },
-  jQuery: (target) => ({ append: (option) => appended.push({ target, option }) }),
+  jQuery: (target) => ({
+    append: (option) => appended.push({ target, option }),
+    trigger: () => selectChanged(),
+  }),
 };
 globalThis.Option = class {
   constructor(text, value) {
@@ -91,4 +96,22 @@ test("saving a draft goes through SillyTavern's list update only for the running
   assert.deepEqual(await host(other).savePreset("A", base, draft), draft);
   assert.deepEqual(other.saves, [["A", draft, { skipUpdate: true }]]);
   assert.deepEqual(other.presets, [draft]);
+});
+
+test("reverting stops listening once the file is reapplied, or when the wait runs out", async (t) => {
+  const listeners = new Set();
+  st.eventTypes = { OAI_PRESET_CHANGED_AFTER: "oai_preset_changed_after" };
+  st.eventSource = { on: (_, fn) => listeners.add(fn), removeListener: (_, fn) => listeners.delete(fn) };
+  const reverting = { ...host(presetManager()), resourceVersions: { preset: 0 } };
+  selectChanged = () => queueMicrotask(() => [...listeners].forEach((fn) => fn()));
+  await reverting.revertPreset();
+  assert.equal(listeners.size, 0);
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  selectChanged = () => {};
+  const pending = reverting.revertPreset();
+  assert.equal(listeners.size, 1);
+  t.mock.timers.tick(3000);
+  await pending;
+  assert.equal(listeners.size, 0, "a reapply that never came leaves no listener behind");
+  assert.equal(reverting.resourceVersions.preset, 2);
 });
