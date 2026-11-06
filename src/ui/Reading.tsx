@@ -4,14 +4,14 @@ import { ChevronRight, Type } from "./icons";
 import type { HostAdapter } from "../host/adapter";
 import { useHostSlices } from "./common";
 import { Popover } from "./Popover";
-import { usePresence } from "./Motion";
+import { motionAllowed, usePresence } from "./Motion";
 import { MessageActions } from "./MessageActions";
 import { useMessageEditing } from "./useMessageEditing";
 import { messageActions } from "./message-actions";
 /** `row` renders a labelled list row (the phone's session menu) instead of the toolbar icon. */
 export function ReadingSettings({ host, row = false }: { host: HostAdapter; row?: boolean }) {
   // Subscribed for the re-render: the preferences below are read from the host on each render.
-  useHostSlices(host, ["session", "chat", "prefs"]);
+  useHostSlices(host, ["prefs"]);
   const prefs = host.prefs(),
     [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const presence = usePresence(anchor);
@@ -146,8 +146,7 @@ export const ReadingPresentation = React.memo(function ReadingPresentation({
     const chat = document.getElementById("chat")!;
     const scan = () => {
       for (const n of controls.current.keys()) if (!chat.contains(n)) controls.current.delete(n);
-      const next = [...chat.querySelectorAll<HTMLElement>(".mes")];
-      setNodes((old) => (old.length === next.length && old.every((n, i) => n === next[i]) ? [...old] : next));
+      setNodes([...chat.querySelectorAll<HTMLElement>(".mes")]);
     };
     scan();
     const off = host.chatObserver.subscribe((change) => {
@@ -227,9 +226,7 @@ export const ReadingPresentation = React.memo(function ReadingPresentation({
           animations.current.delete(n);
         });
       node.classList.toggle("wb-user-collapsed", !open);
-      const motion =
-        !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-        !document.body.classList.contains("reduced-motion");
+      const motion = motionAllowed();
       bodies.forEach((body, i) => {
         body.inert = !open;
         if (changed && wasOpen !== open && motion) {

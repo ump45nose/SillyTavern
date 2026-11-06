@@ -64,6 +64,7 @@ export function ComposerPopovers({
   const replies = [...new Map(host.quickReplies().map((x: any) => [x.key, x])).values()] as any[],
     groups = [...new Set(replies.map((x) => x.set))],
     selected = groups.includes(group) ? group : groups[0];
+  // A "tool" popup always opens on its native editor, so only the other kinds need a title of their own.
   const heading = nativeEditor
     ? nativeEditor === "note"
       ? "作者注释"
@@ -78,8 +79,7 @@ export function ComposerPopovers({
           files: "聊天文件",
           rename: "重命名对话",
           pinned: "更多工具",
-          tool: "聊天工具",
-        }[popup.kind];
+        }[popup.kind as Exclude<ComposerPopup["kind"], "tool">];
   return (
     <Popover
       anchor={popup.anchor}
