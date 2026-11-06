@@ -34,6 +34,7 @@ import { bus } from "../host/bus";
 import { actionLabels } from "../host/labels";
 import { MessageActionButton } from "./MessageActionButton";
 import { RPToolMenu } from "./RPToolMenu";
+import { sceneText, uniqueReplies } from "./chatData";
 
 type Message = {
   node: HTMLElement;
@@ -823,13 +824,8 @@ export function RPStage({
       ))}
     </div>
   );
-  const replies = [...new Map(host.quickReplies().map((qr: any) => [qr.key, qr])).values()].slice(
-    0,
-    3,
-  ) as any[];
-  const scene = presentation.scene,
-    sceneValue = (key: string) =>
-      typeof scene[key] === "string" || typeof scene[key] === "number" ? String(scene[key]) : "";
+  const replies = uniqueReplies(host.quickReplies()).slice(0, 3);
+  const sceneValue = (key: string) => sceneText(presentation.scene, key);
   const sendRow = document.getElementById("rightSendForm");
   const sceneHidden = isHidden || width < 1000 || (expanded && compose) || history;
   return (

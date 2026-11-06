@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Activity,
-  BookMarked,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -14,13 +13,10 @@ import {
   MenuDrawer,
   MoreHorizontal,
   PanelsTopLeft,
-  Plug,
   ScanLine,
   Plus,
   Settings,
-  SlidersHorizontal,
   Theater,
-  UserRound,
   Users,
   WandSparkles,
   X,
@@ -46,7 +42,8 @@ import { useDrawerGestures } from "./mobile/useDrawerGestures";
 import { useSheetGestures } from "./mobile/useSheetGestures";
 import type { MobileSheet as Sheet } from "./mobile/types";
 import { MessageActionButton } from "./MessageActionButton";
-const resourceIcons = { connection: Plug, preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
+import { resourceIcons } from "./resources";
+import { sceneText } from "./chatData";
 export function MobileShell({
   host,
   snap,
@@ -95,6 +92,9 @@ export function MobileShell({
     items = document.getElementById("nonQRFormItems")!;
   const latest = useRef({ left, panel, editor, sheet });
   latest.current = { left, panel, editor, sheet };
+  // The bus handlers are bound once; closeDrawers checks the leave guards against the current layout.
+  const closeDrawersRef = useRef(closeDrawers);
+  closeDrawersRef.current = closeDrawers;
   const close = () => {
       setSheet(null);
       setChooser(null);
@@ -108,10 +108,7 @@ export function MobileShell({
   const { edit, letGo, grip } = useComposerPage(rp, editor, latest, headerRef, setEditing);
   const presentation = host.rpPresentation();
   // Novel names the story; RP names the scene, falling back to the story when the card has none.
-  const scene = (key: string) => {
-      const value = presentation.scene?.[key];
-      return typeof value === "string" || typeof value === "number" ? String(value) : "";
-    },
+  const scene = (key: string) => sceneText(presentation.scene, key),
     who = snap.character?.name || snap.groupName || "选择角色",
     title = (rp && scene("location")) || snap.chatName || who,
     subtitle =
@@ -150,7 +147,7 @@ export function MobileShell({
     const image = () => {
       setSheet(null);
       setEditor(false);
-      closeDrawers();
+      closeDrawersRef.current();
     };
     const off = [
       bus.on("image-compose", image),

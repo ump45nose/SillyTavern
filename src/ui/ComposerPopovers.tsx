@@ -17,6 +17,7 @@ import { Popover } from "./Popover";
 import { Empty, Loading, Notice, useTask, useHostSlices } from "./common";
 import { toolIcon } from "./ToolIcon";
 import { useComposerTools } from "./useTools";
+import { uniqueReplies } from "./chatData";
 const NativeSettings = lazyChunk(() => import("../modules/NativeSettings"));
 export type ComposerPopup = {
   kind: "menu" | "tools" | "quick" | "chat" | "files" | "rename" | "pinned" | "tool";
@@ -47,12 +48,32 @@ export function ComposerPopovers({
     [query, setQuery] = useState(""),
     [group, setGroup] = useState(""),
     [files, setFiles] = useState<Data[]>([]),
+    [loading, setLoading] = useState(false),
     [name, setName] = useState(snap.chatName),
     [renaming, setRenaming] = useState<string | null>(popup.kind === "rename" ? snap.chatName : null);
   const toolRow = useComposerTools(host, snap.busy);
+  // Not task.run: its lock drops a call made while another task runs, leaving the old chat's list.
   useEffect(() => {
-    if (popup.kind === "files") task.run(async () => setFiles(await host.recentChats()));
-  }, [popup.kind, snap.chatName, snap.groupId]);
+    if (popup.kind !== "files") return;
+    let active = true;
+    setLoading(true);
+    task.setError("");
+    host
+      .recentChats()
+      .then((chats) => {
+        if (active) setFiles(chats);
+      })
+      .catch((e) => {
+        if (active) task.setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [host, popup.kind, snap.chatName, snap.groupId]);
+  const pending = task.busy || loading;
   const native = (selector: string) => {
     close();
     try {
@@ -61,9 +82,10 @@ export function ComposerPopovers({
       host.report(e);
     }
   };
-  const replies = [...new Map(host.quickReplies().map((x: any) => [x.key, x])).values()] as any[],
+  const replies = uniqueReplies(host.quickReplies()),
     groups = [...new Set(replies.map((x) => x.set))],
     selected = groups.includes(group) ? group : groups[0];
+  // A "tool" popup always opens on its native editor, so only the other kinds need a title of their own.
   const heading = nativeEditor
     ? nativeEditor === "note"
       ? "作者注释"
@@ -78,8 +100,7 @@ export function ComposerPopovers({
           files: "聊天文件",
           rename: "重命名对话",
           pinned: "更多工具",
-          tool: "聊天工具",
-        }[popup.kind];
+        }[popup.kind as Exclude<ComposerPopup["kind"], "tool">];
   return (
     <Popover
       anchor={popup.anchor}
@@ -130,7 +151,7 @@ export function ComposerPopovers({
             对话名称
             <input aria-label="对话名称" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
-          <button className="wb-primary" disabled={task.busy || !name.trim()}>
+          <button className="wb-primary" disabled={pending || !name.trim()}>
             保存名称
           </button>
         </form>
@@ -297,7 +318,7 @@ export function ComposerPopovers({
                   <div className={`wb-chat-file ${title === snap.chatName ? "is-active" : ""}`} key={id}>
                     <FileText size={16} />
                     <button
-                      disabled={snap.busy || task.busy}
+                      disabled={snap.busy || pending}
                       onClick={() =>
                         task.run(async () => {
                           await host.openChat(id);
@@ -314,7 +335,7 @@ export function ComposerPopovers({
                     <button
                       className="wb-icon"
                       aria-label={`导出 ${title}`}
-                      disabled={task.busy}
+                      disabled={pending}
                       onClick={() => task.run(() => host.exportChat(id))}
                     >
                       <Download size={15} />
@@ -322,7 +343,7 @@ export function ComposerPopovers({
                     <button
                       className="wb-icon"
                       aria-label={`重命名 ${title}`}
-                      disabled={snap.busy || task.busy}
+                      disabled={snap.busy || pending}
                       onClick={() => {
                         setRenaming(title);
                         setName(title);
@@ -333,7 +354,7 @@ export function ComposerPopovers({
                     <button
                       className="wb-icon"
                       aria-label={`删除 ${title}`}
-                      disabled={snap.busy || task.busy}
+                      disabled={snap.busy || pending}
                       onClick={() => {
                         if (confirm(`删除聊天文件「${title}」？此操作会删除记录。`))
                           task.run(async () => {
@@ -347,7 +368,7 @@ export function ComposerPopovers({
                   </div>
                 );
               })}
-            {!files.length && <Empty>{task.busy ? "正在读取…" : "还没有聊天文件"}</Empty>}
+            {!files.length && <Empty>{pending ? "正在读取…" : "还没有聊天文件"}</Empty>}
           </div>
           <footer className="wb-pop-footer">
             <label className="wb-upload-button">
@@ -357,7 +378,7 @@ export function ComposerPopovers({
                 type="file"
                 accept=".jsonl,.json"
                 aria-label="导入聊天文件"
-                disabled={snap.busy || task.busy}
+                disabled={snap.busy || pending}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file)
@@ -374,7 +395,7 @@ export function ComposerPopovers({
                 setRenaming(snap.chatName);
                 setName(snap.chatName);
               }}
-              disabled={!snap.chatName || snap.busy || task.busy}
+              disabled={!snap.chatName || snap.busy || pending}
             >
               <PencilLine size={15} />
               重命名当前

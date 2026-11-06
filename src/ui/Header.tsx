@@ -1,16 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  BookMarked,
-  Activity,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Plug,
-  ScanLine,
-  SlidersHorizontal,
-  UserRound,
-  X,
-} from "./icons";
+import { Activity, Check, ChevronDown, ChevronRight, ScanLine, X } from "./icons";
 import { createPortal } from "react-dom";
 import type { HostSnapshot, Item, Panel, Resource } from "../host/types";
 import { Empty, IconButton, SearchBox } from "./common";
@@ -18,7 +7,7 @@ import { grouped, groupItems, ungroupedLabel, unarchived } from "../host/organiz
 import { GroupCheck } from "./ResourcePicker";
 import { resourceLabels } from "../host/labels";
 import { usePresence } from "./Motion";
-const pillIcons = { connection: Plug, preset: SlidersHorizontal, world: BookMarked, persona: UserRound };
+import { resourceIcons } from "./resources";
 /** The popover's way into the full panel, named after what the panel lets you do there. */
 const manageLabels: Record<Resource, string> = {
   connection: "管理连接",
@@ -219,7 +208,7 @@ function ResourcePills({
           items = unarchived(all),
           selected = all.find((x) => x.id === snap.current[kind]),
           sections = chooserSections(kind, all, bound, chooser === kind ? query : "");
-        const Icon = pillIcons[kind];
+        const Icon = resourceIcons[kind];
         const value = selected?.name || (kind === "connection" ? model || "未连接" : "未选择");
         const active = items.filter((x) => x.active);
         const count = kind === "world" ? active.length : 0;
@@ -389,7 +378,7 @@ export function ResourceControls({
               onClick={() => setChooser(chooser === kind ? null : kind)}
             >
               <span className="wb-selector-icon" aria-hidden="true">
-                {React.createElement(pillIcons[kind], { size: 17 })}
+                {React.createElement(resourceIcons[kind], { size: 17 })}
                 {kind === "connection" && <i className={`wb-dot ${snap.online ? "online" : ""}`} />}
               </span>
               <span key={value + count} className="wb-value-text">
